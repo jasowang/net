@@ -329,6 +329,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
+	vq->delayed = 0;
 }
 
 static int vhost_worker(void *data)
