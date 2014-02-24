@@ -175,6 +175,7 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct skb_array tx_array;
 	struct napi_struct napi;
+	struct sk_buff_head process_queue;
 };
 
 struct tun_flow_entry {
@@ -529,6 +530,7 @@ static void tun_queue_purge(struct tun_file *tfile)
 		kfree_skb(skb);
 
 	skb_queue_purge(&tfile->sk.sk_write_queue);
+	skb_queue_purge(&tfile->process_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -632,17 +634,6 @@ static void tun_detach_all(struct net_device *dev)
 		module_put(THIS_MODULE);
 }
 
-static struct sk_buff *tun_dequeue(struct sk_buff_head *input_queue)
-{
-	struct sk_buff *skb;
-
-	spin_lock(&input_queue->lock);
-	skb = __skb_dequeue(input_queue);
-	spin_unlock(&input_queue->lock);
-
-	return skb;
-}
-
 static int tun_poll(struct napi_struct *napi, int budget)
 {
 	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
@@ -651,10 +642,20 @@ static int tun_poll(struct napi_struct *napi, int budget)
 	struct sk_buff *skb;
 	unsigned int received = 0;
 
-	while ((skb = tun_dequeue(input_queue))) {
-		netif_receive_skb(skb);
-		if (++received >= budget)
-			return received;
+	while (1) {
+		while ((skb = __skb_dequeue(&tfile->process_queue))) {
+			netif_receive_skb(skb);
+			if (++received >= budget)
+				return received;
+		}
+
+		spin_lock(&input_queue->lock);
+		if (skb_queue_empty(input_queue)) {
+			spin_unlock(&input_queue->lock);
+			break;
+		}
+		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
+		spin_unlock(&input_queue->lock);
 	}
 
 	napi_complete(napi);
@@ -2405,6 +2406,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	file->private_data = tfile;
 	INIT_LIST_HEAD(&tfile->next);
+
+	skb_queue_head_init(&tfile->process_queue);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
