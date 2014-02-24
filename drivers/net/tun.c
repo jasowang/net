@@ -74,6 +74,7 @@
 #include <linux/skb_array.h>
 
 #include <asm/uaccess.h>
+#include <linux/interrupt.h>
 
 /* Uncomment to enable debugging */
 /* #define TUN_DEBUG 1 */
@@ -169,6 +170,7 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_array tx_array;
+	struct napi_struct napi;
 };
 
 struct tun_flow_entry {
@@ -522,6 +524,7 @@ static void tun_queue_purge(struct tun_file *tfile)
 	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
 		kfree_skb(skb);
 
+	skb_queue_purge(&tfile->sk.sk_write_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -531,6 +534,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 	struct tun_struct *tun;
 
 	tun = rtnl_dereference(tfile->tun);
+
+	if (tun && clean) {
+		napi_disable(&tfile->napi);
+		netif_napi_del(&tfile->napi);
+	}
 
 	if (tun && !tfile->detached) {
 		u16 index = tfile->queue_index;
@@ -587,6 +595,7 @@ static void tun_detach_all(struct net_device *dev)
 
 	for (i = 0; i < n; i++) {
 		tfile = rtnl_dereference(tun->tfiles[i]);
+		napi_disable(&tfile->napi);
 		BUG_ON(!tfile);
 		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
 		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
@@ -603,6 +612,7 @@ static void tun_detach_all(struct net_device *dev)
 	synchronize_net();
 	for (i = 0; i < n; i++) {
 		tfile = rtnl_dereference(tun->tfiles[i]);
+		netif_napi_del(&tfile->napi);
 		/* Drop read queue */
 		tun_queue_purge(tfile);
 		sock_put(&tfile->sk);
@@ -616,6 +626,31 @@ static void tun_detach_all(struct net_device *dev)
 
 	if (tun->flags & IFF_PERSIST)
 		module_put(THIS_MODULE);
+}
+
+static int tun_poll(struct napi_struct *napi, int budget)
+{
+	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
+	struct sk_buff_head *input_queue =
+	       &tfile->socket.sk->sk_write_queue;
+	struct sk_buff *skb;
+	unsigned int received = 0;
+
+	while ((skb = skb_dequeue(input_queue))) {
+		netif_receive_skb(skb);
+		if (++received >= budget)
+			return received;
+	}
+
+	if (received < budget) {
+		napi_complete(napi);
+		if (skb_peek(input_queue) &&
+		    unlikely(napi_schedule_prep(napi))) {
+			__napi_schedule(napi);
+		}
+	}
+
+	return received;
 }
 
 static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
@@ -666,9 +701,11 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
 
 	if (tfile->detached)
 		tun_enable_queue(tfile);
-	else
+	else {
 		sock_hold(&tfile->sk);
-
+		netif_napi_add(tun->dev, &tfile->napi, tun_poll, 64);
+		napi_enable(&tfile->napi);
+	}
 	tun_set_real_num_queues(tun);
 
 	/* device is allowed to go away first, so no need to hold extra
@@ -1296,7 +1333,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	netif_rx_ni(skb);
+	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
+		this_cpu_inc(tun->pcpu_stats->rx_dropped);
+		kfree_skb(skb);
+		return -E2BIG;
+	}
+	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
+
+	local_bh_disable();
+	napi_schedule(&tfile->napi);
+	local_bh_enable();
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
@@ -1319,7 +1365,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (!tun)
 		return -EBADFD;
 
-	result = tun_get_user(tun, tfile, NULL, from, file->f_flags & O_NONBLOCK);
+	result = tun_get_user(tun, tfile, NULL, from,
+			      file->f_flags & O_NONBLOCK);
 
 	tun_put(tun);
 	return result;
