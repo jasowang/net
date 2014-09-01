@@ -781,6 +781,8 @@ void vring_transport_features(struct virtio_device *vdev)
 			break;
 		case VIRTIO_RING_F_EVENT_IDX:
 			break;
+		case VIRTIO_RING_F_INTR_COALESCING:
+			break;
 		case VIRTIO_F_VERSION_1:
 			break;
 		default:
