@@ -145,6 +145,11 @@ struct virtnet_info {
 
 	/* Budget for polling tx completion */
 	u32 tx_work_limit;
+
+	__u32 rx_coalesce_usecs;
+	__u32 rx_max_coalesced_frames;
+	__u32 tx_coalesce_usecs;
+	__u32 tx_max_coalesced_frames;
 };
 
 struct padded_vnet_hdr {
@@ -1400,6 +1405,65 @@ static void virtnet_get_channels(struct net_device *dev,
 	channels->other_count = 0;
 }
 
+static int virtnet_set_coalesce(struct net_device *dev,
+				struct ethtool_coalesce *ec)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+	struct scatterlist sg;
+	struct virtio_net_ctrl_coalesce c;
+
+	if (!vi->has_cvq ||
+	    !virtio_has_feature(vi->vdev, VIRTIO_NET_F_CTRL_COALESCE))
+		return -EOPNOTSUPP;
+	if (vi->rx_coalesce_usecs != ec->rx_coalesce_usecs ||
+	    vi->rx_max_coalesced_frames != ec->rx_max_coalesced_frames) {
+		c.coalesce_usecs = ec->rx_coalesce_usecs;
+		c.max_coalesced_frames = ec->rx_max_coalesced_frames;
+		sg_init_one(&sg, &c, sizeof(c));
+		if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_COALESCE,
+					  VIRTIO_NET_CTRL_COALESCE_RX_SET,
+					  &sg)) {
+			dev_warn(&dev->dev, "Fail to set rx coalescing\n");
+			return -EINVAL;
+		}
+		vi->rx_coalesce_usecs = ec->rx_coalesce_usecs;
+		vi->rx_max_coalesced_frames = ec->rx_max_coalesced_frames;
+	}
+
+	if (vi->tx_coalesce_usecs != ec->tx_coalesce_usecs ||
+	    vi->tx_max_coalesced_frames != ec->tx_max_coalesced_frames) {
+		c.coalesce_usecs = ec->tx_coalesce_usecs;
+		c.max_coalesced_frames = ec->tx_max_coalesced_frames;
+		sg_init_one(&sg, &c, sizeof(c));
+		if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_COALESCE,
+					  VIRTIO_NET_CTRL_COALESCE_TX_SET,
+					  &sg)) {
+			dev_warn(&dev->dev, "Fail to set tx coalescing\n");
+			return -EINVAL;
+		}
+		vi->tx_coalesce_usecs = ec->tx_coalesce_usecs;
+		vi->tx_max_coalesced_frames = ec->tx_max_coalesced_frames;
+	}
+
+	vi->tx_work_limit = ec->tx_max_coalesced_frames_irq;
+
+	return 0;
+}
+
+static int virtnet_get_coalesce(struct net_device *dev,
+				struct ethtool_coalesce *ec)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+
+	ec->rx_coalesce_usecs = vi->rx_coalesce_usecs;
+	ec->rx_max_coalesced_frames = vi->rx_max_coalesced_frames;
+	ec->tx_coalesce_usecs = vi->tx_coalesce_usecs;
+	ec->tx_max_coalesced_frames = vi->tx_max_coalesced_frames;
+	ec->tx_max_coalesced_frames_irq = vi->tx_work_limit;
+
+	return 0;
+}
+
 static const struct ethtool_ops virtnet_ethtool_ops = {
 	.get_drvinfo = virtnet_get_drvinfo,
 	.get_link = ethtool_op_get_link,
@@ -1407,6 +1471,8 @@ static const struct ethtool_ops virtnet_ethtool_ops = {
 	.set_channels = virtnet_set_channels,
 	.get_channels = virtnet_get_channels,
 	.get_ts_info = ethtool_op_get_ts_info,
+	.set_coalesce = virtnet_set_coalesce,
+	.get_coalesce = virtnet_get_coalesce,
 };
 
 #define MIN_MTU 68
@@ -2052,6 +2118,7 @@ static unsigned int features[] = {
 	VIRTIO_NET_F_GUEST_ANNOUNCE, VIRTIO_NET_F_MQ,
 	VIRTIO_NET_F_CTRL_MAC_ADDR,
 	VIRTIO_F_ANY_LAYOUT,
+	VIRTIO_NET_F_CTRL_COALESCE,
 };
 
 static struct virtio_driver virtio_net_driver = {
