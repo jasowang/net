@@ -34,6 +34,7 @@
 /* The feature bitmap for virtio net */
 #define VIRTIO_NET_F_CSUM	0	/* Host handles pkts w/ partial csum */
 #define VIRTIO_NET_F_GUEST_CSUM	1	/* Guest handles pkts w/ partial csum */
+#define VIRTIO_NET_F_CTRL_COALESCE 3	/* Set coalescing */
 #define VIRTIO_NET_F_MAC	5	/* Host has given MAC address. */
 #define VIRTIO_NET_F_GUEST_TSO4	7	/* Guest can handle TSOv4 in. */
 #define VIRTIO_NET_F_GUEST_TSO6	8	/* Guest can handle TSOv6 in. */
@@ -225,5 +226,16 @@ struct virtio_net_ctrl_mq {
  #define VIRTIO_NET_CTRL_MQ_VQ_PAIRS_SET        0
  #define VIRTIO_NET_CTRL_MQ_VQ_PAIRS_MIN        1
  #define VIRTIO_NET_CTRL_MQ_VQ_PAIRS_MAX        0x8000
+
+struct virtio_net_ctrl_coalesce {
+	__u32 coalesce_usecs;
+	__u32 max_coalesced_frames;
+};
+
+#define VIRTIO_NET_CTRL_COALESCE 6
+ #define VIRTIO_NET_CTRL_COALESCE_TX_SET 0
+ #define VIRTIO_NET_CTRL_COALESCE_TX_GET 1
+ #define VIRTIO_NET_CTRL_COALESCE_RX_SET 2
+ #define VIRTIO_NET_CTRL_COALESCE_RX_GET 3
 
 #endif /* _LINUX_VIRTIO_NET_H */
