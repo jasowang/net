@@ -720,10 +720,10 @@ xdp_xmit:
 }
 
 static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
-			void *buf, unsigned int len)
+			void *buf, unsigned int len,
+			unsigned int *packets, unsigned int *bytes)
 {
 	struct net_device *dev = vi->dev;
-	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
 	struct sk_buff *skb;
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
 
@@ -754,10 +754,8 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 
 	hdr = skb_vnet_hdr(skb);
 
-	u64_stats_update_begin(&stats->rx_syncp);
-	stats->rx_bytes += skb->len;
-	stats->rx_packets++;
-	u64_stats_update_end(&stats->rx_syncp);
+	*packets += 1;
+	*bytes += skb->len;
 
 	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_DATA_VALID)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
@@ -996,10 +994,13 @@ static int virtnet_receive(struct receive_queue *rq, int budget)
 	struct virtnet_info *vi = rq->vq->vdev->priv;
 	unsigned int len, received = 0;
 	void *buf;
+	unsigned int packets = 0;
+	unsigned int bytes = 0;
+	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
 
 	while (received < budget &&
 	       (buf = virtqueue_get_buf(rq->vq, &len)) != NULL) {
-		receive_buf(vi, rq, buf, len);
+		receive_buf(vi, rq, buf, len, &packets, &bytes);
 		received++;
 	}
 
@@ -1007,6 +1008,11 @@ static int virtnet_receive(struct receive_queue *rq, int budget)
 		if (!try_fill_recv(vi, rq, GFP_ATOMIC))
 			schedule_delayed_work(&vi->refill, 0);
 	}
+
+	u64_stats_update_begin(&stats->rx_syncp);
+	stats->rx_bytes += bytes;
+	stats->rx_packets += packets;
+	u64_stats_update_end(&stats->rx_syncp);
 
 	return received;
 }
