@@ -27,10 +27,17 @@ struct vhost_vring_file {
 
 };
 
+<<<<<<< current
 struct vhost_vring_coalesce {
 	unsigned int index;
 	__u32 coalesce_usecs;
 	__u32 max_coalesced_buffers;
+=======
+struct vhost_net_vring_coalesce {
+	unsigned int index;
+	__u32 coalesce_usecs;
+	__u32 max_coalesced_frames;
+>>>>>>> patched
 };
 
 struct vhost_vring_addr {
@@ -132,6 +139,12 @@ struct vhost_memory {
  * device.  This can be used to stop the ring (e.g. for migration). */
 #define VHOST_NET_SET_BACKEND _IOW(VHOST_VIRTIO, 0x30, struct vhost_vring_file)
 
+/* Setting interrupt coalescing parameters. */
+#define VHOST_NET_SET_VRING_COALESCE \
+	_IOW(VHOST_VIRTIO, 0x31, struct vhost_net_vring_coalesce)
+/* Getting interrupt coalescing parameters. */
+#define VHOST_NET_GET_VRING_COALESCE \
+	_IOW(VHOST_VIRTIO, 0x32, struct vhost_net_vring_coalesce)
 /* Feature bits */
 /* Log all write descriptors. Can be changed while device is active. */
 #define VHOST_F_LOG_ALL 26
