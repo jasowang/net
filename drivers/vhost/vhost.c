@@ -1532,9 +1532,6 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	int left;
 	ktime_t now;
 
-	if (!vq->call_ctx)
-		return;
-
 	if (can_coalesce) {
 		now = ktime_get();
 		left = vq->coalesce_usecs -
