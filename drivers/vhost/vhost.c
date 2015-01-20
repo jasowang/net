@@ -1482,11 +1482,14 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 }
 
 /* This actually signals the guest, using eventfd. */
-void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
 	/* Signal the Guest tell them we used something up. */
-	if (vq->call_ctx && vhost_notify(dev, vq))
+	if (vq->call_ctx && vhost_notify(dev, vq)) {
 		eventfd_signal(vq->call_ctx, 1);
+		return true;
+	}
+	return false;
 }
 EXPORT_SYMBOL_GPL(vhost_signal);
 
