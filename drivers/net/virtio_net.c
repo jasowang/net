@@ -234,8 +234,8 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
 		packets++;
 	}
 
-	if (sq->vq->num_free >= 2+MAX_SKB_FRAGS)
-		netif_tx_start_queue(txq);
+	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
+		netif_wake_subqueue(vi->dev, vq2txq(sq->vq));
 
 	return packets;
 }
