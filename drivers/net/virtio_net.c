@@ -956,8 +956,6 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, qnum);
 	bool kick = !skb->xmit_more;
 
-	virtqueue_disable_cb(sq->vq);
-
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
 
@@ -982,12 +980,6 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	if (kick || netif_xmit_stopped(txq))
 		virtqueue_kick(sq->vq);
-
-	free_old_xmit_skbs(txq, sq, virtqueue_get_vring_size(sq->vq));
-	if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
-		virtqueue_disable_cb(sq->vq);
-		napi_schedule(&sq->napi);
-	}
 
 	return NETDEV_TX_OK;
 }
