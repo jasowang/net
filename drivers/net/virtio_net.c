@@ -959,6 +959,8 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
 
+	virtqueue_disable_cb(sq->vq);
+
 	/* Try to transmit */
 	err = xmit_skb(sq, skb);
 
@@ -978,9 +980,14 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (sq->vq->num_free < 2+MAX_SKB_FRAGS)
 		netif_stop_subqueue(dev, qnum);
 
-	if (kick || netif_xmit_stopped(txq))
+	if (kick || netif_xmit_stopped(txq)) {
 		virtqueue_kick(sq->vq);
-
+		if (!virtqueue_enable_cb_delayed(sq->vq) &&
+		    napi_schedule_prep(&sq->napi)) {
+			virtqueue_disable_cb(sq->vq);
+			__napi_schedule(&sq->napi);
+		}
+	}
 	return NETDEV_TX_OK;
 }
 
