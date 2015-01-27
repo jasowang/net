@@ -538,6 +538,8 @@ void virtqueue_disable_cb(struct virtqueue *_vq)
 	struct vring_virtqueue *vq = to_vvq(_vq);
 
 	vq->vring.avail->flags |= cpu_to_virtio16(_vq->vdev, VRING_AVAIL_F_NO_INTERRUPT);
+	vring_used_event(&vq->vring) = cpu_to_virtio16(_vq->vdev,
+						       vq->vring.avail->idx);
 }
 EXPORT_SYMBOL_GPL(virtqueue_disable_cb);
 
