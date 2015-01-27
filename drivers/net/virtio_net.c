@@ -245,8 +245,10 @@ static void skb_xmit_done(struct virtqueue *vq)
 	struct virtnet_info *vi = vq->vdev->priv;
 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
 
-	virtqueue_disable_cb(sq->vq);
-	napi_schedule(&sq->napi);
+	if (napi_schedule_prep(&sq->napi)) {
+		virtqueue_disable_cb(sq->vq);
+		__napi_schedule(&sq->napi);
+	}
 }
 
 static unsigned int mergeable_ctx_to_buf_truesize(unsigned long mrg_ctx)
@@ -805,19 +807,17 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 	struct virtnet_info *vi = sq->vq->vdev->priv;
 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev, vq2txq(sq->vq));
 	u32 limit = vi->tx_work_limit;
-	unsigned int sent;
+	unsigned int r, sent;
 
 	__netif_tx_lock(txq, smp_processor_id());
 	sent = free_old_xmit_skbs(txq, sq, limit);
 	if (sent < limit) {
+		r = virtqueue_enable_cb_prepare(sq->vq);
 		napi_complete(napi);
-		/* Note: we must enable cb *after* napi_complete, because
-		 * napi_schedule calls from callbacks that trigger before
-		 * napi_complete are ignored.
-		 */
-		if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
+		if (unlikely(virtqueue_poll(sq->vq, r)) &&
+		    napi_schedule_prep(napi)) {
 			virtqueue_disable_cb(sq->vq);
-			napi_schedule(&sq->napi);
+			__napi_schedule(napi);
 		}
 	}
 	__netif_tx_unlock(txq);
