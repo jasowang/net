@@ -1431,8 +1431,8 @@ static int virtnet_set_coalesce(struct net_device *dev,
 	    vi->tx_max_coalesced_frames != ec->tx_max_coalesced_frames) {
 		for (i = 0; i < vi->max_queue_pairs; i++) {
 			vi->vdev->config->set_coalesce(vi->vdev, txq2vq(i),
-						ec->rx_max_coalesced_frames,
-						ec->rx_coalesce_usecs);
+						ec->tx_max_coalesced_frames,
+						ec->tx_coalesce_usecs);
 		}
 		vi->tx_coalesce_usecs = ec->tx_coalesce_usecs;
 		vi->tx_max_coalesced_frames = ec->tx_max_coalesced_frames;
