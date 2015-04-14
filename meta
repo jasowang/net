@@ -1,6 +1,6 @@
 Version: 1
-Previous: 506b11f3e1a4f635eab797a8dbe52b3068013360
-Head: 748166f41df149966a869f3aeab46f83c2cd6077
+Previous: 1468e5b11058a57fc647d9df14830cd06d99fb6f
+Head: a6ae9d1061b6e3f41dbd381a41fa82be8a922491
 Applied:
   virtio_net-enable-tx-interrupt: 4292f6d5c72631e51c048cac5ee46817f4710b6f
   virtio-net-should-use: 307086febd0a74ccc916a058ce62a53e8d06ef6b
@@ -9,8 +9,8 @@ Applied:
   virtio_ring-try-to-disable: 226a7143d0b1d18328fe23920081963d63253d30
   virtio-net-disable_cb-in: 3b18b784a641b1a799c8a3bc7a8a0bc4f457b54b
   virito-add-coalescing: 748166f41df149966a869f3aeab46f83c2cd6077
+  virtio-net-add-basic-interrupt: a6ae9d1061b6e3f41dbd381a41fa82be8a922491
 Unapplied:
-  virtio-net-add-basic-interrupt: f676a08f7b0679353d49573635edb0af35ae39f0
   vhost-let-vhost_signal-returns: 2770b427d2f9be214c40f0aee8898ca997061318
   vhost_net-interrupt-coalescing: 5b51f15af9e53681400162e11991f939c0020a4a
 Hidden:
