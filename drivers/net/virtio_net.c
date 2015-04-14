@@ -1409,22 +1409,19 @@ static int virtnet_set_coalesce(struct net_device *dev,
 				struct ethtool_coalesce *ec)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
-	struct scatterlist sg;
-	struct virtio_net_ctrl_coalesce c;
+	int i;
 
-	if (!vi->has_cvq ||
-	    !virtio_has_feature(vi->vdev, VIRTIO_NET_F_CTRL_COALESCE))
-		return -EOPNOTSUPP;
+	if (!vi->vdev->config->set_coalesce) {
+		dev_warn(&dev->dev, "Transport does not support coalescing.\n");
+		return -EINVAL;
+	}
+
 	if (vi->rx_coalesce_usecs != ec->rx_coalesce_usecs ||
 	    vi->rx_max_coalesced_frames != ec->rx_max_coalesced_frames) {
-		c.coalesce_usecs = ec->rx_coalesce_usecs;
-		c.max_coalesced_frames = ec->rx_max_coalesced_frames;
-		sg_init_one(&sg, &c, sizeof(c));
-		if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_COALESCE,
-					  VIRTIO_NET_CTRL_COALESCE_RX_SET,
-					  &sg)) {
-			dev_warn(&dev->dev, "Fail to set rx coalescing\n");
-			return -EINVAL;
+		for (i = 0; i < vi->max_queue_pairs; i++) {
+			vi->vdev->config->set_coalesce(vi->vdev, rxq2vq(i),
+						ec->rx_max_coalesced_frames,
+						ec->rx_coalesce_usecs);
 		}
 		vi->rx_coalesce_usecs = ec->rx_coalesce_usecs;
 		vi->rx_max_coalesced_frames = ec->rx_max_coalesced_frames;
@@ -1432,14 +1429,10 @@ static int virtnet_set_coalesce(struct net_device *dev,
 
 	if (vi->tx_coalesce_usecs != ec->tx_coalesce_usecs ||
 	    vi->tx_max_coalesced_frames != ec->tx_max_coalesced_frames) {
-		c.coalesce_usecs = ec->tx_coalesce_usecs;
-		c.max_coalesced_frames = ec->tx_max_coalesced_frames;
-		sg_init_one(&sg, &c, sizeof(c));
-		if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_COALESCE,
-					  VIRTIO_NET_CTRL_COALESCE_TX_SET,
-					  &sg)) {
-			dev_warn(&dev->dev, "Fail to set tx coalescing\n");
-			return -EINVAL;
+		for (i = 0; i < vi->max_queue_pairs; i++) {
+			vi->vdev->config->set_coalesce(vi->vdev, txq2vq(i),
+						ec->rx_max_coalesced_frames,
+						ec->rx_coalesce_usecs);
 		}
 		vi->tx_coalesce_usecs = ec->tx_coalesce_usecs;
 		vi->tx_max_coalesced_frames = ec->tx_max_coalesced_frames;
