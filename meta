@@ -1,6 +1,6 @@
 Version: 1
-Previous: b40d2f2283ba01bf5b2acccc8531b8250084147f
-Head: c3d0dac6935e388547d7b7721e80b9c996eb90a1
+Previous: d9bafc780510b1216c576efa40916084a687edbc
+Head: 6e8a9d9148b6dc2305fcaaf60550b81cbb6319c6
 Applied:
 Unapplied:
   virtio_net-enable-tx-interrupt: 4292f6d5c72631e51c048cac5ee46817f4710b6f
