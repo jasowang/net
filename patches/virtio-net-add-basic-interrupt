@@ -1,5 +1,5 @@
 Bottom: 44bf0d63c5a4ab0cb1483e03c3e262d256dcd6d8
-Top:    96b700dcaed809cc6c0f25cded463e7018f37a4c
+Top:    7b948c1df9fc642c41aa852869bf1099c9dc7fb1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-09-01 11:33:08 +0800
 
@@ -98,3 +98,28 @@ index 9127214..7073cd7 100644
  };
  
  #define MIN_MTU 68
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index d6c1bf4..b7c7aaf 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -781,6 +781,8 @@ void vring_transport_features(struct virtio_device *vdev)
+ 			break;
+ 		case VIRTIO_RING_F_EVENT_IDX:
+ 			break;
++		case VIRTIO_RING_F_INTR_COALESCING:
++			break;
+ 		case VIRTIO_F_VERSION_1:
+ 			break;
+ 		default:
+diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
+index a3318f3..71a27ce 100644
+--- a/include/uapi/linux/virtio_ring.h
++++ b/include/uapi/linux/virtio_ring.h
+@@ -58,6 +58,7 @@
+ /* The Host publishes the avail index for which it expects a kick
+  * at the end of the used ring. Guest should ignore the used->flags field. */
+ #define VIRTIO_RING_F_EVENT_IDX		29
++#define VIRTIO_RING_F_INTR_COALESCING   31
+ 
+ /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
+ struct vring_desc {
