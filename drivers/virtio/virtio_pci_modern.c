@@ -233,6 +233,8 @@ static void vp_set_coalesce(struct virtio_device *vdev, int n,
 {
 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
 
+	printk("index %d c %d u %d\n",
+		n, coalesce_count, coalesce_us);
 	iowrite16(n, &vp_dev->common->queue_select);
 	iowrite32(coalesce_count, &vp_dev->common->queue_coalesce_count);
 	iowrite32(coalesce_us, &vp_dev->common->queue_coalesce_us);
