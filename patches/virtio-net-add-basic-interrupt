@@ -1,5 +1,5 @@
 Bottom: 44bf0d63c5a4ab0cb1483e03c3e262d256dcd6d8
-Top:    ce221cd78930a979aa658fca78848d28f5908a97
+Top:    b0c457ec7c1940a7373bf4d5e54fa688a3a73d8f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-09-01 11:33:08 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9127214..9deeeaa 100644
+index 9127214..95bdee0 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -145,6 +145,11 @@ struct virtnet_info {
@@ -60,8 +60,8 @@ index 9127214..9deeeaa 100644
 +	    vi->tx_max_coalesced_frames != ec->tx_max_coalesced_frames) {
 +		for (i = 0; i < vi->max_queue_pairs; i++) {
 +			vi->vdev->config->set_coalesce(vi->vdev, txq2vq(i),
-+						ec->rx_max_coalesced_frames,
-+						ec->rx_coalesce_usecs);
++						ec->tx_max_coalesced_frames,
++						ec->tx_coalesce_usecs);
 +		}
 +		vi->tx_coalesce_usecs = ec->tx_coalesce_usecs;
 +		vi->tx_max_coalesced_frames = ec->tx_max_coalesced_frames;
