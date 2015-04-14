@@ -1,0 +1,143 @@
+Bottom: 3afb9a6422ce849e0142a1b782d2616d96e0afd8
+Top:    2ba237334a65da2bc5022b36bf5cea94b4a56419
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-01-26 22:19:11 -0500
+
+virtio-net: serializing cb() and napi()
+
+We currently use:
+
+static void skb_xmit_done(struct virtqueue *vq)
+{
+        struct virtnet_info *vi = vq->vdev->priv;
+        struct send_queue *sq = &vi->sq[vq2txq(vq)];
+        static unsigned int fake, count;
+
+        virtqueue_disable_cb(sq->vq);
+        napi_schedule(&sq->napi);
+}
+
+On platform that atomic operations was not serialized:
+
+Disable cb before checking NAPI state to prevent:
+[tx intr] napi_schedule_prep() == false;
+[tx napi] napi_complete()
+[tx napi] enable_cb_delayed()
+[tx intr] disable_cb()
+[tx intr] nothing!
+
+There may need a smp_mb_before_atomic(), or even and mb().
+
+Change this to:
+
+if (__napi_schedule_prep(&sq->napi)) {
+   virtqueue_diable_cb(sq->vq);
+   __napi_schedule(&sq->napi);
+}
+
+To solve this race.
+
+Similiarly, in virtnet_poll_tx(), we have:
+
+            if (sent < limit) {
+               napi_complete(napi);
+                /* Note: we must enable cb *after* napi_complete, because
+                 * napi_schedule calls from callbacks that trigger before
+                 * napi_complete are ignored.
+               if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
+                   virtqueue_disable_cb(sq->vq);
+                   napi_schedule(&sq->napi);
+               }
+
+Though the comments said we much enable cb after napi complete, there's no
+guarantee that it will do this. so a wmb() was need to prevent:
+
+[tx napi] virtqueue_enable_cb_delayed() == false
+[tx intr] virtqueue_disable_cb()
+[tx intr] napi_schedule_prep() == false
+[tx intr] nothing
+[tx napi] return!
+
+So change this to:
+
+if (sent < limit) {
+   r = virtqueue_enable_cb_prepare(sq->vq);
+   napi_complete(napi)
+   if (unlikely(virtqueue_poll(sq->vq, r)) &&
+       napi_schedule_prep(napi) {
+       virtqueue_disable_cb(sq->vq);
+       __napi_schedule(napi);
+}
+
+It works since, there's napi_complete() which makes sure that it was serialized
+with virtqueue_enable_cb_prepare():
+
+void __napi_complete(struct napi_struct *n)
+{
+        BUG_ON(!test_bit(NAPI_STATE_SCHED, &n->state));
+
+        list_del_init(&n->poll_list);
+        smp_mb__before_atomic();
+        clear_bit(NAPI_STATE_SCHED, &n->state);
+}
+
+and there's a virtio_mb() in virtqueue_poll() which is guaranteed to be
+serialized with napi_complete():
+
+bool virtqueue_poll(struct virtqueue *_vq, unsigned last_used_idx)
+{
+        struct vring_virtqueue *vq = to_vvq(_vq);
+
+        virtio_mb(vq->weak_barriers);
+        return (u16)last_used_idx != virtio16_to_cpu(_vq->vdev,
+        vq->vring.used->idx);
+}
+EXPORT_SYMBOL_GPL(virtqueue_poll);
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index f993174..2ab331f0 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -245,8 +245,10 @@ static void skb_xmit_done(struct virtqueue *vq)
+ 	struct virtnet_info *vi = vq->vdev->priv;
+ 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
+ 
+-	virtqueue_disable_cb(sq->vq);
+-	napi_schedule(&sq->napi);
++	if (napi_schedule_prep(&sq->napi)) {
++		virtqueue_disable_cb(sq->vq);
++		__napi_schedule(&sq->napi);
++	}
+ }
+ 
+ static unsigned int mergeable_ctx_to_buf_truesize(unsigned long mrg_ctx)
+@@ -805,19 +807,17 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
+ 	struct virtnet_info *vi = sq->vq->vdev->priv;
+ 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev, vq2txq(sq->vq));
+ 	u32 limit = vi->tx_work_limit;
+-	unsigned int sent;
++	unsigned int r, sent;
+ 
+ 	__netif_tx_lock(txq, smp_processor_id());
+ 	sent = free_old_xmit_skbs(txq, sq, limit);
+ 	if (sent < limit) {
++		r = virtqueue_enable_cb_prepare(sq->vq);
+ 		napi_complete(napi);
+-		/* Note: we must enable cb *after* napi_complete, because
+-		 * napi_schedule calls from callbacks that trigger before
+-		 * napi_complete are ignored.
+-		 */
+-		if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
++		if (unlikely(virtqueue_poll(sq->vq, r)) &&
++		    napi_schedule_prep(napi)) {
+ 			virtqueue_disable_cb(sq->vq);
+-			napi_schedule(&sq->napi);
++			__napi_schedule(napi);
+ 		}
+ 	}
+ 	__netif_tx_unlock(txq);

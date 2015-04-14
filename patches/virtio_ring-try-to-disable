@@ -1,0 +1,29 @@
+Bottom: 2ba237334a65da2bc5022b36bf5cea94b4a56419
+Top:    efa2ca54bbadff5e9dc55f8cce4cdcd68a0cfb6c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-01-27 00:20:51 -0500
+
+virtio_ring: try to disable event index callbacks in virtqueue_disable_cb()
+
+Currently, we do nothing to prevent the callbacks in virtqueue_disable_cb() when
+event index is used. This may cause spurious interrupts which may damage the
+performance. This patch tries to publish avail event as the used even to prevent
+the callbacks.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 096b857..d6c1bf4 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -538,6 +538,8 @@ void virtqueue_disable_cb(struct virtqueue *_vq)
+ 	struct vring_virtqueue *vq = to_vvq(_vq);
+ 
+ 	vq->vring.avail->flags |= cpu_to_virtio16(_vq->vdev, VRING_AVAIL_F_NO_INTERRUPT);
++	vring_used_event(&vq->vring) = cpu_to_virtio16(_vq->vdev,
++						       vq->vring.avail->idx);
+ }
+ EXPORT_SYMBOL_GPL(virtqueue_disable_cb);

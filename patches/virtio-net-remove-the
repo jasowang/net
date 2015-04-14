@@ -1,0 +1,60 @@
+Bottom: ed95af8a8dadd49110629bba504ae22d5ccb2307
+Top:    3afb9a6422ce849e0142a1b782d2616d96e0afd8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-01-26 21:58:31 -0500
+
+virtio-net: remove the optimizations in start_xmit()
+
+Remove the virtqueue_disable_cb()/virtqueue_enable_cb_delayed() paris in
+start_xmit(). We used to do:
+
+virtqueue_enable_cb()
+add bufs
+virtqueue_enable_cb_delayed()
+
+The interrupts was enabled (event index was published) on each
+start_xmit(). After removing those in start_xmit(), we get:
+
+add bufs
+tx intr
+enable_cb_delayed()
+add bufs
+add bufs
+add bufs
+add bufs
+tx intr
+
+Probably it can save some interrupts.
+
+Test shows that almost all spurious tx interrupt was saved.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 91fed38..f993174 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -956,8 +956,6 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	struct netdev_queue *txq = netdev_get_tx_queue(dev, qnum);
+ 	bool kick = !skb->xmit_more;
+ 
+-	virtqueue_disable_cb(sq->vq);
+-
+ 	/* timestamp packet in software */
+ 	skb_tx_timestamp(skb);
+ 
+@@ -983,12 +981,6 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	if (kick || netif_xmit_stopped(txq))
+ 		virtqueue_kick(sq->vq);
+ 
+-	free_old_xmit_skbs(txq, sq, virtqueue_get_vring_size(sq->vq));
+-	if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
+-		virtqueue_disable_cb(sq->vq);
+-		napi_schedule(&sq->napi);
+-	}
+-
+ 	return NETDEV_TX_OK;
+ }

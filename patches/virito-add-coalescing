@@ -1,0 +1,25 @@
+Bottom: 08c8c892c353c36c9e61010a448d5779a7c146c4
+Top:    1398a9b4440d11f38cf61e53ef7d317de203bf9a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-13 02:28:20 -0400
+
+virito: add coalescing parameters setting
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/virtio_config.h b/include/linux/virtio_config.h
+index ca3ed78..a95b89c 100644
+--- a/include/linux/virtio_config.h
++++ b/include/linux/virtio_config.h
+@@ -66,6 +66,8 @@ struct virtio_config_ops {
+ 	u32 (*generation)(struct virtio_device *vdev);
+ 	u8 (*get_status)(struct virtio_device *vdev);
+ 	void (*set_status)(struct virtio_device *vdev, u8 status);
++	void (*set_coalsece)(struct virtio_device *vdev, int n,
++			     u32 coalesce_count, u32 coalesce_us);
+ 	void (*reset)(struct virtio_device *vdev);
+ 	int (*find_vqs)(struct virtio_device *, unsigned nvqs,
+ 			struct virtqueue *vqs[],

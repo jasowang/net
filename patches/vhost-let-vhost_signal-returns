@@ -1,0 +1,45 @@
+Bottom: 19d0c39f07b14d85d6c13d56198ff9726150e1d5
+Top:    d13b47087633a7438a3a5e97857e075865a14036
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-01-20 13:45:15 +0800
+
+vhost: let vhost_signal() returns whether or not
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 2ee2826..a8766fe 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1482,11 +1482,14 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ 
+ /* This actually signals the guest, using eventfd. */
+-void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+ 	/* Signal the Guest tell them we used something up. */
+-	if (vq->call_ctx && vhost_notify(dev, vq))
++	if (vq->call_ctx && vhost_notify(dev, vq)) {
+ 		eventfd_signal(vq->call_ctx, 1);
++		return true;
++	}
++	return false;
+ }
+ EXPORT_SYMBOL_GPL(vhost_signal);
+ 
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 8c1c792..a482563 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -148,7 +148,7 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       unsigned int id, int len);
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+-void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++bool vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
