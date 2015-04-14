@@ -1,0 +1,49 @@
+Bottom: b0c457ec7c1940a7373bf4d5e54fa688a3a73d8f
+Top:    96b700dcaed809cc6c0f25cded463e7018f37a4c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-14 16:22:44 +0800
+
+Refresh of virtio-net-add-basic-interrupt
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 95bdee0..7073cd7 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2111,7 +2111,6 @@ static unsigned int features[] = {
+ 	VIRTIO_NET_F_GUEST_ANNOUNCE, VIRTIO_NET_F_MQ,
+ 	VIRTIO_NET_F_CTRL_MAC_ADDR,
+ 	VIRTIO_F_ANY_LAYOUT,
+-	VIRTIO_NET_F_CTRL_COALESCE,
+ };
+ 
+ static struct virtio_driver virtio_net_driver = {
+diff --git a/include/uapi/linux/virtio_net.h b/include/uapi/linux/virtio_net.h
+index 5757fd6..7bbee79 100644
+--- a/include/uapi/linux/virtio_net.h
++++ b/include/uapi/linux/virtio_net.h
+@@ -34,7 +34,6 @@
+ /* The feature bitmap for virtio net */
+ #define VIRTIO_NET_F_CSUM	0	/* Host handles pkts w/ partial csum */
+ #define VIRTIO_NET_F_GUEST_CSUM	1	/* Guest handles pkts w/ partial csum */
+-#define VIRTIO_NET_F_CTRL_COALESCE 3	/* Set coalescing */
+ #define VIRTIO_NET_F_MAC	5	/* Host has given MAC address. */
+ #define VIRTIO_NET_F_GUEST_TSO4	7	/* Guest can handle TSOv4 in. */
+ #define VIRTIO_NET_F_GUEST_TSO6	8	/* Guest can handle TSOv6 in. */
+@@ -227,15 +226,4 @@ struct virtio_net_ctrl_mq {
+  #define VIRTIO_NET_CTRL_MQ_VQ_PAIRS_MIN        1
+  #define VIRTIO_NET_CTRL_MQ_VQ_PAIRS_MAX        0x8000
+ 
+-struct virtio_net_ctrl_coalesce {
+-	__u32 coalesce_usecs;
+-	__u32 max_coalesced_frames;
+-};
+-
+-#define VIRTIO_NET_CTRL_COALESCE 6
+- #define VIRTIO_NET_CTRL_COALESCE_TX_SET 0
+- #define VIRTIO_NET_CTRL_COALESCE_TX_GET 1
+- #define VIRTIO_NET_CTRL_COALESCE_RX_SET 2
+- #define VIRTIO_NET_CTRL_COALESCE_RX_GET 3
+-
+ #endif /* _LINUX_VIRTIO_NET_H */
