@@ -1,0 +1,96 @@
+Bottom: 1398a9b4440d11f38cf61e53ef7d317de203bf9a
+Top:    a3b64c9688fbd91fde7eff3724e590a5f2143f47
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-14 11:19:52 +0800
+
+Refresh of virito-add-coalescing
+
+---
+
+diff --git a/drivers/virtio/virtio_pci_modern.c b/drivers/virtio/virtio_pci_modern.c
+index 2aa38e5..39e42bd 100644
+--- a/drivers/virtio/virtio_pci_modern.c
++++ b/drivers/virtio/virtio_pci_modern.c
+@@ -228,6 +228,16 @@ static void vp_set_status(struct virtio_device *vdev, u8 status)
+ 	iowrite8(status, &vp_dev->common->device_status);
+ }
+ 
++static void vp_set_coalesce(struct virtio_device *vdev, int n,
++			    u32 coalesce_count, u32 coalesce_us)
++{
++	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
++
++	iowrite16(n, &vp_dev->common->queue_select);
++	iowrite32(coalesce_count, &vp_dev->common->queue_coalesce_count);
++	iowrite32(coalesce_us, &vp_dev->common->queue_coalesce_us);
++}
++
+ static void vp_reset(struct virtio_device *vdev)
+ {
+ 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
+@@ -443,6 +453,7 @@ static const struct virtio_config_ops virtio_pci_config_ops = {
+ 	.generation	= vp_generation,
+ 	.get_status	= vp_get_status,
+ 	.set_status	= vp_set_status,
++	.set_coalesce   = vp_set_coalesce,
+ 	.reset		= vp_reset,
+ 	.find_vqs	= vp_modern_find_vqs,
+ 	.del_vqs	= vp_del_vqs,
+@@ -550,6 +561,10 @@ static inline void check_offsets(void)
+ 		     offsetof(struct virtio_pci_common_cfg, queue_used_lo));
+ 	BUILD_BUG_ON(VIRTIO_PCI_COMMON_Q_USEDHI !=
+ 		     offsetof(struct virtio_pci_common_cfg, queue_used_hi));
++	BUILD_BUG_ON(VIRTIO_PCI_COMMON_Q_COALESCE_C !=
++		offsetof(struct virtio_pci_common_cfg, queue_coalesce_count));
++	BUILD_BUG_ON(VIRTIO_PCI_COMMON_Q_COALESCE_U !=
++		offsetof(struct virtio_pci_common_cfg, queue_coalesce_us));
+ }
+ 
+ /* the PCI probing function */
+diff --git a/include/linux/virtio_config.h b/include/linux/virtio_config.h
+index a95b89c..09d0899 100644
+--- a/include/linux/virtio_config.h
++++ b/include/linux/virtio_config.h
+@@ -28,6 +28,12 @@
+  * @set_status: write the status byte
+  *	vdev: the virtio_device
+  *	status: the new status byte
++ * @set_coalesce: set coalescing parameters
++ *	vdev: the virtio_device
++ *	n: the queue index
++ *	coalesce_count: maximum coalesced count before issuing interrupt
++ *      coalesce_count: maximum micro seconds to wait if there's a
++ *      pending buffer
+  * @reset: reset the device
+  *	vdev: the virtio device
+  *	After this, status and feature negotiation must be done again
+@@ -66,7 +72,7 @@ struct virtio_config_ops {
+ 	u32 (*generation)(struct virtio_device *vdev);
+ 	u8 (*get_status)(struct virtio_device *vdev);
+ 	void (*set_status)(struct virtio_device *vdev, u8 status);
+-	void (*set_coalsece)(struct virtio_device *vdev, int n,
++	void (*set_coalesce)(struct virtio_device *vdev, int n,
+ 			     u32 coalesce_count, u32 coalesce_us);
+ 	void (*reset)(struct virtio_device *vdev);
+ 	int (*find_vqs)(struct virtio_device *, unsigned nvqs,
+diff --git a/include/uapi/linux/virtio_pci.h b/include/uapi/linux/virtio_pci.h
+index 7530146..3396026 100644
+--- a/include/uapi/linux/virtio_pci.h
++++ b/include/uapi/linux/virtio_pci.h
+@@ -155,6 +155,8 @@ struct virtio_pci_common_cfg {
+ 	__le32 queue_avail_hi;		/* read-write */
+ 	__le32 queue_used_lo;		/* read-write */
+ 	__le32 queue_used_hi;		/* read-write */
++	__le32 queue_coalesce_count;    /* read-write */
++	__le32 queue_coalesce_us;       /* read-write */
+ };
+ 
+ /* Macro versions of offsets for the Old Timers! */
+@@ -187,6 +189,8 @@ struct virtio_pci_common_cfg {
+ #define VIRTIO_PCI_COMMON_Q_AVAILHI	44
+ #define VIRTIO_PCI_COMMON_Q_USEDLO	48
+ #define VIRTIO_PCI_COMMON_Q_USEDHI	52
++#define VIRTIO_PCI_COMMON_Q_COALESCE_C  56
++#define VIRTIO_PCI_COMMON_Q_COALESCE_U  60
+ 
+ #endif /* VIRTIO_PCI_NO_MODERN */
