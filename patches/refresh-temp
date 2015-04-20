@@ -1,0 +1,23 @@
+Bottom: 0f558897f461a3a70d1342450e9fe41032f650fd
+Top:    1c9f34cba4e623ba038e3c4276f861d0cf8ed09c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-20 17:01:28 +0800
+
+Refresh of vhost_net-interrupt-coalescing
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 1577af6..0e5768e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -63,8 +63,7 @@ enum {
+ 	VHOST_NET_FEATURES = VHOST_FEATURES |
+ 			 (1ULL << VHOST_NET_F_VIRTIO_NET_HDR) |
+ 			 (1ULL << VIRTIO_NET_F_MRG_RXBUF) |
+-			 (1ULL << VIRTIO_F_VERSION_1) |
+-			 (1ULL << VIRTIO_NET_F_CTRL_COALESCE),
++			 (1ULL << VIRTIO_F_VERSION_1)
+ };
+ 
+ enum {
