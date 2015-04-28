@@ -1,0 +1,51 @@
+Bottom: ec91c695e452602aaf71a53a0fc5cc088c63ef9e
+Top:    806ffeb85606cda8470ff90864f5a40497888785
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-28 15:05:41 +0800
+
+Refresh of virito-net-limit-tx-interrupt
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index d9e5d05..1c93ca2 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -125,6 +125,9 @@ struct virtnet_info {
+ 	/* Host can handle any s/g split between our header and packet data */
+ 	bool any_header_sg;
+ 
++	/* Host can coalesce interrupts */
++	bool intr_coalescing;
++
+ 	/* Packet virtio header size */
+ 	u8 hdr_len;
+ 
+@@ -239,7 +242,8 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
+ 		packets++;
+ 	}
+ 
+-	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
++	if (vi->intr_coalescing &&
++	    sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
+ 		netif_wake_subqueue(vi->dev, vq2txq(sq->vq));
+ 
+ 	return packets;
+@@ -250,7 +254,7 @@ static void skb_xmit_done(struct virtqueue *vq)
+ 	struct virtnet_info *vi = vq->vdev->priv;
+ 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
+ 
+-	if (virtio_has_feature(vi->vdev, VIRTIO_RING_F_INTR_COALESCING)) {
++	if (vi->intr_coalescing) {
+ 		if (napi_schedule_prep(&sq->napi)) {
+ 			virtqueue_disable_cb(sq->vq);
+ 			__napi_schedule(&sq->napi);
+@@ -2005,6 +2009,9 @@ static int virtnet_probe(struct virtio_device *vdev)
+ 	if (virtio_has_feature(vdev, VIRTIO_NET_F_CTRL_VQ))
+ 		vi->has_cvq = true;
+ 
++	if (virtio_has_feature(vdev, VIRTIO_RING_F_INTR_COALESCING))
++		vi->intr_coalescing = true;
++
+ 	if (vi->any_header_sg)
+ 		dev->needed_headroom = vi->hdr_len;
