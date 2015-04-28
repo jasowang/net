@@ -250,9 +250,17 @@ static void skb_xmit_done(struct virtqueue *vq)
 	struct virtnet_info *vi = vq->vdev->priv;
 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
 
-	if (napi_schedule_prep(&sq->napi)) {
-		virtqueue_disable_cb(sq->vq);
-		__napi_schedule(&sq->napi);
+	if (virtio_has_feature(vi->vdev, VIRTIO_RING_F_INTR_COALESCING)) {
+		if (napi_schedule_prep(&sq->napi)) {
+			virtqueue_disable_cb(sq->vq);
+			__napi_schedule(&sq->napi);
+		}
+	} else {
+		/* Suppress further interrupts. */
+		virtqueue_disable_cb(vq);
+
+		/* We were probably waiting for more output buffers. */
+		netif_wake_subqueue(vi->dev, vq2txq(vq));
 	}
 }
 
@@ -961,6 +969,59 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, qnum);
 	bool kick = !skb->xmit_more;
 
+	/* Free up any pending old buffers before queueing new ones. */
+	free_old_xmit_skbs(txq, sq, virtqueue_get_vring_size(sq->vq));
+
+	/* timestamp packet in software */
+	skb_tx_timestamp(skb);
+
+	/* Try to transmit */
+	err = xmit_skb(sq, skb);
+
+	/* This should not happen! */
+	if (unlikely(err)) {
+		dev->stats.tx_fifo_errors++;
+		if (net_ratelimit())
+			dev_warn(&dev->dev,
+				 "Unexpected TXQ (%d) queue failure: %d\n", qnum, err);
+		dev->stats.tx_dropped++;
+		dev_kfree_skb_any(skb);
+		return NETDEV_TX_OK;
+	}
+
+	/* Don't wait up for transmitted skbs to be freed. */
+	skb_orphan(skb);
+	nf_reset(skb);
+
+	/* Apparently nice girls don't return TX_BUSY; stop the queue
+	 * before it gets out of hand.  Naturally, this wastes entries. */
+	if (sq->vq->num_free < 2+MAX_SKB_FRAGS) {
+		netif_stop_subqueue(dev, qnum);
+		if (unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
+			/* More just got used, free them then recheck. */
+			free_old_xmit_skbs(txq, sq, virtqueue_get_vring_size(sq->vq));
+			if (sq->vq->num_free >= 2+MAX_SKB_FRAGS) {
+				netif_start_subqueue(dev, qnum);
+				virtqueue_disable_cb(sq->vq);
+			}
+		}
+	}
+
+	if (kick || netif_xmit_stopped(txq))
+		virtqueue_kick(sq->vq);
+
+	return NETDEV_TX_OK;
+}
+
+static netdev_tx_t start_xmit_txintr(struct sk_buff *skb, struct net_device *dev)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+	int qnum = skb_get_queue_mapping(skb);
+	struct send_queue *sq = &vi->sq[qnum];
+	int err;
+	struct netdev_queue *txq = netdev_get_tx_queue(dev, qnum);
+	bool kick = !skb->xmit_more;
+
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
 
@@ -1498,6 +1559,25 @@ static const struct net_device_ops virtnet_netdev = {
 #endif
 };
 
+static const struct net_device_ops virtnet_netdev_txintr = {
+	.ndo_open            = virtnet_open,
+	.ndo_stop   	     = virtnet_close,
+	.ndo_start_xmit      = start_xmit_txintr,
+	.ndo_validate_addr   = eth_validate_addr,
+	.ndo_set_mac_address = virtnet_set_mac_address,
+	.ndo_set_rx_mode     = virtnet_set_rx_mode,
+	.ndo_change_mtu	     = virtnet_change_mtu,
+	.ndo_get_stats64     = virtnet_stats,
+	.ndo_vlan_rx_add_vid = virtnet_vlan_rx_add_vid,
+	.ndo_vlan_rx_kill_vid = virtnet_vlan_rx_kill_vid,
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	.ndo_poll_controller = virtnet_netpoll,
+#endif
+#ifdef CONFIG_NET_RX_BUSY_POLL
+	.ndo_busy_poll		= virtnet_busy_poll,
+#endif
+};
+
 static void virtnet_config_changed_work(struct work_struct *work)
 {
 	struct virtnet_info *vi =
@@ -1835,7 +1915,10 @@ static int virtnet_probe(struct virtio_device *vdev)
 
 	/* Set up network device as normal. */
 	dev->priv_flags |= IFF_UNICAST_FLT | IFF_LIVE_ADDR_CHANGE;
-	dev->netdev_ops = &virtnet_netdev;
+	if (virtio_has_feature(vdev, VIRTIO_RING_F_INTR_COALESCING))
+		dev->netdev_ops = &virtnet_netdev_txintr;
+	else
+		dev->netdev_ops = &virtnet_netdev;
 	dev->features = NETIF_F_HIGHDMA;
 
 	dev->ethtool_ops = &virtnet_ethtool_ops;
