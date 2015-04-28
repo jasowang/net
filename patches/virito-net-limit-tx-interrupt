@@ -1,0 +1,11 @@
+Bottom: b6b78df32c4edf767538ab8747927e23d7af9214
+Top:    b6b78df32c4edf767538ab8747927e23d7af9214
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-28 14:33:03 +0800
+
+virito-net: limit tx interrupt only for new host
+
+
+---
+
+
