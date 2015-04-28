@@ -125,6 +125,9 @@ struct virtnet_info {
 	/* Host can handle any s/g split between our header and packet data */
 	bool any_header_sg;
 
+	/* Host can coalesce interrupts */
+	bool intr_coalescing;
+
 	/* Packet virtio header size */
 	u8 hdr_len;
 
@@ -239,7 +242,8 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
 		packets++;
 	}
 
-	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
+	if (vi->intr_coalescing &&
+	    sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
 		netif_wake_subqueue(vi->dev, vq2txq(sq->vq));
 
 	return packets;
@@ -250,7 +254,7 @@ static void skb_xmit_done(struct virtqueue *vq)
 	struct virtnet_info *vi = vq->vdev->priv;
 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
 
-	if (virtio_has_feature(vi->vdev, VIRTIO_RING_F_INTR_COALESCING)) {
+	if (vi->intr_coalescing) {
 		if (napi_schedule_prep(&sq->napi)) {
 			virtqueue_disable_cb(sq->vq);
 			__napi_schedule(&sq->napi);
@@ -2004,6 +2008,9 @@ static int virtnet_probe(struct virtio_device *vdev)
 
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_CTRL_VQ))
 		vi->has_cvq = true;
+
+	if (virtio_has_feature(vdev, VIRTIO_RING_F_INTR_COALESCING))
+		vi->intr_coalescing = true;
 
 	if (vi->any_header_sg)
 		dev->needed_headroom = vi->hdr_len;
