@@ -1,5 +1,5 @@
 Bottom: 3ec7be255291ec746269f7e0149c6c466f03ef3a
-Top:    ec91c695e452602aaf71a53a0fc5cc088c63ef9e
+Top:    806ffeb85606cda8470ff90864f5a40497888785
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-28 14:33:03 +0800
 
@@ -11,17 +11,37 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 7073cd7..d9e5d05 100644
+index 7073cd7..1c93ca2 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -250,9 +250,17 @@ static void skb_xmit_done(struct virtqueue *vq)
+@@ -125,6 +125,9 @@ struct virtnet_info {
+ 	/* Host can handle any s/g split between our header and packet data */
+ 	bool any_header_sg;
+ 
++	/* Host can coalesce interrupts */
++	bool intr_coalescing;
++
+ 	/* Packet virtio header size */
+ 	u8 hdr_len;
+ 
+@@ -239,7 +242,8 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
+ 		packets++;
+ 	}
+ 
+-	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
++	if (vi->intr_coalescing &&
++	    sq->vq->num_free >= 2 + MAX_SKB_FRAGS)
+ 		netif_wake_subqueue(vi->dev, vq2txq(sq->vq));
+ 
+ 	return packets;
+@@ -250,9 +254,17 @@ static void skb_xmit_done(struct virtqueue *vq)
  	struct virtnet_info *vi = vq->vdev->priv;
  	struct send_queue *sq = &vi->sq[vq2txq(vq)];
  
 -	if (napi_schedule_prep(&sq->napi)) {
 -		virtqueue_disable_cb(sq->vq);
 -		__napi_schedule(&sq->napi);
-+	if (virtio_has_feature(vi->vdev, VIRTIO_RING_F_INTR_COALESCING)) {
++	if (vi->intr_coalescing) {
 +		if (napi_schedule_prep(&sq->napi)) {
 +			virtqueue_disable_cb(sq->vq);
 +			__napi_schedule(&sq->napi);
@@ -35,7 +55,7 @@ index 7073cd7..d9e5d05 100644
  	}
  }
  
-@@ -961,6 +969,59 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -961,6 +973,59 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
  	struct netdev_queue *txq = netdev_get_tx_queue(dev, qnum);
  	bool kick = !skb->xmit_more;
  
@@ -95,7 +115,7 @@ index 7073cd7..d9e5d05 100644
  	/* timestamp packet in software */
  	skb_tx_timestamp(skb);
  
-@@ -1498,6 +1559,25 @@ static const struct net_device_ops virtnet_netdev = {
+@@ -1498,6 +1563,25 @@ static const struct net_device_ops virtnet_netdev = {
  #endif
  };
  
@@ -121,7 +141,7 @@ index 7073cd7..d9e5d05 100644
  static void virtnet_config_changed_work(struct work_struct *work)
  {
  	struct virtnet_info *vi =
-@@ -1835,7 +1915,10 @@ static int virtnet_probe(struct virtio_device *vdev)
+@@ -1835,7 +1919,10 @@ static int virtnet_probe(struct virtio_device *vdev)
  
  	/* Set up network device as normal. */
  	dev->priv_flags |= IFF_UNICAST_FLT | IFF_LIVE_ADDR_CHANGE;
@@ -133,3 +153,12 @@ index 7073cd7..d9e5d05 100644
  	dev->features = NETIF_F_HIGHDMA;
  
  	dev->ethtool_ops = &virtnet_ethtool_ops;
+@@ -1922,6 +2009,9 @@ static int virtnet_probe(struct virtio_device *vdev)
+ 	if (virtio_has_feature(vdev, VIRTIO_NET_F_CTRL_VQ))
+ 		vi->has_cvq = true;
+ 
++	if (virtio_has_feature(vdev, VIRTIO_RING_F_INTR_COALESCING))
++		vi->intr_coalescing = true;
++
+ 	if (vi->any_header_sg)
+ 		dev->needed_headroom = vi->hdr_len;
