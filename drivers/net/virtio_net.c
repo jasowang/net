@@ -250,9 +250,17 @@ static void skb_xmit_done(struct virtqueue *vq)
 	struct virtnet_info *vi = vq->vdev->priv;
 	struct send_queue *sq = &vi->sq[vq2txq(vq)];
 
-	if (napi_schedule_prep(&sq->napi)) {
-		virtqueue_disable_cb(sq->vq);
-		__napi_schedule(&sq->napi);
+	if (virtio_has_feature(vi->vdev, VIRTIO_RING_F_INTR_COALESCING)) {
+		if (napi_schedule_prep(&sq->napi)) {
+			virtqueue_disable_cb(sq->vq);
+			__napi_schedule(&sq->napi);
+		}
+	} else {
+		/* Suppress further interrupts. */
+		virtqueue_disable_cb(vq);
+
+		/* We were probably waiting for more output buffers. */
+		netif_wake_subqueue(vi->dev, vq2txq(vq));
 	}
 }
 
@@ -962,7 +970,7 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	bool kick = !skb->xmit_more;
 
 	/* Free up any pending old buffers before queueing new ones. */
-	free_old_xmit_skbs(txq, sq, virtqueue_ger_vring_size(sq->vq));
+	free_old_xmit_skbs(txq, sq, virtqueue_get_vring_size(sq->vq));
 
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
@@ -1907,7 +1915,7 @@ static int virtnet_probe(struct virtio_device *vdev)
 
 	/* Set up network device as normal. */
 	dev->priv_flags |= IFF_UNICAST_FLT | IFF_LIVE_ADDR_CHANGE;
-	if (virtio_has_feature(vdev, VIRTIO_F_INTR_COALESCE))
+	if (virtio_has_feature(vdev, VIRTIO_RING_F_INTR_COALESCING))
 		dev->netdev_ops = &virtnet_netdev_txintr;
 	else
 		dev->netdev_ops = &virtnet_netdev;
