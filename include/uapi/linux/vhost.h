@@ -33,6 +33,12 @@ struct vhost_net_vring_coalesce {
 	__u32 max_coalesced_frames;
 };
 
+struct vhost_vring_coalesce {
+	unsigned int index;
+	__u32 coalesce_usecs;
+	__u32 max_coalesced_buffers;
+};
+
 struct vhost_vring_addr {
 	unsigned int index;
 	/* Option flags. */
@@ -108,7 +114,12 @@ struct vhost_memory {
 #define VHOST_SET_VRING_BASE _IOW(VHOST_VIRTIO, 0x12, struct vhost_vring_state)
 /* Get accessor: reads index, writes value in num */
 #define VHOST_GET_VRING_BASE _IOWR(VHOST_VIRTIO, 0x12, struct vhost_vring_state)
-
+/* Set coalescing parameters for the ring. */
+#define VHOST_SET_VRING_COALESCE _IOW(VHOST_VIRTIO, 0x13, \
+				      struct vhost_vring_coalesce)
+/* Get coalescing parameters for the ring. */
+#define VHOST_GET_VRING_COALESCE _IOW(VHOST_VIRTIO, 0x14, \
+				      struct vhost_vring_coalesce)
 /* The following ioctls use eventfd file descriptors to signal and poll
  * for events. */
 
