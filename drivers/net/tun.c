@@ -128,8 +128,6 @@ struct tap_filter {
 #define MAX_TAP_QUEUES 256
 #define TAP_QUEUE_MASK 0xFF
 
-#define TUN_FLOW_EXPIRE (3 * HZ)
-
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
  * to serve as one transmit queue for tuntap device. The sock_fprog and
