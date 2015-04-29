@@ -1,5 +1,5 @@
 Bottom: 6c30015e4118ff6a56c67043f2ba842ed4a6e011
-Top:    6d251e30f9dc0f8c2be4320137b835b2ff5c867a
+Top:    205ed095a64377db5937de2fe85419a26adf3cb2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 11:26:46 +0800
 
@@ -11,19 +11,21 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e470ae5..d5cca01 100644
+index e470ae5..aeeb612 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -126,7 +126,7 @@ struct tap_filter {
+@@ -126,9 +126,7 @@ struct tap_filter {
  /* MAX_TAP_QUEUES 256 is chosen to allow rx/tx queues to be equal
   * to max number of VCPUs in guest. */
  #define MAX_TAP_QUEUES 256
 -#define MAX_TAP_FLOWS  4096
+-
+-#define TUN_FLOW_EXPIRE (3 * HZ)
 +#define TAP_QUEUE_MASK 0xFF
  
- #define TUN_FLOW_EXPIRE (3 * HZ)
- 
-@@ -158,18 +158,13 @@ struct tun_file {
+ /* A tun_file connects an open character device to a tuntap netdevice. It
+  * also contains all socket related structures (except sock_fprog and tap_filter)
+@@ -158,18 +156,13 @@ struct tun_file {
  	struct tun_struct *detached;
  };
  
@@ -46,7 +48,7 @@ index e470ae5..d5cca01 100644
  
  /* Since the socket were moved to tun_file, to preserve the behavior of persist
   * device, socket filter, sndbuf and vnet header size were restore when the
-@@ -197,13 +192,10 @@ struct tun_struct {
+@@ -197,13 +190,10 @@ struct tun_struct {
  	int debug;
  #endif
  	spinlock_t lock;
@@ -61,7 +63,7 @@ index e470ae5..d5cca01 100644
  };
  
  static inline u16 tun16_to_cpu(struct tun_struct *tun, __virtio16 val)
-@@ -216,164 +208,26 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
+@@ -216,164 +206,26 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
  	return __cpu_to_virtio16(tun->flags & TUN_VNET_LE, val);
  }
  
@@ -130,7 +132,7 @@ index e470ae5..d5cca01 100644
  	int i;
  
 -	spin_lock_bh(&tun->lock);
- 	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
+-	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
 -		struct tun_flow_entry *e;
 -		struct hlist_node *n;
 -
@@ -138,9 +140,7 @@ index e470ae5..d5cca01 100644
 -			if (e->queue_index == queue_index)
 -				tun_flow_delete(tun, e);
 -		}
-+		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index)
-+			tun->flows->ents[i] = 0;
- 	}
+-	}
 -	spin_unlock_bh(&tun->lock);
 -}
 -
@@ -155,7 +155,7 @@ index e470ae5..d5cca01 100644
 -	tun_debug(KERN_INFO, tun, "tun_flow_cleanup\n");
 -
 -	spin_lock_bh(&tun->lock);
--	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
+ 	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
 -		struct tun_flow_entry *e;
 -		struct hlist_node *n;
 -
@@ -168,7 +168,9 @@ index e470ae5..d5cca01 100644
 -			else if (time_before(this_timer, next_timer))
 -				next_timer = this_timer;
 -		}
--	}
++		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index)
++			tun->flows->ents[i] = 0;
+ 	}
 -
 -	if (count)
 -		mod_timer(&tun->flow_gc_timer, round_jiffies_up(next_timer));
@@ -231,7 +233,7 @@ index e470ae5..d5cca01 100644
  }
  
  /* We try to identify a flow through its rxhash first. The reason that
-@@ -387,22 +241,22 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
+@@ -387,22 +239,22 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
  			    void *accel_priv, select_queue_fallback_t fallback)
  {
  	struct tun_struct *tun = netdev_priv(dev);
@@ -263,7 +265,7 @@ index e470ae5..d5cca01 100644
  	} else if (likely(skb_rx_queue_recorded(skb))) {
  		txq = skb_get_rx_queue(skb);
  		while (unlikely(txq >= numqueues))
-@@ -767,22 +621,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -767,22 +619,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	if (txq >= numqueues)
  		goto drop;
  
@@ -286,7 +288,7 @@ index e470ae5..d5cca01 100644
  	tun_debug(KERN_INFO, tun, "tun_net_xmit %d\n", skb->len);
  
  	BUG_ON(!tfile);
-@@ -914,21 +752,12 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -914,21 +750,12 @@ static const struct net_device_ops tap_netdev_ops = {
  
  static void tun_flow_init(struct tun_struct *tun)
  {
@@ -310,7 +312,7 @@ index e470ae5..d5cca01 100644
  }
  
  /* Initialize net device. */
-@@ -1338,6 +1167,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1338,6 +1165,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
  
  done:
