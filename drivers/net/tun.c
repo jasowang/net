@@ -126,9 +126,7 @@ struct tap_filter {
 /* MAX_TAP_QUEUES 256 is chosen to allow rx/tx queues to be equal
  * to max number of VCPUs in guest. */
 #define MAX_TAP_QUEUES 256
-#define MAX_TAP_FLOWS  4096
-
-#define TUN_FLOW_EXPIRE (3 * HZ)
+#define TAP_QUEUE_MASK 0xFF
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
@@ -157,18 +155,14 @@ struct tun_file {
 	struct tun_struct *detached;
 };
 
-struct tun_flow_entry {
-	struct hlist_node hash_link;
-	struct rcu_head rcu;
-	struct tun_struct *tun;
-
-	u32 rxhash;
-	u32 rps_rxhash;
-	int queue_index;
-	unsigned long updated;
+struct tun_flow_table {
+	u32 ents[0] ____cacheline_aligned_in_smp;
 };
 
 #define TUN_NUM_FLOW_ENTRIES 1024
+#define TUN_FLOW_MASK (TUN_NUM_FLOW_ENTRIES - 1)
+#define TUN_FLOW_TABLE_SIZE() (offsetof(struct tun_flow_table,		\
+					ents[TUN_NUM_FLOW_ENTRIES]))
 
 /* Since the socket were moved to tun_file, to preserve the behavior of persist
  * device, socket filter, sndbuf and vnet header size were restore when the
@@ -196,13 +190,11 @@ struct tun_struct {
 	int debug;
 #endif
 	spinlock_t lock;
-	struct hlist_head flows[TUN_NUM_FLOW_ENTRIES];
-	struct timer_list flow_gc_timer;
-	unsigned long ageing_time;
+	struct tun_flow_table *flows;
+	struct tun_flow_table *rps_flows;
 	unsigned int numdisabled;
 	struct list_head disabled;
 	void *security;
-	u32 flow_count;
 };
 
 static inline u16 tun16_to_cpu(struct tun_struct *tun, __virtio16 val)
@@ -215,164 +207,33 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
 	return __cpu_to_virtio16(tun->flags & TUN_VNET_LE, val);
 }
 
-static inline u32 tun_hashfn(u32 rxhash)
-{
-	return rxhash & 0x3ff;
-}
-
-static struct tun_flow_entry *tun_flow_find(struct hlist_head *head, u32 rxhash)
-{
-	struct tun_flow_entry *e;
-
-	hlist_for_each_entry_rcu(e, head, hash_link) {
-		if (e->rxhash == rxhash)
-			return e;
-	}
-	return NULL;
-}
-
-static struct tun_flow_entry *tun_flow_create(struct tun_struct *tun,
-					      struct hlist_head *head,
-					      u32 rxhash, u16 queue_index)
-{
-	struct tun_flow_entry *e = kmalloc(sizeof(*e), GFP_ATOMIC);
-
-	if (e) {
-		tun_debug(KERN_INFO, tun, "create flow: hash %u index %u\n",
-			  rxhash, queue_index);
-		e->updated = jiffies;
-		e->rxhash = rxhash;
-		e->rps_rxhash = 0;
-		e->queue_index = queue_index;
-		e->tun = tun;
-		hlist_add_head_rcu(&e->hash_link, head);
-		++tun->flow_count;
-	}
-	return e;
-}
-
-static void tun_flow_delete(struct tun_struct *tun, struct tun_flow_entry *e)
-{
-	tun_debug(KERN_INFO, tun, "delete flow: hash %u index %u\n",
-		  e->rxhash, e->queue_index);
-	hlist_del_rcu(&e->hash_link);
-	kfree_rcu(e, rcu);
-	--tun->flow_count;
-}
-
-static void tun_flow_flush(struct tun_struct *tun)
-{
-	int i;
-
-	spin_lock_bh(&tun->lock);
-	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
-		struct tun_flow_entry *e;
-		struct hlist_node *n;
-
-		hlist_for_each_entry_safe(e, n, &tun->flows[i], hash_link)
-			tun_flow_delete(tun, e);
-	}
-	spin_unlock_bh(&tun->lock);
-}
-
 static void tun_flow_delete_by_queue(struct tun_struct *tun, u16 queue_index)
 {
 	int i;
 
-	spin_lock_bh(&tun->lock);
 	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
-		struct tun_flow_entry *e;
-		struct hlist_node *n;
-
-		hlist_for_each_entry_safe(e, n, &tun->flows[i], hash_link) {
-			if (e->queue_index == queue_index)
-				tun_flow_delete(tun, e);
+		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index) {
+			tun->flows->ents[i] = 0;
+			tun->rps_flows->ents[i] = 0;
 		}
 	}
-	spin_unlock_bh(&tun->lock);
-}
-
-static void tun_flow_cleanup(unsigned long data)
-{
-	struct tun_struct *tun = (struct tun_struct *)data;
-	unsigned long delay = tun->ageing_time;
-	unsigned long next_timer = jiffies + delay;
-	unsigned long count = 0;
-	int i;
-
-	tun_debug(KERN_INFO, tun, "tun_flow_cleanup\n");
-
-	spin_lock_bh(&tun->lock);
-	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
-		struct tun_flow_entry *e;
-		struct hlist_node *n;
-
-		hlist_for_each_entry_safe(e, n, &tun->flows[i], hash_link) {
-			unsigned long this_timer;
-			count++;
-			this_timer = e->updated + delay;
-			if (time_before_eq(this_timer, jiffies))
-				tun_flow_delete(tun, e);
-			else if (time_before(this_timer, next_timer))
-				next_timer = this_timer;
-		}
-	}
-
-	if (count)
-		mod_timer(&tun->flow_gc_timer, round_jiffies_up(next_timer));
-	spin_unlock_bh(&tun->lock);
 }
 
 static void tun_flow_update(struct tun_struct *tun, u32 rxhash,
 			    struct tun_file *tfile)
 {
-	struct hlist_head *head;
-	struct tun_flow_entry *e;
-	unsigned long delay = tun->ageing_time;
-	u16 queue_index = tfile->queue_index;
+	int index = rxhash & TUN_FLOW_MASK;
+	u32 val = (rxhash & ~TAP_QUEUE_MASK) | tfile->queue_index;
 
 	if (!rxhash)
 		return;
 	else
-		head = &tun->flows[tun_hashfn(rxhash)];
-
-	rcu_read_lock();
-
-	/* We may get a very small possibility of OOO during switching, not
-	 * worth to optimize.*/
-	if (tun->numqueues == 1 || tfile->detached)
-		goto unlock;
-
-	e = tun_flow_find(head, rxhash);
-	if (likely(e)) {
-		/* TODO: keep queueing to old queue until it's empty? */
-		e->queue_index = queue_index;
-		e->updated = jiffies;
-		sock_rps_record_flow_hash(e->rps_rxhash);
-	} else {
-		spin_lock_bh(&tun->lock);
-		if (!tun_flow_find(head, rxhash) &&
-		    tun->flow_count < MAX_TAP_FLOWS)
-			tun_flow_create(tun, head, rxhash, queue_index);
-
-		if (!timer_pending(&tun->flow_gc_timer))
-			mod_timer(&tun->flow_gc_timer,
-				  round_jiffies_up(jiffies + delay));
-		spin_unlock_bh(&tun->lock);
-	}
-
-unlock:
-	rcu_read_unlock();
+		tun->flows->ents[index] = val;
 }
 
-/**
- * Save the hash received in the stack receive path and update the
- * flow_hash table accordingly.
- */
-static inline void tun_flow_save_rps_rxhash(struct tun_flow_entry *e, u32 hash)
+static bool tun_hash_match(u32 ident, u32 hash)
 {
-	if (unlikely(e->rps_rxhash != hash))
-		e->rps_rxhash = hash;
+	return !((ident ^ hash) & ~TAP_QUEUE_MASK);
 }
 
 /* We try to identify a flow through its rxhash first. The reason that
@@ -386,7 +247,6 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
 			    void *accel_priv, select_queue_fallback_t fallback)
 {
 	struct tun_struct *tun = netdev_priv(dev);
-	struct tun_flow_entry *e;
 	u32 rps_hash, txq;
 	u32 numqueues = 0;
 
@@ -397,13 +257,16 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
 	skb_clear_hash_if_not_sw(skb);
 	txq = skb_get_hash(skb);
 	if (txq) {
-		e = tun_flow_find(&tun->flows[tun_hashfn(txq)], txq);
-		if (e) {
-			tun_flow_save_rps_rxhash(e, rps_hash);
-			txq = e->queue_index;
-		} else
+		int index = txq & TUN_FLOW_MASK;
+		u32 ident = tun->flows->ents[index];
+
+		if (tun_hash_match(ident, txq)) {
+			txq = ident & TAP_QUEUE_MASK;
+			tun->rps_flows->ents[index] = rps_hash;
+		} else {
 			/* use multiply and shift instead of expensive divide */
 			txq = ((u64)txq * numqueues) >> 32;
+		}
 	} else if (likely(skb_rx_queue_recorded(skb))) {
 		txq = skb_get_rx_queue(skb);
 		while (unlikely(txq >= numqueues))
@@ -767,7 +630,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	if (numqueues == 1) {
 		/* Select queue was not called for the skbuff, so we extract the
-		 * RPS hash and save it into the flow_table here.
+		 * RPS hash and save it into the rps_flows here.
 		 */
 		__u32 rps_hash, hash;
 
@@ -775,11 +638,11 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		skb_clear_hash_if_not_sw(skb);
 		hash = skb_get_hash(skb);
 		if (hash) {
-			struct tun_flow_entry *e;
-			e = tun_flow_find(&tun->flows[tun_hashfn(hash)],
-					  hash);
-			if (e)
-				tun_flow_save_rps_rxhash(e, rps_hash);
+			int index = hash & TUN_FLOW_MASK;
+			u32 ident = tun->flows->ents[index];
+
+			if (tun_hash_match(ident, hash))
+				tun->rps_flows->ents[index] = rps_hash;
 		}
 	}
 
@@ -912,23 +775,25 @@ static const struct net_device_ops tap_netdev_ops = {
 #endif
 };
 
-static void tun_flow_init(struct tun_struct *tun)
+static int tun_flow_init(struct tun_struct *tun)
 {
-	int i;
+	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE());
+	if (!tun->flows)
+		return -ENOMEM;
 
-	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++)
-		INIT_HLIST_HEAD(&tun->flows[i]);
+	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE());
+	if (!tun->rps_flows) {
+		vfree(tun->rps_flows);
+		return -ENOMEM;
+	}
 
-	tun->ageing_time = TUN_FLOW_EXPIRE;
-	setup_timer(&tun->flow_gc_timer, tun_flow_cleanup, (unsigned long)tun);
-	mod_timer(&tun->flow_gc_timer,
-		  round_jiffies_up(jiffies + tun->ageing_time));
+	return 0;
 }
 
 static void tun_flow_uninit(struct tun_struct *tun)
 {
-	del_timer_sync(&tun->flow_gc_timer);
-	tun_flow_flush(tun);
+	vfree(tun->flows);
+	vfree(tun->rps_flows);
 }
 
 /* Initialize net device. */
@@ -1024,6 +889,17 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 	skb->len += len - linear;
 
 	return skb;
+}
+
+static void tun_rps_record_flow_hash(struct tun_struct *tun,
+				     struct tun_file *tfile,
+				     u32 hash)
+{
+	int index = hash & TUN_FLOW_MASK;
+	u32 val = (hash & ~TAP_QUEUE_MASK) | tfile->queue_index;
+
+	if (hash && tun->flows->ents[index] == val)
+		sock_rps_record_flow_hash(tun->rps_flows->ents[index]);
 }
 
 /* Get packet from user space buffer */
@@ -1212,6 +1088,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	tun->dev->stats.rx_bytes += len;
 
 	tun_flow_update(tun, rxhash, tfile);
+	tun_rps_record_flow_hash(tun, tfile, rxhash);
 	return total_len;
 }
 
@@ -1338,6 +1215,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
 
 done:
+	tun_rps_record_flow_hash(tun, tfile, skb_get_hash(skb));
 	tun->dev->stats.tx_packets++;
 	tun->dev->stats.tx_bytes += skb->len + vlan_hlen;
 
@@ -1649,7 +1527,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			goto err_free_dev;
 
 		tun_net_init(dev);
-		tun_flow_init(tun);
+		err = tun_flow_init(tun);
+		if (err < 0)
+			goto err_free_security;
 
 		dev->hw_features = NETIF_F_SG | NETIF_F_FRAGLIST |
 				   TUN_USER_FEATURES | NETIF_F_HW_VLAN_CTAG_TX |
@@ -1689,6 +1569,7 @@ err_detach:
 	tun_detach_all(dev);
 err_free_flow:
 	tun_flow_uninit(tun);
+err_free_security:
 	security_tun_dev_free_security(tun->security);
 err_free_dev:
 	free_netdev(dev);
@@ -2298,6 +2179,8 @@ static const struct ethtool_ops tun_ethtool_ops = {
 static int __init tun_init(void)
 {
 	int ret = 0;
+
+	BUILD_BUG_ON((TUN_NUM_FLOW_ENTRIES) & (TUN_NUM_FLOW_ENTRIES - 1));
 
 	pr_info("%s, %s\n", DRV_DESCRIPTION, DRV_VERSION);
 	pr_info("%s\n", DRV_COPYRIGHT);
