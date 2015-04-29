@@ -1471,6 +1471,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 		if (vq->log_ctx)
 			eventfd_signal(vq->log_ctx, 1);
 	}
+	vq->coalesced += count;
 	return r;
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_n);
@@ -1513,14 +1514,32 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 }
 
 /* This actually signals the guest, using eventfd. */
-bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
-	/* Signal the Guest tell them we used something up. */
-	if (vq->call_ctx && vhost_notify(dev, vq)) {
-		eventfd_signal(vq->call_ctx, 1);
-		return true;
+	bool can_coalesce = vq->max_coalesced_buffers &&
+		            vq->coalesce_usecs;
+	ktime_t now;
+	int left;
+
+	if (!vq->call_ctx)
+		return;
+
+	if (can_coalesce) {
+		now = ktime_get();
+		left = vq->coalesce_usecs -
+		       ktime_to_us(ktime_sub(now, vq->last_signal));
+
+		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
+		    && vhost_notify(dev, vq)) {
+			vq->coalesced = 0;
+			vq->last_signal = now;
+		} else if (left) {
+			hrtimer_start(&vq->ctimer, ns_to_ktime(left),
+				      HRTIMER_MODE_REL);
+		}
+	} else {
+		vhost_notify(dev, vq);
 	}
-	return false;
 }
 EXPORT_SYMBOL_GPL(vhost_signal);
 
@@ -1539,30 +1558,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
 				 struct vhost_virtqueue *vq,
 				 struct vring_used_elem *heads, unsigned count)
 {
-	bool can_coalesce = vq->max_coalesced_buffers &&
-		            vq->coalesce_usecs;
-	ktime_t now;
-	int left;
-
 	vhost_add_used_n(vq, heads, count);
-
-	if (can_coalesce) {
-		now = ktime_get();
-		left = vq->coalesce_usecs -
-		       ktime_to_us(ktime_sub(now, vq->last_signal));
-		vq->coalesced += count;
-
-		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
-		    && vhost_signal(dev, vq)) {
-			vq->coalesced = 0;
-			vq->last_signal = now;
-		} else if (left) {
-			hrtimer_start(&vq->ctimer, ns_to_ktime(left),
-				      HRTIMER_MODE_REL);
-		}
-	} else {
-		vhost_signal(dev, vq);
-	}
+	vhost_signal(dev, vq);
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
 
