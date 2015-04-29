@@ -1,0 +1,116 @@
+Bottom: 150144692bb9c0427005ba79e4f866d95ab7d630
+Top:    432bc8121420e6d237bd9ab6d9122b1261a80689
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-04-29 17:10:42 +0800
+
+Refresh of vhost-interrupt-coalescing
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index a133dca..8cd6a5c 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1471,6 +1471,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+ 		if (vq->log_ctx)
+ 			eventfd_signal(vq->log_ctx, 1);
+ 	}
++	vq->coalesced += count;
+ 	return r;
+ }
+ EXPORT_SYMBOL_GPL(vhost_add_used_n);
+@@ -1513,47 +1514,23 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ 
+ /* This actually signals the guest, using eventfd. */
+-bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+-{
+-	/* Signal the Guest tell them we used something up. */
+-	if (vq->call_ctx && vhost_notify(dev, vq)) {
+-		eventfd_signal(vq->call_ctx, 1);
+-		return true;
+-	}
+-	return false;
+-}
+-EXPORT_SYMBOL_GPL(vhost_signal);
+-
+-/* And here's the combo meal deal.  Supersize me! */
+-void vhost_add_used_and_signal(struct vhost_dev *dev,
+-			       struct vhost_virtqueue *vq,
+-			       unsigned int head, int len)
+-{
+-	vhost_add_used(vq, head, len);
+-	vhost_signal(dev, vq);
+-}
+-EXPORT_SYMBOL_GPL(vhost_add_used_and_signal);
+-
+-/* multi-buffer version of vhost_add_used_and_signal */
+-void vhost_add_used_and_signal_n(struct vhost_dev *dev,
+-				 struct vhost_virtqueue *vq,
+-				 struct vring_used_elem *heads, unsigned count)
++void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+ 	bool can_coalesce = vq->max_coalesced_buffers &&
+ 		            vq->coalesce_usecs;
+ 	ktime_t now;
+ 	int left;
+ 
+-	vhost_add_used_n(vq, heads, count);
++	if (!vq->call_ctx)
++		return;
+ 
+ 	if (can_coalesce) {
+ 		now = ktime_get();
+ 		left = vq->coalesce_usecs -
+ 		       ktime_to_us(ktime_sub(now, vq->last_signal));
+-		vq->coalesced += count;
+ 
+ 		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
+-		    && vhost_signal(dev, vq)) {
++		    && vhost_notify(dev, vq)) {
+ 			vq->coalesced = 0;
+ 			vq->last_signal = now;
+ 		} else if (left) {
+@@ -1561,9 +1538,29 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
+ 				      HRTIMER_MODE_REL);
+ 		}
+ 	} else {
+-		vhost_signal(dev, vq);
++		vhost_notify(dev, vq);
+ 	}
+ }
++EXPORT_SYMBOL_GPL(vhost_signal);
++
++/* And here's the combo meal deal.  Supersize me! */
++void vhost_add_used_and_signal(struct vhost_dev *dev,
++			       struct vhost_virtqueue *vq,
++			       unsigned int head, int len)
++{
++	vhost_add_used(vq, head, len);
++	vhost_signal(dev, vq);
++}
++EXPORT_SYMBOL_GPL(vhost_add_used_and_signal);
++
++/* multi-buffer version of vhost_add_used_and_signal */
++void vhost_add_used_and_signal_n(struct vhost_dev *dev,
++				 struct vhost_virtqueue *vq,
++				 struct vring_used_elem *heads, unsigned count)
++{
++	vhost_add_used_n(vq, heads, count);
++	vhost_signal(dev, vq);
++}
+ EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
+ 
+ /* OK, now we need to know about added descriptors. */
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index de8b2b5..faa0dd7 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -165,7 +165,7 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       unsigned int id, int len);
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+-bool vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
