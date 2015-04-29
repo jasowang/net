@@ -92,6 +92,23 @@ struct vhost_virtqueue {
 	/* Last used index value we have signalled on */
 	bool signalled_used_valid;
 
+	/* Maxinum microseconds waited after at least one buffer is
+	 * processed before generating an interrupt.
+	 */
+	__u32 coalesce_usecs;
+
+	/* Maxinum number of pending buffers before genearting an interrupt. */
+	__u32 max_coalesced_buffers;
+
+	/* The number of buffers whose interrupt are coalesced */
+	__u32 coalesced;
+
+	/* Last time we singalled guest. */
+	ktime_t last_signal;
+
+	/* Timer used to trigger an coalesced interrupt. */
+	struct hrtimer ctimer;
+
 	/* Log writes to used structure. */
 	bool log_used;
 	u64 log_addr;
