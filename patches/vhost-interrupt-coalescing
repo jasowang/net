@@ -1,17 +1,16 @@
 Bottom: 054e942a56804f95e735fcd809561a92f884d29d
-Top:    150144692bb9c0427005ba79e4f866d95ab7d630
+Top:    432bc8121420e6d237bd9ab6d9122b1261a80689
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2015-04-29 16:15:31 +0800
+Date:   2015-04-29 18:54:37 +0800
 
 vhost: interrupt coalescing support
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a8766fe..a133dca 100644
+index a8766fe..8cd6a5c 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -199,6 +199,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -80,26 +79,40 @@ index a8766fe..a133dca 100644
  	case VHOST_SET_VRING_ADDR:
  		if (copy_from_user(&a, argp, sizeof a)) {
  			r = -EFAULT;
-@@ -1508,8 +1539,30 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
- 				 struct vhost_virtqueue *vq,
- 				 struct vring_used_elem *heads, unsigned count)
+@@ -1440,6 +1471,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+ 		if (vq->log_ctx)
+ 			eventfd_signal(vq->log_ctx, 1);
+ 	}
++	vq->coalesced += count;
+ 	return r;
+ }
+ EXPORT_SYMBOL_GPL(vhost_add_used_n);
+@@ -1482,14 +1514,32 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ 
+ /* This actually signals the guest, using eventfd. */
+-bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  {
+-	/* Signal the Guest tell them we used something up. */
+-	if (vq->call_ctx && vhost_notify(dev, vq)) {
+-		eventfd_signal(vq->call_ctx, 1);
+-		return true;
 +	bool can_coalesce = vq->max_coalesced_buffers &&
 +		            vq->coalesce_usecs;
 +	ktime_t now;
 +	int left;
 +
- 	vhost_add_used_n(vq, heads, count);
--	vhost_signal(dev, vq);
++	if (!vq->call_ctx)
++		return;
 +
 +	if (can_coalesce) {
 +		now = ktime_get();
 +		left = vq->coalesce_usecs -
 +		       ktime_to_us(ktime_sub(now, vq->last_signal));
-+		vq->coalesced += count;
 +
 +		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
-+		    && vhost_signal(dev, vq)) {
++		    && vhost_notify(dev, vq)) {
 +			vq->coalesced = 0;
 +			vq->last_signal = now;
 +		} else if (left) {
@@ -107,13 +120,14 @@ index a8766fe..a133dca 100644
 +				      HRTIMER_MODE_REL);
 +		}
 +	} else {
-+		vhost_signal(dev, vq);
-+	}
++		vhost_notify(dev, vq);
+ 	}
+-	return false;
  }
- EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
+ EXPORT_SYMBOL_GPL(vhost_signal);
  
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index a482563..de8b2b5 100644
+index a482563..faa0dd7 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -92,6 +92,23 @@ struct vhost_virtqueue {
@@ -140,6 +154,15 @@ index a482563..de8b2b5 100644
  	/* Log writes to used structure. */
  	bool log_used;
  	u64 log_addr;
+@@ -148,7 +165,7 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       unsigned int id, int len);
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+-bool vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ 
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
 index bb6a5b4..6362e6e 100644
 --- a/include/uapi/linux/vhost.h
