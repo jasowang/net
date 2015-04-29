@@ -5,6 +5,8 @@ Date:   2015-04-29 16:15:31 +0800
 
 vhost: interrupt coalescing support
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
