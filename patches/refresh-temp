@@ -1,0 +1,100 @@
+Bottom: 432bc8121420e6d237bd9ab6d9122b1261a80689
+Top:    43573e33946f0f5161e3660757d58512f148b4a0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-05-11 15:32:41 +0800
+
+Refresh of vhost-interrupt-coalescing
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 8cd6a5c..e3867e9 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1471,7 +1471,9 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+ 		if (vq->log_ctx)
+ 			eventfd_signal(vq->log_ctx, 1);
+ 	}
+-	vq->coalesced += count;
++
++	if (vq->max_coalesced_buffers && vq->coalesce_usecs)
++		vq->coalesced += count;
+ 	return r;
+ }
+ EXPORT_SYMBOL_GPL(vhost_add_used_n);
+@@ -1516,10 +1518,9 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ /* This actually signals the guest, using eventfd. */
+ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+-	bool can_coalesce = vq->max_coalesced_buffers &&
+-		            vq->coalesce_usecs;
+-	ktime_t now;
++	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
+ 	int left;
++	ktime_t now;
+ 
+ 	if (!vq->call_ctx)
+ 		return;
+@@ -1529,13 +1530,10 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 		left = vq->coalesce_usecs -
+ 		       ktime_to_us(ktime_sub(now, vq->last_signal));
+ 
+-		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
+-		    && vhost_notify(dev, vq)) {
++		if (((vq->coalesced >= vq->max_coalesced_buffers) ||
++		     (left < 0)) && vhost_notify(dev, vq)) {
+ 			vq->coalesced = 0;
+ 			vq->last_signal = now;
+-		} else if (left) {
+-			hrtimer_start(&vq->ctimer, ns_to_ktime(left),
+-				      HRTIMER_MODE_REL);
+ 		}
+ 	} else {
+ 		vhost_notify(dev, vq);
+@@ -1543,6 +1541,34 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ EXPORT_SYMBOL_GPL(vhost_signal);
+ 
++void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
++				     struct vhost_virtqueue *vq)
++{
++	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
++	int left;
++	ktime_t now;
++
++	if (!vq->call_ctx)
++		return;
++
++	if (can_coalesce && vq->coalesced) {
++		now = ktime_get();
++		left = vq->coalesce_usecs -
++		       ktime_to_us(ktime_sub(now, vq->last_signal));
++		if (left <= 0) {
++			if (vhost_notify(dev, vq)) {
++				vq->last_signal = now;
++				vq->coalesced = 0;
++			}
++		} else {
++			hrtimer_start(&vq->ctimer,
++				      ns_to_ktime(left * NSEC_PER_USEC),
++				      HRTIMER_MODE_REL);
++		}
++	}
++}
++EXPORT_SYMBOL_GPL(vhost_check_coalesce_and_signal);
++
+ /* And here's the combo meal deal.  Supersize me! */
+ void vhost_add_used_and_signal(struct vhost_dev *dev,
+ 			       struct vhost_virtqueue *vq,
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index faa0dd7..d389e75 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -166,6 +166,8 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+ void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
++                                     struct vhost_virtqueue *vq);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
