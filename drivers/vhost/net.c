@@ -415,6 +415,7 @@ static void handle_tx(struct vhost_net *net)
 		}
 	}
 out:
+	vhost_check_coalesce_and_signal(dev, vq);
 	mutex_unlock(&vq->mutex);
 }
 
