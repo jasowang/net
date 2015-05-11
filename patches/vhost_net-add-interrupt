@@ -1,5 +1,5 @@
 Bottom: 43573e33946f0f5161e3660757d58512f148b4a0
-Top:    97e8b521eeff84d3264fb4dcbfd9ef38e02d0a7b
+Top:    e2890710c970dd207d6637b2e82f3ca0c5c38f25
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-05-11 15:34:01 +0800
 
@@ -11,10 +11,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 7d137a4..80d9f6c 100644
+index 7d137a4..ac24979 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -415,6 +415,7 @@ static void handle_tx(struct vhost_net *net)
+ 		}
+ 	}
+ out:
++	vhost_check_coalesce_and_signal(dev, vq);
+ 	mutex_unlock(&vq->mutex);
+ }
+ 
+@@ -638,6 +639,7 @@ static void handle_rx(struct vhost_net *net)
  		}
  	}
  out:
