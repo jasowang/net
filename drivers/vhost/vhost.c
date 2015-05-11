@@ -1526,14 +1526,11 @@ static bool __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 }
 
 /* This actually signals the guest, using eventfd. */
-bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
 	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
 	int left;
 	ktime_t now;
-
-	if (!vq->call_ctx)
-		return;
 
 	if (can_coalesce) {
 		now = ktime_get();
