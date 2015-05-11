@@ -1,0 +1,34 @@
+Bottom: 55d747949e52937b82271d649e11920b4b534b80
+Top:    23e25f34a44ab6a28ab9a6c7bd55803e9616e253
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-05-11 16:00:59 +0800
+
+Refresh of vhost-let-vhost_signal-returns
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index e75c2e2..2bb6881 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1526,7 +1526,7 @@ static bool __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ 
+ /* This actually signals the guest, using eventfd. */
+-void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++bool vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+ 	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
+ 	int left;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index faa0dd7..de8b2b5 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -165,7 +165,7 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       unsigned int id, int len);
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+-void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++bool vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
