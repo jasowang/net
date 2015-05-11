@@ -1558,9 +1558,6 @@ void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
 	int left;
 	ktime_t now;
 
-	if (!vq->call_ctx)
-		return;
-
 	if (can_coalesce && vq->coalesced) {
 		now = ktime_get();
 		left = vq->coalesce_usecs -
