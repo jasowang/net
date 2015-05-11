@@ -1,5 +1,5 @@
 Bottom: 74c916967de618742f5df336b6c6aca1160c120d
-Top:    89ebfd60338e60917ebaef4e94b7d948d84176dd
+Top:    6a757a10982c7c5d0f1a3ce7624a449699e59106
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-01-20 13:45:15 +0800
 
@@ -24,3 +24,15 @@ index 08ff8a7..fadbe2f 100644
  	if (can_coalesce) {
  		now = ktime_get();
  		left = vq->coalesce_usecs -
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index faa0dd7..e0ec89c 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -166,6 +166,8 @@ void vhost_add_used_and_signal(struct vhost_dev *, struct vhost_virtqueue *,
+ void vhost_add_used_and_signal_n(struct vhost_dev *, struct vhost_virtqueue *,
+ 			       struct vring_used_elem *heads, unsigned count);
+ void vhost_signal(struct vhost_dev *, struct vhost_virtqueue *);
++void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
++				     struct vhost_virtqueue *vq);
+ void vhost_disable_notify(struct vhost_dev *, struct vhost_virtqueue *);
+ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
