@@ -1471,7 +1471,9 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 		if (vq->log_ctx)
 			eventfd_signal(vq->log_ctx, 1);
 	}
-	vq->coalesced += count;
+
+	if (vq->max_coalesced_buffers && vq->coalesce_usecs)
+		vq->coalesced += count;
 	return r;
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_n);
@@ -1516,10 +1518,9 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 /* This actually signals the guest, using eventfd. */
 void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
-	bool can_coalesce = vq->max_coalesced_buffers &&
-		            vq->coalesce_usecs;
-	ktime_t now;
+	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
 	int left;
+	ktime_t now;
 
 	if (!vq->call_ctx)
 		return;
@@ -1529,19 +1530,44 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 		left = vq->coalesce_usecs -
 		       ktime_to_us(ktime_sub(now, vq->last_signal));
 
-		if (((vq->coalesced >= vq->max_coalesced_buffers) || left <= 0)
-		    && vhost_notify(dev, vq)) {
+		if (((vq->coalesced >= vq->max_coalesced_buffers) ||
+		     (left < 0)) && vhost_notify(dev, vq)) {
 			vq->coalesced = 0;
 			vq->last_signal = now;
-		} else if (left) {
-			hrtimer_start(&vq->ctimer, ns_to_ktime(left),
-				      HRTIMER_MODE_REL);
 		}
 	} else {
 		vhost_notify(dev, vq);
 	}
 }
 EXPORT_SYMBOL_GPL(vhost_signal);
+
+void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
+				     struct vhost_virtqueue *vq)
+{
+	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
+	int left;
+	ktime_t now;
+
+	if (!vq->call_ctx)
+		return;
+
+	if (can_coalesce && vq->coalesced) {
+		now = ktime_get();
+		left = vq->coalesce_usecs -
+		       ktime_to_us(ktime_sub(now, vq->last_signal));
+		if (left <= 0) {
+			if (vhost_notify(dev, vq)) {
+				vq->last_signal = now;
+				vq->coalesced = 0;
+			}
+		} else {
+			hrtimer_start(&vq->ctimer,
+				      ns_to_ktime(left * NSEC_PER_USEC),
+				      HRTIMER_MODE_REL);
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(vhost_check_coalesce_and_signal);
 
 /* And here's the combo meal deal.  Supersize me! */
 void vhost_add_used_and_signal(struct vhost_dev *dev,
