@@ -1,0 +1,61 @@
+Bottom: 102297c0b8a83e6595147c964c1ad352da829a22
+Top:    3ce3562cb202f048f2b671b8593dae80efab2f35
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-05-12 16:13:30 +0800
+
+Refresh of vhost
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index fadbe2f..22ab5dd 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1515,14 +1515,13 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	return vring_need_event(vhost16_to_cpu(vq, event), new, old);
+ }
+ 
+-static bool __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++static void __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+ 	if (vq->call_ctx && vhost_notify(dev, vq)) {
+ 		eventfd_signal(vq->call_ctx, 1);
+-		return true;
+ 	}
+-
+-	return false;
++	vq->coalesced = 0;
++	vq->last_signal = ktime_get();
+ }
+ 
+ /* This actually signals the guest, using eventfd. */
+@@ -1537,14 +1536,10 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 		left = vq->coalesce_usecs -
+ 		       ktime_to_us(ktime_sub(now, vq->last_signal));
+ 
+-		if (((vq->coalesced >= vq->max_coalesced_buffers) ||
+-		     (left < 0)) && __vhost_signal(dev, vq)) {
+-			vq->coalesced = 0;
+-			vq->last_signal = now;
+-		}
+-	} else {
++		if ((vq->coalesced >= vq->max_coalesced_buffers) || (left < 0))
++			__vhost_signal(dev, vq);
++	} else
+ 		__vhost_signal(dev, vq);
+-	}
+ }
+ EXPORT_SYMBOL_GPL(vhost_signal);
+ 
+@@ -1560,10 +1555,7 @@ void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
+ 		left = vq->coalesce_usecs -
+ 		       ktime_to_us(ktime_sub(now, vq->last_signal));
+ 		if (left <= 0) {
+-			if (__vhost_signal(dev, vq)) {
+-				vq->last_signal = now;
+-				vq->coalesced = 0;
+-			}
++			__vhost_signal(dev, vq);
+ 		} else {
+ 			hrtimer_start(&vq->ctimer,
+ 				      ns_to_ktime(left * NSEC_PER_USEC),
