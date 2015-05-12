@@ -1,7 +1,7 @@
 Bottom: 555b37d1d57cf6db342ea9bc10f47033832541db
-Top:    5364300125c1ec074d9685cfcca98ed4ae95bb05
+Top:    e0210757a9923450f3403cee2735f816347c1627
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2015-04-29 18:54:37 +0800
+Date:   2015-05-12 16:13:50 +0800
 
 vhost: interrupt coalescing support
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 2ee2826..fadbe2f 100644
+index 2ee2826..22ab5dd 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -199,6 +199,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -89,18 +89,17 @@ index 2ee2826..fadbe2f 100644
  	return r;
  }
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
-@@ -1481,15 +1515,64 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -1481,15 +1515,56 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	return vring_need_event(vhost16_to_cpu(vq, event), new, old);
  }
  
-+static bool __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++static void __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 +{
 +	if (vq->call_ctx && vhost_notify(dev, vq)) {
 +		eventfd_signal(vq->call_ctx, 1);
-+		return true;
 +	}
-+
-+	return false;
++	vq->coalesced = 0;
++	vq->last_signal = ktime_get();
 +}
 +
  /* This actually signals the guest, using eventfd. */
@@ -118,14 +117,10 @@ index 2ee2826..fadbe2f 100644
 +		left = vq->coalesce_usecs -
 +		       ktime_to_us(ktime_sub(now, vq->last_signal));
 +
-+		if (((vq->coalesced >= vq->max_coalesced_buffers) ||
-+		     (left < 0)) && __vhost_signal(dev, vq)) {
-+			vq->coalesced = 0;
-+			vq->last_signal = now;
-+		}
-+	} else {
++		if ((vq->coalesced >= vq->max_coalesced_buffers) || (left < 0))
++			__vhost_signal(dev, vq);
++	} else
 +		__vhost_signal(dev, vq);
-+	}
  }
  EXPORT_SYMBOL_GPL(vhost_signal);
  
@@ -141,10 +136,7 @@ index 2ee2826..fadbe2f 100644
 +		left = vq->coalesce_usecs -
 +		       ktime_to_us(ktime_sub(now, vq->last_signal));
 +		if (left <= 0) {
-+			if (__vhost_signal(dev, vq)) {
-+				vq->last_signal = now;
-+				vq->coalesced = 0;
-+			}
++			__vhost_signal(dev, vq);
 +		} else {
 +			hrtimer_start(&vq->ctimer,
 +				      ns_to_ktime(left * NSEC_PER_USEC),
