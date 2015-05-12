@@ -1,0 +1,33 @@
+Bottom: 3ce3562cb202f048f2b671b8593dae80efab2f35
+Top:    48a87586e18b7cf2b781244cb5264851e98eee9f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-05-12 16:40:33 +0800
+
+Refresh of vhost_net-add-interrupt
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9740534..ab1dcde 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -320,6 +320,9 @@ static void handle_tx(struct vhost_net *net)
+ 	hdr_size = nvq->vhost_hlen;
+ 	zcopy = nvq->ubufs;
+ 
++	/* Finish pending interrupts first */
++	vhost_check_coalesce_and_signal(vq->dev, vq);
++
+ 	for (;;) {
+ 		/* Release DMAs done buffers first */
+ 		if (zcopy)
+@@ -555,6 +558,9 @@ static void handle_rx(struct vhost_net *net)
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+ 
++	/* Finish pending interrupts first */
++	vhost_check_coalesce_and_signal(vq->dev, vq);
++
+ 	while ((sock_len = peek_head_len(sock->sk))) {
+ 		sock_len += sock_hlen;
+ 		vhost_len = sock_len + vhost_hlen;
