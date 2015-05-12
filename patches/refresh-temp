@@ -1,0 +1,23 @@
+Bottom: ccfd54d88cfdf5e5446872f405aec178a13d8e4b
+Top:    5364300125c1ec074d9685cfcca98ed4ae95bb05
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-05-12 15:41:19 +0800
+
+Refresh of vhost-interrupt-coalescing
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 08ff8a7..fadbe2f 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1532,9 +1532,6 @@ void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	int left;
+ 	ktime_t now;
+ 
+-	if (!vq->call_ctx)
+-		return;
+-
+ 	if (can_coalesce) {
+ 		now = ktime_get();
+ 		left = vq->coalesce_usecs -
