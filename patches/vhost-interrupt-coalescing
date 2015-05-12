@@ -1,5 +1,5 @@
 Bottom: 555b37d1d57cf6db342ea9bc10f47033832541db
-Top:    ccfd54d88cfdf5e5446872f405aec178a13d8e4b
+Top:    5364300125c1ec074d9685cfcca98ed4ae95bb05
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 18:54:37 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 2ee2826..08ff8a7 100644
+index 2ee2826..fadbe2f 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -199,6 +199,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -89,7 +89,7 @@ index 2ee2826..08ff8a7 100644
  	return r;
  }
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
-@@ -1481,15 +1515,67 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -1481,15 +1515,64 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	return vring_need_event(vhost16_to_cpu(vq, event), new, old);
  }
  
@@ -112,9 +112,6 @@ index 2ee2826..08ff8a7 100644
 +	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
 +	int left;
 +	ktime_t now;
-+
-+	if (!vq->call_ctx)
-+		return;
 +
 +	if (can_coalesce) {
 +		now = ktime_get();
