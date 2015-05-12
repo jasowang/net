@@ -199,6 +199,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->call = NULL;
 	vq->log_ctx = NULL;
 	vq->memory = NULL;
+	vq->coalesce_usecs = 0;
+	vq->max_coalesced_buffers = 0;
+	vq->coalesced = 0;
+	vq->last_signal = ktime_get();
+	hrtimer_cancel(&vq->ctimer);
 }
 
 static int vhost_worker(void *data)
@@ -291,6 +296,16 @@ static void vhost_dev_free_iovecs(struct vhost_dev *dev)
 		vhost_vq_free_iovecs(dev->vqs[i]);
 }
 
+static enum hrtimer_restart vhost_ctimer_handler(struct hrtimer *timer)
+{
+	struct vhost_virtqueue *vq =
+		container_of(timer, struct vhost_virtqueue, ctimer);
+
+	vhost_poll_queue(&vq->poll);
+
+	return HRTIMER_NORESTART;
+}
+
 void vhost_dev_init(struct vhost_dev *dev,
 		    struct vhost_virtqueue **vqs, int nvqs)
 {
@@ -315,6 +330,8 @@ void vhost_dev_init(struct vhost_dev *dev,
 		vq->heads = NULL;
 		vq->dev = dev;
 		mutex_init(&vq->mutex);
+		hrtimer_init(&vq->ctimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		vq->ctimer.function = vhost_ctimer_handler;
 		vhost_vq_reset(dev, vq);
 		if (vq->handle_kick)
 			vhost_poll_init(&vq->poll, vq->handle_kick,
@@ -640,6 +657,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 	struct vhost_vring_state s;
 	struct vhost_vring_file f;
 	struct vhost_vring_addr a;
+	struct vhost_vring_coalesce c;
 	u32 idx;
 	long r;
 
@@ -694,6 +712,19 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		s.index = idx;
 		s.num = vq->last_avail_idx;
 		if (copy_to_user(argp, &s, sizeof s))
+			r = -EFAULT;
+		break;
+	case VHOST_SET_VRING_COALESCE:
+		if (copy_from_user(&c, argp, sizeof c)) {
+			r = -EFAULT;
+			break;
+		}
+		vq->coalesce_usecs = c.coalesce_usecs;
+		vq->max_coalesced_buffers = c.max_coalesced_buffers;
+		break;
+	case VHOST_GET_VRING_COALESCE:
+		s.index = idx;
+		if (copy_to_user(argp, &c, sizeof c))
 			r = -EFAULT;
 		break;
 	case VHOST_SET_VRING_ADDR:
@@ -1440,6 +1471,9 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 		if (vq->log_ctx)
 			eventfd_signal(vq->log_ctx, 1);
 	}
+
+	if (vq->max_coalesced_buffers && vq->coalesce_usecs)
+		vq->coalesced += count;
 	return r;
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_n);
@@ -1481,14 +1515,55 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	return vring_need_event(vhost16_to_cpu(vq, event), new, old);
 }
 
+static void __vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+{
+	if (vq->call_ctx && vhost_notify(dev, vq)) {
+		eventfd_signal(vq->call_ctx, 1);
+	}
+	vq->coalesced = 0;
+	vq->last_signal = ktime_get();
+}
+
 /* This actually signals the guest, using eventfd. */
 void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
-	/* Signal the Guest tell them we used something up. */
-	if (vq->call_ctx && vhost_notify(dev, vq))
-		eventfd_signal(vq->call_ctx, 1);
+	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
+	int left;
+	ktime_t now;
+
+	if (can_coalesce) {
+		now = ktime_get();
+		left = vq->coalesce_usecs -
+		       ktime_to_us(ktime_sub(now, vq->last_signal));
+
+		if ((vq->coalesced >= vq->max_coalesced_buffers) || (left < 0))
+			__vhost_signal(dev, vq);
+	} else
+		__vhost_signal(dev, vq);
 }
 EXPORT_SYMBOL_GPL(vhost_signal);
+
+void vhost_check_coalesce_and_signal(struct vhost_dev *dev,
+				     struct vhost_virtqueue *vq)
+{
+	bool can_coalesce = vq->max_coalesced_buffers && vq->coalesce_usecs;
+	int left;
+	ktime_t now;
+
+	if (can_coalesce && vq->coalesced) {
+		now = ktime_get();
+		left = vq->coalesce_usecs -
+		       ktime_to_us(ktime_sub(now, vq->last_signal));
+		if (left <= 0) {
+			__vhost_signal(dev, vq);
+		} else {
+			hrtimer_start(&vq->ctimer,
+				      ns_to_ktime(left * NSEC_PER_USEC),
+				      HRTIMER_MODE_REL);
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(vhost_check_coalesce_and_signal);
 
 /* And here's the combo meal deal.  Supersize me! */
 void vhost_add_used_and_signal(struct vhost_dev *dev,
