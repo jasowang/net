@@ -372,6 +372,7 @@ bool virtqueue_kick_prepare(struct virtqueue *_vq)
 	} else {
 		needs_kick = !(vq->vring.used->flags & cpu_to_virtio16(_vq->vdev, VRING_USED_F_NO_NOTIFY));
 	}
+	needs_kick = needs_kick && (vq->vring.used->idx != vq->vring.avail->idx);
 	END_USE(vq);
 	return needs_kick;
 }
