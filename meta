@@ -1,9 +1,9 @@
 Version: 1
-Previous: 0087d3e37185cb6e37ea3d1f7ccc62276dcf6a47
-Head: 944b7bb051cc57967788ca27346d0eeba9074242
+Previous: f47d8091e40247e6c5336b1eebb2e5676a80dc2a
+Head: 6e8a9d9148b6dc2305fcaaf60550b81cbb6319c6
 Applied:
-  virtio-enhance: 944b7bb051cc57967788ca27346d0eeba9074242
 Unapplied:
+  virtio-enhance: 944b7bb051cc57967788ca27346d0eeba9074242
   virtio_net-enable-tx-interrupt: b99ecd6820aa2968891311e837ef2d627c75175f
   virtio-net-should-use: 2f863ca9c3996b35123ccfe7fca03a2e3ddcf7cf
   virtio-net-remove-the: 160a63dfe95b0f5f25fbd1f286ab8992ef82cacd
