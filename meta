@@ -1,5 +1,5 @@
 Version: 1
-Previous: 33019dc15019ab2f66f2e5e96723779694f4ef0c
+Previous: 64b3847784a856f96cf39141b506a7244a7bd9b6
 Head: ee010a8328361c0835e836d1ecdae47da92e0a35
 Applied:
   virtio_net-enable-tx-interrupt: b99ecd6820aa2968891311e837ef2d627c75175f
@@ -8,7 +8,6 @@ Applied:
   virtio-net-serializing-cb-and: a3c1a56c111547ba8f1f0e3a5c9dd349c9d421f0
   virtio-net-disable_cb-in: ee010a8328361c0835e836d1ecdae47da92e0a35
 Unapplied:
-  virtio-enhance: 944b7bb051cc57967788ca27346d0eeba9074242
   virtio_ring-try-to-disable: 893ae8e3f4e77c6433e8fbd980fab0198ef5babb
   virito-add-coalescing: 1ed243424dbde991e04d8a8830362163e0e26c8f
   virtio-net-add-basic-interrupt: f85c3854cbc50e73a32d68f9f03801b3ef74aa75
