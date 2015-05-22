@@ -27,6 +27,12 @@ struct vhost_vring_file {
 
 };
 
+struct vhost_vring_coalesce {
+	unsigned int index;
+	__u32 coalesce_usecs;
+	__u32 max_coalesced_buffers;
+};
+
 struct vhost_vring_addr {
 	unsigned int index;
 	/* Option flags. */
@@ -116,6 +122,13 @@ struct vhost_memory {
 #define VHOST_VRING_BIG_ENDIAN 1
 #define VHOST_SET_VRING_ENDIAN _IOW(VHOST_VIRTIO, 0x13, struct vhost_vring_state)
 #define VHOST_GET_VRING_ENDIAN _IOW(VHOST_VIRTIO, 0x14, struct vhost_vring_state)
+
+/* Set coalescing parameters for the ring. */
+#define VHOST_SET_VRING_COALESCE _IOW(VHOST_VIRTIO, 0x15, \
+				      struct vhost_vring_coalesce)
+/* Get coalescing parameters for the ring. */
+#define VHOST_GET_VRING_COALESCE _IOW(VHOST_VIRTIO, 0x16, \
+				      struct vhost_vring_coalesce)
 
 /* The following ioctls use eventfd file descriptors to signal and poll
  * for events. */
