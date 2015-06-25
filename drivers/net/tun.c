@@ -223,8 +223,25 @@ static void tun_flow_update(struct tun_struct *tun, u32 rxhash,
 
 	if (!rxhash)
 		return;
-	else
+	else if (tun->flows[index].ent != val)
 		tun->flows[index].ent = val;
+	else
+		sock_rps_record_flow_hash(tun->flows[index].rps_hash);
+}
+
+static void tun_flow_rps_update(struct tun_struct *tun,
+				struct tun_file *tfile,
+				u32 hash)
+{
+	int index = hash & TUN_FLOW_MASK;
+	u32 val = (hash & ~TAP_QUEUE_MASK) | tfile->queue_index;
+
+	if (!hash)
+		return;
+	else if (tun->flows[index].ent == )
+		tun->flows[index].rps_hash = hash;
+
+	sock_rps_record_flow_hash(hash);
 }
 
 /* We try to identify a flow through its rxhash first. The reason that
@@ -1035,7 +1052,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	tun->dev->stats.rx_packets++;
 	tun->dev->stats.rx_bytes += len;
 
-	tun_flow_update(tun, rxhash, tfile);
+	tun_flow_update(tun, tfile, rxhash);
 	return total_len;
 }
 
@@ -1162,7 +1179,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
 
 done:
-	sock_rps_record_flow_hash(skb_get_hash(skb));
+	tun_flow_rps_update(tun, tfile, skb_get_hash(skb));
 	tun->dev->stats.tx_packets++;
 	tun->dev->stats.tx_bytes += skb->len + vlan_hlen;
 
