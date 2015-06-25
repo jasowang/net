@@ -926,7 +926,7 @@ static inline __u32 skb_get_hash(struct sk_buff *skb)
 	return skb->hash;
 }
 
-static inline __u32 skb_get_swhash(struct sk_buff *skb)
+static inline __u32 skb_get_sw_hash(struct sk_buff *skb)
 {
 	if (!skb->sw_hash)
 		__skb_get_hash(skb);
