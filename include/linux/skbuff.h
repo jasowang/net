@@ -485,13 +485,13 @@ static inline u32 skb_mstamp_us_delta(const struct skb_mstamp *t1,
  *	@tc_index: Traffic control index
  *	@tc_verd: traffic control verdict
  *	@hash: the packet hash
+ *	@sw_hash: the packet hash that was computed in software stack
  *	@queue_mapping: Queue mapping for multiqueue devices
  *	@xmit_more: More SKBs are pending for this queue
  *	@ndisc_nodetype: router type (from link layer)
  *	@ooo_okay: allow the mapping of a socket to a queue to be changed
  *	@l4_hash: indicate hash is a canonical 4-tuple hash over transport
  *		ports.
- *	@sw_hash: indicates hash was computed in software stack
  *	@wifi_acked_valid: wifi_acked was set
  *	@wifi_acked: whether frame was acked on wifi or not
  *	@no_fcs:  Request NIC to treat last 4 bytes as Ethernet FCS
@@ -595,7 +595,6 @@ struct sk_buff {
 	__u8			ip_summed:2;
 	__u8			ooo_okay:1;
 	__u8			l4_hash:1;
-	__u8			sw_hash:1;
 	__u8			wifi_acked_valid:1;
 	__u8			wifi_acked:1;
 
@@ -633,6 +632,7 @@ struct sk_buff {
 	__u32			priority;
 	int			skb_iif;
 	__u32			hash;
+	__u32			sw_hash;
 	__be16			vlan_proto;
 	__u16			vlan_tci;
 #if defined(CONFIG_NET_RX_BUSY_POLL) || defined(CONFIG_XPS)
@@ -918,10 +918,20 @@ skb_set_hash(struct sk_buff *skb, __u32 hash, enum pkt_hash_types type)
 	skb->hash = hash;
 }
 
+static inline __u32 skb_get_sw_hash(struct sk_buff *skb)
+{
+	if (!skb->sw_hash)
+		__skb_get_hash(skb);
+
+	return skb->sw_hash;
+}
+
 static inline __u32 skb_get_hash(struct sk_buff *skb)
 {
-	if (!skb->l4_hash && !skb->sw_hash)
-		__skb_get_hash(skb);
+	if (!skb->l4_hash)
+		return skb_get_sw_hash(skb);
+	else if (skb->sw_hash)
+		return skb->sw_hash;
 
 	return skb->hash;
 }
