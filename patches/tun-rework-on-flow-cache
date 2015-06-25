@@ -1,5 +1,5 @@
 Bottom: 028eeb771c3f596b66853dce3a22d93425848187
-Top:    61a23d4c2297019f71edf0c8b66f54c023a70ad0
+Top:    05c0b45011fbf09c28f3e8fa43cdecbfbe41316f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 11:26:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 1a1c4f7..736765c 100644
+index 1a1c4f7..3062b79 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -126,9 +126,7 @@ struct tap_filter {
@@ -39,9 +39,9 @@ index 1a1c4f7..736765c 100644
 -	int queue_index;
 -	unsigned long updated;
 +struct tun_flow_table {
-+	u32 ents[0] ____cacheline_aligned_in_smp;
++	u32 ent;
++	u32 rps_hash;
  };
-+#define TUN_FLOW_TABLE_SIZE(_num) (offsetof(struct tun_flow_table, ents[_num]))
  
  #define TUN_NUM_FLOW_ENTRIES 1024
 +#define TUN_FLOW_MASK 0x3FF
@@ -168,8 +168,8 @@ index 1a1c4f7..736765c 100644
 -			else if (time_before(this_timer, next_timer))
 -				next_timer = this_timer;
 -		}
-+		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index)
-+			tun->flows->ents[i] = 0;
++		if ((tun->flows[i].ent & TAP_QUEUE_MASK) == queue_index)
++			tun->flows[i].ent = 0;
  	}
 -
 -	if (count)
@@ -229,7 +229,7 @@ index 1a1c4f7..736765c 100644
 -{
 -	if (unlikely(e->rps_rxhash != hash))
 -		e->rps_rxhash = hash;
-+		tun->flows->ents[index] = val;
++		tun->flows[index].ent = val;
  }
  
  /* We try to identify a flow through its rxhash first. The reason that
@@ -254,7 +254,7 @@ index 1a1c4f7..736765c 100644
 -		} else
 +	hash = skb_get_hash(skb);
 +	if (hash) {
-+		u32 ident = tun->flows->ents[hash & TUN_FLOW_MASK];
++		u32 ident = tun->flows[hash & TUN_FLOW_MASK].ent;
 +
 +		if ((ident ^ hash) & ~TAP_QUEUE_MASK) {
  			/* use multiply and shift instead of expensive divide */
@@ -288,7 +288,7 @@ index 1a1c4f7..736765c 100644
  	tun_debug(KERN_INFO, tun, "tun_net_xmit %d\n", skb->len);
  
  	BUG_ON(!tfile);
-@@ -910,21 +746,12 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -910,21 +746,13 @@ static const struct net_device_ops tap_netdev_ops = {
  
  static void tun_flow_init(struct tun_struct *tun)
  {
@@ -301,7 +301,8 @@ index 1a1c4f7..736765c 100644
 -	setup_timer(&tun->flow_gc_timer, tun_flow_cleanup, (unsigned long)tun);
 -	mod_timer(&tun->flow_gc_timer,
 -		  round_jiffies_up(jiffies + tun->ageing_time));
-+	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE(TUN_NUM_FLOW_ENTRIES));
++	tun->flows = vzalloc(sizeof(struct tun_flow_table) *
++			     TUN_NUM_FLOW_ENTRIES);
  }
  
  static void tun_flow_uninit(struct tun_struct *tun)
@@ -312,7 +313,7 @@ index 1a1c4f7..736765c 100644
  }
  
  /* Initialize net device. */
-@@ -1334,6 +1161,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1334,6 +1162,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
  
  done:
