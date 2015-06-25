@@ -926,6 +926,14 @@ static inline __u32 skb_get_hash(struct sk_buff *skb)
 	return skb->hash;
 }
 
+static inline __u32 skb_get_sw_hash(struct sk_buff *skb)
+{
+	if (!skb->sw_hash)
+		__skb_get_hash(skb);
+
+	return skb->hash;
+}
+
 __u32 skb_get_hash_perturb(const struct sk_buff *skb, u32 perturb);
 
 static inline __u32 skb_get_hash_raw(const struct sk_buff *skb)
