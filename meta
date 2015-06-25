@@ -1,7 +1,8 @@
 Version: 1
-Previous: 4b032b13c088a7e05a505e3eedc939ed68169a99
+Previous: 3be97f7596c7347b2de7ea95cb3873e6254cb6bd
 Head: e29cfcc52666cef10e45c7aaf9169d71c94f7287
 Applied:
+  net-introduce-skb_get_swhash: e29cfcc52666cef10e45c7aaf9169d71c94f7287
 Unapplied:
   tun-rework-on-flow-cache: 8bb203ff67f39bc84b942cd1f417ce5d983691c5
 Hidden:
