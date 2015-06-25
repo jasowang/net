@@ -1,8 +1,8 @@
 Version: 1
-Previous: 279acf20b6aa7d34cb8d88f13c5ef9f24ce452e2
-Head: 7aa9f5d0d54ca6da8c164adcc53717c84e1d9d30
+Previous: 636f804c00afcefb66d5adcd9496eb2966b7ac17
+Head: da1c0089df415a9b1db99a67a379de9beedf06e0
 Applied:
   net-introduce-skb_get_swhash: 7aa9f5d0d54ca6da8c164adcc53717c84e1d9d30
+  tun-rework-on-flow-cache: da1c0089df415a9b1db99a67a379de9beedf06e0
 Unapplied:
-  tun-rework-on-flow-cache: 9233c6e2af158c93298f8ce30f37f76ea20d00fb
 Hidden:
