@@ -1,5 +1,5 @@
 Bottom: 028eeb771c3f596b66853dce3a22d93425848187
-Top:    05c0b45011fbf09c28f3e8fa43cdecbfbe41316f
+Top:    8f067da8b916d3268129082a6c366cee129854ee
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 11:26:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 1a1c4f7..3062b79 100644
+index 1a1c4f7..ea4ab5a 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -126,9 +126,7 @@ struct tap_filter {
@@ -63,7 +63,7 @@ index 1a1c4f7..3062b79 100644
  };
  
  static inline u16 tun16_to_cpu(struct tun_struct *tun, __virtio16 val)
-@@ -215,164 +205,26 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
+@@ -215,164 +205,43 @@ static inline __virtio16 cpu_to_tun16(struct tun_struct *tun, u16 val)
  	return __cpu_to_virtio16(tun->flags & TUN_VNET_LE, val);
  }
  
@@ -189,6 +189,8 @@ index 1a1c4f7..3062b79 100644
  
  	if (!rxhash)
  		return;
++	else if (tun->flows[index].ent != val)
++		tun->flows[index].ent = val;
  	else
 -		head = &tun->flows[tun_hashfn(rxhash)];
 -
@@ -219,21 +221,33 @@ index 1a1c4f7..3062b79 100644
 -
 -unlock:
 -	rcu_read_unlock();
--}
--
++		sock_rps_record_flow_hash(tun->flows[index].rps_hash);
+ }
+ 
 -/**
 - * Save the hash received in the stack receive path and update the
 - * flow_hash table accordingly.
 - */
 -static inline void tun_flow_save_rps_rxhash(struct tun_flow_entry *e, u32 hash)
--{
++static void tun_flow_rps_update(struct tun_struct *tun,
++				struct tun_file *tfile,
++				u32 hash)
+ {
 -	if (unlikely(e->rps_rxhash != hash))
 -		e->rps_rxhash = hash;
-+		tun->flows[index].ent = val;
++	int index = hash & TUN_FLOW_MASK;
++	u32 val = (hash & ~TAP_QUEUE_MASK) | tfile->queue_index;
++
++	if (!hash)
++		return;
++	else if (tun->flows[index].ent == )
++		tun->flows[index].rps_hash = hash;
++
++	sock_rps_record_flow_hash(hash);
  }
  
  /* We try to identify a flow through its rxhash first. The reason that
-@@ -386,22 +238,22 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
+@@ -386,22 +255,22 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
  			    void *accel_priv, select_queue_fallback_t fallback)
  {
  	struct tun_struct *tun = netdev_priv(dev);
@@ -265,7 +279,7 @@ index 1a1c4f7..3062b79 100644
  	} else if (likely(skb_rx_queue_recorded(skb))) {
  		txq = skb_get_rx_queue(skb);
  		while (unlikely(txq >= numqueues))
-@@ -763,22 +615,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -763,22 +632,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	if (txq >= numqueues)
  		goto drop;
  
@@ -288,7 +302,7 @@ index 1a1c4f7..3062b79 100644
  	tun_debug(KERN_INFO, tun, "tun_net_xmit %d\n", skb->len);
  
  	BUG_ON(!tfile);
-@@ -910,21 +746,13 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -910,21 +763,13 @@ static const struct net_device_ops tap_netdev_ops = {
  
  static void tun_flow_init(struct tun_struct *tun)
  {
@@ -313,10 +327,19 @@ index 1a1c4f7..3062b79 100644
  }
  
  /* Initialize net device. */
-@@ -1334,6 +1162,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1207,7 +1052,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	tun->dev->stats.rx_packets++;
+ 	tun->dev->stats.rx_bytes += len;
+ 
+-	tun_flow_update(tun, rxhash, tfile);
++	tun_flow_update(tun, tfile, rxhash);
+ 	return total_len;
+ }
+ 
+@@ -1334,6 +1179,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
  
  done:
-+	sock_rps_record_flow_hash(skb_get_hash(skb));
++	tun_flow_rps_update(tun, tfile, skb_get_hash(skb));
  	tun->dev->stats.tx_packets++;
  	tun->dev->stats.tx_bytes += skb->len + vlan_hlen;
