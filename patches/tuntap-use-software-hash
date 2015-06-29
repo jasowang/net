@@ -1,0 +1,42 @@
+Bottom: c32b7acc311b4ad3de023cac19244ee526bc1587
+Top:    117e2e69df4d7a8f03c2d1037521e9d040ad67ed
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-06-29 14:46:46 +0800
+
+tuntap: use software hash explicitly
+
+Some cards can provides L4 hash which breaks flow caches of tuntap
+since it expect software hash. This patch switch to use software hash
+directly.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 1a1c4f7..5f76cdb 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -387,17 +387,18 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
+ {
+ 	struct tun_struct *tun = netdev_priv(dev);
+ 	struct tun_flow_entry *e;
+-	u32 txq = 0;
++	u32 hash, txq = 0;
+ 	u32 numqueues = 0;
+ 
+ 	rcu_read_lock();
+ 	numqueues = ACCESS_ONCE(tun->numqueues);
+ 
+-	txq = skb_get_hash(skb);
++	hash = skb_get_hash(skb);
++	txq = skb_get_sw_hash(skb);
+ 	if (txq) {
+ 		e = tun_flow_find(&tun->flows[tun_hashfn(txq)], txq);
+ 		if (e) {
+-			tun_flow_save_rps_rxhash(e, txq);
++			tun_flow_save_rps_rxhash(e, hash);
+ 			txq = e->queue_index;
+ 		} else
+ 			/* use multiply and shift instead of expensive divide */
