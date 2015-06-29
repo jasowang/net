@@ -930,6 +930,8 @@ static inline __u32 skb_get_hash(struct sk_buff *skb)
 {
 	if (!skb->l4_hash)
 		return skb_get_sw_hash(skb);
+        else if (skb->sw_hash)
+		return skb->sw_hash;
 
 	return skb->hash;
 }
