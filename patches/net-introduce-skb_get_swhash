@@ -3,7 +3,11 @@ Top:    00d2d7b50396c51da19e212b5b37b693775ca1e4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-06-25 16:54:07 +0800
 
-net: introduce skb_get_swhash()
+net: introduce skb_get_sw_hash()
+
+Some users want to use software hash explicitly, this patch record the
+sw_hash explicitly in sk_buff and introduce the skb_get_sw_hash() to
+fetch the value explicitly.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
