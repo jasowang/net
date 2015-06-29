@@ -1,9 +1,9 @@
 Version: 1
-Previous: b05293047126cf09e7aeaba825282b2270274ea9
-Head: b9fbe709de4dbe663613ebb852f35aef2467872c
+Previous: ede5fd9d9d1f1a8ce60005ce49fc1f203fccccd5
+Head: 0806cfd4853703bc6be3f12ba62e61e9af9c281f
 Applied:
-Unapplied:
   net-introduce-skb_get_swhash: 0806cfd4853703bc6be3f12ba62e61e9af9c281f
+Unapplied:
   tuntap-use-software-hash: 2f8fdebac5a48102f785b1cc81d1af023f678643
   tun-rework-on-flow-cache: 65ed28c3e459e011eefe11f3cba66b9782bd06d8
 Hidden:
