@@ -387,17 +387,18 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_flow_entry *e;
-	u32 txq = 0;
+	u32 hash, txq = 0;
 	u32 numqueues = 0;
 
 	rcu_read_lock();
 	numqueues = ACCESS_ONCE(tun->numqueues);
 
-	txq = skb_get_hash(skb);
+	hash = skb_get_hash(skb);
+	txq = skb_get_sw_hash(skb);
 	if (txq) {
 		e = tun_flow_find(&tun->flows[tun_hashfn(txq)], txq);
 		if (e) {
-			tun_flow_save_rps_rxhash(e, txq);
+			tun_flow_save_rps_rxhash(e, hash);
 			txq = e->queue_index;
 		} else
 			/* use multiply and shift instead of expensive divide */
