@@ -1,5 +1,5 @@
 Bottom: 7b9b358f3a8112ed20b16495e52e9556f34088a5
-Top:    77e42da04dc7e521f2e5ab569ae8779d6cf6e296
+Top:    75bd931abba7fce0516a532ed0c59a7697be6d60
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 11:26:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index b21a315..91f0d79 100644
+index b21a315..ba26891 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -126,9 +126,7 @@ struct tap_filter {
@@ -45,7 +45,7 @@ index b21a315..91f0d79 100644
 +#define TUN_FLOW_TABLE_SIZE(_num) (offsetof(struct tun_flow_table, ents[_num]))
 +
  #define TUN_NUM_FLOW_ENTRIES 1024
-+#define TUN_FLOW_MASK 0x3FF
++#define TUN_FLOW_MASK (TUN_NUM_FLOW_ENTRIES - 1)
  
  /* Since the socket were moved to tun_file, to preserve the behavior of persist
   * device, socket filter, sndbuf and vnet header size were restore when the
