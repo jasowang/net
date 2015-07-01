@@ -1,7 +1,8 @@
 Version: 1
-Previous: d6205c97ab32102ad0b874fd7773cf26b9712c3e
+Previous: b7a4575fe2f11f42bac2ad2145c60636c21a8a7b
 Head: 6776052177f278e8698e03dabc5aac18961ee634
 Applied:
+  net-introduce: 1d2c5aab5d95558c92f2ef54bd4be44f68612e74
   tuntap-use-software-hash-in: 6776052177f278e8698e03dabc5aac18961ee634
 Unapplied:
   net-introduce-skb_get_swhash: 0806cfd4853703bc6be3f12ba62e61e9af9c281f

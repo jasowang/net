@@ -1,0 +1,29 @@
+Bottom: 028eeb771c3f596b66853dce3a22d93425848187
+Top:    babe8758ea6ebf2471e839dec3e7b48581fb73c1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-07-01 14:48:04 +0800
+
+net: introduce skb_clear_hash_if_not_sw()
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index b57eebf..a24d531 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -946,6 +946,12 @@ static inline void skb_clear_hash_if_not_l4(struct sk_buff *skb)
+ 		skb_clear_hash(skb);
+ }
+ 
++static inline void skb_clear_hash_if_not_sw(struct sk_buff *skb)
++{
++	if (!skb->sw_hash)
++		skb_clear_hash(skb);
++}
++
+ static inline void skb_copy_hash(struct sk_buff *to, const struct sk_buff *from)
+ {
+ 	to->hash = from->hash;
