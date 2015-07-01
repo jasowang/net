@@ -1,0 +1,18 @@
+Bottom: babe8758ea6ebf2471e839dec3e7b48581fb73c1
+Top:    babe8758ea6ebf2471e839dec3e7b48581fb73c1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-07-01 15:01:17 +0800
+
+tuntap: use software hash in flow caches
+
+Some card can provides L4 hash, this may confuse flow cache in tuntap
+since it expects software hash in finding flows. Fixing this by:
+
+1) record rps_hash, this will probably be used by saving rps hash
+2) clear skb hash if it was not L4
+3) get software hash and use it for flow caches
+
+
+---
+
+
