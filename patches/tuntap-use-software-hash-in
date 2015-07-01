@@ -1,5 +1,5 @@
 Bottom: babe8758ea6ebf2471e839dec3e7b48581fb73c1
-Top:    3afc0298dca489ce139c534f80ffa3ed8f0d105d
+Top:    7b9b358f3a8112ed20b16495e52e9556f34088a5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-07-01 15:01:17 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 1a1c4f7..a9b52e5 100644
+index 1a1c4f7..b21a315 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -387,17 +387,19 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
@@ -43,3 +43,26 @@ index 1a1c4f7..a9b52e5 100644
  			txq = e->queue_index;
  		} else
  			/* use multiply and shift instead of expensive divide */
+@@ -767,15 +769,17 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 		/* Select queue was not called for the skbuff, so we extract the
+ 		 * RPS hash and save it into the flow_table here.
+ 		 */
+-		__u32 rxhash;
++		__u32 rps_hash, hash;
+ 
+-		rxhash = skb_get_hash(skb);
+-		if (rxhash) {
++		rps_hash = skb_get_hash(skb);
++		skb_clear_hash_if_not_sw(skb);
++		hash = skb_get_hash(skb);
++		if (hash) {
+ 			struct tun_flow_entry *e;
+-			e = tun_flow_find(&tun->flows[tun_hashfn(rxhash)],
+-					rxhash);
++			e = tun_flow_find(&tun->flows[tun_hashfn(hash)],
++					  hash);
+ 			if (e)
+-				tun_flow_save_rps_rxhash(e, rxhash);
++				tun_flow_save_rps_rxhash(e, rps_hash);
+ 		}
+ 	}
