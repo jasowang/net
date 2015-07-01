@@ -946,6 +946,12 @@ static inline void skb_clear_hash_if_not_l4(struct sk_buff *skb)
 		skb_clear_hash(skb);
 }
 
+static inline void skb_clear_hash_if_not_sw(struct sk_buff *skb)
+{
+	if (!skb->sw_hash)
+		skb_clear_hash(skb);
+}
+
 static inline void skb_copy_hash(struct sk_buff *to, const struct sk_buff *from)
 {
 	to->hash = from->hash;
