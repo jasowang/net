@@ -1,9 +1,8 @@
 Version: 1
-Previous: a46488522ccf98717b8a752565fabb8723c0b153
-Head: 2a7ba25801f97cd6c8d3f94fb0225e99fd47961e
+Previous: d6205c97ab32102ad0b874fd7773cf26b9712c3e
+Head: 6776052177f278e8698e03dabc5aac18961ee634
 Applied:
-  tuntap-use-software-hash-in: 6f1426e3bb9a0921cb39962066b3887c3765f1d7
-  refresh-temp: 2a7ba25801f97cd6c8d3f94fb0225e99fd47961e
+  tuntap-use-software-hash-in: 6776052177f278e8698e03dabc5aac18961ee634
 Unapplied:
   net-introduce-skb_get_swhash: 0806cfd4853703bc6be3f12ba62e61e9af9c281f
   tuntap-use-software-hash: c81cd63de9f1e446be2f168a3b2e689867eaeda6
