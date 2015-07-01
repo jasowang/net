@@ -1,5 +1,5 @@
 Bottom: 7b9b358f3a8112ed20b16495e52e9556f34088a5
-Top:    00e9079cd2cb8e725b724e293c5e213779ba46ea
+Top:    d9cf20329adef046f3d475c0afffba658a65f217
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-04-29 11:26:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index b21a315..4cdd5b8 100644
+index b21a315..c511aa1 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -126,9 +126,7 @@ struct tap_filter {
@@ -134,18 +134,15 @@ index b21a315..4cdd5b8 100644
  	int i;
  
 -	spin_lock_bh(&tun->lock);
- 	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
+-	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
 -		struct tun_flow_entry *e;
 -		struct hlist_node *n;
 -
 -		hlist_for_each_entry_safe(e, n, &tun->flows[i], hash_link) {
 -			if (e->queue_index == queue_index)
 -				tun_flow_delete(tun, e);
-+		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index) {
-+			tun->flows->ents[i] = 0;
-+			tun->rps_flows->ents[i] = 0;
- 		}
- 	}
+-		}
+-	}
 -	spin_unlock_bh(&tun->lock);
 -}
 -
@@ -160,7 +157,7 @@ index b21a315..4cdd5b8 100644
 -	tun_debug(KERN_INFO, tun, "tun_flow_cleanup\n");
 -
 -	spin_lock_bh(&tun->lock);
--	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
+ 	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++) {
 -		struct tun_flow_entry *e;
 -		struct hlist_node *n;
 -
@@ -172,8 +169,11 @@ index b21a315..4cdd5b8 100644
 -				tun_flow_delete(tun, e);
 -			else if (time_before(this_timer, next_timer))
 -				next_timer = this_timer;
--		}
--	}
++		if ((tun->flows->ents[i] & TAP_QUEUE_MASK) == queue_index) {
++			tun->flows->ents[i] = 0;
++			tun->rps_flows->ents[i] = 0;
+ 		}
+ 	}
 -
 -	if (count)
 -		mod_timer(&tun->flow_gc_timer, round_jiffies_up(next_timer));
@@ -294,21 +294,31 @@ index b21a315..4cdd5b8 100644
  		}
  	}
  
-@@ -914,21 +777,14 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -912,23 +775,25 @@ static const struct net_device_ops tap_netdev_ops = {
+ #endif
+ };
  
- static void tun_flow_init(struct tun_struct *tun)
+-static void tun_flow_init(struct tun_struct *tun)
++static int tun_flow_init(struct tun_struct *tun)
  {
 -	int i;
--
++	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE());
++	if (!tun->flows)
++		return -ENOMEM;
+ 
 -	for (i = 0; i < TUN_NUM_FLOW_ENTRIES; i++)
 -		INIT_HLIST_HEAD(&tun->flows[i]);
--
++	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE());
++	if (!tun->rps_flows) {
++		vfree(tun->rps_flows);
++		return -ENOMEM;
++	}
+ 
 -	tun->ageing_time = TUN_FLOW_EXPIRE;
 -	setup_timer(&tun->flow_gc_timer, tun_flow_cleanup, (unsigned long)tun);
 -	mod_timer(&tun->flow_gc_timer,
 -		  round_jiffies_up(jiffies + tun->ageing_time));
-+	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE());
-+	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE());
++	return 0;
  }
  
  static void tun_flow_uninit(struct tun_struct *tun)
@@ -320,7 +330,7 @@ index b21a315..4cdd5b8 100644
  }
  
  /* Initialize net device. */
-@@ -1026,6 +882,17 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1026,6 +891,17 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
@@ -338,7 +348,7 @@ index b21a315..4cdd5b8 100644
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
-@@ -1212,6 +1079,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1212,6 +1088,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	tun->dev->stats.rx_bytes += len;
  
  	tun_flow_update(tun, rxhash, tfile);
@@ -346,7 +356,7 @@ index b21a315..4cdd5b8 100644
  	return total_len;
  }
  
-@@ -1338,6 +1206,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1338,6 +1215,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	skb_copy_datagram_iter(skb, vlan_offset, iter, skb->len - vlan_offset);
  
  done:
@@ -354,7 +364,26 @@ index b21a315..4cdd5b8 100644
  	tun->dev->stats.tx_packets++;
  	tun->dev->stats.tx_bytes += skb->len + vlan_hlen;
  
-@@ -2299,6 +2168,8 @@ static int __init tun_init(void)
+@@ -1649,7 +1527,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 			goto err_free_dev;
+ 
+ 		tun_net_init(dev);
+-		tun_flow_init(tun);
++		err = tun_flow_init(tun);
++		if (err < 0)
++			goto err_free_security;
+ 
+ 		dev->hw_features = NETIF_F_SG | NETIF_F_FRAGLIST |
+ 				   TUN_USER_FEATURES | NETIF_F_HW_VLAN_CTAG_TX |
+@@ -1689,6 +1569,7 @@ err_detach:
+ 	tun_detach_all(dev);
+ err_free_flow:
+ 	tun_flow_uninit(tun);
++err_free_security:
+ 	security_tun_dev_free_security(tun->security);
+ err_free_dev:
+ 	free_netdev(dev);
+@@ -2299,6 +2180,8 @@ static int __init tun_init(void)
  {
  	int ret = 0;
  
