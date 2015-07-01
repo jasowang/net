@@ -769,15 +769,17 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		/* Select queue was not called for the skbuff, so we extract the
 		 * RPS hash and save it into the flow_table here.
 		 */
-		__u32 rxhash;
+		__u32 rps_hash, hash;
 
-		rxhash = skb_get_hash(skb);
-		if (rxhash) {
+		rps_hash = skb_get_hash(skb);
+		skb_clear_hash_if_not_sw(skb);
+		hash = skb_get_hash(skb);
+		if (hash) {
 			struct tun_flow_entry *e;
-			e = tun_flow_find(&tun->flows[tun_hashfn(rxhash)],
-					rxhash);
+			e = tun_flow_find(&tun->flows[tun_hashfn(hash)],
+					  hash);
 			if (e)
-				tun_flow_save_rps_rxhash(e, rxhash);
+				tun_flow_save_rps_rxhash(e, rps_hash);
 		}
 	}
 
