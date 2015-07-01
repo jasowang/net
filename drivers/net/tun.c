@@ -162,7 +162,7 @@ struct tun_flow_table {
 #define TUN_FLOW_TABLE_SIZE(_num) (offsetof(struct tun_flow_table, ents[_num]))
 
 #define TUN_NUM_FLOW_ENTRIES 1024
-#define TUN_FLOW_MASK 0x3FF
+#define TUN_FLOW_MASK (TUN_NUM_FLOW_ENTRIES - 1)
 
 /* Since the socket were moved to tun_file, to preserve the behavior of persist
  * device, socket filter, sndbuf and vnet header size were restore when the
