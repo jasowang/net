@@ -387,17 +387,19 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_flow_entry *e;
-	u32 txq = 0;
+	u32 rps_hash, txq;
 	u32 numqueues = 0;
 
 	rcu_read_lock();
 	numqueues = ACCESS_ONCE(tun->numqueues);
 
+	rps_hash = skb_get_hash(skb);
+	skb_clear_hash_if_not_sw(skb);
 	txq = skb_get_hash(skb);
 	if (txq) {
 		e = tun_flow_find(&tun->flows[tun_hashfn(txq)], txq);
 		if (e) {
-			tun_flow_save_rps_rxhash(e, txq);
+			tun_flow_save_rps_rxhash(e, rps_hash);
 			txq = e->queue_index;
 		} else
 			/* use multiply and shift instead of expensive divide */
@@ -767,15 +769,17 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		/* Select queue was not called for the skbuff, so we extract the
 		 * RPS hash and save it into the flow_table here.
 		 */
-		__u32 rxhash;
+		__u32 rps_hash, hash;
 
-		rxhash = skb_get_hash(skb);
-		if (rxhash) {
+		rps_hash = skb_get_hash(skb);
+		skb_clear_hash_if_not_sw(skb);
+		hash = skb_get_hash(skb);
+		if (hash) {
 			struct tun_flow_entry *e;
-			e = tun_flow_find(&tun->flows[tun_hashfn(rxhash)],
-					rxhash);
+			e = tun_flow_find(&tun->flows[tun_hashfn(hash)],
+					  hash);
 			if (e)
-				tun_flow_save_rps_rxhash(e, rxhash);
+				tun_flow_save_rps_rxhash(e, rps_hash);
 		}
 	}
 
