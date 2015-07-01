@@ -159,10 +159,10 @@ struct tun_flow_table {
 	u32 ents[0] ____cacheline_aligned_in_smp;
 };
 
-#define TUN_FLOW_TABLE_SIZE(_num) (offsetof(struct tun_flow_table, ents[_num]))
-
 #define TUN_NUM_FLOW_ENTRIES 1024
 #define TUN_FLOW_MASK (TUN_NUM_FLOW_ENTRIES - 1)
+#define TUN_FLOW_TABLE_SIZE() (offsetof(struct tun_flow_table,		\
+					ents[TUN_NUM_FLOW_ENTRIES]))
 
 /* Since the socket were moved to tun_file, to preserve the behavior of persist
  * device, socket filter, sndbuf and vnet header size were restore when the
@@ -777,8 +777,8 @@ static const struct net_device_ops tap_netdev_ops = {
 
 static void tun_flow_init(struct tun_struct *tun)
 {
-	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE(TUN_NUM_FLOW_ENTRIES));
-	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE(TUN_NUM_FLOW_ENTRIES));
+	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE());
+	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE());
 }
 
 static void tun_flow_uninit(struct tun_struct *tun)
@@ -2167,6 +2167,8 @@ static const struct ethtool_ops tun_ethtool_ops = {
 static int __init tun_init(void)
 {
 	int ret = 0;
+
+	BUILD_BUG_ON((TUN_NUM_FLOW_ENTRIES) & (TUN_NUM_FLOW_ENTRIES - 1));
 
 	pr_info("%s, %s\n", DRV_DESCRIPTION, DRV_VERSION);
 	pr_info("%s\n", DRV_COPYRIGHT);
