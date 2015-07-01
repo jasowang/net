@@ -775,10 +775,19 @@ static const struct net_device_ops tap_netdev_ops = {
 #endif
 };
 
-static void tun_flow_init(struct tun_struct *tun)
+static int tun_flow_init(struct tun_struct *tun)
 {
 	tun->flows = vzalloc(TUN_FLOW_TABLE_SIZE());
+	if (!tun->flows)
+		return -ENOMEM;
+
 	tun->rps_flows = vzalloc(TUN_FLOW_TABLE_SIZE());
+	if (!tun->rps_flows) {
+		vfree(tun->rps_flows);
+		return -ENOMEM;
+	}
+
+	return 0;
 }
 
 static void tun_flow_uninit(struct tun_struct *tun)
@@ -1518,7 +1527,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			goto err_free_dev;
 
 		tun_net_init(dev);
-		tun_flow_init(tun);
+		err = tun_flow_init(tun);
+		if (err < 0)
+			goto err_free_security;
 
 		dev->hw_features = NETIF_F_SG | NETIF_F_FRAGLIST |
 				   TUN_USER_FEATURES | NETIF_F_HW_VLAN_CTAG_TX |
@@ -1558,6 +1569,7 @@ err_detach:
 	tun_detach_all(dev);
 err_free_flow:
 	tun_flow_uninit(tun);
+err_free_security:
 	security_tun_dev_free_security(tun->security);
 err_free_dev:
 	free_netdev(dev);
