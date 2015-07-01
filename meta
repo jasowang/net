@@ -1,11 +1,11 @@
 Version: 1
-Previous: fd0e702fab1780cf3e60cd12cc21c8a65da25f8d
-Head: eced8c57a899b2584c6806f99140c1eecdd3acce
+Previous: bb9c97697f0e64d6a2be65a4f4799904ad87182b
+Head: 124d4483fc46abafbeeb934d894555d9f08da7b8
 Applied:
   net-introduce: 1d2c5aab5d95558c92f2ef54bd4be44f68612e74
   tuntap-use-software-hash-in: 124d4483fc46abafbeeb934d894555d9f08da7b8
-  tun-rework-on-flow-cache-0: eced8c57a899b2584c6806f99140c1eecdd3acce
 Unapplied:
+  tun-rework-on-flow-cache-0: eced8c57a899b2584c6806f99140c1eecdd3acce
   tun-rework-on-flow-cache: 62f89508f8feab6100c3e69aef16a853b505a0be
   net-introduce-skb_get_swhash: 0806cfd4853703bc6be3f12ba62e61e9af9c281f
   tuntap-use-software-hash: c81cd63de9f1e446be2f168a3b2e689867eaeda6
