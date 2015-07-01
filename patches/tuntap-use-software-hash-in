@@ -12,6 +12,8 @@ since it expects software hash in finding flows. Fixing this by:
 2) clear skb hash if it was not L4
 3) get software hash and use it for flow caches
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
