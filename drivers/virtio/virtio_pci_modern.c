@@ -600,6 +600,10 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 
 	check_offsets();
 
+	dump_stack();
+
+	printk("probe start!\n");
+
 	/* We only own devices >= 0x1000 and <= 0x107f: leave the rest. */
 	if (pci_dev->device < 0x1000 || pci_dev->device > 0x107f)
 		return -ENODEV;
@@ -624,6 +628,8 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 		return -ENODEV;
 	}
 
+	printk("CAP COMMON CFG\n");
+
 	/* If common is there, these should be too... */
 	isr = virtio_pci_find_capability(pci_dev, VIRTIO_PCI_CAP_ISR_CFG,
 					 IORESOURCE_IO | IORESOURCE_MEM);
@@ -636,12 +642,15 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 		return -EINVAL;
 	}
 
+	printk("CAP ISRCFG\n");
+
 	/* Device capability is only mandatory for devices that have
 	 * device-specific configuration.
 	 */
 	device = virtio_pci_find_capability(pci_dev, VIRTIO_PCI_CAP_DEVICE_CFG,
 					    IORESOURCE_IO | IORESOURCE_MEM);
 
+	printk("device CFG!\n");
 	err = -EINVAL;
 	vp_dev->common = map_capability(pci_dev, common,
 					sizeof(struct virtio_pci_common_cfg), 4,
@@ -649,28 +658,31 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 					NULL);
 	if (!vp_dev->common)
 		goto err_map_common;
+	printk("MAP common!\n");
 	vp_dev->isr = map_capability(pci_dev, isr, sizeof(u8), 1,
 				     0, 1,
 				     NULL);
 	if (!vp_dev->isr)
 		goto err_map_isr;
+	printk("map isr!\n");
 
 	/* Read notify_off_multiplier from config space. */
 	pci_read_config_dword(pci_dev,
 			      notify + offsetof(struct virtio_pci_notify_cap,
 						notify_off_multiplier),
 			      &vp_dev->notify_offset_multiplier);
+	printk("read 1\n");
 	/* Read notify length and offset from config space. */
 	pci_read_config_dword(pci_dev,
 			      notify + offsetof(struct virtio_pci_notify_cap,
 						cap.length),
 			      &notify_length);
-
+	printk("Read 2\n");
 	pci_read_config_dword(pci_dev,
 			      notify + offsetof(struct virtio_pci_notify_cap,
 						cap.length),
 			      &notify_offset);
-
+	printk("read 3\n");
 	/* We don't know how many VQs we'll map, ahead of the time.
 	 * If notify length is small, map it all now.
 	 * Otherwise, map each VQ individually later.
@@ -684,6 +696,8 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 	} else {
 		vp_dev->notify_map_cap = notify;
 	}
+
+	printk("444\n");
 
 	/* Again, we don't know how much we should map, but PAGE_SIZE
 	 * is more than enough for all existing devices.
@@ -700,10 +714,15 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 		vp_dev->vdev.config = &virtio_pci_config_nodev_ops;
 	}
 
+	printk("555\n");
+
 	vp_dev->config_vector = vp_config_vector;
 	vp_dev->setup_vq = setup_vq;
 	vp_dev->del_vq = del_vq;
 
+	dump_stack();
+
+	printk("probe finish!\n");
 	return 0;
 
 err_map_device:
