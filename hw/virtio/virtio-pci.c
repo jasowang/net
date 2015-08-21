@@ -286,8 +286,8 @@ static int virtio_pci_set_host_notifier_internal(VirtIOPCIProxy *proxy,
         }
         virtio_queue_set_host_notifier_fd_handler(vq, true, set_handler);
         if (modern) {
-            memory_region_add_eventfd(modern_mr, modern_addr, 2,
-                                      true, n, notifier);
+            memory_region_add_eventfd(modern_mr, modern_addr, 0,
+                                      false, n, notifier);
         }
         if (legacy) {
             memory_region_add_eventfd(legacy_mr, legacy_addr, 2,
@@ -295,8 +295,8 @@ static int virtio_pci_set_host_notifier_internal(VirtIOPCIProxy *proxy,
         }
     } else {
         if (modern) {
-            memory_region_del_eventfd(modern_mr, modern_addr, 2,
-                                      true, n, notifier);
+            memory_region_del_eventfd(modern_mr, modern_addr, 0,
+                                      false, n, notifier);
         }
         if (legacy) {
             memory_region_del_eventfd(legacy_mr, legacy_addr, 2,
