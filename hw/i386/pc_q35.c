@@ -365,15 +365,15 @@ static void pc_q35_machine_options(MachineClass *m)
     m->desc = "Standard PC (Q35 + ICH9, 2009)";
     m->hot_add_cpu = pc_hot_add_cpu;
     m->units_per_default_bus = 1;
+    m->default_machine_opts = "firmware=bios-256k.bin";
+    m->default_display = "std";
+    m->no_floppy = 1;
+    m->no_tco = 0;
 }
 
 static void pc_q35_2_4_machine_options(MachineClass *m)
 {
     pc_q35_machine_options(m);
-    m->default_machine_opts = "firmware=bios-256k.bin";
-    m->default_display = "std";
-    m->no_floppy = 1;
-    m->no_tco = 0;
     m->alias = "q35";
 }
 
