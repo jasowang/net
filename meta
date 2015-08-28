@@ -1,8 +1,7 @@
 Version: 1
-Previous: 80522f45ff05b2a8d05982da610ab9e4eac3a6ca
-Head: aeb3fa0febfc975aa9ccc95cff384bf85d73f8cf
+Previous: fde7ccd4033bfc1acdd75f4b15110cb57345337e
+Head: 43fc7704aba0db4178bb1b23564955a5d4db2155
 Applied:
-  kvm-factor-out-eventfd: c35efa43e4fe92fa37c1752c77ff509a7d95bb42
-  refresh-temp: aeb3fa0febfc975aa9ccc95cff384bf85d73f8cf
+  kvm-factor-out-eventfd: 43fc7704aba0db4178bb1b23564955a5d4db2155
 Unapplied:
 Hidden:
