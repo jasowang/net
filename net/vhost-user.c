@@ -146,6 +146,7 @@ static int net_vhost_user_init(NetClientState *peer, const char *device,
     /* We don't provide a receive callback */
     s->nc.receive_disabled = 1;
     s->chr = chr;
+    nc->queue_index = 0;
 
     qemu_chr_add_handlers(s->chr, NULL, NULL, net_vhost_user_event, s);
 
