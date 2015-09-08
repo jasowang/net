@@ -187,6 +187,23 @@ static int vhost_user_write(struct vhost_dev *dev, VhostUserMsg *msg,
             0 : -1;
 }
 
+static bool vhost_user_one_time_request(VhostUserRequest request)
+{
+    switch (request) {
+    case VHOST_USER_GET_FEATURES:
+    case VHOST_USER_SET_FEATURES:
+    case VHOST_USER_GET_PROTOCOL_FEATURES:
+    case VHOST_USER_SET_PROTOCOL_FEATURES:
+    case VHOST_USER_SET_OWNER:
+    case VHOST_USER_RESET_DEVICE:
+    case VHOST_USER_SET_MEM_TABLE:
+    case VHOST_USER_GET_QUEUE_NUM:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static int vhost_user_call(struct vhost_dev *dev, unsigned long int request,
         void *arg)
 {
@@ -205,6 +222,14 @@ static int vhost_user_call(struct vhost_dev *dev, unsigned long int request,
         msg_request = vhost_user_request_translate(request);
     else
         msg_request = request;
+
+    /*
+     * For none-vring specific requests, like VHOST_USER_GET_FEATURES,
+     * we just need send it once in the first time. For later such
+     * request, we just ignore it.
+     */
+    if (vhost_user_one_time_request(msg_request) && dev->vq_index != 0)
+        return 0;
 
     msg.request = msg_request;
     msg.flags = VHOST_USER_VERSION;
@@ -268,17 +293,20 @@ static int vhost_user_call(struct vhost_dev *dev, unsigned long int request,
     case VHOST_USER_SET_VRING_NUM:
     case VHOST_USER_SET_VRING_BASE:
         memcpy(&msg.state, arg, sizeof(struct vhost_vring_state));
+        msg.addr.index += dev->vq_index;
         msg.size = sizeof(m.state);
         break;
 
     case VHOST_USER_GET_VRING_BASE:
         memcpy(&msg.state, arg, sizeof(struct vhost_vring_state));
+        msg.addr.index += dev->vq_index;
         msg.size = sizeof(m.state);
         need_reply = 1;
         break;
 
     case VHOST_USER_SET_VRING_ADDR:
         memcpy(&msg.addr, arg, sizeof(struct vhost_vring_addr));
+        msg.addr.index += dev->vq_index;
         msg.size = sizeof(m.addr);
         break;
 
@@ -286,7 +314,7 @@ static int vhost_user_call(struct vhost_dev *dev, unsigned long int request,
     case VHOST_USER_SET_VRING_CALL:
     case VHOST_USER_SET_VRING_ERR:
         file = arg;
-        msg.u64 = file->index & VHOST_USER_VRING_IDX_MASK;
+        msg.u64 = (file->index + dev->vq_index) & VHOST_USER_VRING_IDX_MASK;
         msg.size = sizeof(m.u64);
         if (ioeventfd_enabled() && file->fd > 0) {
             fds[fd_num++] = file->fd;
@@ -330,6 +358,7 @@ static int vhost_user_call(struct vhost_dev *dev, unsigned long int request,
                 error_report("Received bad msg size.");
                 return -1;
             }
+            msg.state.index -= dev->vq_index;
             memcpy(arg, &msg.state, sizeof(struct vhost_vring_state));
             break;
         default:

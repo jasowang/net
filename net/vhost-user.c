@@ -15,10 +15,16 @@
 #include "qemu/config-file.h"
 #include "qemu/error-report.h"
 
+struct VhostUserNetPeer {
+    NetClientState *nc;
+    VHostNetState  *vhost_net;
+};
+
 typedef struct VhostUserState {
-    NetClientState nc;
     CharDriverState *chr;
-    VHostNetState *vhost_net;
+    bool running;
+    int queues;
+    struct VhostUserNetPeer peers[];
 } VhostUserState;
 
 typedef struct VhostUserChardevProps {
@@ -29,48 +35,75 @@ typedef struct VhostUserChardevProps {
 
 VHostNetState *vhost_user_get_vhost_net(NetClientState *nc)
 {
-    VhostUserState *s = DO_UPCAST(VhostUserState, nc, nc);
+    VhostUserState *s = nc->opaque;
     assert(nc->info->type == NET_CLIENT_OPTIONS_KIND_VHOST_USER);
-    return s->vhost_net;
-}
-
-static int vhost_user_running(VhostUserState *s)
-{
-    return (s->vhost_net) ? 1 : 0;
+    return s->peers[nc->queue_index].vhost_net;
 }
 
 static int vhost_user_start(VhostUserState *s)
 {
     VhostNetOptions options;
+    VHostNetState *vhost_net;
+    int max_queues;
+    int i = 0;
 
-    if (vhost_user_running(s)) {
+    if (s->running)
         return 0;
-    }
 
     options.backend_type = VHOST_BACKEND_TYPE_USER;
-    options.net_backend = &s->nc;
     options.opaque = s->chr;
 
-    s->vhost_net = vhost_net_init(&options);
+    options.net_backend = s->peers[i].nc;
+    vhost_net = s->peers[i++].vhost_net = vhost_net_init(&options);
 
-    return vhost_user_running(s) ? 0 : -1;
+    max_queues = vhost_net_get_max_queues(vhost_net);
+    if (s->queues >= max_queues) {
+        error_report("you are asking more queues than supported: %d\n",
+                     max_queues);
+        return -1;
+    }
+
+    for (; i < s->queues; i++) {
+        options.net_backend = s->peers[i].nc;
+
+        s->peers[i].vhost_net = vhost_net_init(&options);
+        if (!s->peers[i].vhost_net)
+            return -1;
+    }
+    s->running = true;
+
+    return 0;
 }
 
 static void vhost_user_stop(VhostUserState *s)
 {
-    if (vhost_user_running(s)) {
-        vhost_net_cleanup(s->vhost_net);
+    int i;
+    VHostNetState *vhost_net;
+
+    if (!s->running)
+        return;
+
+    for (i = 0;  i < s->queues; i++) {
+        vhost_net = s->peers[i].vhost_net;
+        if (vhost_net)
+            vhost_net_cleanup(vhost_net);
     }
 
-    s->vhost_net = 0;
+    s->running = false;
 }
 
 static void vhost_user_cleanup(NetClientState *nc)
 {
-    VhostUserState *s = DO_UPCAST(VhostUserState, nc, nc);
+    VhostUserState *s = nc->opaque;
+    VHostNetState *vhost_net = s->peers[nc->queue_index].vhost_net;
 
-    vhost_user_stop(s);
+    if (vhost_net)
+        vhost_net_cleanup(vhost_net);
+
     qemu_purge_queued_packets(nc);
+
+    if (nc->queue_index == s->queues - 1)
+        free(s);
 }
 
 static bool vhost_user_has_vnet_hdr(NetClientState *nc)
@@ -89,7 +122,7 @@ static bool vhost_user_has_ufo(NetClientState *nc)
 
 static NetClientInfo net_vhost_user_info = {
         .type = NET_CLIENT_OPTIONS_KIND_VHOST_USER,
-        .size = sizeof(VhostUserState),
+        .size = sizeof(NetClientState),
         .cleanup = vhost_user_cleanup,
         .has_vnet_hdr = vhost_user_has_vnet_hdr,
         .has_ufo = vhost_user_has_ufo,
@@ -97,18 +130,25 @@ static NetClientInfo net_vhost_user_info = {
 
 static void net_vhost_link_down(VhostUserState *s, bool link_down)
 {
-    s->nc.link_down = link_down;
+    NetClientState *nc;
+    int i;
 
-    if (s->nc.peer) {
-        s->nc.peer->link_down = link_down;
-    }
+    for (i = 0; i < s->queues; i++) {
+        nc = s->peers[i].nc;
 
-    if (s->nc.info->link_status_changed) {
-        s->nc.info->link_status_changed(&s->nc);
-    }
+        nc->link_down = link_down;
 
-    if (s->nc.peer && s->nc.peer->info->link_status_changed) {
-        s->nc.peer->info->link_status_changed(s->nc.peer);
+        if (nc->peer) {
+            nc->peer->link_down = link_down;
+        }
+
+        if (nc->info->link_status_changed) {
+            nc->info->link_status_changed(nc);
+        }
+
+        if (nc->peer && nc->peer->info->link_status_changed) {
+            nc->peer->info->link_status_changed(nc->peer);
+        }
     }
 }
 
@@ -118,7 +158,8 @@ static void net_vhost_user_event(void *opaque, int event)
 
     switch (event) {
     case CHR_EVENT_OPENED:
-        vhost_user_start(s);
+        if (vhost_user_start(s) < 0)
+            exit(1);
         net_vhost_link_down(s, false);
         error_report("chardev \"%s\" went up", s->chr->label);
         break;
@@ -131,24 +172,28 @@ static void net_vhost_user_event(void *opaque, int event)
 }
 
 static int net_vhost_user_init(NetClientState *peer, const char *device,
-                               const char *name, CharDriverState *chr)
+                               const char *name, VhostUserState *s)
 {
     NetClientState *nc;
-    VhostUserState *s;
+    CharDriverState *chr = s->chr;
+    int i;
 
-    nc = qemu_new_net_client(&net_vhost_user_info, peer, device, name);
+    for (i = 0; i < s->queues; i++) {
+        nc = qemu_new_net_client(&net_vhost_user_info, peer, device, name);
 
-    snprintf(nc->info_str, sizeof(nc->info_str), "vhost-user to %s",
-             chr->label);
+        snprintf(nc->info_str, sizeof(nc->info_str), "vhost-user%d to %s",
+                 i, chr->label);
 
-    s = DO_UPCAST(VhostUserState, nc, nc);
+        /* We don't provide a receive callback */
+        nc->receive_disabled = 1;
 
-    /* We don't provide a receive callback */
-    s->nc.receive_disabled = 1;
-    s->chr = chr;
-    nc->queue_index = 0;
+        nc->queue_index = i;
+        nc->opaque      = s;
 
-    qemu_chr_add_handlers(s->chr, NULL, NULL, net_vhost_user_event, s);
+        s->peers[i].nc = nc;
+    }
+
+    qemu_chr_add_handlers(chr, NULL, NULL, net_vhost_user_event, s);
 
     return 0;
 }
@@ -227,8 +272,10 @@ static int net_vhost_check_net(void *opaque, QemuOpts *opts, Error **errp)
 int net_init_vhost_user(const NetClientOptions *opts, const char *name,
                         NetClientState *peer, Error **errp)
 {
+    int queues;
     const NetdevVhostUserOptions *vhost_user_opts;
     CharDriverState *chr;
+    VhostUserState *s;
 
     assert(opts->kind == NET_CLIENT_OPTIONS_KIND_VHOST_USER);
     vhost_user_opts = opts->vhost_user;
@@ -244,6 +291,11 @@ int net_init_vhost_user(const NetClientOptions *opts, const char *name,
         return -1;
     }
 
+    queues = vhost_user_opts->has_queues ? vhost_user_opts->queues : 1;
+    s = g_malloc0(sizeof(VhostUserState) +
+                  queues * sizeof(struct VhostUserNetPeer));
+    s->queues = queues;
+    s->chr    = chr;
 
-    return net_vhost_user_init(peer, "vhost_user", name, chr);
+    return net_vhost_user_init(peer, "vhost_user", name, s);
 }
