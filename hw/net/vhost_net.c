@@ -133,6 +133,11 @@ static int vhost_net_get_fd(NetClientState *backend)
     }
 }
 
+static void vhost_net_set_vq_index(struct vhost_net *net, int vq_index)
+{
+    net->dev.vq_index = vq_index;
+}
+
 struct vhost_net *vhost_net_init(VhostNetOptions *options)
 {
     int r;
@@ -157,6 +162,8 @@ struct vhost_net *vhost_net_init(VhostNetOptions *options)
         net->backend = -1;
     }
     net->nc = options->net_backend;
+
+    vhost_net_set_vq_index(net, net->nc->queue_index * 2);
 
     net->dev.nvqs = 2;
     net->dev.vqs = net->vqs;
@@ -185,11 +192,6 @@ struct vhost_net *vhost_net_init(VhostNetOptions *options)
 fail:
     g_free(net);
     return NULL;
-}
-
-static void vhost_net_set_vq_index(struct vhost_net *net, int vq_index)
-{
-    net->dev.vq_index = vq_index;
 }
 
 static int vhost_net_set_vnet_endian(VirtIODevice *dev, NetClientState *peer,
@@ -314,10 +316,6 @@ int vhost_net_start(VirtIODevice *dev, NetClientState *ncs,
     r = vhost_net_set_vnet_endian(dev, ncs[0].peer, true);
     if (r < 0) {
         goto err;
-    }
-
-    for (i = 0; i < total_queues; i++) {
-        vhost_net_set_vq_index(get_vhost_net(ncs[i].peer), i * 2);
     }
 
     r = k->set_guest_notifiers(qbus->parent, total_queues * 2, true);
