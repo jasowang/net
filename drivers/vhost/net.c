@@ -385,12 +385,8 @@ static void handle_tx(struct vhost_net *net)
 	hdr_size = nvq->vhost_hlen;
 	zcopy = nvq->ubufs;
 
-<<<<<<< current
 	/* Finish pending interrupts first */
 	vhost_check_coalesce_and_signal(vq->dev, vq);
-=======
-	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
->>>>>>> patched
 
 	for (;;) {
 		/* Release DMAs done buffers first */
@@ -638,12 +634,8 @@ static void handle_rx(struct vhost_net *net)
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
 
-<<<<<<< current
 	/* Finish pending interrupts first */
 	vhost_check_coalesce_and_signal(vq->dev, vq);
-=======
-	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
->>>>>>> patched
 
 	while ((sock_len = peek_head_len(sock->sk))) {
 		sock_len += sock_hlen;
