@@ -1,0 +1,31 @@
+Bottom: 67ccb758cb0b7fe0f149c028c9a38298cfe92809
+Top:    dffe6e53fa0f9370090a34d6086c971cfb4ef888
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-10 15:05:55 +0800
+
+Refresh of vhost_net-interrupt-coalescing
+
+---
+
+diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
+index cb5b7bf1..0b80113 100644
+--- a/include/uapi/linux/vhost.h
++++ b/include/uapi/linux/vhost.h
+@@ -27,17 +27,10 @@ struct vhost_vring_file {
+ 
+ };
+ 
+-<<<<<<< current
+ struct vhost_vring_coalesce {
+ 	unsigned int index;
+ 	__u32 coalesce_usecs;
+ 	__u32 max_coalesced_buffers;
+-=======
+-struct vhost_net_vring_coalesce {
+-	unsigned int index;
+-	__u32 coalesce_usecs;
+-	__u32 max_coalesced_frames;
+->>>>>>> patched
+ };
+ 
+ struct vhost_vring_addr {
