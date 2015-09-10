@@ -1,0 +1,39 @@
+Bottom: 8cf1fe97e59a50726d6a8957820d94bb1f0bafb1
+Top:    67ccb758cb0b7fe0f149c028c9a38298cfe92809
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-10 15:04:41 +0800
+
+Refresh of vhost_net-interrupt-coalescing
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b52a4cc..8063abc 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -385,12 +385,8 @@ static void handle_tx(struct vhost_net *net)
+ 	hdr_size = nvq->vhost_hlen;
+ 	zcopy = nvq->ubufs;
+ 
+-<<<<<<< current
+ 	/* Finish pending interrupts first */
+ 	vhost_check_coalesce_and_signal(vq->dev, vq);
+-=======
+-	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
+->>>>>>> patched
+ 
+ 	for (;;) {
+ 		/* Release DMAs done buffers first */
+@@ -638,12 +634,8 @@ static void handle_rx(struct vhost_net *net)
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+ 
+-<<<<<<< current
+ 	/* Finish pending interrupts first */
+ 	vhost_check_coalesce_and_signal(vq->dev, vq);
+-=======
+-	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
+->>>>>>> patched
+ 
+ 	while ((sock_len = peek_head_len(sock->sk))) {
+ 		sock_len += sock_hlen;
