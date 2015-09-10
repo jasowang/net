@@ -1,5 +1,5 @@
 Bottom: 48a87586e18b7cf2b781244cb5264851e98eee9f
-Top:    67ccb758cb0b7fe0f149c028c9a38298cfe92809
+Top:    dffe6e53fa0f9370090a34d6086c971cfb4ef888
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-11-09 20:22:08 +0800
 
@@ -360,28 +360,10 @@ index ab1dcde..8063abc 100644
  		mutex_lock(&n->dev.mutex);
  		r = vhost_dev_ioctl(&n->dev, ioctl, argp);
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
-index 6362e6e..cb5b7bf1 100644
+index 6362e6e..0b80113 100644
 --- a/include/uapi/linux/vhost.h
 +++ b/include/uapi/linux/vhost.h
-@@ -27,10 +27,17 @@ struct vhost_vring_file {
- 
- };
- 
-+<<<<<<< current
- struct vhost_vring_coalesce {
- 	unsigned int index;
- 	__u32 coalesce_usecs;
- 	__u32 max_coalesced_buffers;
-+=======
-+struct vhost_net_vring_coalesce {
-+	unsigned int index;
-+	__u32 coalesce_usecs;
-+	__u32 max_coalesced_frames;
-+>>>>>>> patched
- };
- 
- struct vhost_vring_addr {
-@@ -132,6 +139,12 @@ struct vhost_memory {
+@@ -132,6 +132,12 @@ struct vhost_memory {
   * device.  This can be used to stop the ring (e.g. for migration). */
  #define VHOST_NET_SET_BACKEND _IOW(VHOST_VIRTIO, 0x30, struct vhost_vring_file)
  
