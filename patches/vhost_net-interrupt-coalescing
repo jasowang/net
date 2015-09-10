@@ -1,5 +1,5 @@
 Bottom: 48a87586e18b7cf2b781244cb5264851e98eee9f
-Top:    8cf1fe97e59a50726d6a8957820d94bb1f0bafb1
+Top:    67ccb758cb0b7fe0f149c028c9a38298cfe92809
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-11-09 20:22:08 +0800
 
@@ -23,7 +23,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ab1dcde..b52a4cc 100644
+index ab1dcde..8063abc 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -18,6 +18,7 @@
@@ -151,20 +151,7 @@ index ab1dcde..b52a4cc 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -320,8 +385,12 @@ static void handle_tx(struct vhost_net *net)
- 	hdr_size = nvq->vhost_hlen;
- 	zcopy = nvq->ubufs;
- 
-+<<<<<<< current
- 	/* Finish pending interrupts first */
- 	vhost_check_coalesce_and_signal(vq->dev, vq);
-+=======
-+	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
-+>>>>>>> patched
- 
- 	for (;;) {
- 		/* Release DMAs done buffers first */
-@@ -406,10 +475,15 @@ static void handle_tx(struct vhost_net *net)
+@@ -406,10 +471,15 @@ static void handle_tx(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -183,7 +170,7 @@ index ab1dcde..b52a4cc 100644
  		total_len += len;
  		vhost_net_tx_packet(net);
  		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
-@@ -417,6 +491,12 @@ static void handle_tx(struct vhost_net *net)
+@@ -417,6 +487,12 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  	}
@@ -196,7 +183,7 @@ index ab1dcde..b52a4cc 100644
  out:
  	vhost_check_coalesce_and_signal(vq->dev, vq);
  	mutex_unlock(&vq->mutex);
-@@ -537,7 +617,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -537,7 +613,7 @@ static void handle_rx(struct vhost_net *net)
  		.gso_type = VIRTIO_NET_HDR_GSO_NONE
  	};
  	size_t total_len = 0;
@@ -205,20 +192,7 @@ index ab1dcde..b52a4cc 100644
  	s16 headcount;
  	size_t vhost_hlen, sock_hlen;
  	size_t vhost_len, sock_len;
-@@ -558,8 +638,12 @@ static void handle_rx(struct vhost_net *net)
- 		vq->log : NULL;
- 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
- 
-+<<<<<<< current
- 	/* Finish pending interrupts first */
- 	vhost_check_coalesce_and_signal(vq->dev, vq);
-+=======
-+	vhost_net_check_coalesce_and_signal(&net->dev, nvq);
-+>>>>>>> patched
- 
- 	while ((sock_len = peek_head_len(sock->sk))) {
- 		sock_len += sock_hlen;
-@@ -634,8 +718,10 @@ static void handle_rx(struct vhost_net *net)
+@@ -634,8 +710,10 @@ static void handle_rx(struct vhost_net *net)
  			vhost_discard_vq_desc(vq, headcount);
  			break;
  		}
@@ -231,7 +205,7 @@ index ab1dcde..b52a4cc 100644
  		if (unlikely(vq_log))
  			vhost_log_write(vq, vq_log, log, vhost_len);
  		total_len += vhost_len;
-@@ -644,6 +730,12 @@ static void handle_rx(struct vhost_net *net)
+@@ -644,6 +722,12 @@ static void handle_rx(struct vhost_net *net)
  			break;
  		}
  	}
@@ -244,7 +218,7 @@ index ab1dcde..b52a4cc 100644
  out:
  	vhost_check_coalesce_and_signal(vq->dev, vq);
  	mutex_unlock(&vq->mutex);
-@@ -681,6 +773,18 @@ static void handle_rx_net(struct vhost_work *work)
+@@ -681,6 +765,18 @@ static void handle_rx_net(struct vhost_work *work)
  	handle_rx(net);
  }
  
@@ -263,7 +237,7 @@ index ab1dcde..b52a4cc 100644
  static int vhost_net_open(struct inode *inode, struct file *f)
  {
  	struct vhost_net *n;
-@@ -712,6 +816,13 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -712,6 +808,13 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
@@ -277,7 +251,7 @@ index ab1dcde..b52a4cc 100644
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
  
-@@ -888,6 +999,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -888,6 +991,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  	struct vhost_virtqueue *vq;
  	struct vhost_net_virtqueue *nvq;
  	struct vhost_net_ubuf_ref *ubufs, *oldubufs = NULL;
@@ -285,7 +259,7 @@ index ab1dcde..b52a4cc 100644
  	int r;
  
  	mutex_lock(&n->dev.mutex);
-@@ -916,6 +1028,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -916,6 +1020,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  
  	/* start polling new socket */
  	oldsock = vq->private_data;
@@ -293,7 +267,7 @@ index ab1dcde..b52a4cc 100644
  	if (sock != oldsock) {
  		ubufs = vhost_net_ubuf_alloc(vq,
  					     sock && vhost_sock_zcopy(sock));
-@@ -950,6 +1063,12 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -950,6 +1055,12 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  		mutex_unlock(&vq->mutex);
  	}
  
@@ -306,7 +280,7 @@ index ab1dcde..b52a4cc 100644
  	if (oldsock) {
  		vhost_net_flush_vq(n, index);
  		sockfd_put(oldsock);
-@@ -1057,6 +1176,67 @@ out:
+@@ -1057,6 +1168,67 @@ out:
  	return r;
  }
  
@@ -374,7 +348,7 @@ index ab1dcde..b52a4cc 100644
  static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
  			    unsigned long arg)
  {
-@@ -1087,6 +1267,10 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
+@@ -1087,6 +1259,10 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
  		return vhost_net_set_owner(n);
