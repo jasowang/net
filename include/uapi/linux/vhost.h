@@ -27,17 +27,10 @@ struct vhost_vring_file {
 
 };
 
-<<<<<<< current
 struct vhost_vring_coalesce {
 	unsigned int index;
 	__u32 coalesce_usecs;
 	__u32 max_coalesced_buffers;
-=======
-struct vhost_net_vring_coalesce {
-	unsigned int index;
-	__u32 coalesce_usecs;
-	__u32 max_coalesced_frames;
->>>>>>> patched
 };
 
 struct vhost_vring_addr {
