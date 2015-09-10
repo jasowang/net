@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
+Previous: 3e9ee7668370ca04c33c78345078f323bf70f23b
 Head: 19317895733d1febc68a6d113c3ee8994813f450
 Applied:
+  vhost_net-move: 19317895733d1febc68a6d113c3ee8994813f450
 Unapplied:
 Hidden:

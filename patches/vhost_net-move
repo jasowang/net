@@ -1,0 +1,80 @@
+Bottom: 40b09380e4790e2c132b32ff1dad31fb86b883d8
+Top:    58ce4323c95af65cb995e7decdace996f6f08e7d
+Author: Yuanhan Liu <yuanhan.liu@linux.intel.com>
+Date:   2015-09-08 15:38:45 +0800
+
+vhost_net: move vhost_net_set_vq_index ahead at vhost_net_init
+
+So that we could use the `vq_index' as well in the vhost_net_init
+stage, which is required when adding vhost-user multiple-queue support,
+where we need the vq_index to indicate which queue pair we are gonna
+initiate.
+
+vhost-user has no multiple queue support yet, hence no queue_index set
+before. Here is a quick set to 0 at net_vhost_user_init() stage, and it
+will be set properly soon in the next patch.
+
+Signed-off-by: Yuanhan Liu <yuanhan.liu@linux.intel.com>
+
+
+---
+
+diff --git a/hw/net/vhost_net.c b/hw/net/vhost_net.c
+index 5c1d11f..e220d7f 100644
+--- a/hw/net/vhost_net.c
++++ b/hw/net/vhost_net.c
+@@ -133,6 +133,11 @@ static int vhost_net_get_fd(NetClientState *backend)
+     }
+ }
+ 
++static void vhost_net_set_vq_index(struct vhost_net *net, int vq_index)
++{
++    net->dev.vq_index = vq_index;
++}
++
+ struct vhost_net *vhost_net_init(VhostNetOptions *options)
+ {
+     int r;
+@@ -158,6 +163,8 @@ struct vhost_net *vhost_net_init(VhostNetOptions *options)
+     }
+     net->nc = options->net_backend;
+ 
++    vhost_net_set_vq_index(net, net->nc->queue_index * 2);
++
+     net->dev.nvqs = 2;
+     net->dev.vqs = net->vqs;
+ 
+@@ -187,11 +194,6 @@ fail:
+     return NULL;
+ }
+ 
+-static void vhost_net_set_vq_index(struct vhost_net *net, int vq_index)
+-{
+-    net->dev.vq_index = vq_index;
+-}
+-
+ static int vhost_net_set_vnet_endian(VirtIODevice *dev, NetClientState *peer,
+                                      bool set)
+ {
+@@ -316,10 +318,6 @@ int vhost_net_start(VirtIODevice *dev, NetClientState *ncs,
+         goto err;
+     }
+ 
+-    for (i = 0; i < total_queues; i++) {
+-        vhost_net_set_vq_index(get_vhost_net(ncs[i].peer), i * 2);
+-    }
+-
+     r = k->set_guest_notifiers(qbus->parent, total_queues * 2, true);
+     if (r < 0) {
+         error_report("Error binding guest notifier: %d", -r);
+diff --git a/net/vhost-user.c b/net/vhost-user.c
+index 93dcecd..2d6bbe5 100644
+--- a/net/vhost-user.c
++++ b/net/vhost-user.c
+@@ -146,6 +146,7 @@ static int net_vhost_user_init(NetClientState *peer, const char *device,
+     /* We don't provide a receive callback */
+     s->nc.receive_disabled = 1;
+     s->chr = chr;
++    nc->queue_index = 0;
+ 
+     qemu_chr_add_handlers(s->chr, NULL, NULL, net_vhost_user_event, s);
