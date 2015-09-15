@@ -1,9 +1,8 @@
 Version: 1
-Previous: 97f8a5f503a7250ddb7a451411315185af034542
-Head: 32bfbce0a88fb8c0514466bb46ed1c8d857593ed
+Previous: a8940dc840ad785421161490399c456d1ba4cee7
+Head: 9eb4fc3851435c3aef4e6c8280e9171cf1e7135f
 Applied:
-  virtio_ring-introduce: d72f917ab3ce46572dedc5189b554213c7a61843
-  refresh-temp: 32bfbce0a88fb8c0514466bb46ed1c8d857593ed
+  virtio_ring-introduce: 9eb4fc3851435c3aef4e6c8280e9171cf1e7135f
 Unapplied:
   virtio_net-enable-tx-interrupt: b99ecd6820aa2968891311e837ef2d627c75175f
   virtio-net-should-use: 2f863ca9c3996b35123ccfe7fca03a2e3ddcf7cf
