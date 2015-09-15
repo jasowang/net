@@ -1,0 +1,11 @@
+Bottom: 60a235b136b1a3b2d0d7f3eef903fa13c319e1e9
+Top:    60a235b136b1a3b2d0d7f3eef903fa13c319e1e9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-15 17:35:44 +0800
+
+virtio_ring: introduce virtqueu_foreach_buf()
+
+
+---
+
+
