@@ -148,11 +148,25 @@ static int vhost_poll_wakeup(wait_queue_t *wait, unsigned mode, int sync,
 	return 0;
 }
 
-void vhost_work_init(struct vhost_work *work, vhost_work_fn_t fn)
+static void vhost_work_register(struct vhost_dev *dev, struct vhost_work *work)
 {
-	INIT_LIST_HEAD(&work->node);
+	BUG_ON(dev->work_bitmap == ~0UL);
+	work->bit = ffz(dev->work_bitmap);
+	set_bit(work->bit, &dev->work_bitmap);
+	dev->works[work->bit] = work;
+}
+
+static void vhost_work_unregister(struct vhost_dev *dev, struct vhost_work *work)
+{
+	clear_bit(work->bit, &dev->work_bitmap);
+}
+
+void vhost_work_init(struct vhost_dev *dev, struct vhost_work *work,
+		     vhost_work_fn_t fn)
+{
 	work->fn = fn;
 	init_waitqueue_head(&work->done);
+	vhost_work_register(dev, work);
 }
 EXPORT_SYMBOL_GPL(vhost_work_init);
 
@@ -166,7 +180,7 @@ void vhost_poll_init(struct vhost_poll *poll, vhost_work_fn_t fn,
 	poll->dev = dev;
 	poll->wqh = NULL;
 
-	vhost_work_init(&poll->work, fn);
+	vhost_work_init(dev, &poll->work, fn);
 }
 EXPORT_SYMBOL_GPL(vhost_poll_init);
 
@@ -209,10 +223,11 @@ void vhost_work_flush(struct vhost_dev *dev, struct vhost_work *work)
 	struct vhost_flush_struct flush;
 
 	init_completion(&flush.wait_event);
-	vhost_work_init(&flush.work, vhost_flush_work);
+	vhost_work_init(dev, &flush.work, vhost_flush_work);
 
 	vhost_work_queue(dev, &flush.work);
 	wait_for_completion(&flush.wait_event);
+	vhost_work_unregister(dev, &flush.work);
 }
 EXPORT_SYMBOL_GPL(vhost_work_flush);
 
@@ -226,16 +241,8 @@ EXPORT_SYMBOL_GPL(vhost_poll_flush);
 
 void vhost_work_queue(struct vhost_dev *dev, struct vhost_work *work)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&dev->work_lock, flags);
-	if (list_empty(&work->node)) {
-		list_add_tail(&work->node, &dev->work_list);
-		spin_unlock_irqrestore(&dev->work_lock, flags);
+	if (!test_and_set_bit(work->bit, &dev->pending))
 		wake_up_process(dev->worker);
-	} else {
-		spin_unlock_irqrestore(&dev->work_lock, flags);
-	}
 }
 EXPORT_SYMBOL_GPL(vhost_work_queue);
 
@@ -278,6 +285,7 @@ static int vhost_worker(void *data)
 {
 	struct vhost_dev *dev = data;
 	struct vhost_work *work = NULL;
+	int pending = 0, bit;
 	mm_segment_t oldfs = get_fs();
 
 	set_fs(USER_DS);
@@ -287,29 +295,23 @@ static int vhost_worker(void *data)
 		/* mb paired w/ kthread_stop */
 		set_current_state(TASK_INTERRUPTIBLE);
 
-		spin_lock_irq(&dev->work_lock);
-
 		if (kthread_should_stop()) {
-			spin_unlock_irq(&dev->work_lock);
 			__set_current_state(TASK_RUNNING);
 			break;
 		}
-		if (!list_empty(&dev->work_list)) {
-			work = list_first_entry(&dev->work_list,
-						struct vhost_work, node);
-			list_del_init(&work->node);
-		} else
-			work = NULL;
-		spin_unlock_irq(&dev->work_lock);
 
-		if (work) {
+		if (!pending)
+			pending = xchg(&dev->pending, 0);
+		if ((bit = ffs(pending))) {
+			bit--;
+			pending &= ~(1 << bit);
+			work = dev->works[bit];
 			__set_current_state(TASK_RUNNING);
 			work->fn(work);
 			if (need_resched())
 				schedule();
 		} else
 			schedule();
-
 	}
 	unuse_mm(dev->mm);
 	set_fs(oldfs);
@@ -370,9 +372,11 @@ void vhost_dev_init(struct vhost_dev *dev,
 	dev->log_file = NULL;
 	dev->memory = NULL;
 	dev->mm = NULL;
-	spin_lock_init(&dev->work_lock);
-	INIT_LIST_HEAD(&dev->work_list);
 	dev->worker = NULL;
+	dev->pending = 0;
+	dev->work_bitmap = 0;
+	for (i = 0; i < MAX_VHOST_WORK; i++)
+		dev->works[i] = NULL;
 
 	for (i = 0; i < dev->nvqs; ++i) {
 		vq = dev->vqs[i];
@@ -416,7 +420,7 @@ static int vhost_attach_cgroups(struct vhost_dev *dev)
 	struct vhost_attach_cgroups_struct attach;
 
 	attach.owner = current;
-	vhost_work_init(&attach.work, vhost_attach_cgroups_work);
+	vhost_work_init(dev, &attach.work, vhost_attach_cgroups_work);
 	vhost_work_queue(dev, &attach.work);
 	vhost_work_flush(dev, &attach.work);
 	return attach.ret;
@@ -538,7 +542,6 @@ void vhost_dev_cleanup(struct vhost_dev *dev, bool locked)
 	/* No one will access memory at this point */
 	kvfree(dev->memory);
 	dev->memory = NULL;
-	WARN_ON(!list_empty(&dev->work_list));
 	if (dev->worker) {
 		kthread_stop(dev->worker);
 		dev->worker = NULL;

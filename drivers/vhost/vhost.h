@@ -16,12 +16,9 @@ struct vhost_work;
 typedef void (*vhost_work_fn_t)(struct vhost_work *work);
 
 struct vhost_work {
-	struct list_head	  node;
 	vhost_work_fn_t		  fn;
 	wait_queue_head_t	  done;
-	int			  flushing;
-	unsigned		  queue_seq;
-	unsigned		  done_seq;
+	int bit;
 };
 
 /* Poll a file (eventfd or socket) */
@@ -35,7 +32,8 @@ struct vhost_poll {
 	struct vhost_dev	 *dev;
 };
 
-void vhost_work_init(struct vhost_work *work, vhost_work_fn_t fn);
+void vhost_work_init(struct vhost_dev *dev, struct vhost_work *work,
+                     vhost_work_fn_t fn);
 void vhost_work_queue(struct vhost_dev *dev, struct vhost_work *work);
 
 void vhost_poll_init(struct vhost_poll *poll, vhost_work_fn_t fn,
@@ -116,6 +114,8 @@ struct vhost_virtqueue {
 #endif
 };
 
+#define MAX_VHOST_WORK (sizeof(unsigned long) * 8)
+
 struct vhost_dev {
 	struct vhost_memory *memory;
 	struct mm_struct *mm;
@@ -124,9 +124,11 @@ struct vhost_dev {
 	int nvqs;
 	struct file *log_file;
 	struct eventfd_ctx *log_ctx;
-	spinlock_t work_lock;
 	struct list_head work_list;
 	struct task_struct *worker;
+	unsigned long work_bitmap;
+	unsigned long pending;
+	struct vhost_work *works[MAX_VHOST_WORK];
 };
 
 void vhost_dev_init(struct vhost_dev *, struct vhost_virtqueue **vqs, int nvqs);

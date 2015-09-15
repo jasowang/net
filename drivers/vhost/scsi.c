@@ -1426,8 +1426,9 @@ static int vhost_scsi_open(struct inode *inode, struct file *f)
 	if (!vqs)
 		goto err_vqs;
 
-	vhost_work_init(&vs->vs_completion_work, vhost_scsi_complete_cmd_work);
-	vhost_work_init(&vs->vs_event_work, vhost_scsi_evt_work);
+	vhost_work_init(&vs->dev, &vs->vs_completion_work,
+			vhost_scsi_complete_cmd_work);
+	vhost_work_init(&vs->dev, &vs->vs_event_work, vhost_scsi_evt_work);
 
 	vs->vs_events_nr = 0;
 	vs->vs_events_missed = false;
