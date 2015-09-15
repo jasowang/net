@@ -5,6 +5,8 @@ Date:   2015-09-15 17:35:44 +0800
 
 virtio_ring: introduce virtqueu_foreach_buf()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
