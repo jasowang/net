@@ -682,6 +682,23 @@ void *virtqueue_detach_unused_buf(struct virtqueue *_vq)
 }
 EXPORT_SYMBOL_GPL(virtqueue_detach_unused_buf);
 
+void virtqueue_foreach_buf(struct virtqueue *_vq, void (*func)(void *))
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	unsigned int i;
+
+	START_USE(vq);
+
+	for (i = 0; i < vq->vring.num; i++) {
+		if (!vq->data[i])
+			continue;
+		func(vq->data[i]);
+	}
+
+	END_USE(vq);
+}
+EXPORT_SYMBOL_GPL(virtqueue_foreach_buf);
+
 irqreturn_t vring_interrupt(int irq, void *_vq)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);
