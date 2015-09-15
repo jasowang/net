@@ -1,0 +1,50 @@
+Bottom: 60a235b136b1a3b2d0d7f3eef903fa13c319e1e9
+Top:    ee5ccb94218a2ee9989c9a8026851ee3a4eebe90
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-15 17:35:48 +0800
+
+Refresh of virtio_ring-introduce
+
+---
+
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 096b857..0c33567 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -682,6 +682,23 @@ void *virtqueue_detach_unused_buf(struct virtqueue *_vq)
+ }
+ EXPORT_SYMBOL_GPL(virtqueue_detach_unused_buf);
+ 
++void virtqueue_foreach_buf(struct virtqueue *_vq, void (*func)(void *))
++{
++	struct vring_virtqueue *vq = to_vvq(_vq);
++	unsigned int i;
++
++	START_USE(vq);
++
++	for (i = 0; i < vq->vring.num; i++) {
++		if (!vq->data[i])
++			continue;
++		func(vq->data[i]);
++	}
++
++	END_USE(vq);
++}
++EXPORT_SYMBOL_GPL(virtqueue_foreach_buf);
++
+ irqreturn_t vring_interrupt(int irq, void *_vq)
+ {
+ 	struct vring_virtqueue *vq = to_vvq(_vq);
+diff --git a/include/linux/virtio.h b/include/linux/virtio.h
+index 28f0e65..6d7ea9a 100644
+--- a/include/linux/virtio.h
++++ b/include/linux/virtio.h
+@@ -71,6 +71,8 @@ bool virtqueue_enable_cb_delayed(struct virtqueue *vq);
+ 
+ void *virtqueue_detach_unused_buf(struct virtqueue *vq);
+ 
++void virtqueue_foreach_buf(struct virtqueue *vq, void (*func)(void *));
++
+ unsigned int virtqueue_get_vring_size(struct virtqueue *vq);
+ 
+ bool virtqueue_is_broken(struct virtqueue *vq);
