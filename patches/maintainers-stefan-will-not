@@ -7,6 +7,8 @@ MAINTAINERS: Stefan will not maintain net subsystem
 
 Talked with Stefan, he will not maintain net subsystem.
 
+Cc: Stefan Hajnoczi <stefanha@redhat.com>
+Cc: Michael S. Tsirkin <mst@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
