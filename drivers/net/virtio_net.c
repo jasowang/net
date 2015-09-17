@@ -1544,8 +1544,8 @@ static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev,
 						vq2txq(sq->vq));
 
-	__netif_tx_lock_bh(txq);
-//	free_old_xmit_skbs(sq);
+	__netif_tx_lock(txq, smp_processor_id());
+	free_old_xmit_skbs(sq);
 //	virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
 	__netif_tx_unlock(txq);
 
