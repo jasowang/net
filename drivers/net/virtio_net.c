@@ -1544,10 +1544,13 @@ static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev,
 						vq2txq(sq->vq));
 
-	__netif_tx_lock(txq, smp_processor_id());
-	free_old_xmit_skbs(sq);
-//	virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
-	__netif_tx_unlock(txq);
+	if (__netif_tx_trylock(txq)) {
+		free_old_xmit_skbs(sq);
+//		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
+		__netif_tx_unlock(txq);
+	} else {
+		hrtimer_start(&sq->completion_timer, ms_to_ktime(1), HRTIMER_MODE_REL);
+	}
 
 	return HRTIMER_NORESTART;
 }
