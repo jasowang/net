@@ -31,6 +31,8 @@
 
 static int napi_weight = NAPI_POLL_WEIGHT;
 module_param(napi_weight, int, 0444);
+static int tx_timeout = 10;
+module_param(tx_timeout, int, 0444);
 
 static bool csum = true, gso = true;
 module_param(csum, bool, 0444);
@@ -69,6 +71,8 @@ struct send_queue {
 
 	/* TX: fragments + linear part + virtio header */
 	struct scatterlist sg[MAX_SKB_FRAGS + 2];
+
+	struct hrtimer completion_timer;
 
 	/* Name of the send queue: output.$index */
 	char name[40];
@@ -936,7 +940,7 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	/* Don't wait up for transmitted skbs to be freed. */
-	skb_orphan(skb);
+//	skb_orphan(skb);
 	nf_reset(skb);
 
 	/* If running out of space, stop queue to avoid getting packets that we
@@ -961,9 +965,14 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 		}
 	}
 
-	if (kick || netif_xmit_stopped(txq))
+	if (kick || netif_xmit_stopped(txq)) {
 		virtqueue_kick(sq->vq);
+	} else {
+		printk("no kick!\n");
+	}
 
+	hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
+		HRTIMER_MODE_REL);
 	return NETDEV_TX_OK;
 }
 
@@ -1522,6 +1531,34 @@ static void virtnet_del_vqs(struct virtnet_info *vi)
 	virtnet_free_queues(vi);
 }
 
+static void virtnet_orphan_skb(void *data)
+{
+	struct sk_buff *skb = data;
+
+	skb_orphan(skb);
+}
+
+static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
+{
+	struct send_queue *sq = container_of(timer,
+					struct send_queue,
+					completion_timer);
+	struct virtnet_info *vi = sq->vq->vdev->priv;
+	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev,
+						vq2txq(sq->vq));
+
+	if (__netif_tx_trylock(txq)) {
+		free_old_xmit_skbs(sq);
+		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
+		__netif_tx_unlock(txq);
+	} else {
+		hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
+			      HRTIMER_MODE_REL);
+	}
+
+	return HRTIMER_NORESTART;
+}
+
 static int virtnet_find_vqs(struct virtnet_info *vi)
 {
 	vq_callback_t **callbacks;
@@ -1578,6 +1615,9 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
 	for (i = 0; i < vi->max_queue_pairs; i++) {
 		vi->rq[i].vq = vqs[rxq2vq(i)];
 		vi->sq[i].vq = vqs[txq2vq(i)];
+		hrtimer_init(&vi->sq[i].completion_timer,
+			     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		vi->sq[i].completion_timer.function = virtnet_complete_tx;
 	}
 
 	kfree(names);
