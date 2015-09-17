@@ -1,5 +1,5 @@
 Bottom: ee5ccb94218a2ee9989c9a8026851ee3a4eebe90
-Top:    784d540d39192246f89c8e919f4164a4334b82d5
+Top:    e3902a1f2c894c87a2c6407047b8df825665ff6d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-09-17 13:35:02 +0800
 
@@ -9,7 +9,7 @@ timer completion
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 63c7810..8c552b9 100644
+index 63c7810..eda2d8b 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -31,6 +31,8 @@
@@ -77,7 +77,7 @@ index 63c7810..8c552b9 100644
 +
 +	if (__netif_tx_trylock(txq)) {
 +		free_old_xmit_skbs(sq);
-+//		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
++		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
 +		__netif_tx_unlock(txq);
 +	} else {
 +		hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
