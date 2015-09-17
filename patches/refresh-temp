@@ -1,0 +1,31 @@
+Bottom: 69bc8a41926b3ef0a1a4e6f2d8bb8cd8b26ea1d5
+Top:    a942ee349272b18dff08287d195cc8ccc9bb68d9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-17 14:00:43 +0800
+
+Refresh of timer-completion
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 0388969..38359ae 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1544,10 +1544,13 @@ static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
+ 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev,
+ 						vq2txq(sq->vq));
+ 
+-	__netif_tx_lock(txq, smp_processor_id());
+-	free_old_xmit_skbs(sq);
+-//	virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
+-	__netif_tx_unlock(txq);
++	if (__netif_tx_trylock(txq)) {
++		free_old_xmit_skbs(sq);
++//		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
++		__netif_tx_unlock(txq);
++	} else {
++		hrtimer_start(&sq->completion_timer, ms_to_ktime(1), HRTIMER_MODE_REL);
++	}
+ 
+ 	return HRTIMER_NORESTART;
+ }
