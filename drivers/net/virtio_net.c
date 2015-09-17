@@ -1549,7 +1549,7 @@ static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
 
 	if (__netif_tx_trylock(txq)) {
 		free_old_xmit_skbs(sq);
-//		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
+		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
 		__netif_tx_unlock(txq);
 	} else {
 		hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
