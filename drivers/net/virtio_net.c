@@ -31,6 +31,8 @@
 
 static int napi_weight = NAPI_POLL_WEIGHT;
 module_param(napi_weight, int, 0444);
+static int tx_timeout = 10;
+module_param(tx_timeout, int, 0444);
 
 static bool csum = true, gso = true;
 module_param(csum, bool, 0444);
@@ -969,7 +971,8 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 		printk("no kick!\n");
 	}
 
-	hrtimer_start(&sq->completion_timer, ms_to_ktime(1), HRTIMER_MODE_REL);
+	hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
+		HRTIMER_MODE_REL);
 	return NETDEV_TX_OK;
 }
 
@@ -1549,7 +1552,8 @@ static enum hrtimer_restart virtnet_complete_tx(struct hrtimer *timer)
 //		virtqueue_foreach_buf(sq->vq, virtnet_orphan_skb);
 		__netif_tx_unlock(txq);
 	} else {
-		hrtimer_start(&sq->completion_timer, ms_to_ktime(1), HRTIMER_MODE_REL);
+		hrtimer_start(&sq->completion_timer, ns_to_ktime(tx_timeout),
+			      HRTIMER_MODE_REL);
 	}
 
 	return HRTIMER_NORESTART;
