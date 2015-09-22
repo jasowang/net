@@ -1,5 +1,5 @@
 Bottom: ad394d3ec5c7e1d11f1403b448637a09cdf124ec
-Top:    159826520d8722d3a77119f6b7a139e3f2d772c3
+Top:    23573954eaa537022522f6fb586e9255886d08a5
 Author: Yang Hongyang <yanghy@cn.fujitsu.com>
 Date:   2015-09-16 20:16:00 +0800
 
@@ -30,7 +30,7 @@ index 36e5fab..7af3e15 100644
                              unsigned flags,
                              const struct iovec *iov,
 diff --git a/net/net.c b/net/net.c
-index ad37419..ca35b27 100644
+index ad37419..38c92ab 100644
 --- a/net/net.c
 +++ b/net/net.c
 @@ -597,36 +597,6 @@ static ssize_t filter_receive(NetClientState *nc, NetFilterChain chain,
@@ -70,17 +70,26 @@ index ad37419..ca35b27 100644
  void qemu_purge_queued_packets(NetClientState *nc)
  {
      if (!nc->peer) {
-@@ -717,14 +687,18 @@ ssize_t qemu_send_packet_raw(NetClientState *nc, const uint8_t *buf, int size)
+@@ -717,14 +687,25 @@ ssize_t qemu_send_packet_raw(NetClientState *nc, const uint8_t *buf, int size)
  }
  
  static ssize_t nc_sendv_compat(NetClientState *nc, const struct iovec *iov,
 -                               int iovcnt)
 +                               int iovcnt, unsigned flags)
  {
-     uint8_t buffer[NET_BUFSIZE];
+-    uint8_t buffer[NET_BUFSIZE];
++    uint8_t buf[NET_BUFSIZE];
++    uint8_t *buffer;
      size_t offset;
  
-     offset = iov_to_buf(iov, iovcnt, 0, buffer, sizeof(buffer));
+-    offset = iov_to_buf(iov, iovcnt, 0, buffer, sizeof(buffer));
++    if (iovcnt == 1) {
++        buffer = iov[0].iov_base;
++        offset = iov[0].iov_len;
++    } else {
++        buffer = buf;
++        offset = iov_to_buf(iov, iovcnt, 0, buffer, sizeof(buffer));
++    }
  
 -    return nc->info->receive(nc, buffer, offset);
 +    if (flags & QEMU_NET_PACKET_FLAG_RAW && nc->info->receive_raw) {
@@ -91,7 +100,7 @@ index ad37419..ca35b27 100644
  }
  
  ssize_t qemu_deliver_packet_iov(NetClientState *sender,
-@@ -747,7 +721,7 @@ ssize_t qemu_deliver_packet_iov(NetClientState *sender,
+@@ -747,7 +728,7 @@ ssize_t qemu_deliver_packet_iov(NetClientState *sender,
      if (nc->info->receive_iov) {
          ret = nc->info->receive_iov(nc, iov, iovcnt);
      } else {
