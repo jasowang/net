@@ -12,6 +12,7 @@ Using qtest qmp interface to implement following cases:
 4) add more than one netfilters and then delete the netdev
 
 Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
