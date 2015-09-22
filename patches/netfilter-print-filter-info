@@ -1,5 +1,5 @@
-Bottom: e46eba1458ffcb747a4d802ef0f51a3a6049dc18
-Top:    dd2b46f1185b4c8989f83df51d89abcea703686c
+Bottom: 7ed91f379c5eb457804ba1d74092f45e792002fa
+Top:    30831109c0f2b6954b3daeea5bbeb3559b921e31
 Author: Yang Hongyang <burnef@gmail.com>
 Date:   2015-09-16 20:16:03 +0800
 
@@ -72,10 +72,10 @@ index d6fa164..a8adc89 100644
  
  static void netfilter_class_init(ObjectClass *oc, void *data)
 diff --git a/net/net.c b/net/net.c
-index 845daf2..e8f858d 100644
+index 1c14a7d..f649fcd 100644
 --- a/net/net.c
 +++ b/net/net.c
-@@ -1170,10 +1170,21 @@ void qmp_netdev_del(const char *id, Error **errp)
+@@ -1177,10 +1177,21 @@ void qmp_netdev_del(const char *id, Error **errp)
  
  void print_net_client(Monitor *mon, NetClientState *nc)
  {
