@@ -1,0 +1,158 @@
+Bottom: dda102fb6ea4906932738e852477824650d4ad30
+Top:    ad394d3ec5c7e1d11f1403b448637a09cdf124ec
+Author: Yang Hongyang <yanghy@cn.fujitsu.com>
+Date:   2015-09-16 20:15:59 +0800
+
+netfilter: hook packets before net queue send
+
+Capture packets that will be sent.
+
+Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Reviewed-by: Thomas Huth <thuth@redhat.com>
+
+
+---
+
+diff --git a/include/net/filter.h b/include/net/filter.h
+index 226f2f7..69902ea 100644
+--- a/include/net/filter.h
++++ b/include/net/filter.h
+@@ -57,4 +57,11 @@ struct NetFilterState {
+     QTAILQ_ENTRY(NetFilterState) next;
+ };
+ 
++ssize_t qemu_netfilter_receive(NetFilterState *nf, NetFilterChain chain,
++                               NetClientState *sender,
++                               unsigned flags,
++                               const struct iovec *iov,
++                               int iovcnt,
++                               NetPacketSent *sent_cb);
++
+ #endif /* QEMU_NET_FILTER_H */
+diff --git a/net/filter.c b/net/filter.c
+index 3b810c8..905817d 100644
+--- a/net/filter.c
++++ b/net/filter.c
+@@ -15,6 +15,21 @@
+ #include "net/vhost_net.h"
+ #include "qom/object_interfaces.h"
+ 
++ssize_t qemu_netfilter_receive(NetFilterState *nf, NetFilterChain chain,
++                               NetClientState *sender,
++                               unsigned flags,
++                               const struct iovec *iov,
++                               int iovcnt,
++                               NetPacketSent *sent_cb)
++{
++    if (nf->chain == chain || nf->chain == NET_FILTER_CHAIN_ALL) {
++        return NETFILTER_GET_CLASS(OBJECT(nf))->receive_iov(
++                                   nf, sender, flags, iov, iovcnt, sent_cb);
++    }
++
++    return 0;
++}
++
+ static char *netfilter_get_netdev_id(Object *obj, Error **errp)
+ {
+     NetFilterState *nf = NETFILTER(obj);
+diff --git a/net/net.c b/net/net.c
+index 033f4f3..ad37419 100644
+--- a/net/net.c
++++ b/net/net.c
+@@ -561,6 +561,42 @@ int qemu_can_send_packet(NetClientState *sender)
+     return 1;
+ }
+ 
++static ssize_t filter_receive_iov(NetClientState *nc, NetFilterChain chain,
++                                  NetClientState *sender,
++                                  unsigned flags,
++                                  const struct iovec *iov,
++                                  int iovcnt,
++                                  NetPacketSent *sent_cb)
++{
++    ssize_t ret = 0;
++    NetFilterState *nf = NULL;
++
++    QTAILQ_FOREACH(nf, &nc->filters, next) {
++        ret = qemu_netfilter_receive(nf, chain, sender, flags, iov,
++                                     iovcnt, sent_cb);
++        if (ret) {
++            return ret;
++        }
++    }
++
++    return ret;
++}
++
++static ssize_t filter_receive(NetClientState *nc, NetFilterChain chain,
++                              NetClientState *sender,
++                              unsigned flags,
++                              const uint8_t *data,
++                              size_t size,
++                              NetPacketSent *sent_cb)
++{
++    struct iovec iov = {
++        .iov_base = (void *)data,
++        .iov_len = size
++    };
++
++    return filter_receive_iov(nc, chain, sender, flags, &iov, 1, sent_cb);
++}
++
+ ssize_t qemu_deliver_packet(NetClientState *sender,
+                             unsigned flags,
+                             const uint8_t *data,
+@@ -632,6 +668,7 @@ static ssize_t qemu_send_packet_async_with_flags(NetClientState *sender,
+                                                  NetPacketSent *sent_cb)
+ {
+     NetQueue *queue;
++    int ret;
+ 
+ #ifdef DEBUG_NET
+     printf("qemu_send_packet_async:\n");
+@@ -642,6 +679,19 @@ static ssize_t qemu_send_packet_async_with_flags(NetClientState *sender,
+         return size;
+     }
+ 
++    /* Let filters handle the packet first */
++    ret = filter_receive(sender, NET_FILTER_CHAIN_OUT,
++                         sender, flags, buf, size, sent_cb);
++    if (ret) {
++        return ret;
++    }
++
++    ret = filter_receive(sender->peer, NET_FILTER_CHAIN_IN,
++                         sender, flags, buf, size, sent_cb);
++    if (ret) {
++        return ret;
++    }
++
+     queue = sender->peer->incoming_queue;
+ 
+     return qemu_net_queue_send(queue, sender, flags, buf, size, sent_cb);
+@@ -712,11 +762,25 @@ ssize_t qemu_sendv_packet_async(NetClientState *sender,
+                                 NetPacketSent *sent_cb)
+ {
+     NetQueue *queue;
++    int ret;
+ 
+     if (sender->link_down || !sender->peer) {
+         return iov_size(iov, iovcnt);
+     }
+ 
++    /* Let filters handle the packet first */
++    ret = filter_receive_iov(sender, NET_FILTER_CHAIN_OUT, sender,
++                             QEMU_NET_PACKET_FLAG_NONE, iov, iovcnt, sent_cb);
++    if (ret) {
++        return ret;
++    }
++
++    ret = filter_receive_iov(sender->peer, NET_FILTER_CHAIN_IN, sender,
++                             QEMU_NET_PACKET_FLAG_NONE, iov, iovcnt, sent_cb);
++    if (ret) {
++        return ret;
++    }
++
+     queue = sender->peer->incoming_queue;
+ 
+     return qemu_net_queue_send_iov(queue, sender,

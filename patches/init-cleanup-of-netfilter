@@ -1,0 +1,374 @@
+Bottom: 54fb756d455a6db568992b6170951633d17e31c6
+Top:    dda102fb6ea4906932738e852477824650d4ad30
+Author: Yang Hongyang <yanghy@cn.fujitsu.com>
+Date:   2015-09-16 20:15:58 +0800
+
+init/cleanup of netfilter object
+
+Add a netfilter object based on QOM.
+
+A netfilter is attached to a netdev, captures all network packets
+that pass through the netdev. When we delete the netdev, we also
+delete the netfilter object attached to it, because if the netdev is
+removed, the filter which attached to it is useless.
+
+QTAILQ_ENTRY next used by netdev, filter belongs to the specific netdev is
+in this queue.
+
+Also init delayed object after net_init_clients, because netfilters need
+to be initialized after net clients initialized.
+
+Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+
+
+---
+
+diff --git a/include/net/filter.h b/include/net/filter.h
+new file mode 100644
+index 0000000..226f2f7
+--- /dev/null
++++ b/include/net/filter.h
+@@ -0,0 +1,60 @@
++/*
++ * Copyright (c) 2015 FUJITSU LIMITED
++ * Author: Yang Hongyang <yanghy@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or
++ * later.  See the COPYING file in the top-level directory.
++ */
++
++#ifndef QEMU_NET_FILTER_H
++#define QEMU_NET_FILTER_H
++
++#include "qom/object.h"
++#include "qemu-common.h"
++#include "qemu/typedefs.h"
++#include "net/queue.h"
++
++#define TYPE_NETFILTER "netfilter"
++#define NETFILTER(obj) \
++    OBJECT_CHECK(NetFilterState, (obj), TYPE_NETFILTER)
++#define NETFILTER_GET_CLASS(obj) \
++    OBJECT_GET_CLASS(NetFilterClass, (obj), TYPE_NETFILTER)
++#define NETFILTER_CLASS(klass) \
++    OBJECT_CLASS_CHECK(NetFilterClass, (klass), TYPE_NETFILTER)
++
++typedef void (FilterSetup) (NetFilterState *nf, Error **errp);
++typedef void (FilterCleanup) (NetFilterState *nf);
++/*
++ * Return:
++ *   0: finished handling the packet, we should continue
++ *   size: filter stolen this packet, we stop pass this packet further
++ */
++typedef ssize_t (FilterReceiveIOV)(NetFilterState *nc,
++                                   NetClientState *sender,
++                                   unsigned flags,
++                                   const struct iovec *iov,
++                                   int iovcnt,
++                                   NetPacketSent *sent_cb);
++
++struct NetFilterClass {
++    ObjectClass parent_class;
++
++    FilterSetup *setup;
++    FilterCleanup *cleanup;
++    FilterReceiveIOV *receive_iov;
++};
++typedef struct NetFilterClass NetFilterClass;
++
++
++struct NetFilterState {
++    /* private */
++    Object parent;
++
++    /* protected */
++    char *netdev_id;
++    NetClientState *netdev;
++    NetFilterChain chain;
++    QTAILQ_ENTRY(NetFilterState) next;
++};
++
++#endif /* QEMU_NET_FILTER_H */
+diff --git a/include/net/net.h b/include/net/net.h
+index 6a6cbef..36e5fab 100644
+--- a/include/net/net.h
++++ b/include/net/net.h
+@@ -92,6 +92,7 @@ struct NetClientState {
+     NetClientDestructor *destructor;
+     unsigned int queue_index;
+     unsigned rxfilter_notify_enabled:1;
++    QTAILQ_HEAD(, NetFilterState) filters;
+ };
+ 
+ typedef struct NICState {
+diff --git a/include/qemu/typedefs.h b/include/qemu/typedefs.h
+index ce82c64..d96e875 100644
+--- a/include/qemu/typedefs.h
++++ b/include/qemu/typedefs.h
+@@ -45,6 +45,7 @@ typedef struct Monitor Monitor;
+ typedef struct MouseTransformInfo MouseTransformInfo;
+ typedef struct MSIMessage MSIMessage;
+ typedef struct NetClientState NetClientState;
++typedef struct NetFilterState NetFilterState;
+ typedef struct NICInfo NICInfo;
+ typedef struct PcGuestInfo PcGuestInfo;
+ typedef struct PCIBridge PCIBridge;
+diff --git a/net/Makefile.objs b/net/Makefile.objs
+index ec19cb3..914aec0 100644
+--- a/net/Makefile.objs
++++ b/net/Makefile.objs
+@@ -13,3 +13,4 @@ common-obj-$(CONFIG_HAIKU) += tap-haiku.o
+ common-obj-$(CONFIG_SLIRP) += slirp.o
+ common-obj-$(CONFIG_VDE) += vde.o
+ common-obj-$(CONFIG_NETMAP) += netmap.o
++common-obj-y += filter.o
+diff --git a/net/filter.c b/net/filter.c
+new file mode 100644
+index 0000000..3b810c8
+--- /dev/null
++++ b/net/filter.c
+@@ -0,0 +1,138 @@
++/*
++ * Copyright (c) 2015 FUJITSU LIMITED
++ * Author: Yang Hongyang <yanghy@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or
++ * later.  See the COPYING file in the top-level directory.
++ */
++
++#include "qemu-common.h"
++#include "qapi/qmp/qerror.h"
++#include "qemu/error-report.h"
++
++#include "net/filter.h"
++#include "net/net.h"
++#include "net/vhost_net.h"
++#include "qom/object_interfaces.h"
++
++static char *netfilter_get_netdev_id(Object *obj, Error **errp)
++{
++    NetFilterState *nf = NETFILTER(obj);
++
++    return g_strdup(nf->netdev_id);
++}
++
++static void netfilter_set_netdev_id(Object *obj, const char *str, Error **errp)
++{
++    NetFilterState *nf = NETFILTER(obj);
++
++    nf->netdev_id = g_strdup(str);
++}
++
++static int netfilter_get_chain(Object *obj, Error **errp G_GNUC_UNUSED)
++{
++    NetFilterState *nf = NETFILTER(obj);
++    return nf->chain;
++}
++
++static void netfilter_set_chain(Object *obj, int chain, Error **errp)
++{
++    NetFilterState *nf = NETFILTER(obj);
++    nf->chain = chain;
++}
++
++static void netfilter_init(Object *obj)
++{
++    object_property_add_str(obj, "netdev",
++                            netfilter_get_netdev_id, netfilter_set_netdev_id,
++                            NULL);
++    object_property_add_enum(obj, "chain", "NetFilterChain",
++                             NetFilterChain_lookup,
++                             netfilter_get_chain, netfilter_set_chain,
++                             NULL);
++}
++
++static void netfilter_finalize(Object *obj)
++{
++    NetFilterState *nf = NETFILTER(obj);
++    NetFilterClass *nfc = NETFILTER_GET_CLASS(obj);
++
++    if (nfc->cleanup) {
++        nfc->cleanup(nf);
++    }
++
++    if (nf->netdev && !QTAILQ_EMPTY(&nf->netdev->filters)) {
++        QTAILQ_REMOVE(&nf->netdev->filters, nf, next);
++    }
++}
++
++static void netfilter_complete(UserCreatable *uc, Error **errp)
++{
++    NetFilterState *nf = NETFILTER(uc);
++    NetClientState *ncs[MAX_QUEUE_NUM];
++    NetFilterClass *nfc = NETFILTER_GET_CLASS(uc);
++    int queues;
++    Error *local_err = NULL;
++
++    if (!nf->netdev_id) {
++        error_setg(errp, "Parameter 'netdev' is required");
++        return;
++    }
++
++    queues = qemu_find_net_clients_except(nf->netdev_id, ncs,
++                                          NET_CLIENT_OPTIONS_KIND_NIC,
++                                          MAX_QUEUE_NUM);
++    if (queues < 1) {
++        error_setg(errp, QERR_INVALID_PARAMETER_VALUE, "netdev",
++                   "a network backend id");
++        return;
++    } else if (queues > 1) {
++        error_setg(errp, "Multi queue is not supported");
++        return;
++    }
++
++    if (get_vhost_net(ncs[0])) {
++        error_setg(errp, "Vhost is not supported");
++        return;
++    }
++
++    nf->netdev = ncs[0];
++
++    if (nfc->setup) {
++        nfc->setup(nf, &local_err);
++        if (local_err) {
++            error_propagate(errp, local_err);
++            return;
++        }
++    }
++    QTAILQ_INSERT_TAIL(&nf->netdev->filters, nf, next);
++}
++
++static void netfilter_class_init(ObjectClass *oc, void *data)
++{
++    UserCreatableClass *ucc = USER_CREATABLE_CLASS(oc);
++
++    ucc->complete = netfilter_complete;
++}
++
++static const TypeInfo netfilter_info = {
++    .name = TYPE_NETFILTER,
++    .parent = TYPE_OBJECT,
++    .abstract = true,
++    .class_size = sizeof(NetFilterClass),
++    .class_init = netfilter_class_init,
++    .instance_size = sizeof(NetFilterState),
++    .instance_init = netfilter_init,
++    .instance_finalize = netfilter_finalize,
++    .interfaces = (InterfaceInfo[]) {
++        { TYPE_USER_CREATABLE },
++        { }
++    }
++};
++
++static void register_types(void)
++{
++    type_register_static(&netfilter_info);
++}
++
++type_init(register_types);
+diff --git a/net/net.c b/net/net.c
+index 28a5597..033f4f3 100644
+--- a/net/net.c
++++ b/net/net.c
+@@ -44,6 +44,7 @@
+ #include "qapi/opts-visitor.h"
+ #include "qapi/dealloc-visitor.h"
+ #include "sysemu/sysemu.h"
++#include "net/filter.h"
+ 
+ /* Net bridge is currently not supported for W32. */
+ #if !defined(_WIN32)
+@@ -287,6 +288,7 @@ static void qemu_net_client_setup(NetClientState *nc,
+ 
+     nc->incoming_queue = qemu_new_net_queue(nc);
+     nc->destructor = destructor;
++    QTAILQ_INIT(&nc->filters);
+ }
+ 
+ NetClientState *qemu_new_net_client(NetClientInfo *info,
+@@ -384,6 +386,7 @@ void qemu_del_net_client(NetClientState *nc)
+ {
+     NetClientState *ncs[MAX_QUEUE_NUM];
+     int queues, i;
++    NetFilterState *nf, *next;
+ 
+     assert(nc->info->type != NET_CLIENT_OPTIONS_KIND_NIC);
+ 
+@@ -395,6 +398,10 @@ void qemu_del_net_client(NetClientState *nc)
+                                           MAX_QUEUE_NUM);
+     assert(queues != 0);
+ 
++    QTAILQ_FOREACH_SAFE(nf, &nc->filters, next, next) {
++        object_unparent(OBJECT(nf));
++    }
++
+     /* If there is a peer NIC, delete and cleanup client, but do not free. */
+     if (nc->peer && nc->peer->info->type == NET_CLIENT_OPTIONS_KIND_NIC) {
+         NICState *nic = qemu_get_nic(nc->peer);
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 821362d..77a126c 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -2552,6 +2552,24 @@
+     'opts': 'NetClientOptions' } }
+ 
+ ##
++# @NetFilterChain
++#
++# netfilter chain, a netfilter is attached to a netdev, captures the
++# network packets of the netdev.
++#
++# @all: the filter will receive packets both sent to/from the netdev, this
++#       is the default chain.
++#
++# @in: the filter will receive packets sent to the netdev.
++#
++# @out: the filter will receive packets sent from the netdev.
++#
++# Since 2.5
++##
++{ 'enum': 'NetFilterChain',
++  'data': [ 'all', 'in', 'out' ] }
++
++##
+ # @InetSocketAddress
+ #
+ # Captures a socket address or address range in the Internet namespace.
+diff --git a/vl.c b/vl.c
+index e211f6a..a9de7a1 100644
+--- a/vl.c
++++ b/vl.c
+@@ -2760,6 +2760,7 @@ static bool object_create_initial(const char *type)
+     if (g_str_equal(type, "rng-egd")) {
+         return false;
+     }
++    /* TODO: return false for concrete netfilters */
+     return true;
+ }
+ 
+@@ -4279,12 +4280,6 @@ int main(int argc, char **argv, char **envp)
+         exit(0);
+     }
+ 
+-    if (qemu_opts_foreach(qemu_find_opts("object"),
+-                          object_create,
+-                          object_create_delayed, NULL)) {
+-        exit(1);
+-    }
+-
+     machine_opts = qemu_get_machine_opts();
+     if (qemu_opt_foreach(machine_opts, machine_set_property, current_machine,
+                          NULL)) {
+@@ -4390,6 +4385,12 @@ int main(int argc, char **argv, char **envp)
+         exit(1);
+     }
+ 
++    if (qemu_opts_foreach(qemu_find_opts("object"),
++                          object_create,
++                          object_create_delayed, NULL)) {
++        exit(1);
++    }
++
+ #ifdef CONFIG_TPM
+     if (tpm_init() < 0) {
+         exit(1);

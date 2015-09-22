@@ -1,0 +1,255 @@
+Bottom: d79b3a2580d6f5944caa285979ed512cc5a36c44
+Top:    ca28de8f655b4f30bbdca1bb564d421b4516db45
+Author: Yang Hongyang <yanghy@cn.fujitsu.com>
+Date:   2015-09-16 20:16:06 +0800
+
+tests: add test cases for netfilter object
+
+Using qtest qmp interface to implement following cases:
+1) add/remove netfilter
+2) add a netfilter then delete the netdev
+3) add/remove more than one netfilters
+4) add more than one netfilters and then delete the netdev
+
+Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+
+
+---
+
+diff --git a/tests/.gitignore b/tests/.gitignore
+index a607bdd..65496aa 100644
+--- a/tests/.gitignore
++++ b/tests/.gitignore
+@@ -49,5 +49,6 @@ test-vmstate
+ test-write-threshold
+ test-x86-cpuid
+ test-xbzrle
++test-netfilter
+ *-test
+ qapi-schema/*.test.*
+diff --git a/tests/Makefile b/tests/Makefile
+index 4063639..bacfd8a 100644
+--- a/tests/Makefile
++++ b/tests/Makefile
+@@ -189,6 +189,7 @@ check-qtest-i386-y += tests/pc-cpu-test$(EXESUF)
+ check-qtest-i386-y += tests/q35-test$(EXESUF)
+ gcov-files-i386-y += hw/pci-host/q35.c
+ check-qtest-i386-$(CONFIG_LINUX) += tests/vhost-user-test$(EXESUF)
++check-qtest-i386-y += tests/test-netfilter$(EXESUF)
+ check-qtest-x86_64-y = $(check-qtest-i386-y)
+ gcov-files-i386-y += i386-softmmu/hw/timer/mc146818rtc.c
+ gcov-files-x86_64-y = $(subst i386-softmmu/,x86_64-softmmu/,$(gcov-files-i386-y))
+@@ -435,6 +436,7 @@ tests/vhost-user-test$(EXESUF): tests/vhost-user-test.o qemu-char.o qemu-timer.o
+ tests/qemu-iotests/socket_scm_helper$(EXESUF): tests/qemu-iotests/socket_scm_helper.o
+ tests/test-qemu-opts$(EXESUF): tests/test-qemu-opts.o $(test-util-obj-y)
+ tests/test-write-threshold$(EXESUF): tests/test-write-threshold.o $(test-block-obj-y)
++tests/test-netfilter$(EXESUF): tests/test-netfilter.o $(qtest-obj-y)
+ 
+ ifeq ($(CONFIG_POSIX),y)
+ LIBS += -lutil
+diff --git a/tests/test-netfilter.c b/tests/test-netfilter.c
+new file mode 100644
+index 0000000..e114545
+--- /dev/null
++++ b/tests/test-netfilter.c
+@@ -0,0 +1,200 @@
++/*
++ * QTest testcase for netfilter
++ *
++ * Copyright (c) 2015 FUJITSU LIMITED
++ * Author: Yang Hongyang <yanghy@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or
++ * later.  See the COPYING file in the top-level directory.
++ */
++
++#include <glib.h>
++#include "libqtest.h"
++
++/* add a netfilter to a netdev and then remove it */
++static void add_one_netfilter(void)
++{
++    QDict *response;
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f0',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'object-del',"
++                   " 'arguments': {"
++                   "   'id': 'qtest-f0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++}
++
++/* add a netfilter to a netdev and then remove the netdev */
++static void remove_netdev_with_one_netfilter(void)
++{
++    QDict *response;
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f0',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'netdev_del',"
++                   " 'arguments': {"
++                   "   'id': 'qtest-bn0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    /* add back the netdev */
++    response = qmp("{'execute': 'netdev_add',"
++                   " 'arguments': {"
++                   "   'type': 'user',"
++                   "   'id': 'qtest-bn0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++}
++
++/* add multi(2) netfilters to a netdev and then remove them */
++static void add_multi_netfilter(void)
++{
++    QDict *response;
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f0',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f1',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'object-del',"
++                   " 'arguments': {"
++                   "   'id': 'qtest-f0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'object-del',"
++                   " 'arguments': {"
++                   "   'id': 'qtest-f1'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++}
++
++/* add multi(2) netfilters to a netdev and then remove the netdev */
++static void remove_netdev_with_multi_netfilter(void)
++{
++    QDict *response;
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f0',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'object-add',"
++                   " 'arguments': {"
++                   "   'qom-type': 'filter-buffer',"
++                   "   'id': 'qtest-f1',"
++                   "   'props': {"
++                   "     'netdev': 'qtest-bn0',"
++                   "     'chain': 'in',"
++                   "     'interval': 1000"
++                   "}}}");
++
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    response = qmp("{'execute': 'netdev_del',"
++                   " 'arguments': {"
++                   "   'id': 'qtest-bn0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++
++    /* add back the netdev */
++    response = qmp("{'execute': 'netdev_add',"
++                   " 'arguments': {"
++                   "   'type': 'user',"
++                   "   'id': 'qtest-bn0'"
++                   "}}");
++    g_assert(response);
++    g_assert(!qdict_haskey(response, "error"));
++    QDECREF(response);
++}
++
++int main(int argc, char **argv)
++{
++    int ret;
++
++    g_test_init(&argc, &argv, NULL);
++    qtest_add_func("/netfilter/addremove_one", add_one_netfilter);
++    qtest_add_func("/netfilter/remove_netdev_one",
++                   remove_netdev_with_one_netfilter);
++    qtest_add_func("/netfilter/addremove_multi", add_multi_netfilter);
++    qtest_add_func("/netfilter/remove_netdev_multi",
++                   remove_netdev_with_multi_netfilter);
++
++    qtest_start("-netdev user,id=qtest-bn0 -device e1000,netdev=qtest-bn0");
++    ret = g_test_run();
++
++    qtest_end();
++
++    return ret;
++}

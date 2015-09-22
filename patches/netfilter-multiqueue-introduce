@@ -1,0 +1,63 @@
+Bottom: ca28de8f655b4f30bbdca1bb564d421b4516db45
+Top:    10150a733d2c9b5a4162524dadc132d0a24c3dcc
+Author: Yang Hongyang <burnef@gmail.com>
+Date:   2015-09-16 20:16:07 +0800
+
+netfilter/multiqueue: introduce netfilter name
+
+We will add multiple netfilter objects when using object_add id=xxx attach
+a filter to a multiqueue enabled netdev. The multiple objects should have
+different object id, but the filter name should be the same. Introduce
+netfilter name to identify the netfilters.
+
+Signed-off-by: Yang Hongyang <burnef@gmail.com>
+
+
+---
+
+diff --git a/include/net/filter.h b/include/net/filter.h
+index 3fa80c9..a3060c9 100644
+--- a/include/net/filter.h
++++ b/include/net/filter.h
+@@ -51,6 +51,7 @@ struct NetFilterState {
+     Object parent;
+ 
+     /* protected */
++    char *name;
+     char *netdev_id;
+     NetClientState *netdev;
+     NetFilterChain chain;
+diff --git a/net/filter.c b/net/filter.c
+index a8adc89..aea619a 100644
+--- a/net/filter.c
++++ b/net/filter.c
+@@ -138,6 +138,8 @@ static void netfilter_finalize(Object *obj)
+     if (nf->netdev && !QTAILQ_EMPTY(&nf->netdev->filters)) {
+         QTAILQ_REMOVE(&nf->netdev->filters, nf, next);
+     }
++
++    g_free(nf->name);
+ }
+ 
+ static void netfilter_complete(UserCreatable *uc, Error **errp)
+@@ -173,6 +175,7 @@ static void netfilter_complete(UserCreatable *uc, Error **errp)
+         return;
+     }
+ 
++    nf->name = object_get_canonical_path_component(OBJECT(nf));
+     nf->netdev = ncs[0];
+ 
+     if (nfc->setup) {
+diff --git a/net/net.c b/net/net.c
+index e8f858d..33d4c99 100644
+--- a/net/net.c
++++ b/net/net.c
+@@ -1181,7 +1181,7 @@ void print_net_client(Monitor *mon, NetClientState *nc)
+     }
+     QTAILQ_FOREACH(nf, &nc->filters, next) {
+         monitor_printf(mon, "  - %s: type=%s%s\n",
+-                       object_get_canonical_path_component(OBJECT(nf)),
++                       nf->name,
+                        object_get_typename(OBJECT(nf)),
+                        nf->info_str);
+     }

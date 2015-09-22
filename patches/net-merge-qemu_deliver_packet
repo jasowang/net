@@ -1,0 +1,121 @@
+Bottom: ad394d3ec5c7e1d11f1403b448637a09cdf124ec
+Top:    159826520d8722d3a77119f6b7a139e3f2d772c3
+Author: Yang Hongyang <yanghy@cn.fujitsu.com>
+Date:   2015-09-16 20:16:00 +0800
+
+net: merge qemu_deliver_packet and qemu_deliver_packet_iov
+
+qemu_deliver_packet_iov already have the compat delivery, we
+can drop qemu_deliver_packet.
+
+Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+
+
+---
+
+diff --git a/include/net/net.h b/include/net/net.h
+index 36e5fab..7af3e15 100644
+--- a/include/net/net.h
++++ b/include/net/net.h
+@@ -152,11 +152,6 @@ void qemu_check_nic_model(NICInfo *nd, const char *model);
+ int qemu_find_nic_model(NICInfo *nd, const char * const *models,
+                         const char *default_model);
+ 
+-ssize_t qemu_deliver_packet(NetClientState *sender,
+-                            unsigned flags,
+-                            const uint8_t *data,
+-                            size_t size,
+-                            void *opaque);
+ ssize_t qemu_deliver_packet_iov(NetClientState *sender,
+                             unsigned flags,
+                             const struct iovec *iov,
+diff --git a/net/net.c b/net/net.c
+index ad37419..ca35b27 100644
+--- a/net/net.c
++++ b/net/net.c
+@@ -597,36 +597,6 @@ static ssize_t filter_receive(NetClientState *nc, NetFilterChain chain,
+     return filter_receive_iov(nc, chain, sender, flags, &iov, 1, sent_cb);
+ }
+ 
+-ssize_t qemu_deliver_packet(NetClientState *sender,
+-                            unsigned flags,
+-                            const uint8_t *data,
+-                            size_t size,
+-                            void *opaque)
+-{
+-    NetClientState *nc = opaque;
+-    ssize_t ret;
+-
+-    if (nc->link_down) {
+-        return size;
+-    }
+-
+-    if (nc->receive_disabled) {
+-        return 0;
+-    }
+-
+-    if (flags & QEMU_NET_PACKET_FLAG_RAW && nc->info->receive_raw) {
+-        ret = nc->info->receive_raw(nc, data, size);
+-    } else {
+-        ret = nc->info->receive(nc, data, size);
+-    }
+-
+-    if (ret == 0) {
+-        nc->receive_disabled = 1;
+-    }
+-
+-    return ret;
+-}
+-
+ void qemu_purge_queued_packets(NetClientState *nc)
+ {
+     if (!nc->peer) {
+@@ -717,14 +687,18 @@ ssize_t qemu_send_packet_raw(NetClientState *nc, const uint8_t *buf, int size)
+ }
+ 
+ static ssize_t nc_sendv_compat(NetClientState *nc, const struct iovec *iov,
+-                               int iovcnt)
++                               int iovcnt, unsigned flags)
+ {
+     uint8_t buffer[NET_BUFSIZE];
+     size_t offset;
+ 
+     offset = iov_to_buf(iov, iovcnt, 0, buffer, sizeof(buffer));
+ 
+-    return nc->info->receive(nc, buffer, offset);
++    if (flags & QEMU_NET_PACKET_FLAG_RAW && nc->info->receive_raw) {
++        return nc->info->receive_raw(nc, buffer, offset);
++    } else {
++        return nc->info->receive(nc, buffer, offset);
++    }
+ }
+ 
+ ssize_t qemu_deliver_packet_iov(NetClientState *sender,
+@@ -747,7 +721,7 @@ ssize_t qemu_deliver_packet_iov(NetClientState *sender,
+     if (nc->info->receive_iov) {
+         ret = nc->info->receive_iov(nc, iov, iovcnt);
+     } else {
+-        ret = nc_sendv_compat(nc, iov, iovcnt);
++        ret = nc_sendv_compat(nc, iov, iovcnt, flags);
+     }
+ 
+     if (ret == 0) {
+diff --git a/net/queue.c b/net/queue.c
+index ebbe2bb..cf8db3a 100644
+--- a/net/queue.c
++++ b/net/queue.c
+@@ -152,9 +152,13 @@ static ssize_t qemu_net_queue_deliver(NetQueue *queue,
+                                       size_t size)
+ {
+     ssize_t ret = -1;
++    struct iovec iov = {
++        .iov_base = (void *)data,
++        .iov_len = size
++    };
+ 
+     queue->delivering = 1;
+-    ret = qemu_deliver_packet(sender, flags, data, size, queue->opaque);
++    ret = qemu_deliver_packet_iov(sender, flags, &iov, 1, queue->opaque);
+     queue->delivering = 0;
+ 
+     return ret;
