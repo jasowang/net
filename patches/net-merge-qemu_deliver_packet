@@ -9,6 +9,7 @@ qemu_deliver_packet_iov already have the compat delivery, we
 can drop qemu_deliver_packet.
 
 Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
