@@ -10,6 +10,7 @@ add a info_str member to NetFilterState, store specific filters
 info.
 
 Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
