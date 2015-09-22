@@ -1,6 +1,6 @@
 Version: 1
-Previous: deb93d80904e4d6dac77ddc2fc1010383e00c4e3
-Head: ed0e9cbda0742e194bb18c5802dea6d14b968d05
+Previous: 47e94e9e113ccc2c77906600b7dd61d15db6bde3
+Head: b612ec3ef8b1914901f8d5e27b916e93b6876c77
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
   qmp-delete-qemu-opts-when: c208dd3a49472920d00166910e11a6c8351c6aed
@@ -9,8 +9,8 @@ Applied:
   net-merge-qemu_deliver_packet: 25d0bbcda736e2e160b3bf3af702afb902331e63
   net-queue-introduce: b56f7dab587d6fb3e401d19dffd487e772ab5bd8
   netfilter-add-an-api-to-pass: ed0e9cbda0742e194bb18c5802dea6d14b968d05
+  netfilter-print-filter-info: b612ec3ef8b1914901f8d5e27b916e93b6876c77
 Unapplied:
-  netfilter-print-filter-info: a642c2074ff6cfc6d76253970dd54a484f0a1f72
   net-queue-export: 49c03e5ef195deca6f064dc82d1143e3f3d86a2c
   netfilter-add-a-netbuffer: b680c5ca12968ecaf90584e9006ff3cfc0e4070a
   tests-add-test-cases-for: 89541f58c966609a4f9623c43bed30ac13d6891f
