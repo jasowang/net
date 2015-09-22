@@ -18,6 +18,7 @@ object_add xxx,id=aa
 QEMU will return error with Duplicate ID error.
 
 Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---

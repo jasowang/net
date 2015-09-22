@@ -1,9 +1,9 @@
 Version: 1
-Previous: 40285a1ba469e30116012a1cb9b37a0eec3f90dd
-Head: 7035c49beac3c5543d2f06bca2e1d813a9b92deb
+Previous: 81aa6cdc240ac3f46f1b2a44524df31293d642bf
+Head: c208dd3a49472920d00166910e11a6c8351c6aed
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
-  qmp-delete-qemu-opts-when: 7035c49beac3c5543d2f06bca2e1d813a9b92deb
+  qmp-delete-qemu-opts-when: c208dd3a49472920d00166910e11a6c8351c6aed
 Unapplied:
   init-cleanup-of-netfilter: 03e52babb12d529be1d054cfe7850d4c8e854272
   netfilter-hook-packets-before: 5d53f031a0c13e67cc6ec37ed2f26a41a9dafa9c
