@@ -1,5 +1,5 @@
 Version: 1
-Previous: b88cb8c05bcdcb5e7227ed7bbe8ec568723bca20
+Previous: 5b4e1655c82b53a941bc656199984e9f85983ac5
 Head: 89541f58c966609a4f9623c43bed30ac13d6891f
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
@@ -14,6 +14,4 @@ Applied:
   netfilter-add-a-netbuffer: 2d7bf99a7c5d689ab0e089af55a772b0b8a09341
   tests-add-test-cases-for: 89541f58c966609a4f9623c43bed30ac13d6891f
 Unapplied:
-  netfilter-multiqueue-introduce: b5627c09c319803c4652ae8c93456a98bc26fa38
-  netfilter-add-multiqueue: feb108a31e3b8275de15e919633206f652326012
 Hidden:
