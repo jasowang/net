@@ -1,5 +1,5 @@
-Bottom: 159826520d8722d3a77119f6b7a139e3f2d772c3
-Top:    dc9e9b28033eddf6091535ddd71b96484047ebaa
+Bottom: 23573954eaa537022522f6fb586e9255886d08a5
+Top:    e0bcded76143253e59fab94b1cdabbb478bd09d3
 Author: Yang Hongyang <yanghy@cn.fujitsu.com>
 Date:   2015-09-16 20:16:01 +0800
 
@@ -40,7 +40,7 @@ index fc02b33..b4a7183 100644
  void qemu_del_net_queue(NetQueue *queue);
  
 diff --git a/net/net.c b/net/net.c
-index ca35b27..845daf2 100644
+index 38c92ab..1c14a7d 100644
 --- a/net/net.c
 +++ b/net/net.c
 @@ -286,7 +286,7 @@ static void qemu_net_client_setup(NetClientState *nc,
