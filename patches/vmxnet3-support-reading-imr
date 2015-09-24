@@ -1,0 +1,35 @@
+Bottom: 5f4d17df5ec0ed10c94f319db60c26869c290f82
+Top:    ec901e906bde600c3fb103dfce4ab1a584ca74c3
+Author: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
+Date:   2015-09-21 17:09:02 +0300
+
+vmxnet3: Support reading IMR registers on bar0
+
+Instead of asserting, return the actual IMR register value.
+This is aligned with what's returned on ESXi.
+
+Signed-off-by: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
+Tested-by: Dana Rubin <dana.rubin@ravellosystems.com>
+
+
+---
+
+diff --git a/hw/net/vmxnet3.c b/hw/net/vmxnet3.c
+index 48ced71..057f0dc 100644
+--- a/hw/net/vmxnet3.c
++++ b/hw/net/vmxnet3.c
+@@ -1163,9 +1163,13 @@ vmxnet3_io_bar0_write(void *opaque, hwaddr addr,
+ static uint64_t
+ vmxnet3_io_bar0_read(void *opaque, hwaddr addr, unsigned size)
+ {
++    VMXNET3State *s = opaque;
++
+     if (VMW_IS_MULTIREG_ADDR(addr, VMXNET3_REG_IMR,
+                         VMXNET3_MAX_INTRS, VMXNET3_REG_ALIGN)) {
+-        g_assert_not_reached();
++        int l = VMW_MULTIREG_IDX_BY_ADDR(addr, VMXNET3_REG_IMR,
++                                         VMXNET3_REG_ALIGN);
++        return s->interrupt_states[l].is_masked;
+     }
+ 
+     VMW_CBPRN("BAR0 unknown read [%" PRIx64 "], size %d", addr, size);
