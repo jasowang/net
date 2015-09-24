@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9edf004dfad38be4c72f68bdda4658bfd20fdad5
-Head: 983e7d35819646b9cbea7a4742fe62fdabd5be43
+Previous: 2757c668e7bd450b3b4f6bae50cadcde7d123143
+Head: 316b2a7cc6920705998eafb54cb08ab3cb113cec
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
   qmp-delete-qemu-opts-when: c208dd3a49472920d00166910e11a6c8351c6aed
@@ -13,6 +13,6 @@ Applied:
   net-queue-export: d68010820e2b92670addd8bf35d5828c99137596
   netfilter-add-a-netbuffer: f306948acfbb4502e50e07e11b62ee0119a181e1
   tests-add-test-cases-for: 551eb56ea2175043abb0f4dae7243b8646ba9428
-  vmxnet3-support-reading-imr: 983e7d35819646b9cbea7a4742fe62fdabd5be43
+  vmxnet3-support-reading-imr: 316b2a7cc6920705998eafb54cb08ab3cb113cec
 Unapplied:
 Hidden:

@@ -10,6 +10,7 @@ This is aligned with what's returned on ESXi.
 
 Signed-off-by: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
 Tested-by: Dana Rubin <dana.rubin@ravellosystems.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
