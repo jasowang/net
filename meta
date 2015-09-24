@@ -1,6 +1,6 @@
 Version: 1
-Previous: c78ddc9a5181913dfe074047726c08c374f2425f
-Head: 551eb56ea2175043abb0f4dae7243b8646ba9428
+Previous: 410c27a6cf2ff15f15047f2df5e92ee9345a2034
+Head: 983e7d35819646b9cbea7a4742fe62fdabd5be43
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
   qmp-delete-qemu-opts-when: c208dd3a49472920d00166910e11a6c8351c6aed
