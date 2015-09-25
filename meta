@@ -1,18 +1,17 @@
 Version: 1
-Previous: 2757c668e7bd450b3b4f6bae50cadcde7d123143
-Head: 316b2a7cc6920705998eafb54cb08ab3cb113cec
+Previous: f2f1b24381f9b202ffe7528c5655c6b5919e05e2
+Head: 59b2947c36a20e05a65cbf2427b2f2cf33bccf36
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
-  qmp-delete-qemu-opts-when: c208dd3a49472920d00166910e11a6c8351c6aed
-  init-cleanup-of-netfilter: ec9a9751671c93cf5a65fb4be3950a3f686173e9
-  netfilter-hook-packets-before: e43ebe481e32b3a6725dee6490b32fd8005ce3e9
-  net-merge-qemu_deliver_packet: 25d0bbcda736e2e160b3bf3af702afb902331e63
-  net-queue-introduce: b56f7dab587d6fb3e401d19dffd487e772ab5bd8
-  netfilter-add-an-api-to-pass: ed0e9cbda0742e194bb18c5802dea6d14b968d05
-  netfilter-print-filter-info: b612ec3ef8b1914901f8d5e27b916e93b6876c77
-  net-queue-export: d68010820e2b92670addd8bf35d5828c99137596
-  netfilter-add-a-netbuffer: f306948acfbb4502e50e07e11b62ee0119a181e1
-  tests-add-test-cases-for: 551eb56ea2175043abb0f4dae7243b8646ba9428
-  vmxnet3-support-reading-imr: 316b2a7cc6920705998eafb54cb08ab3cb113cec
+  init-cleanup-of-netfilter: a42326dca9a53de6f8551ba3a4cb894eec9f06b4
+  netfilter-hook-packets-before: e0c1d5b883b3a9b7a987f35ee475f39152e70153
+  net-merge-qemu_deliver_packet: b7ca0f17945e7703bcbc7732f7a592d3b2fe17c1
+  net-queue-introduce: d1d96846e506f198ec0bf746700e3909123180a1
+  netfilter-add-an-api-to-pass: 16005443d884fdb2d16bfd911296a4d2cd7fabc4
+  netfilter-print-filter-info: 734a3c829dc49e065c580fe84b298e78468bae44
+  net-queue-export: f080e003059ad931c85673617c8a62a9847bd225
+  netfilter-add-a-netbuffer: aa8c36094797bb544eaef2aa8bd576c346c372df
+  tests-add-test-cases-for: 4713b95fc7fa99d4c7f31e14c5364f9053ce760c
+  vmxnet3-support-reading-imr: 59b2947c36a20e05a65cbf2427b2f2cf33bccf36
 Unapplied:
 Hidden:
