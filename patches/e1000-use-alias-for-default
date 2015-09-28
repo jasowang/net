@@ -1,5 +1,5 @@
 Bottom: 170820b8c95d6b36a07975fb846ba32cf6d1ca3c
-Top:    69415a28efff0c2cde93af2e70b889bab4f010cd
+Top:    40559755ac3ae93f13572f97d69f3dba95d61ffb
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-09-28 12:31:19 +0800
 
@@ -14,6 +14,19 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/hw/alpha/dp264.c b/hw/alpha/dp264.c
+index 27bdaa1..e993be6 100644
+--- a/hw/alpha/dp264.c
++++ b/hw/alpha/dp264.c
+@@ -87,7 +87,7 @@ static void clipper_init(MachineState *machine)
+ 
+     /* Network setup.  e1000 is good enough, failing Tulip support.  */
+     for (i = 0; i < nb_nics; i++) {
+-        pci_nic_init_nofail(&nd_table[i], pci_bus, "e1000", NULL);
++        pci_nic_init_nofail(&nd_table[i], pci_bus, "e1000-82540em", NULL);
+     }
+ 
+     /* IDE disk setup.  */
 diff --git a/hw/i386/pc.c b/hw/i386/pc.c
 index 461c128..ce68cba 100644
 --- a/hw/i386/pc.c
@@ -63,6 +76,19 @@ index b0bf540..a6f3eb2 100644
      "pcnet",
      "virtio",
      NULL
+diff --git a/hw/ppc/ppc440_bamboo.c b/hw/ppc/ppc440_bamboo.c
+index ada676c..f45fc1c 100644
+--- a/hw/ppc/ppc440_bamboo.c
++++ b/hw/ppc/ppc440_bamboo.c
+@@ -246,7 +246,7 @@ static void bamboo_init(MachineState *machine)
+         for (i = 0; i < nb_nics; i++) {
+             /* There are no PCI NICs on the Bamboo board, but there are
+              * PCI slots, so we can pick whatever default model we want. */
+-            pci_nic_init_nofail(&nd_table[i], pcibus, "e1000", NULL);
++            pci_nic_init_nofail(&nd_table[i], pcibus, "e1000-82540em", NULL);
+         }
+     }
+ 
 diff --git a/qdev-monitor.c b/qdev-monitor.c
 index 0bf7f83..69bce78 100644
 --- a/qdev-monitor.c
