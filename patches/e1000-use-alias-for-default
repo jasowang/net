@@ -1,5 +1,5 @@
 Bottom: 170820b8c95d6b36a07975fb846ba32cf6d1ca3c
-Top:    40559755ac3ae93f13572f97d69f3dba95d61ffb
+Top:    b49d73f00dab626a6e441962235bd4c7204ba718
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-09-28 12:31:19 +0800
 
@@ -65,13 +65,14 @@ index 09c9e9d..7e87249 100644
  
  type_init(e1000_register_types)
 diff --git a/hw/pci/pci.c b/hw/pci/pci.c
-index b0bf540..a6f3eb2 100644
+index b0bf540..c36a37e 100644
 --- a/hw/pci/pci.c
 +++ b/hw/pci/pci.c
-@@ -1638,6 +1638,7 @@ static const char * const pci_nic_models[] = {
+@@ -1637,7 +1637,7 @@ static const char * const pci_nic_models[] = {
+     "i82557b",
      "i82559er",
      "rtl8139",
-     "e1000",
+-    "e1000",
 +    "e1000-82540em",
      "pcnet",
      "virtio",
