@@ -5,6 +5,10 @@ Date:   2015-09-28 12:31:19 +0800
 
 e1000: use alias for default model
 
+Instead of using a new type for default model, using an alias for this
+to avoid bit duplication.
+
+Cc: Markus Armbruster <armbru@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
