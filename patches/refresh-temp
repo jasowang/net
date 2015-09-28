@@ -1,0 +1,22 @@
+Bottom: b49d73f00dab626a6e441962235bd4c7204ba718
+Top:    cb36d77503832f2e17c97978e8ccfb7d0594aecf
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-28 13:34:24 +0800
+
+Refresh of e1000-use-alias-for-default
+
+---
+
+diff --git a/hw/pci/pci.c b/hw/pci/pci.c
+index c36a37e..1762b06 100644
+--- a/hw/pci/pci.c
++++ b/hw/pci/pci.c
+@@ -1649,7 +1649,7 @@ static const char * const pci_nic_names[] = {
+     "i82557b",
+     "i82559er",
+     "rtl8139",
+-    "e1000",
++    "e1000-82540em",
+     "pcnet",
+     "virtio-net-pci",
+     NULL
