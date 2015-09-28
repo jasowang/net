@@ -1,5 +1,5 @@
 Bottom: 170820b8c95d6b36a07975fb846ba32cf6d1ca3c
-Top:    170820b8c95d6b36a07975fb846ba32cf6d1ca3c
+Top:    c53511d2a277251aed68495255e47409e54546a8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2015-09-28 13:37:26 +0800
 
@@ -14,4 +14,47 @@ Signed-off-by: Jason Wang <jasowang@redhat.com
 
 ---
 
-
+diff --git a/hw/net/e1000.c b/hw/net/e1000.c
+index 09c9e9d..910de3a 100644
+--- a/hw/net/e1000.c
++++ b/hw/net/e1000.c
+@@ -1647,7 +1647,7 @@ static const TypeInfo e1000_base_info = {
+ 
+ static const E1000Info e1000_devices[] = {
+     {
+-        .name      = "e1000-82540em",
++        .name      = "e1000",
+         .device_id = E1000_DEV_ID_82540EM,
+         .revision  = 0x03,
+         .phy_id2   = E1000_PHY_ID2_8254xx_DEFAULT,
+@@ -1666,11 +1666,6 @@ static const E1000Info e1000_devices[] = {
+     },
+ };
+ 
+-static const TypeInfo e1000_default_info = {
+-    .name          = "e1000",
+-    .parent        = "e1000-82540em",
+-};
+-
+ static void e1000_register_types(void)
+ {
+     int i;
+@@ -1688,7 +1683,6 @@ static void e1000_register_types(void)
+ 
+         type_register(&type_info);
+     }
+-    type_register_static(&e1000_default_info);
+ }
+ 
+ type_init(e1000_register_types)
+diff --git a/qdev-monitor.c b/qdev-monitor.c
+index 0bf7f83..83c7039 100644
+--- a/qdev-monitor.c
++++ b/qdev-monitor.c
+@@ -50,6 +50,7 @@ static const QDevAlias qdev_alias_table[] = {
+     { "lsi53c895a", "lsi" },
+     { "ich9-ahci", "ahci" },
+     { "kvm-pci-assign", "pci-assign" },
++    { "e1000", "e1000-82540em" },
+     { }
+ };
