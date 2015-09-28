@@ -1,0 +1,11 @@
+Bottom: 170820b8c95d6b36a07975fb846ba32cf6d1ca3c
+Top:    170820b8c95d6b36a07975fb846ba32cf6d1ca3c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2015-09-28 12:31:19 +0800
+
+e1000: use alias for default model
+
+
+---
+
+
