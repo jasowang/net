@@ -1666,11 +1666,6 @@ static const E1000Info e1000_devices[] = {
     },
 };
 
-static const TypeInfo e1000_default_info = {
-    .name          = "e1000",
-    .parent        = "e1000-82540em",
-};
-
 static void e1000_register_types(void)
 {
     int i;
@@ -1688,7 +1683,6 @@ static void e1000_register_types(void)
 
         type_register(&type_info);
     }
-    type_register_static(&e1000_default_info);
 }
 
 type_init(e1000_register_types)
