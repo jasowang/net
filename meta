@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4972423f2221fafe2487b75321b1b9cebf5e1a66
-Head: 670883ebfd10307f606afdd47948a8746c117383
+Previous: 6cbedc4dda33d74e055c2d14fc63cf17ca9d1a50
+Head: 59b2947c36a20e05a65cbf2427b2f2cf33bccf36
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
   init-cleanup-of-netfilter: a42326dca9a53de6f8551ba3a4cb894eec9f06b4
@@ -13,6 +13,6 @@ Applied:
   netfilter-add-a-netbuffer: aa8c36094797bb544eaef2aa8bd576c346c372df
   tests-add-test-cases-for: 4713b95fc7fa99d4c7f31e14c5364f9053ce760c
   vmxnet3-support-reading-imr: 59b2947c36a20e05a65cbf2427b2f2cf33bccf36
-  e1000-use-alias-for-default: 670883ebfd10307f606afdd47948a8746c117383
 Unapplied:
+  e1000-use-alias-for-default: 670883ebfd10307f606afdd47948a8746c117383
 Hidden:
