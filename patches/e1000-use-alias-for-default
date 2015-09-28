@@ -5,6 +5,8 @@ Date:   2015-09-28 12:31:19 +0800
 
 e1000: use alias for default model
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
