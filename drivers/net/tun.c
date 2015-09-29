@@ -69,6 +69,7 @@
 #include <net/netns/generic.h>
 #include <net/rtnetlink.h>
 #include <net/sock.h>
+#include <net/busy_poll.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
 
@@ -871,6 +872,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
+	sk_mark_napi_id(tfile->socket.sk, skb);
 	/* Enqueue packet */
 	skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
 
@@ -878,7 +880,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (tfile->flags & TUN_FASYNC)
 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-
 	rcu_read_unlock();
 	return NETDEV_TX_OK;
 
