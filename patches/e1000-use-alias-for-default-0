@@ -5,11 +5,12 @@ Date:   2015-09-28 13:37:26 +0800
 
 e1000: use alias for default model
 
-Instead of using a new type for default model (82540em), using an
-alias for this to avoid bit duplication.
+Instead of duplicating the "e1000-82540em" device model as "e1000",
+make the latter an alias for the former.
 
 Cc: Markus Armbruster <armbru@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
 
 
 ---
