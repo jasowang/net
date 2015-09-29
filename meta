@@ -1,5 +1,5 @@
 Version: 1
-Previous: 1251238fd2924f8f54b2d539de590c8c24c93320
+Previous: 75bc55b855140ee76fdcbd3c1a98d3ff54a06c4c
 Head: 589ee208f7b7cc86db3329bd2897bee57613ca3b
 Applied:
   net-vmxnet3-refine-l2-header: d9b517da251d56203f3ba30da86d36c0a947060b
@@ -15,5 +15,4 @@ Applied:
   vmxnet3-support-reading-imr: 59b2947c36a20e05a65cbf2427b2f2cf33bccf36
   e1000-use-alias-for-default-0: 589ee208f7b7cc86db3329bd2897bee57613ca3b
 Unapplied:
-  e1000-use-alias-for-default: 670883ebfd10307f606afdd47948a8746c117383
 Hidden:
