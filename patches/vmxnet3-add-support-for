@@ -13,6 +13,7 @@ Currently, due to lack of support, a bogus value (-1) is returned.
 Support this command, returning the "adaptive-ring disabled" flag.
 
 Signed-off-by: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
