@@ -1,0 +1,65 @@
+Bottom: 1f20ecaf97c6f8036eeae0147a413c98d3afc787
+Top:    688f0b522195b805c8723346f3f3430c8cd84e43
+Author: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
+Date:   2015-09-18 08:55:04 +0300
+
+vmxnet3: Add support for VMXNET3_CMD_GET_ADAPTIVE_RING_INFO command
+
+Some drivers (e.g. vmware-tools) issue the VMXNET3_CMD_GET_ADAPTIVE_RING_INFO
+command.
+
+Currently, due to lack of support, a bogus value (-1) is returned.
+
+Support this command, returning the "adaptive-ring disabled" flag.
+
+Signed-off-by: Shmulik Ladkani <shmulik.ladkani@ravellosystems.com>
+
+
+---
+
+diff --git a/hw/net/vmxnet3.c b/hw/net/vmxnet3.c
+index 057f0dc..3c5e10d 100644
+--- a/hw/net/vmxnet3.c
++++ b/hw/net/vmxnet3.c
+@@ -1631,6 +1631,11 @@ static void vmxnet3_handle_command(VMXNET3State *s, uint64_t cmd)
+         VMW_CBPRN("Set: VMXNET3_CMD_GET_CONF_INTR - interrupt configuration");
+         break;
+ 
++    case VMXNET3_CMD_GET_ADAPTIVE_RING_INFO:
++        VMW_CBPRN("Set: VMXNET3_CMD_GET_ADAPTIVE_RING_INFO - "
++                  "adaptive ring info flags");
++        break;
++
+     default:
+         VMW_CBPRN("Received unknown command: %" PRIx64, cmd);
+         break;
+@@ -1670,6 +1675,10 @@ static uint64_t vmxnet3_get_command_status(VMXNET3State *s)
+         ret = vmxnet3_get_interrupt_config(s);
+         break;
+ 
++    case VMXNET3_CMD_GET_ADAPTIVE_RING_INFO:
++        ret = VMXNET3_DISABLE_ADAPTIVE_RING;
++        break;
++
+     default:
+         VMW_WRPRN("Received request for unknown command: %x", s->last_command);
+         ret = -1;
+diff --git a/hw/net/vmxnet3.h b/hw/net/vmxnet3.h
+index f987d71..f7006af 100644
+--- a/hw/net/vmxnet3.h
++++ b/hw/net/vmxnet3.h
+@@ -198,9 +198,13 @@ enum {
+     VMXNET3_CMD_GET_DID_LO,                               /* 0xF00D0005 */
+     VMXNET3_CMD_GET_DID_HI,                               /* 0xF00D0006 */
+     VMXNET3_CMD_GET_DEV_EXTRA_INFO,                       /* 0xF00D0007 */
+-    VMXNET3_CMD_GET_CONF_INTR                             /* 0xF00D0008 */
++    VMXNET3_CMD_GET_CONF_INTR,                            /* 0xF00D0008 */
++    VMXNET3_CMD_GET_ADAPTIVE_RING_INFO                    /* 0xF00D0009 */
+ };
+ 
++/* Adaptive Ring Info Flags */
++#define VMXNET3_DISABLE_ADAPTIVE_RING 1
++
+ /*
+  *    Little Endian layout of bitfields -
+  *    Byte 0 :    7.....len.....0
