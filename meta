@@ -1,13 +1,13 @@
 Version: 1
-Previous: da222e3ab735aa34ccfbd59b520e6898b16ec33f
-Head: d62241eb6da9bd2517f07b3219ba4208b90b4e0d
+Previous: 384b3c095418030f3d8580644a1e0a0a6b4aa2ae
+Head: 180a75bf09404ec95052a09d814098afab5865d3
 Applied:
   net-vmxnet3-refine-l2-header: a7278b36fcab9af469563bd7b9dadebe2ae25e48
   vmxnet3-support-reading-imr: c6048f849c7e3f009786df76206e895a69de032c
   e1000-use-alias-for-default-0: 8304402033e8dbe8e379017d51ed1dd8344f1dce
   vmxnet3-add-support-for: d62241eb6da9bd2517f07b3219ba4208b90b4e0d
-Unapplied:
   vl-c-init-delayed-object-after: 180a75bf09404ec95052a09d814098afab5865d3
+Unapplied:
   init-cleanup-of-netfilter: 27df403e6210d76206299b411eced1c13056f5df
   netfilter-hook-packets-before: 46cba3602854876b3b0ad847f04094e5e94e4366
   net-merge-qemu_deliver_packet: 3d5925c566b3ab6243ecb077116bc4161081dd0d
