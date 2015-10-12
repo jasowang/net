@@ -46,7 +46,7 @@ static void filter_buffer_release_timer(void *opaque)
     /*
      * Note: filter_buffer_flush() drops packets that can't be sent
      * TODO: We should leave them queued.  But currently there's no way
-     * for the next filter or recivier to notify us that it can receive
+     * for the next filter or receiver to notify us that it can receive
      * more packets.
      */
     filter_buffer_flush(nf);
