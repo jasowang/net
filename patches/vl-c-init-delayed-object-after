@@ -1,0 +1,53 @@
+Bottom: 25579c39620cad08d40fa82243e8a1c53a4d8f53
+Top:    76cadb7aea600da6bd4f17b687c39630d0292538
+Author: Yang Hongyang <yanghy@cn.fujitsu.com>
+Date:   2015-10-07 11:52:13 +0800
+
+vl.c: init delayed object after net_init_clients
+
+Init delayed object after net_init_clients, because netfilters need
+to be initialized after net clients initialized.
+
+Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+
+
+---
+
+diff --git a/vl.c b/vl.c
+index f2bd8d2..366f38f 100644
+--- a/vl.c
++++ b/vl.c
+@@ -2767,6 +2767,7 @@ static bool object_create_initial(const char *type)
+     if (g_str_equal(type, "rng-egd")) {
+         return false;
+     }
++    /* TODO: implement netfilters */
+     return true;
+ }
+ 
+@@ -4286,12 +4287,6 @@ int main(int argc, char **argv, char **envp)
+         exit(0);
+     }
+ 
+-    if (qemu_opts_foreach(qemu_find_opts("object"),
+-                          object_create,
+-                          object_create_delayed, NULL)) {
+-        exit(1);
+-    }
+-
+     machine_opts = qemu_get_machine_opts();
+     if (qemu_opt_foreach(machine_opts, machine_set_property, current_machine,
+                          NULL)) {
+@@ -4397,6 +4392,12 @@ int main(int argc, char **argv, char **envp)
+         exit(1);
+     }
+ 
++    if (qemu_opts_foreach(qemu_find_opts("object"),
++                          object_create,
++                          object_create_delayed, NULL)) {
++        exit(1);
++    }
++
+ #ifdef CONFIG_TPM
+     if (tpm_init() < 0) {
+         exit(1);

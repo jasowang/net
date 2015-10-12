@@ -1,10 +1,20 @@
 Version: 1
-Previous: 258c300996b24083aa30c848be783b0fef07ce80
+Previous: d27d115d69e6d98f819c4f1a16807e40fd640df6
 Head: 3df204a4d82e7549ef15cafcc623b56a237a2665
 Applied:
   net-vmxnet3-refine-l2-header: a7278b36fcab9af469563bd7b9dadebe2ae25e48
   vmxnet3-support-reading-imr: c6048f849c7e3f009786df76206e895a69de032c
   e1000-use-alias-for-default-0: 8304402033e8dbe8e379017d51ed1dd8344f1dce
   vmxnet3-add-support-for: d62241eb6da9bd2517f07b3219ba4208b90b4e0d
+  vl-c-init-delayed-object-after: 180a75bf09404ec95052a09d814098afab5865d3
+  init-cleanup-of-netfilter: 27df403e6210d76206299b411eced1c13056f5df
+  netfilter-hook-packets-before: 46cba3602854876b3b0ad847f04094e5e94e4366
+  net-merge-qemu_deliver_packet: 3d5925c566b3ab6243ecb077116bc4161081dd0d
+  net-queue-introduce: c4ef0c09a72157ffe60c05d1d0eb17874b2d1f2c
+  netfilter-add-an-api-to-pass: b74a2c826176b1381480fc3f481788b4ae20fc41
+  netfilter-print-filter-info: 2549b5a8e2a37bd0c3d27f74b1fbba7626d9b242
+  net-queue-export: 8dc725d6c811fc95097e89549190f11c07fdf08a
+  netfilter-add-a-netbuffer: f4a57577c77610cfbf4570d3802fd09705a2237f
+  tests-add-test-cases-for: 3df204a4d82e7549ef15cafcc623b56a237a2665
 Unapplied:
 Hidden:
