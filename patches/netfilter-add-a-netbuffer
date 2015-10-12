@@ -1,5 +1,5 @@
 Bottom: 400d818d74aa5530861e75f4a7e750a94434dc9b
-Top:    adba93d8c8cedf2859812ffc355a69d314a590d4
+Top:    422dfd4290eef95e33f27c929af3fe2178f0dc09
 Author: Yang Hongyang <yanghy@cn.fujitsu.com>
 Date:   2015-10-07 11:52:21 +0800
 
@@ -36,7 +36,7 @@ index 914aec0..5fa2f97 100644
 +common-obj-y += filter-buffer.o
 diff --git a/net/filter-buffer.c b/net/filter-buffer.c
 new file mode 100644
-index 0000000..336bdcc
+index 0000000..57be149
 --- /dev/null
 +++ b/net/filter-buffer.c
 @@ -0,0 +1,186 @@
@@ -88,7 +88,7 @@ index 0000000..336bdcc
 +    /*
 +     * Note: filter_buffer_flush() drops packets that can't be sent
 +     * TODO: We should leave them queued.  But currently there's no way
-+     * for the next filter or recivier to notify us that it can receive
++     * for the next filter or receiver to notify us that it can receive
 +     * more packets.
 +     */
 +    filter_buffer_flush(nf);
