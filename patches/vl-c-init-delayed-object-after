@@ -1,5 +1,5 @@
 Bottom: 25579c39620cad08d40fa82243e8a1c53a4d8f53
-Top:    76cadb7aea600da6bd4f17b687c39630d0292538
+Top:    d4fa4db4846829c1cf64e094e4d9a042c8034616
 Author: Yang Hongyang <yanghy@cn.fujitsu.com>
 Date:   2015-10-07 11:52:13 +0800
 
@@ -15,10 +15,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/vl.c b/vl.c
-index f2bd8d2..366f38f 100644
+index f2bd8d2..17ae26c 100644
 --- a/vl.c
 +++ b/vl.c
-@@ -2767,6 +2767,7 @@ static bool object_create_initial(const char *type)
+@@ -2767,13 +2767,14 @@ static bool object_create_initial(const char *type)
      if (g_str_equal(type, "rng-egd")) {
          return false;
      }
@@ -26,6 +26,14 @@ index f2bd8d2..366f38f 100644
      return true;
  }
  
+ 
+ /*
+  * The remainder of object creation happens after the
+- * creation of chardev, fsdev and device data types.
++ * creation of chardev, fsdev, net clients and device data types.
+  */
+ static bool object_create_delayed(const char *type)
+ {
 @@ -4286,12 +4287,6 @@ int main(int argc, char **argv, char **envp)
          exit(0);
      }
