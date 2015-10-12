@@ -2774,7 +2774,7 @@ static bool object_create_initial(const char *type)
 
 /*
  * The remainder of object creation happens after the
- * creation of chardev, fsdev and device data types.
+ * creation of chardev, fsdev, net clients and device data types.
  */
 static bool object_create_delayed(const char *type)
 {
