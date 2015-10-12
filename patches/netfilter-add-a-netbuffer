@@ -1,5 +1,5 @@
-Bottom: 401df1a2baee5804970ceee7261bec109edb0f5f
-Top:    e61a632c81fc6ae7483e7d4240f900c065025841
+Bottom: 400d818d74aa5530861e75f4a7e750a94434dc9b
+Top:    adba93d8c8cedf2859812ffc355a69d314a590d4
 Author: Yang Hongyang <yanghy@cn.fujitsu.com>
 Date:   2015-10-07 11:52:21 +0800
 
@@ -252,7 +252,7 @@ index 328404c..2485b94 100644
  
  ETEXI
 diff --git a/vl.c b/vl.c
-index 366f38f..c9b4f49 100644
+index 17ae26c..6fbfd4d 100644
 --- a/vl.c
 +++ b/vl.c
 @@ -2767,7 +2767,11 @@ static bool object_create_initial(const char *type)
