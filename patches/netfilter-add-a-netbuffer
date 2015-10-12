@@ -7,7 +7,9 @@ netfilter: add a netbuffer filter
 
 This filter is to buffer/release packets. Can be used when using
 MicroCheckpointing or other Remus like VM FT solutions.
-You can also use it to simulate network delay.
+You can also use it to crudely simulate network delay.  Doesn't
+actually delay individual packets, but batches them together, which is
+a delay of sorts.
 
 Usage:
  -netdev tap,id=bn0
