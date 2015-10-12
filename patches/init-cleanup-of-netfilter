@@ -13,6 +13,7 @@ delete the netfilter object attached to it, because if the netdev is
 removed, the filter which attached to it is useless.
 
 Signed-off-by: Yang Hongyang <yanghy@cn.fujitsu.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
 
 
 ---
