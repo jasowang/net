@@ -1,11 +1,12 @@
 Version: 1
-Previous: d27d115d69e6d98f819c4f1a16807e40fd640df6
-Head: 3df204a4d82e7549ef15cafcc623b56a237a2665
+Previous: da222e3ab735aa34ccfbd59b520e6898b16ec33f
+Head: d62241eb6da9bd2517f07b3219ba4208b90b4e0d
 Applied:
   net-vmxnet3-refine-l2-header: a7278b36fcab9af469563bd7b9dadebe2ae25e48
   vmxnet3-support-reading-imr: c6048f849c7e3f009786df76206e895a69de032c
   e1000-use-alias-for-default-0: 8304402033e8dbe8e379017d51ed1dd8344f1dce
   vmxnet3-add-support-for: d62241eb6da9bd2517f07b3219ba4208b90b4e0d
+Unapplied:
   vl-c-init-delayed-object-after: 180a75bf09404ec95052a09d814098afab5865d3
   init-cleanup-of-netfilter: 27df403e6210d76206299b411eced1c13056f5df
   netfilter-hook-packets-before: 46cba3602854876b3b0ad847f04094e5e94e4366
@@ -16,5 +17,4 @@ Applied:
   net-queue-export: 8dc725d6c811fc95097e89549190f11c07fdf08a
   netfilter-add-a-netbuffer: f4a57577c77610cfbf4570d3802fd09705a2237f
   tests-add-test-cases-for: 3df204a4d82e7549ef15cafcc623b56a237a2665
-Unapplied:
 Hidden:
