@@ -119,7 +119,6 @@ static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
 				  u16 msix_vec)
 {
 	struct virtqueue *vq;
-	unsigned long size;
 	u16 num;
 	int err;
 
@@ -131,28 +130,18 @@ static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
 	if (!num || ioread32(vp_dev->ioaddr + VIRTIO_PCI_QUEUE_PFN))
 		return ERR_PTR(-ENOENT);
 
-	info->num = num;
 	info->msix_vector = msix_vec;
 
-	size = PAGE_ALIGN(vring_size(num, VIRTIO_PCI_VRING_ALIGN));
-	info->queue = dma_zalloc_coherent(&vp_dev->pci_dev->dev, size,
-					  &info->queue_dma_addr,
-					  GFP_KERNEL);
-	if (info->queue == NULL)
+	/* create the vring */
+	vq = vring_create_virtqueue(index, num,
+				    VIRTIO_PCI_VRING_ALIGN, &vp_dev->vdev,
+				    true, false, vp_notify, callback, name);
+	if (!vq)
 		return ERR_PTR(-ENOMEM);
 
 	/* activate the queue */
-	iowrite32(info->queue_dma_addr >> VIRTIO_PCI_QUEUE_ADDR_SHIFT,
+	iowrite32(virtqueue_get_desc_addr(vq) >> VIRTIO_PCI_QUEUE_ADDR_SHIFT,
 		  vp_dev->ioaddr + VIRTIO_PCI_QUEUE_PFN);
-
-	/* create the vring */
-	vq = vring_new_virtqueue(index, info->num,
-				 VIRTIO_PCI_VRING_ALIGN, &vp_dev->vdev,
-				 true, info->queue, vp_notify, callback, name);
-	if (!vq) {
-		err = -ENOMEM;
-		goto out_activate_queue;
-	}
 
 	vq->priv = (void __force *)vp_dev->ioaddr + VIRTIO_PCI_QUEUE_NOTIFY;
 
@@ -161,18 +150,15 @@ static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
 		msix_vec = ioread16(vp_dev->ioaddr + VIRTIO_MSI_QUEUE_VECTOR);
 		if (msix_vec == VIRTIO_MSI_NO_VECTOR) {
 			err = -EBUSY;
-			goto out_assign;
+			goto out_deactivate;
 		}
 	}
 
 	return vq;
 
-out_assign:
-	vring_del_virtqueue(vq);
-out_activate_queue:
+out_deactivate:
 	iowrite32(0, vp_dev->ioaddr + VIRTIO_PCI_QUEUE_PFN);
-	dma_free_coherent(&vp_dev->pci_dev->dev, size,
-			  info->queue, info->queue_dma_addr);
+	vring_del_virtqueue(vq);
 	return ERR_PTR(err);
 }
 
@@ -180,7 +166,6 @@ static void del_vq(struct virtio_pci_vq_info *info)
 {
 	struct virtqueue *vq = info->vq;
 	struct virtio_pci_device *vp_dev = to_vp_device(vq->vdev);
-	unsigned long size;
 
 	iowrite16(vq->index, vp_dev->ioaddr + VIRTIO_PCI_QUEUE_SEL);
 
@@ -191,14 +176,10 @@ static void del_vq(struct virtio_pci_vq_info *info)
 		ioread8(vp_dev->ioaddr + VIRTIO_PCI_ISR);
 	}
 
-	vring_del_virtqueue(vq);
-
 	/* Select and deactivate the queue */
 	iowrite32(0, vp_dev->ioaddr + VIRTIO_PCI_QUEUE_PFN);
 
-	size = PAGE_ALIGN(vring_size(info->num, VIRTIO_PCI_VRING_ALIGN));
-	dma_free_coherent(&vp_dev->pci_dev->dev, size,
-			  info->queue, info->queue_dma_addr);
+	vring_del_virtqueue(vq);
 }
 
 static const struct virtio_config_ops virtio_pci_config_ops = {
