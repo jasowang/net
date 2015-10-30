@@ -293,14 +293,16 @@ static size_t vring_pci_size(u16 num)
 	return PAGE_ALIGN(vring_size(num, SMP_CACHE_BYTES));
 }
 
-static void *alloc_virtqueue_pages(int *num)
+static void *alloc_virtqueue_pages(struct virtio_pci_device *vp_dev,
+				   int *num, dma_addr_t *dma_addr)
 {
 	void *pages;
 
 	/* TODO: allocate each queue chunk individually */
 	for (; *num && vring_pci_size(*num) > PAGE_SIZE; *num /= 2) {
-		pages = alloc_pages_exact(vring_pci_size(*num),
-					  GFP_KERNEL|__GFP_ZERO|__GFP_NOWARN);
+		pages = dma_zalloc_coherent(
+			&vp_dev->pci_dev->dev, vring_pci_size(*num),
+			dma_addr, GFP_KERNEL|__GFP_NOWARN);
 		if (pages)
 			return pages;
 	}
@@ -309,7 +311,9 @@ static void *alloc_virtqueue_pages(int *num)
 		return NULL;
 
 	/* Try to get a single page. You are my only hope! */
-	return alloc_pages_exact(vring_pci_size(*num), GFP_KERNEL|__GFP_ZERO);
+	return dma_zalloc_coherent(
+		&vp_dev->pci_dev->dev, vring_pci_size(*num),
+		dma_addr, GFP_KERNEL);
 }
 
 static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
@@ -346,7 +350,8 @@ static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
 	info->num = num;
 	info->msix_vector = msix_vec;
 
-	info->queue = alloc_virtqueue_pages(&info->num);
+	info->queue = alloc_virtqueue_pages(vp_dev, &info->num,
+					    &info->queue_dma_addr);
 	if (info->queue == NULL)
 		return ERR_PTR(-ENOMEM);
 
@@ -361,11 +366,11 @@ static struct virtqueue *setup_vq(struct virtio_pci_device *vp_dev,
 
 	/* activate the queue */
 	vp_iowrite16(num, &cfg->queue_size);
-	vp_iowrite64_twopart(virt_to_phys(info->queue),
+	vp_iowrite64_twopart(info->queue_dma_addr,
 			     &cfg->queue_desc_lo, &cfg->queue_desc_hi);
-	vp_iowrite64_twopart(virt_to_phys(virtqueue_get_avail(vq)),
+	vp_iowrite64_twopart(info->queue_dma_addr + ((char *)virtqueue_get_avail(vq) - (char *)info->queue),
 			     &cfg->queue_avail_lo, &cfg->queue_avail_hi);
-	vp_iowrite64_twopart(virt_to_phys(virtqueue_get_used(vq)),
+	vp_iowrite64_twopart(info->queue_dma_addr + ((char *)virtqueue_get_used(vq) - (char *)info->queue),
 			     &cfg->queue_used_lo, &cfg->queue_used_hi);
 
 	if (vp_dev->notify_base) {
@@ -411,7 +416,8 @@ err_assign_vector:
 err_map_notify:
 	vring_del_virtqueue(vq);
 err_new_queue:
-	free_pages_exact(info->queue, vring_pci_size(info->num));
+	dma_free_coherent(&vp_dev->pci_dev->dev, vring_pci_size(info->num),
+			  info->queue, info->queue_dma_addr);
 	return ERR_PTR(err);
 }
 
@@ -457,7 +463,8 @@ static void del_vq(struct virtio_pci_vq_info *info)
 
 	vring_del_virtqueue(vq);
 
-	free_pages_exact(info->queue, vring_pci_size(info->num));
+	dma_free_coherent(&vp_dev->pci_dev->dev, vring_pci_size(info->num),
+			  info->queue, info->queue_dma_addr);
 }
 
 static const struct virtio_config_ops virtio_pci_config_nodev_ops = {
@@ -640,6 +647,13 @@ int virtio_pci_modern_probe(struct virtio_pci_device *vp_dev)
 			common, isr, notify);
 		return -EINVAL;
 	}
+
+	err = dma_set_mask_and_coherent(&pci_dev->dev, DMA_BIT_MASK(64));
+	if (err)
+		err = dma_set_mask_and_coherent(&pci_dev->dev,
+						DMA_BIT_MASK(32));
+	if (err)
+		dev_warn(&pci_dev->dev, "Failed to enable 64-bit or 32-bit DMA.  Trying to continue, but this might not work.\n");
 
 	/* Device capability is only mandatory for devices that have
 	 * device-specific configuration.
