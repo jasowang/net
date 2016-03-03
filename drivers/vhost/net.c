@@ -27,6 +27,7 @@
 #include <linux/if_vlan.h>
 
 #include <net/sock.h>
+#include <net/busy_poll.h>
 
 #include "vhost.h"
 
@@ -307,15 +308,24 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    unsigned int *out_num, unsigned int *in_num)
 {
 	unsigned long uninitialized_var(endtime);
+	struct socket *sock = vq->private_data;
+	struct sock *sk = sock->sk;
+	struct napi_struct *napi;
 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				    out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
 		preempt_disable();
+		rcu_read_lock();
+		napi = napi_by_id(sk->sk_napi_id);
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq))
+		       vhost_vq_avail_empty(vq->dev, vq)) {
+			if (napi)
+				sk_busy_loop_once(sk, napi);
 			cpu_relax_lowlatency();
+		}
+		rcu_read_unlock();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 					out_num, in_num, NULL, NULL);
@@ -476,6 +486,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
+	struct napi_struct *napi;
 	int len = peek_head_len(sk);
 
 	if (!len && vq->busyloop_timeout) {
@@ -484,13 +495,20 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
+		rcu_read_lock();
+
+		napi = napi_by_id(sk->sk_napi_id);
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
 		       skb_queue_empty(&sk->sk_receive_queue) &&
-		       vhost_vq_avail_empty(&net->dev, vq))
+		       vhost_vq_avail_empty(&net->dev, vq)) {
+			if (napi)
+				sk_busy_loop_once(sk, napi);
 			cpu_relax_lowlatency();
+		}
 
+		rcu_read_unlock();
 		preempt_enable();
 
 		if (vhost_enable_notify(&net->dev, vq))
