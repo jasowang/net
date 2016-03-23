@@ -59,8 +59,9 @@ __u64 eventfd_signal(struct eventfd_ctx *ctx, __u64 n)
 	if (ULLONG_MAX - ctx->count < n)
 		n = ULLONG_MAX - ctx->count;
 	ctx->count += n;
-	if (waitqueue_active(&ctx->wqh))
+	if (waitqueue_active(&ctx->wqh)) {
 		wake_up_locked_poll(&ctx->wqh, POLLIN);
+	}
 	spin_unlock_irqrestore(&ctx->wqh.lock, flags);
 
 	return n;
