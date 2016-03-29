@@ -20,6 +20,7 @@
 #include <net/net_namespace.h>
 #include <net/rtnetlink.h>
 #include <net/sock.h>
+#include <net/busy_poll.h>
 #include <linux/virtio_net.h>
 
 /*
@@ -369,6 +370,7 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 			goto drop;
 
 		if (!segs) {
+			sk_mark_napi_id(&q->sk, skb);
 			skb_queue_tail(&q->sk.sk_receive_queue, skb);
 			goto wake_up;
 		}
@@ -378,6 +380,7 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 			struct sk_buff *nskb = segs->next;
 
 			segs->next = NULL;
+			sk_mark_napi_id(&q->sk, segs);
 			skb_queue_tail(&q->sk.sk_receive_queue, segs);
 			segs = nskb;
 		}
@@ -391,6 +394,7 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 		    !(features & NETIF_F_CSUM_MASK) &&
 		    skb_checksum_help(skb))
 			goto drop;
+		sk_mark_napi_id(&q->sk, skb);
 		skb_queue_tail(&q->sk.sk_receive_queue, skb);
 	}
 
