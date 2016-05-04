@@ -130,6 +130,8 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
+#define TUN_RING_SIZE 256
+#define TUN_RING_MASK (TUN_RING_SIZE - 1)
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
@@ -140,6 +142,11 @@ struct tun_pcpu_stats {
 	u32 rx_dropped;
 	u32 tx_dropped;
 	u32 rx_frame_errors;
+};
+
+struct tun_desc {
+	struct sk_buff *skb;
+	int len; /* Cached skb len for peeking */
 };
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
@@ -167,6 +174,11 @@ struct tun_file {
 	};
 	struct list_head next;
 	struct tun_struct *detached;
+	spinlock_t rlock;
+	spinlock_t wlock;
+	struct tun_desc tx_descs[TUN_RING_SIZE];
+	unsigned short head;
+	unsigned short tail;
 };
 
 struct tun_flow_entry {
@@ -515,7 +527,14 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
-	skb_queue_purge(&tfile->sk.sk_receive_queue);
+//	skb_queue_purge(&tfile->sk.sk_receive_queue);
+	spin_lock(&tfile->rlock);
+	while (tfile->tail != tfile->head) {
+		struct sk_buff *skb = tfile->tx_descs[tfile->head].skb;
+		kfree_skb(skb);
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+	}
+	spin_unlock(&tfile->rlock);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -824,6 +843,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	u32 numqueues = 0;
+	unsigned long flags;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -889,7 +909,17 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	/* Enqueue packet */
-	skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	//skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+
+	if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
+		goto drop;
+
+	spin_lock_irqsave(&tfile->wlock, flags);
+	tfile->tx_descs[tfile->tail].skb = skb;
+	tfile->tx_descs[tfile->tail].len = skb->len;
+	smp_wmb();
+	tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+	spin_unlock_irqrestore(&tfile->wlock, flags);
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
@@ -1484,7 +1514,6 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 {
 	struct sk_buff *skb;
 	ssize_t ret;
-	int peeked, err, off = 0;
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
@@ -1494,11 +1523,26 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->dev->reg_state != NETREG_REGISTERED)
 		return -EIO;
 
+	spin_lock(&tfile->rlock);
+
+	if (tfile->head == tfile->tail) {
+		spin_unlock(&tfile->rlock);
+		return -EAGAIN;
+	}
+
+	skb = tfile->tx_descs[tfile->head].skb;
+	smp_wmb();
+	tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+
+	spin_unlock(&tfile->rlock);
+
+#if 0
 	/* Read frames from queue */
 	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
 				  &peeked, &off, &err);
 	if (!skb)
 		return err;
+#endif
 
 	ret = tun_put_user(tun, tfile, skb, to);
 	if (unlikely(ret < 0))
@@ -1629,8 +1673,20 @@ out:
 	return ret;
 }
 
+static int tun_peek_len(struct socket *sock)
+{
+	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+	int last_head = READ_ONCE(tfile->head);
+
+	if (last_head != tfile->tail)
+		return tfile->tx_descs[last_head].len;
+	else
+		return 0;
+}
+
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops tun_socket_ops = {
+	.peek_len = tun_peek_len,
 	.sendmsg = tun_sendmsg,
 	.recvmsg = tun_recvmsg,
 };
@@ -2313,6 +2369,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
+
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -2332,6 +2389,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+	tfile->head = tfile->tail = 0;
+
+	spin_lock_init(&tfile->rlock);
+	spin_lock_init(&tfile->wlock);
 
 	return 0;
 }
