@@ -1,8 +1,10 @@
 Version: 1
-Previous: daae9d32a33f3f9c90d669eb8bb01678327ff327
+Previous: 6826819e9a52a27202d9c5a8052d804ff49781a3
 Head: b25826bb9d34b18a86285552ae18fe775b37d66b
 Applied:
   introduce-peek-ops: ba1edce20b44bffc73ea192ee406214c1ee1a0f2
   high-performance-mode: 092563fa4e3f73adc2a6b8d2edb5423532614e35
+  lockless: 8b54c888274727bfd7f7e7cee1dcd5bd834a92f4
+  signed-off-by-jason-wang: b25826bb9d34b18a86285552ae18fe775b37d66b
 Unapplied:
 Hidden:
