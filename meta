@@ -1,6 +1,8 @@
 Version: 1
-Previous: cc6158e9c259d262675cc20796edb298f5a0345f
+Previous: f49ab65031def5e7b8c8efc24a2879ad1a448c77
 Head: 092563fa4e3f73adc2a6b8d2edb5423532614e35
 Applied:
+  introduce-peek-ops: ba1edce20b44bffc73ea192ee406214c1ee1a0f2
+  high-performance-mode: 092563fa4e3f73adc2a6b8d2edb5423532614e35
 Unapplied:
 Hidden:

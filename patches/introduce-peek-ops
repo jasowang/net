@@ -1,0 +1,24 @@
+Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
+Top:    c611acb839902e61e2239e159ccabddeabd5103a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-04-22 05:00:12 -0400
+
+introduce peek ops
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/net.h b/include/linux/net.h
+index 72c1e06..29b5dbc 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -132,6 +132,7 @@ struct module;
+ struct proto_ops {
+ 	int		family;
+ 	struct module	*owner;
++	int		(*peek_len)  (struct socket *sock);
+ 	int		(*release)   (struct socket *sock);
+ 	int		(*bind)	     (struct socket *sock,
+ 				      struct sockaddr *myaddr,
