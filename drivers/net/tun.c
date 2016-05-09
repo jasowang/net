@@ -71,6 +71,7 @@
 #include <net/sock.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
+#include <linux/circ_buf.h>
 
 #include <asm/uaccess.h>
 
@@ -175,10 +176,10 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	spinlock_t rlock;
-	unsigned short head;
+	unsigned long tail;
 	struct tun_desc tx_descs[TUN_RING_SIZE];
 	spinlock_t wlock;
-	unsigned short tail;
+	unsigned long head;
 };
 
 struct tun_flow_entry {
