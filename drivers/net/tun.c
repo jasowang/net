@@ -869,8 +869,11 @@ static bool tun_xmit_skb(struct tun_struct *tun, struct tun_file *tfile,
 		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
 
 		spin_unlock_irqrestore(&tfile->wlock, flags);
-	} else
+		printk("TX RING sent\n");
+	} else {
 		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+		printk("skb queue!\n");
+	}
 
 	return true;
 drop:
@@ -1535,12 +1538,41 @@ done:
 	return total;
 }
 
+static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
+					 struct tun_file *tfile,
+					 int noblock,
+					 int *err)
+{
+	int peeked, off = 0;
+	if (tun->flags & IFF_TX_RING) {
+		struct sk_buff *skb;
+		spin_lock(&tfile->rlock);
+		if (tfile->head == tfile->tail) {
+			spin_unlock(&tfile->rlock);
+			*err = -EAGAIN;
+			return NULL;
+		}
+		skb = tfile->tx_descs[tfile->head].skb;
+		smp_wmb();
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+		spin_unlock(&tfile->rlock);
+		return skb;
+	} else {
+		printk("recv!\n");
+		/* Read frames from queue */
+		return __skb_recv_datagram(tfile->socket.sk,
+					   noblock ? MSG_DONTWAIT : 0,
+					   &peeked, &off, err);
+	}
+}
+
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock)
 {
 	struct sk_buff *skb;
 	ssize_t ret;
+	int err;
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
@@ -1550,26 +1582,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->dev->reg_state != NETREG_REGISTERED)
 		return -EIO;
 
-	spin_lock(&tfile->rlock);
-
-	if (tfile->head == tfile->tail) {
-		spin_unlock(&tfile->rlock);
-		return -EAGAIN;
-	}
-
-	skb = tfile->tx_descs[tfile->head].skb;
-	smp_wmb();
-	tfile->head = (tfile->head + 1) & TUN_RING_MASK;
-
-	spin_unlock(&tfile->rlock);
-
-#if 0
-	/* Read frames from queue */
-	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
-				  &peeked, &off, &err);
+	skb = tun_recv_datagram(tun, tfile, noblock, &err);
 	if (!skb)
 		return err;
-#endif
 
 	ret = tun_put_user(tun, tfile, skb, to);
 	if (unlikely(ret < 0))
@@ -1704,11 +1719,30 @@ static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	int last_head = READ_ONCE(tfile->head);
+	struct tun_struct *tun = __tun_get(tfile);
+	int ret;
 
-	if (last_head != tfile->tail)
-		return tfile->tx_descs[last_head].len;
-	else
+	if (!tun)
 		return 0;
+
+	if (tun->flags & IFF_TX_RING) {
+		if (last_head != tfile->tail)
+			ret = tfile->tx_descs[last_head].len;
+		else
+			ret = 0;
+	} else {
+		struct sock *sk = sock->sk;
+		struct sk_buff *skb;
+		unsigned long flags;
+
+		spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+		skb = skb_peek(&sk->sk_receive_queue);
+		spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
+		ret = skb ? skb->len : 0;
+	}
+
+	tun_put(tun);
+	return ret;
 }
 
 /* Ops structure to mimic raw sockets with tun */
@@ -2142,6 +2176,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case TUNSETPERSIST:
+		if (tun->flags & IFF_TX_RING) {
+			ret = -EINVAL;
+			break;
+		}
+
 		/* Disable/Enable persist mode. Keep an extra reference to the
 		 * module to prevent the module being unprobed.
 		 */
