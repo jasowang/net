@@ -1,5 +1,5 @@
 Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
-Top:    fb1a891b51935490e029affcc18680f2437c62d9
+Top:    46521044b8bc345643a54d631c3a39c1028e14db
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-09 19:33:45 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8864f2a..d4d98cc 100644
+index 8864f2a..c373afb 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -35,7 +35,16 @@ index 8864f2a..d4d98cc 100644
  };
  
  struct tun_flow_entry {
-@@ -908,18 +909,34 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -527,7 +528,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+ 
+ static void tun_queue_purge(struct tun_file *tfile)
+ {
+-//	skb_queue_purge(&tfile->sk.sk_receive_queue);
++	skb_queue_purge(&tfile->sk.sk_receive_queue);
+ 	spin_lock(&tfile->rlock);
+ 	while (tfile->tail != tfile->head) {
+ 		struct sk_buff *skb = tfile->tx_descs[tfile->head].skb;
+@@ -908,18 +909,36 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	nf_reset(skb);
  
@@ -64,6 +73,8 @@ index 8864f2a..d4d98cc 100644
 +
 +			desc->skb = skb;
 +			desc->len = skb->len;
++			if (skb_vlan_tag_present(skb))
++				desc->len += VLAN_HLEN;
 +
 +			smp_store_release(&tfile->head,
 +					  (head + 1) & TUN_RING_MASK);
@@ -80,6 +91,92 @@ index 8864f2a..d4d98cc 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
+@@ -1514,6 +1533,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ {
+ 	struct sk_buff *skb;
+ 	ssize_t ret;
++	int peeked, err, off = 0;
+ 
+ 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
+ 
+@@ -1536,13 +1556,33 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ 
+ 	spin_unlock(&tfile->rlock);
+ 
+-#if 0
+-	/* Read frames from queue */
+-	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
+-				  &peeked, &off, &err);
+-	if (!skb)
+-		return err;
+-#endif
++	if (tun->flags & IFF_TX_RING) {
++		unsigned head, tail;
++
++		spin_lock(&tfile->rlock);
++		/* Read index before reading contents at that index. */
++		head = smp_load_acquire(&tfile->head);
++		tail = tfile->tail;
++
++		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
++			struct tun_desc *desc = &tfile->tx_descs[tail];
++			skb = desc->skb;
++			/* Finish reading descriptor before incrementing tail. */
++			smp_store_release(&tfile->tail,
++					  (tail + 1) & TUN_RING_MASK);
++		} else {
++			spin_unlock(&tfile->rlock);
++			return -EAGAIN;
++		}
++
++		spin_unlock(&tfile->rlock);
++	} else {
++		skb = __skb_recv_datagram(tfile->socket.sk,
++					  noblock ? MSG_DONTWAIT : 0,
++					  &peeked, &off, &err);
++		if (!skb)
++			return err;
++	}
+ 
+ 	ret = tun_put_user(tun, tfile, skb, to);
+ 	if (unlikely(ret < 0))
+@@ -1676,12 +1716,32 @@ out:
+ static int tun_peek_len(struct socket *sock)
+ {
+ 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+-	int last_head = READ_ONCE(tfile->head);
++	struct sock *sk = tfile->socket.sk;
++	struct tun_struct *tun = __tun_get(tfile);
+ 
+-	if (last_head != tfile->tail)
+-		return tfile->tx_descs[last_head].len;
+-	else
++	if (!tun)
+ 		return 0;
++
++	if (tun->flags & IFF_TX_RING) {
++		unsigned long tail = READ_ONCE(tfile->tail);
++		if (tail != tfile->head)
++			return tfile->tx_descs[tail].len;
++		else
++			return 0;
++	} else {
++		struct sk_buff *head;
++		unsigned long flags;
++		int len = 0;
++		spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
++		head = skb_peek(&sk->sk_receive_queue);
++		if (likely(head)) {
++			len = head->len;
++			if (skb_vlan_tag_present(head))
++				len += VLAN_HLEN;
++		}
++		spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
++		return len;
++	}
+ }
+ 
+ /* Ops structure to mimic raw sockets with tun */
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
 index 3cb5e1d..f3b597c 100644
 --- a/include/uapi/linux/if_tun.h
