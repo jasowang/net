@@ -527,7 +527,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
-//	skb_queue_purge(&tfile->sk.sk_receive_queue);
+	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	spin_lock(&tfile->rlock);
 	while (tfile->tail != tfile->head) {
 		struct sk_buff *skb = tfile->tx_descs[tfile->head].skb;
@@ -869,10 +869,8 @@ static bool tun_xmit_skb(struct tun_struct *tun, struct tun_file *tfile,
 		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
 
 		spin_unlock_irqrestore(&tfile->wlock, flags);
-		printk("TX RING sent\n");
 	} else {
 		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
-		printk("skb queue!\n");
 	}
 
 	return true;
@@ -1558,7 +1556,6 @@ static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
 		spin_unlock(&tfile->rlock);
 		return skb;
 	} else {
-		printk("recv!\n");
 		/* Read frames from queue */
 		return __skb_recv_datagram(tfile->socket.sk,
 					   noblock ? MSG_DONTWAIT : 0,
