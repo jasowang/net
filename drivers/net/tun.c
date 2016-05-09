@@ -1732,11 +1732,13 @@ static int tun_peek_len(struct socket *sock)
 			ret = 0;
 	} else {
 		struct sock *sk = sock->sk;
+		struct sk_buff *skb;
 		unsigned long flags;
 
 		spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
-		ret = skb_peek(&sk->sk_receive_queue);
+		skb = skb_peek(&sk->sk_receive_queue);
 		spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
+		ret = skb ? skb->len : 0;
 	}
 
 	tun_put(tun);
