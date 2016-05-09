@@ -1,10 +1,10 @@
 Version: 1
-Previous: 9fd13af64f90d32e890d8a3ff49043983d194772
-Head: a61595919e95a626f46d7f29a2f4c33318aa2672
+Previous: 1e100fca1ae30a17a98e36b4388190bbd11b50e6
+Head: 997ecd64516954bc6e26966eefc59a45d922f818
 Applied:
   introduce-peek-ops: ba1edce20b44bffc73ea192ee406214c1ee1a0f2
   high-performance-mode: 6d2677213258b278ff38d2da0e6397b1e15f4062
-  circular-buffer: a61595919e95a626f46d7f29a2f4c33318aa2672
+  circular-buffer: 997ecd64516954bc6e26966eefc59a45d922f818
 Unapplied:
   formal-patch: cbb978ea17736a2a0578803c7580f89787d6528a
   refresh-temp: 0795857266adba073a7cf1b9e86d72a7cee80231
