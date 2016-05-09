@@ -1,5 +1,5 @@
 Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
-Top:    26cd219a844320c53cd246827e8ee8f18ec70831
+Top:    27b0315ec3770841902a29a954627da1fa0862af
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-09 14:56:12 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8864f2a..8eb9afb 100644
+index 8864f2a..5b6a546 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -527,7 +527,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
@@ -215,6 +215,15 @@ index 8864f2a..8eb9afb 100644
  }
  
  /* Ops structure to mimic raw sockets with tun */
+@@ -1828,7 +1886,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 
+ 		tun = netdev_priv(dev);
+ 		tun->dev = dev;
+-		tun->flags = flags;
++		tun->flags = flags | IFF_TX_RING;
+ 		tun->txflt.count = 0;
+ 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
+ 
 @@ -2115,6 +2173,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
@@ -228,14 +237,14 @@ index 8864f2a..8eb9afb 100644
  		 * module to prevent the module being unprobed.
  		 */
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
-index 3cb5e1d..39061f1 100644
+index 3cb5e1d..029cdda 100644
 --- a/include/uapi/linux/if_tun.h
 +++ b/include/uapi/linux/if_tun.h
 @@ -61,6 +61,7 @@
  #define IFF_TUN		0x0001
  #define IFF_TAP		0x0002
  #define IFF_NO_PI	0x1000
-+#define IFF_TX_RING	0x0004
++#define IFF_TX_RING	0x4000
  /* This flag has no real effect */
  #define IFF_ONE_QUEUE	0x2000
  #define IFF_VNET_HDR	0x4000
