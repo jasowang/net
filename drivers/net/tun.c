@@ -71,6 +71,7 @@
 #include <net/sock.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
+#include <linux/circ_buf.h>
 
 #include <asm/uaccess.h>
 
@@ -175,10 +176,10 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	spinlock_t rlock;
-	unsigned short head;
+	unsigned long tail;
 	struct tun_desc tx_descs[TUN_RING_SIZE];
 	spinlock_t wlock;
-	unsigned short tail;
+	unsigned long head;
 };
 
 struct tun_flow_entry {
@@ -527,7 +528,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
-//	skb_queue_purge(&tfile->sk.sk_receive_queue);
+	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	spin_lock(&tfile->rlock);
 	while (tfile->tail != tfile->head) {
 		struct sk_buff *skb = tfile->tx_descs[tfile->head].skb;
@@ -909,14 +910,30 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	if (tun->flags & IFF_TX_RING) {
-		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
-			goto drop;
+		unsigned long head, tail;
 
 		spin_lock_irqsave(&tfile->wlock, flags);
-		tfile->tx_descs[tfile->tail].skb = skb;
-		tfile->tx_descs[tfile->tail].len = skb->len;
-		smp_wmb();
-		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+
+		head = tfile->head;
+		/* The spin_unlock() and next spin_lock() provide
+		 * needed ordering. */
+		tail = ACCESS_ONCE(tfile->tail);
+
+		if (CIRC_SPACE(head, tail, TUN_RING_SIZE) >= 1) {
+			struct tun_desc *desc = &tfile->tx_descs[head];
+
+			desc->skb = skb;
+			desc->len = skb->len;
+			if (skb_vlan_tag_present(skb))
+				desc->len += VLAN_HLEN;
+
+			smp_store_release(&tfile->head,
+					  (head + 1) & TUN_RING_MASK);
+		} else {
+			spin_unlock_irqrestore(&tfile->wlock, flags);
+			goto drop;
+		}
+
 		spin_unlock_irqrestore(&tfile->wlock, flags);
 	} else {
 		/* Enqueue packet */
@@ -1527,20 +1544,28 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return -EIO;
 
 	if (tun->flags & IFF_TX_RING) {
-		spin_lock(&tfile->rlock);
+		unsigned head, tail;
+		struct tun_desc *desc;
 
-		if (tfile->head == tfile->tail) {
+		spin_lock(&tfile->rlock);
+		head = ACCESS_ONCE(tfile->head);
+		tail = tfile->tail;
+
+		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
+			/* read tail before reading descriptor at tail */
+			smp_rmb();
+			desc = &tfile->tx_descs[tail];
+			skb = desc->skb;
+			/* read descriptor before incrementing tail. */
+			smp_store_release(&tfile->tail,
+					  (tail + 1) & TUN_RING_MASK);
+		} else {
 			spin_unlock(&tfile->rlock);
 			return -EAGAIN;
 		}
 
-		skb = tfile->tx_descs[tfile->head].skb;
-		smp_wmb();
-		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
-
 		spin_unlock(&tfile->rlock);
 	} else {
-
 		/* Read frames from queue */
 		skb = __skb_recv_datagram(tfile->socket.sk,
 					  noblock ? MSG_DONTWAIT : 0,
@@ -1688,10 +1713,10 @@ static int tun_peek_len(struct socket *sock)
 		return 0;
 
 	if (tun->flags & IFF_TX_RING) {
-		int last_head = READ_ONCE(tfile->head);
-
-		if (last_head != tfile->tail)
-			ret = tfile->tx_descs[last_head].len;
+		unsigned long head = ACCESS_ONCE(tfile->head);
+		unsigned long tail = ACCESS_ONCE(tfile->tail);
+		if (head != tail)
+			ret = tfile->tx_descs[tail].len;
 	} else {
 		struct sock *sk = sock->sk;
 		struct sk_buff *head;
