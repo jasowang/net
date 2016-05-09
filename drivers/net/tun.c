@@ -1536,6 +1536,53 @@ done:
 	return total;
 }
 
+static struct sk_buff *tun_ring_recv(struct tun_struct *tun,
+				     struct tun_file *tfile,
+				     int noblock,
+				     int *err)
+{
+	DECLARE_WAITQUEUE(wait, current);
+	struct sk_buff *skb = NULL;
+
+	if (unlikely(!noblock)) {
+		add_wait_queue(&tfile->wq.wait, &wait);
+		current->state = TASK_INTERRUPTIBLE;
+	}
+
+	while(1) {
+		spin_lock(&tfile->rlock);
+		if (tfile->head == tfile->tail) {
+			spin_unlock(&tfile->rlock);
+			if (noblock) {
+				*err = -EAGAIN;
+				break;
+			}
+			if (signal_pending(current)) {
+				*err = -ERESTARTSYS;
+				break;
+			}
+			if (tun->dev->reg_state != NETREG_REGISTERED) {
+				*err = -EIO;
+				break;
+			}
+			/* Nothing to read, let's sleep */
+			schedule();
+			continue;
+		}
+		skb = tfile->tx_descs[tfile->head].skb;
+		smp_wmb();
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+		spin_unlock(&tfile->rlock);
+	}
+
+	if (unlikely(!noblock)) {
+		current->state = TASK_RUNNING;
+		remove_wait_queue(&tfile->wq.wait, &wait);
+	}
+
+	return skb;
+}
+
 static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
 					 struct tun_file *tfile,
 					 int noblock,
@@ -1543,18 +1590,7 @@ static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
 {
 	int peeked, off = 0;
 	if (tun->flags & IFF_TX_RING) {
-		struct sk_buff *skb;
-		spin_lock(&tfile->rlock);
-		if (tfile->head == tfile->tail) {
-			spin_unlock(&tfile->rlock);
-			*err = -EAGAIN;
-			return NULL;
-		}
-		skb = tfile->tx_descs[tfile->head].skb;
-		smp_wmb();
-		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
-		spin_unlock(&tfile->rlock);
-		return skb;
+		return tun_ring_recv(tun, tfile, noblock, err);
 	} else {
 		/* Read frames from queue */
 		return __skb_recv_datagram(tfile->socket.sk,
