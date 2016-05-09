@@ -1,0 +1,114 @@
+Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
+Top:    80a0860c6d5eaeff9f2074c498211d1c0fec04e1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-09 12:33:53 +0800
+
+Refresh of formal-patch
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8864f2a..df17ce21 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -836,6 +836,47 @@ static int tun_net_close(struct net_device *dev)
+ 	return 0;
+ }
+ 
++static bool tun_can_xmit(struct tun_struct *tun, struct tun_file *tfile,
++			 struct sk_buff *skb)
++{
++	if (tun->flags & IFF_TX_RING) {
++		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
++			return false;
++	} else {
++		if (skb_queue_len(&tfile->socket.sk->sk_receive_queue)
++			          * tun->numqueues >= tun->dev->tx_queue_len)
++			return false;
++	}
++	return true;
++}
++
++static bool tun_xmit_skb(struct tun_struct *tun, struct tun_file *tfile,
++			 struct sk_buff *skb)
++{
++	if (tun->flags & IFF_TX_RING) {
++		unsigned long flags;
++
++		spin_lock_irqsave(&tfile->wlock, flags);
++
++		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head) {
++			spin_unlock_irqrestore(&tfile->wlock, flags);
++			goto drop;
++		}
++		tfile->tx_descs[tfile->tail].skb = skb;
++		tfile->tx_descs[tfile->tail].len = skb->len;
++		/* Make sure tail is seen after descriptor */
++		smp_wmb();
++		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
++
++		spin_unlock_irqrestore(&tfile->wlock, flags);
++	} else
++		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
++
++	return true;
++drop:
++	return false;
++}
++
+ /* Net device start xmit */
+ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ {
+@@ -843,7 +884,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	int txq = skb->queue_mapping;
+ 	struct tun_file *tfile;
+ 	u32 numqueues = 0;
+-	unsigned long flags;
+ 
+ 	rcu_read_lock();
+ 	tfile = rcu_dereference(tun->tfiles[txq]);
+@@ -885,11 +925,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	    sk_filter(tfile->socket.sk, skb))
+ 		goto drop;
+ 
+-	/* Limit the number of packets queued by dividing txq length with the
+-	 * number of queues.
+-	 */
+-	if (skb_queue_len(&tfile->socket.sk->sk_receive_queue) * numqueues
+-			  >= dev->tx_queue_len)
++	if (!tun_can_xmit(tun, tfile, skb))
+ 		goto drop;
+ 
+ 	if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
+@@ -909,18 +945,9 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	nf_reset(skb);
+ 
+ 	/* Enqueue packet */
+-	//skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+-
+-	if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
++	if (!tun_xmit_skb(tun, tfile, skb))
+ 		goto drop;
+ 
+-	spin_lock_irqsave(&tfile->wlock, flags);
+-	tfile->tx_descs[tfile->tail].skb = skb;
+-	tfile->tx_descs[tfile->tail].len = skb->len;
+-	smp_wmb();
+-	tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+-	spin_unlock_irqrestore(&tfile->wlock, flags);
+-
+ 	/* Notify and wake up reader process */
+ 	if (tfile->flags & TUN_FASYNC)
+ 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index 3cb5e1d..39061f1 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -61,6 +61,7 @@
+ #define IFF_TUN		0x0001
+ #define IFF_TAP		0x0002
+ #define IFF_NO_PI	0x1000
++#define IFF_TX_RING	0x0004
+ /* This flag has no real effect */
+ #define IFF_ONE_QUEUE	0x2000
+ #define IFF_VNET_HDR	0x4000
