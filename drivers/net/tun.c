@@ -836,6 +836,47 @@ static int tun_net_close(struct net_device *dev)
 	return 0;
 }
 
+static bool tun_can_xmit(struct tun_struct *tun, struct tun_file *tfile,
+			 struct sk_buff *skb)
+{
+	if (tun->flags & IFF_TX_RING) {
+		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
+			return false;
+	} else {
+		if (skb_queue_len(&tfile->socket.sk->sk_receive_queue)
+			          * tun->numqueues >= tun->dev->tx_queue_len)
+			return false;
+	}
+	return true;
+}
+
+static bool tun_xmit_skb(struct tun_struct *tun, struct tun_file *tfile,
+			 struct sk_buff *skb)
+{
+	if (tun->flags & IFF_TX_RING) {
+		unsigned long flags;
+
+		spin_lock_irqsave(&tfile->wlock, flags);
+
+		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head) {
+			spin_unlock_irqrestore(&tfile->wlock, flags);
+			goto drop;
+		}
+		tfile->tx_descs[tfile->tail].skb = skb;
+		tfile->tx_descs[tfile->tail].len = skb->len;
+		/* Make sure tail is seen after descriptor */
+		smp_wmb();
+		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+
+		spin_unlock_irqrestore(&tfile->wlock, flags);
+	} else
+		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+
+	return true;
+drop:
+	return false;
+}
+
 /* Net device start xmit */
 static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
@@ -843,7 +884,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	u32 numqueues = 0;
-	unsigned long flags;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -885,11 +925,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	    sk_filter(tfile->socket.sk, skb))
 		goto drop;
 
-	/* Limit the number of packets queued by dividing txq length with the
-	 * number of queues.
-	 */
-	if (skb_queue_len(&tfile->socket.sk->sk_receive_queue) * numqueues
-			  >= dev->tx_queue_len)
+	if (!tun_can_xmit(tun, tfile, skb))
 		goto drop;
 
 	if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
@@ -909,17 +945,8 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	/* Enqueue packet */
-	//skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
-
-	if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
+	if (!tun_xmit_skb(tun, tfile, skb))
 		goto drop;
-
-	spin_lock_irqsave(&tfile->wlock, flags);
-	tfile->tx_descs[tfile->tail].skb = skb;
-	tfile->tx_descs[tfile->tail].len = skb->len;
-	smp_wmb();
-	tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
-	spin_unlock_irqrestore(&tfile->wlock, flags);
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
