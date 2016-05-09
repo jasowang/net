@@ -1,11 +1,11 @@
 Version: 1
-Previous: 2159f0974932d0387d38c73d930187e73d2365d6
-Head: 5ad8f2e91f9d03bab96d33729d9f460594cd107f
+Previous: 1c881a2a30d09fcafe3ac18749b1fb7135f083c4
+Head: 6d2677213258b278ff38d2da0e6397b1e15f4062
 Applied:
   introduce-peek-ops: ba1edce20b44bffc73ea192ee406214c1ee1a0f2
   high-performance-mode: 6d2677213258b278ff38d2da0e6397b1e15f4062
-  formal-patch: 5ad8f2e91f9d03bab96d33729d9f460594cd107f
 Unapplied:
+  formal-patch: 5ad8f2e91f9d03bab96d33729d9f460594cd107f
   lockless: 8b54c888274727bfd7f7e7cee1dcd5bd834a92f4
   signed-off-by-jason-wang: b25826bb9d34b18a86285552ae18fe775b37d66b
 Hidden:
