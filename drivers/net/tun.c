@@ -909,18 +909,34 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	/* Enqueue packet */
-	//skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	if (tun->flags & IFF_TX_RING) {
+		unsigned long head, tail;
 
-	if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
-		goto drop;
+		spin_lock_irqsave(&tfile->wlock, flags);
 
-	spin_lock_irqsave(&tfile->wlock, flags);
-	tfile->tx_descs[tfile->tail].skb = skb;
-	tfile->tx_descs[tfile->tail].len = skb->len;
-	smp_wmb();
-	tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
-	spin_unlock_irqrestore(&tfile->wlock, flags);
+		head = tfile->head;
+		/* The spin_unlock() and next spin_lock() provide
+		 * needed ordering. */
+		tail = ACCESS_ONCE(tfile->tail);
+
+		if (CIRC_SPACE(head, tail, TUN_RING_SIZE) >= 1) {
+			struct tun_desc *desc = &tfile->tx_descs[head];
+
+			desc->skb = skb;
+			desc->len = skb->len;
+
+			smp_store_release(&tfile->head,
+					  (head + 1) & TUN_RING_MASK);
+		} else {
+			spin_unlock_irqrestore(&tfile->wlock, flags);
+			goto drop;
+		}
+
+		spin_unlock_irqrestore(&tfile->wlock, flags);
+	} else {
+		/* Enqueue packet */
+		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	}
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
