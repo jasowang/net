@@ -1,5 +1,5 @@
 Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
-Top:    9b62601f95b19758395150e7b59c5e74ba074ef3
+Top:    27b0315ec3770841902a29a954627da1fa0862af
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-09 14:56:12 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8864f2a..41c09d0 100644
+index 8864f2a..5b6a546 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -527,7 +527,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
@@ -112,57 +112,10 @@ index 8864f2a..41c09d0 100644
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
  		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-@@ -1508,12 +1536,76 @@ done:
+@@ -1508,12 +1536,40 @@ done:
  	return total;
  }
  
-+static struct sk_buff *tun_ring_recv(struct tun_struct *tun,
-+				     struct tun_file *tfile,
-+				     int noblock,
-+				     int *err)
-+{
-+	DECLARE_WAITQUEUE(wait, current);
-+	struct sk_buff *skb = NULL;
-+
-+	if (unlikely(!noblock)) {
-+		add_wait_queue(&tfile->wq.wait, &wait);
-+		current->state = TASK_INTERRUPTIBLE;
-+	}
-+
-+	while(1) {
-+		spin_lock(&tfile->rlock);
-+		if (tfile->head == tfile->tail) {
-+			spin_unlock(&tfile->rlock);
-+			if (noblock) {
-+				*err = -EAGAIN;
-+				break;
-+			}
-+			if (signal_pending(current)) {
-+				*err = -ERESTARTSYS;
-+				break;
-+			}
-+			if (tun->dev->reg_state != NETREG_REGISTERED) {
-+				*err = -EIO;
-+				break;
-+			}
-+			/* Nothing to read, let's sleep */
-+			schedule();
-+			continue;
-+		}
-+		skb = tfile->tx_descs[tfile->head].skb;
-+		smp_wmb();
-+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
-+		spin_unlock(&tfile->rlock);
-+	}
-+
-+	if (unlikely(!noblock)) {
-+		current->state = TASK_RUNNING;
-+		remove_wait_queue(&tfile->wq.wait, &wait);
-+	}
-+
-+	return skb;
-+}
-+
 +static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
 +					 struct tun_file *tfile,
 +					 int noblock,
@@ -170,7 +123,18 @@ index 8864f2a..41c09d0 100644
 +{
 +	int peeked, off = 0;
 +	if (tun->flags & IFF_TX_RING) {
-+		return tun_ring_recv(tun, tfile, noblock, err);
++		struct sk_buff *skb;
++		spin_lock(&tfile->rlock);
++		if (tfile->head == tfile->tail) {
++			spin_unlock(&tfile->rlock);
++			*err = -EAGAIN;
++			return NULL;
++		}
++		skb = tfile->tx_descs[tfile->head].skb;
++		smp_wmb();
++		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
++		spin_unlock(&tfile->rlock);
++		return skb;
 +	} else {
 +		/* Read frames from queue */
 +		return __skb_recv_datagram(tfile->socket.sk,
@@ -189,7 +153,7 @@ index 8864f2a..41c09d0 100644
  
  	tun_debug(KERN_INFO, tun, "tun_do_read\n");
  
-@@ -1523,26 +1615,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1523,26 +1579,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->dev->reg_state != NETREG_REGISTERED)
  		return -EIO;
  
@@ -217,7 +181,7 @@ index 8864f2a..41c09d0 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1677,11 +1752,30 @@ static int tun_peek_len(struct socket *sock)
+@@ -1677,11 +1716,30 @@ static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
  	int last_head = READ_ONCE(tfile->head);
@@ -251,7 +215,7 @@ index 8864f2a..41c09d0 100644
  }
  
  /* Ops structure to mimic raw sockets with tun */
-@@ -1828,7 +1922,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+@@ -1828,7 +1886,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
  
  		tun = netdev_priv(dev);
  		tun->dev = dev;
@@ -260,7 +224,7 @@ index 8864f2a..41c09d0 100644
  		tun->txflt.count = 0;
  		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
  
-@@ -2115,6 +2209,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2115,6 +2173,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
  	case TUNSETPERSIST:
