@@ -1,8 +1,9 @@
 Version: 1
-Previous: 3a066920a9de68efb96fca757e7ed73adb84fba9
+Previous: 78b37de7b46f8a147ae1bbef9537ef4bd49ed992
 Head: 6d2677213258b278ff38d2da0e6397b1e15f4062
 Applied:
   introduce-peek-ops: ba1edce20b44bffc73ea192ee406214c1ee1a0f2
+  high-performance-mode-0: 6d2677213258b278ff38d2da0e6397b1e15f4062
 Unapplied:
   high-performance-mode: 092563fa4e3f73adc2a6b8d2edb5423532614e35
   lockless: 8b54c888274727bfd7f7e7cee1dcd5bd834a92f4
