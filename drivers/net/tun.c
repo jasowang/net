@@ -130,6 +130,8 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
+#define TUN_RING_SIZE 256
+#define TUN_RING_MASK (TUN_RING_SIZE - 1)
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
@@ -140,6 +142,11 @@ struct tun_pcpu_stats {
 	u32 rx_dropped;
 	u32 tx_dropped;
 	u32 rx_frame_errors;
+};
+
+struct tun_desc {
+	struct sk_buff *skb;
+	int len; /* Cached skb len for peeking */
 };
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
@@ -167,6 +174,11 @@ struct tun_file {
 	};
 	struct list_head next;
 	struct tun_struct *detached;
+	spinlock_t rlock;
+	unsigned short head;
+	struct tun_desc tx_descs[TUN_RING_SIZE];
+	spinlock_t wlock;
+	unsigned short tail;
 };
 
 struct tun_flow_entry {
@@ -516,6 +528,13 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 static void tun_queue_purge(struct tun_file *tfile)
 {
 	skb_queue_purge(&tfile->sk.sk_receive_queue);
+	spin_lock(&tfile->rlock);
+	while (tfile->tail != tfile->head) {
+		struct sk_buff *skb = tfile->tx_descs[tfile->head].skb;
+		kfree_skb(skb);
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+	}
+	spin_unlock(&tfile->rlock);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -817,6 +836,48 @@ static int tun_net_close(struct net_device *dev)
 	return 0;
 }
 
+static bool tun_can_xmit(struct tun_struct *tun, struct tun_file *tfile,
+			 struct sk_buff *skb)
+{
+	if (tun->flags & IFF_TX_RING) {
+		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
+			return false;
+	} else {
+		if (skb_queue_len(&tfile->socket.sk->sk_receive_queue)
+			          * tun->numqueues >= tun->dev->tx_queue_len)
+			return false;
+	}
+	return true;
+}
+
+static bool tun_xmit_skb(struct tun_struct *tun, struct tun_file *tfile,
+			 struct sk_buff *skb)
+{
+	if (tun->flags & IFF_TX_RING) {
+		unsigned long flags;
+
+		spin_lock_irqsave(&tfile->wlock, flags);
+
+		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head) {
+			spin_unlock_irqrestore(&tfile->wlock, flags);
+			goto drop;
+		}
+		tfile->tx_descs[tfile->tail].skb = skb;
+		tfile->tx_descs[tfile->tail].len = skb->len;
+		/* Make sure tail is seen after descriptor */
+		smp_wmb();
+		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+
+		spin_unlock_irqrestore(&tfile->wlock, flags);
+	} else {
+		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	}
+
+	return true;
+drop:
+	return false;
+}
+
 /* Net device start xmit */
 static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
@@ -865,11 +926,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	    sk_filter(tfile->socket.sk, skb))
 		goto drop;
 
-	/* Limit the number of packets queued by dividing txq length with the
-	 * number of queues.
-	 */
-	if (skb_queue_len(&tfile->socket.sk->sk_receive_queue) * numqueues
-			  >= dev->tx_queue_len)
+	if (!tun_can_xmit(tun, tfile, skb))
 		goto drop;
 
 	if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
@@ -889,7 +946,8 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	/* Enqueue packet */
-	skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	if (!tun_xmit_skb(tun, tfile, skb))
+		goto drop;
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
@@ -1478,13 +1536,76 @@ done:
 	return total;
 }
 
+static struct sk_buff *tun_ring_recv(struct tun_struct *tun,
+				     struct tun_file *tfile,
+				     int noblock,
+				     int *err)
+{
+	DECLARE_WAITQUEUE(wait, current);
+	struct sk_buff *skb = NULL;
+
+	if (unlikely(!noblock)) {
+		add_wait_queue(&tfile->wq.wait, &wait);
+		current->state = TASK_INTERRUPTIBLE;
+	}
+
+	while(1) {
+		spin_lock(&tfile->rlock);
+		if (tfile->head == tfile->tail) {
+			spin_unlock(&tfile->rlock);
+			if (noblock) {
+				*err = -EAGAIN;
+				break;
+			}
+			if (signal_pending(current)) {
+				*err = -ERESTARTSYS;
+				break;
+			}
+			if (tun->dev->reg_state != NETREG_REGISTERED) {
+				*err = -EIO;
+				break;
+			}
+			/* Nothing to read, let's sleep */
+			schedule();
+			continue;
+		}
+		skb = tfile->tx_descs[tfile->head].skb;
+		smp_wmb();
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+		spin_unlock(&tfile->rlock);
+	}
+
+	if (unlikely(!noblock)) {
+		current->state = TASK_RUNNING;
+		remove_wait_queue(&tfile->wq.wait, &wait);
+	}
+
+	return skb;
+}
+
+static struct sk_buff *tun_recv_datagram(struct tun_struct *tun,
+					 struct tun_file *tfile,
+					 int noblock,
+					 int *err)
+{
+	int peeked, off = 0;
+	if (tun->flags & IFF_TX_RING) {
+		return tun_ring_recv(tun, tfile, noblock, err);
+	} else {
+		/* Read frames from queue */
+		return __skb_recv_datagram(tfile->socket.sk,
+					   noblock ? MSG_DONTWAIT : 0,
+					   &peeked, &off, err);
+	}
+}
+
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock)
 {
 	struct sk_buff *skb;
 	ssize_t ret;
-	int peeked, err, off = 0;
+	int err;
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
@@ -1494,9 +1615,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->dev->reg_state != NETREG_REGISTERED)
 		return -EIO;
 
-	/* Read frames from queue */
-	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
-				  &peeked, &off, &err);
+	skb = tun_recv_datagram(tun, tfile, noblock, &err);
 	if (!skb)
 		return err;
 
@@ -1629,8 +1748,39 @@ out:
 	return ret;
 }
 
+static int tun_peek_len(struct socket *sock)
+{
+	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+	int last_head = READ_ONCE(tfile->head);
+	struct tun_struct *tun = __tun_get(tfile);
+	int ret;
+
+	if (!tun)
+		return 0;
+
+	if (tun->flags & IFF_TX_RING) {
+		if (last_head != tfile->tail)
+			ret = tfile->tx_descs[last_head].len;
+		else
+			ret = 0;
+	} else {
+		struct sock *sk = sock->sk;
+		struct sk_buff *skb;
+		unsigned long flags;
+
+		spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+		skb = skb_peek(&sk->sk_receive_queue);
+		spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
+		ret = skb ? skb->len : 0;
+	}
+
+	tun_put(tun);
+	return ret;
+}
+
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops tun_socket_ops = {
+	.peek_len = tun_peek_len,
 	.sendmsg = tun_sendmsg,
 	.recvmsg = tun_recvmsg,
 };
@@ -1772,7 +1922,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 
 		tun = netdev_priv(dev);
 		tun->dev = dev;
-		tun->flags = flags;
+		tun->flags = flags | IFF_TX_RING;
 		tun->txflt.count = 0;
 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
 
@@ -2059,6 +2209,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case TUNSETPERSIST:
+		if (tun->flags & IFF_TX_RING) {
+			ret = -EINVAL;
+			break;
+		}
+
 		/* Disable/Enable persist mode. Keep an extra reference to the
 		 * module to prevent the module being unprobed.
 		 */
@@ -2313,6 +2468,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
+
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -2332,6 +2488,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+	tfile->head = tfile->tail = 0;
+
+	spin_lock_init(&tfile->rlock);
+	spin_lock_init(&tfile->wlock);
 
 	return 0;
 }
