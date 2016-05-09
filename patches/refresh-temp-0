@@ -1,0 +1,46 @@
+Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
+Top:    4927bc82d8217ee626122c99e2c7d19a7029778a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-09 19:33:46 +0800
+
+Refresh of circular-buffer
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8864f2a..3a54a44 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -71,6 +71,7 @@
+ #include <net/sock.h>
+ #include <linux/seq_file.h>
+ #include <linux/uio.h>
++#include <linux/circ_buf.h>
+ 
+ #include <asm/uaccess.h>
+ 
+@@ -175,10 +176,10 @@ struct tun_file {
+ 	struct list_head next;
+ 	struct tun_struct *detached;
+ 	spinlock_t rlock;
+-	unsigned short head;
++	unsigned long tail;
+ 	struct tun_desc tx_descs[TUN_RING_SIZE];
+ 	spinlock_t wlock;
+-	unsigned short tail;
++	unsigned long head;
+ };
+ 
+ struct tun_flow_entry {
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index 3cb5e1d..f3b597c 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -61,6 +61,7 @@
+ #define IFF_TUN		0x0001
+ #define IFF_TAP		0x0002
+ #define IFF_NO_PI	0x1000
++#define IFF_TX_RING     0x0010
+ /* This flag has no real effect */
+ #define IFF_ONE_QUEUE	0x2000
+ #define IFF_VNET_HDR	0x4000
