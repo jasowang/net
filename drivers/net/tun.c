@@ -1713,8 +1713,8 @@ static int tun_peek_len(struct socket *sock)
 		return 0;
 
 	if (tun->flags & IFF_TX_RING) {
-		unsigned long head = smp_load_acquire(&tfile->head);
-		unsigned long tail = tfile->tail;
+		unsigned long head = ACCESS_ONCE(tfile->head);
+		unsigned long tail = ACCESS_ONCE(tfile->tail);
 		if (head != tail)
 			ret = tfile->tx_descs[tail].len;
 	} else {
