@@ -1,0 +1,24 @@
+Bottom: 081675de23cb221d7bab8087b3be8736bbaf4dd0
+Top:    11ab4ad1adc5ebf1cb32aa02d31e1a000e202870
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-10 21:22:57 +0800
+
+Refresh of circular-buffer
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 475cbdb..3742456 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1713,8 +1713,8 @@ static int tun_peek_len(struct socket *sock)
+ 		return 0;
+ 
+ 	if (tun->flags & IFF_TX_RING) {
+-		unsigned long head = smp_load_acquire(&tfile->head);
+-		unsigned long tail = tfile->tail;
++		unsigned long head = ACCESS_ONCE(tfile->head);
++		unsigned long tail = ACCESS_ONCE(tfile->tail);
+ 		if (head != tail)
+ 			ret = tfile->tx_descs[tail].len;
+ 	} else {
