@@ -1,5 +1,5 @@
 Bottom: 710781650dbf79811552af70af523e065190140a
-Top:    9c310072b521ffea18593d0afeb11111a4396d44
+Top:    081675de23cb221d7bab8087b3be8736bbaf4dd0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-09 19:33:45 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index ea8274f..acd85a8 100644
+index ea8274f..475cbdb 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -81,23 +81,25 @@ index ea8274f..acd85a8 100644
  		spin_unlock_irqrestore(&tfile->wlock, flags);
  	} else {
  		/* Enqueue packet */
-@@ -1527,20 +1544,26 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1527,20 +1544,28 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  		return -EIO;
  
  	if (tun->flags & IFF_TX_RING) {
 -		spin_lock(&tfile->rlock);
 +		unsigned head, tail;
++		struct tun_desc *desc;
  
 -		if (tfile->head == tfile->tail) {
 +		spin_lock(&tfile->rlock);
-+		/* Read index before reading contents at that index. */
-+		head = smp_load_acquire(&tfile->head);
++		head = ACCESS_ONCE(tfile->head);
 +		tail = tfile->tail;
 +
 +		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
-+			struct tun_desc *desc = &tfile->tx_descs[tail];
++			/* read tail before reading descriptor at tail */
++			smp_rmb();
++			desc = &tfile->tx_descs[tail];
 +			skb = desc->skb;
-+			/* Finish reading descriptor before incrementing tail. */
++			/* read descriptor before incrementing tail. */
 +			smp_store_release(&tfile->tail,
 +					  (tail + 1) & TUN_RING_MASK);
 +		} else {
@@ -115,7 +117,7 @@ index ea8274f..acd85a8 100644
  		/* Read frames from queue */
  		skb = __skb_recv_datagram(tfile->socket.sk,
  					  noblock ? MSG_DONTWAIT : 0,
-@@ -1688,10 +1711,10 @@ static int tun_peek_len(struct socket *sock)
+@@ -1688,10 +1713,10 @@ static int tun_peek_len(struct socket *sock)
  		return 0;
  
  	if (tun->flags & IFF_TX_RING) {
