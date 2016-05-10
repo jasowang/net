@@ -8,6 +8,7 @@ high performance mode
 TODO:
 - IFF_TX_MASK buggy which lead panic
 - Test detach/attach
+- Test Vlan
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
