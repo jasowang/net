@@ -908,18 +908,20 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	/* Enqueue packet */
-	//skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	if (tun->flags & IFF_TX_RING) {
+		if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
+			goto drop;
 
-	if (((tfile->tail + 1) & TUN_RING_MASK) == tfile->head)
-		goto drop;
-
-	spin_lock_irqsave(&tfile->wlock, flags);
-	tfile->tx_descs[tfile->tail].skb = skb;
-	tfile->tx_descs[tfile->tail].len = skb->len;
-	smp_wmb();
-	tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
-	spin_unlock_irqrestore(&tfile->wlock, flags);
+		spin_lock_irqsave(&tfile->wlock, flags);
+		tfile->tx_descs[tfile->tail].skb = skb;
+		tfile->tx_descs[tfile->tail].len = skb->len;
+		smp_wmb();
+		tfile->tail = (tfile->tail + 1) & TUN_RING_MASK;
+		spin_unlock_irqrestore(&tfile->wlock, flags);
+	} else {
+		/* Enqueue packet */
+		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	}
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
@@ -1514,6 +1516,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 {
 	struct sk_buff *skb;
 	ssize_t ret;
+	int peeked, err, off = 0;
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
@@ -1523,26 +1526,28 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->dev->reg_state != NETREG_REGISTERED)
 		return -EIO;
 
-	spin_lock(&tfile->rlock);
+	if (tun->flags & IFF_TX_RING) {
+		spin_lock(&tfile->rlock);
 
-	if (tfile->head == tfile->tail) {
+		if (tfile->head == tfile->tail) {
+			spin_unlock(&tfile->rlock);
+			return -EAGAIN;
+		}
+
+		skb = tfile->tx_descs[tfile->head].skb;
+		smp_wmb();
+		tfile->head = (tfile->head + 1) & TUN_RING_MASK;
+
 		spin_unlock(&tfile->rlock);
-		return -EAGAIN;
+	} else {
+
+		/* Read frames from queue */
+		skb = __skb_recv_datagram(tfile->socket.sk,
+					  noblock ? MSG_DONTWAIT : 0,
+					  &peeked, &off, &err);
+		if (!skb)
+			return err;
 	}
-
-	skb = tfile->tx_descs[tfile->head].skb;
-	smp_wmb();
-	tfile->head = (tfile->head + 1) & TUN_RING_MASK;
-
-	spin_unlock(&tfile->rlock);
-
-#if 0
-	/* Read frames from queue */
-	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
-				  &peeked, &off, &err);
-	if (!skb)
-		return err;
-#endif
 
 	ret = tun_put_user(tun, tfile, skb, to);
 	if (unlikely(ret < 0))
@@ -1676,12 +1681,34 @@ out:
 static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-	int last_head = READ_ONCE(tfile->head);
+	struct tun_struct *tun = __tun_get(tfile);
+	int ret = 0;
 
-	if (last_head != tfile->tail)
-		return tfile->tx_descs[last_head].len;
-	else
+	if (!tun)
 		return 0;
+
+	if (tun->flags & IFF_TX_RING) {
+		int last_head = READ_ONCE(tfile->head);
+
+		if (last_head != tfile->tail)
+			ret = tfile->tx_descs[last_head].len;
+	} else {
+		struct sock *sk = sock->sk;
+		struct sk_buff *head;
+		unsigned long flags;
+
+		spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+		head = skb_peek(&sk->sk_receive_queue);
+		if (likely(head)) {
+			ret = head->len;
+			if (skb_vlan_tag_present(head))
+				ret += VLAN_HLEN;
+		}
+		spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
+	}
+
+	tun_put(tun);
+	return ret;
 }
 
 /* Ops structure to mimic raw sockets with tun */
