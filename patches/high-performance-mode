@@ -5,7 +5,10 @@ Date:   2016-05-10 21:40:23 +0800
 
 high performance mode
 
+TODO: IFF_TX_MASK buggy which lead panic
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
