@@ -1,5 +1,5 @@
 Bottom: ae8899d46f740a82dc556ef426bc3a456f7686ed
-Top:    46521044b8bc345643a54d631c3a39c1028e14db
+Top:    7f5ca6760fb21ad530f3afcc4bf345e03871fec6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-09 19:33:45 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8864f2a..c373afb 100644
+index 8864f2a..c843f7b 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -140,7 +140,7 @@ index 8864f2a..c373afb 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1676,12 +1716,32 @@ out:
+@@ -1676,12 +1716,33 @@ out:
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
@@ -155,9 +155,10 @@ index 8864f2a..c373afb 100644
  		return 0;
 +
 +	if (tun->flags & IFF_TX_RING) {
-+		unsigned long tail = READ_ONCE(tfile->tail);
-+		if (tail != tfile->head)
-+			return tfile->tx_descs[tail].len;
++		unsigned long head = smp_load_acquire(&tfile->head);
++		unsigned long tail = tfile->tail;
++		if (head != tail)
++			return tfile->tx_descs[head].len;
 +		else
 +			return 0;
 +	} else {
