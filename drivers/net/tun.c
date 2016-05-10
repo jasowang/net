@@ -1545,16 +1545,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 
 	if (tun->flags & IFF_TX_RING) {
 		unsigned head, tail;
+		struct tun_desc *desc;
 
 		spin_lock(&tfile->rlock);
-		/* Read index before reading contents at that index. */
-		head = smp_load_acquire(&tfile->head);
+		head = ACCESS_ONCE(tfile->head);
 		tail = tfile->tail;
 
 		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
-			struct tun_desc *desc = &tfile->tx_descs[tail];
+			/* read tail before reading descriptor at tail */
+			smp_rmb();
+			desc = &tfile->tx_descs[tail];
 			skb = desc->skb;
-			/* Finish reading descriptor before incrementing tail. */
+			/* read descriptor before incrementing tail. */
 			smp_store_release(&tfile->tail,
 					  (tail + 1) & TUN_RING_MASK);
 		} else {
