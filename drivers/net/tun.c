@@ -1714,7 +1714,7 @@ static int tun_peek_len(struct socket *sock)
 		unsigned long head = smp_load_acquire(&tfile->head);
 		unsigned long tail = tfile->tail;
 		if (head != tail)
-			ret = tfile->tx_descs[head].len;
+			ret = tfile->tx_descs[tail].len;
 	} else {
 		struct sock *sk = sock->sk;
 		struct sk_buff *head;
