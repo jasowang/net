@@ -3,7 +3,24 @@ Top:    274113cca73ecedc8e41e9820d44edeaba0125b1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-10 21:40:23 +0800
 
-high performance mode
+tuntap: introduce tx skb ring
+
+We used to queue tx packets in sk_receive_queue, this is less
+efficient since it requires spinlocks to synchronize between producer
+and consumer.
+
+This patch tries to address this by using circular buffer which allows
+lockless synchronization. This is done by introducing a new flag
+IFF_TX_RING and when this is set:
+
+- store pointer to skb in circular buffer in tun_net_xmit, and read if
+  from tun_do_read()
+- introduce a new proto_ops peek_head_len which could be implemented
+  by specific socket which does not use sk_receive_queue.
+- store skb length in circular buffer too, and implement a lockless
+  peeking peek_head_len version for tuntap
+
+Pktgen test shows about 8% improvement:
 
 Before: ~1480000pps
 After : ~1600000pps
