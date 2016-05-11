@@ -5,6 +5,9 @@ Date:   2016-05-10 21:40:23 +0800
 
 high performance mode
 
+Before: ~1480000pps
+After : ~1600000pps
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
