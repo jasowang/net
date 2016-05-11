@@ -1,0 +1,26 @@
+Bottom: 07694aded7a77f51d6194f881b510f8feafa69a1
+Top:    274113cca73ecedc8e41e9820d44edeaba0125b1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-11 10:18:18 +0800
+
+Refresh of high-performance-mode
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 827003e..ffe0ff2 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -543,10 +543,10 @@ static void tun_queue_purge(struct tun_file *tfile)
+ 	while (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
+ 		desc = &tfile->tx_descs[tail];
+ 		skb = desc->skb;
+-		consume_skb(skb);
++		kfree_skb(skb);
+ 		tail = (tail + 1) & TUN_RING_MASK;
+ 		/* read descriptor before incrementing tail. */
+-		smp_store_release(&tfile->tail, (tail + 1) & TUN_RING_MASK);
++		smp_store_release(&tfile->tail, tail & TUN_RING_MASK);
+ 	}
+ 	spin_unlock(&tfile->rlock);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
