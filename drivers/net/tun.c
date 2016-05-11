@@ -543,10 +543,10 @@ static void tun_queue_purge(struct tun_file *tfile)
 	while (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
 		desc = &tfile->tx_descs[tail];
 		skb = desc->skb;
-		consume_skb(skb);
+		kfree_skb(skb);
 		tail = (tail + 1) & TUN_RING_MASK;
 		/* read descriptor before incrementing tail. */
-		smp_store_release(&tfile->tail, (tail + 1) & TUN_RING_MASK);
+		smp_store_release(&tfile->tail, tail & TUN_RING_MASK);
 	}
 	spin_unlock(&tfile->rlock);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
