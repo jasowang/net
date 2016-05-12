@@ -1,0 +1,21 @@
+Bottom: d9758f0f2c8e0c1eb75816f40ccbe2a7e4e15a3e
+Top:    0cc622fc3dd9da9be0791e0ee9176a0468625dfd
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-12 12:10:15 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8b6cf28..a76c43f 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2430,7 +2430,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ {
+ 	struct net *net = current->nsproxy->net_ns;
+ 	struct tun_file *tfile;
+-
+ 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
+ 
+ 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
