@@ -940,6 +940,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 			if (skb_vlan_tag_present(skb))
 				desc->len += VLAN_HLEN;
 
+			/* read descriptor before incrementing head. */
 			smp_store_release(&tfile->head,
 					  (head + 1) & TUN_RING_MASK);
 		} else {
