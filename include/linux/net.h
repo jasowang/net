@@ -132,6 +132,7 @@ struct module;
 struct proto_ops {
 	int		family;
 	struct module	*owner;
+	int		(*peek) (struct socket *sock, bool exact);
 	int		(*release)   (struct socket *sock);
 	int		(*bind)	     (struct socket *sock,
 				      struct sockaddr *myaddr,
