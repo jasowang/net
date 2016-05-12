@@ -1148,6 +1148,13 @@ static void tun_net_init(struct net_device *dev)
 	}
 }
 
+static bool tun_queue_not_empty(struct tun_file *tfile)
+{
+	struct sock *sk = tfile->socket.sk;
+
+	return (!skb_queue_empty(&sk->sk_receive_queue) ||
+		ACCESS_ONCE(tfile->head) != ACCESS_ONCE(tfile->tail));
+}
 /* Character device part */
 
 /* Poll */
@@ -1167,8 +1174,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_queue_empty(&sk->sk_receive_queue) ||
-	    tfile->head != tfile->tail)
+	if (tun_queue_not_empty(tfile))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
@@ -1718,12 +1724,17 @@ out:
 	return ret;
 }
 
-static int tun_peek_len(struct socket *sock)
+static int tun_peek(struct socket *sock, bool exact)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-	struct tun_struct *tun = __tun_get(tfile);
+	struct sock *sk = sock->sk;
+	struct tun_struct *tun;
 	int ret = 0;
 
+	if (!exact)
+		return tun_queue_not_empty(tfile);
+
+	tun = __tun_get(tfile);
 	if (!tun)
 		return 0;
 
@@ -1734,7 +1745,6 @@ static int tun_peek_len(struct socket *sock)
 		if (head != tail)
 			ret = tfile->tx_descs[tail].len;
 	} else {
-		struct sock *sk = sock->sk;
 		struct sk_buff *head;
 		unsigned long flags;
 
@@ -1754,7 +1764,7 @@ static int tun_peek_len(struct socket *sock)
 
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops tun_socket_ops = {
-	.peek_len = tun_peek_len,
+	.peek    = tun_peek,
 	.sendmsg = tun_sendmsg,
 	.recvmsg = tun_recvmsg,
 };
