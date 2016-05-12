@@ -1,0 +1,22 @@
+Bottom: 9fb7e31076ee1cc616290ce1f02731c95c98d60b
+Top:    d9758f0f2c8e0c1eb75816f40ccbe2a7e4e15a3e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-12 12:08:37 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/include/linux/net.h b/include/linux/net.h
+index 3909d8e..55bf25a 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -132,7 +132,7 @@ struct module;
+ struct proto_ops {
+ 	int		family;
+ 	struct module	*owner;
+-	int		(*peek_len)	(struct socket *sock);
++	int		(*peek_len) (struct socket *sock);
+ 	int		(*release)   (struct socket *sock);
+ 	int		(*bind)	     (struct socket *sock,
+ 				      struct sockaddr *myaddr,
