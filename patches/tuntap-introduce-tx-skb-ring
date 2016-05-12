@@ -1,5 +1,5 @@
 Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    d89d2f10eb6998af6a91eff80f6a173702af6ef7
+Top:    9fb7e31076ee1cc616290ce1f02731c95c98d60b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-12 09:19:33 +0800
 
@@ -317,14 +317,14 @@ index f744eeb..236ba52 100644
  			cpu_relax_lowlatency();
  
 diff --git a/include/linux/net.h b/include/linux/net.h
-index 72c1e06..29b5dbc 100644
+index 72c1e06..3909d8e 100644
 --- a/include/linux/net.h
 +++ b/include/linux/net.h
 @@ -132,6 +132,7 @@ struct module;
  struct proto_ops {
  	int		family;
  	struct module	*owner;
-+	int		(*peek_len)  (struct socket *sock);
++	int		(*peek_len)	(struct socket *sock);
  	int		(*release)   (struct socket *sock);
  	int		(*bind)	     (struct socket *sock,
  				      struct sockaddr *myaddr,
