@@ -1,5 +1,5 @@
 Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    0cc622fc3dd9da9be0791e0ee9176a0468625dfd
+Top:    4de18263aa5dae2b8c25fbe7f164cf0cd157e689
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-12 09:19:33 +0800
 
@@ -39,7 +39,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..a76c43f 100644
+index 425e983..6001ece 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -159,17 +159,30 @@ index 425e983..a76c43f 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
-@@ -1104,7 +1167,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+@@ -1085,6 +1148,13 @@ static void tun_net_init(struct net_device *dev)
+ 	}
+ }
+ 
++static bool tun_queue_not_empty(struct tun_file *tfile)
++{
++	struct sock *sk = tfile->socket.sk;
++
++	return (!skb_queue_empty(&sk->sk_receive_queue) ||
++		ACCESS_ONCE(tfile->head) != ACCESS_ONCE(tfile->tail));
++}
+ /* Character device part */
+ 
+ /* Poll */
+@@ -1104,7 +1174,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
  
  	poll_wait(file, sk_sleep(sk), wait);
  
 -	if (!skb_queue_empty(&sk->sk_receive_queue))
-+	if (!skb_queue_empty(&sk->sk_receive_queue) ||
-+	    tfile->head != tfile->tail)
++	if (tun_queue_not_empty(tfile))
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1494,11 +1558,36 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1564,36 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->dev->reg_state != NETREG_REGISTERED)
  		return -EIO;
  
@@ -211,16 +224,21 @@ index 425e983..a76c43f 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1718,43 @@ out:
+@@ -1629,8 +1724,47 @@ out:
  	return ret;
  }
  
-+static int tun_peek_len(struct socket *sock)
++static int tun_peek(struct socket *sock, bool exact)
 +{
 +	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-+	struct tun_struct *tun = __tun_get(tfile);
++	struct sock *sk = sock->sk;
++	struct tun_struct *tun;
 +	int ret = 0;
 +
++	if (!exact)
++		return tun_queue_not_empty(tfile);
++
++	tun = __tun_get(tfile);
 +	if (!tun)
 +		return 0;
 +
@@ -231,7 +249,6 @@ index 425e983..a76c43f 100644
 +		if (head != tail)
 +			ret = tfile->tx_descs[tail].len;
 +	} else {
-+		struct sock *sk = sock->sk;
 +		struct sk_buff *head;
 +		unsigned long flags;
 +
@@ -251,11 +268,11 @@ index 425e983..a76c43f 100644
 +
  /* Ops structure to mimic raw sockets with tun */
  static const struct proto_ops tun_socket_ops = {
-+	.peek_len = tun_peek_len,
++	.peek    = tun_peek,
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2306,13 +2430,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2306,13 +2440,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  {
  	struct net *net = current->nsproxy->net_ns;
  	struct tun_file *tfile;
@@ -270,7 +287,7 @@ index 425e983..a76c43f 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2332,6 +2456,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2332,6 +2466,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	INIT_LIST_HEAD(&tfile->next);
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
@@ -283,7 +300,7 @@ index 425e983..a76c43f 100644
  	return 0;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..236ba52 100644
+index f744eeb..10ff494 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -455,10 +455,14 @@ out:
@@ -295,8 +312,8 @@ index f744eeb..236ba52 100644
  	int len = 0;
  	unsigned long flags;
  
-+	if (sock->ops->peek_len)
-+		return sock->ops->peek_len(sock);
++	if (sock->ops->peek)
++		return sock->ops->peek(sock, true);
 +
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
@@ -309,8 +326,8 @@ index f744eeb..236ba52 100644
 +{
 +	struct socket *sock = sk->sk_socket;
 +
-+	if (sock->ops->peek_len)
-+		return sock->ops->peek_len(sock);
++	if (sock->ops->peek)
++		return sock->ops->peek(sock, false);
 +
 +	return skb_queue_empty(&sk->sk_receive_queue);
 +}
@@ -328,14 +345,14 @@ index f744eeb..236ba52 100644
  			cpu_relax_lowlatency();
  
 diff --git a/include/linux/net.h b/include/linux/net.h
-index 72c1e06..55bf25a 100644
+index 72c1e06..3c4ecd5 100644
 --- a/include/linux/net.h
 +++ b/include/linux/net.h
 @@ -132,6 +132,7 @@ struct module;
  struct proto_ops {
  	int		family;
  	struct module	*owner;
-+	int		(*peek_len) (struct socket *sock);
++	int		(*peek) (struct socket *sock, bool exact);
  	int		(*release)   (struct socket *sock);
  	int		(*bind)	     (struct socket *sock,
  				      struct sockaddr *myaddr,
