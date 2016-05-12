@@ -1,0 +1,23 @@
+Bottom: d2941ddf88827b63fb51872194cb7d31b6dd157d
+Top:    e2d86c570cdcf4687fc5f27cd935d818f4a8da80
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-12 10:01:40 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 894f781..7a5687f 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1164,7 +1164,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, sk_sleep(sk), wait);
+ 
+-	if (!skb_queue_empty(&sk->sk_receive_queue))
++	if (!skb_queue_empty(&sk->sk_receive_queue) ||
++	    tfile->head != tfile->tail)
+ 		mask |= POLLIN | POLLRDNORM;
+ 
+ 	if (sock_writeable(sk) ||
