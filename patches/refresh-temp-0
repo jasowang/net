@@ -1,0 +1,21 @@
+Bottom: 56cf76b9a3fd13e99f340cce9cea5a518b63b0fd
+Top:    15ec088bcc2a7d161a305c58076a862060b8d57c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-12 12:06:05 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 602f45c..91aca2c 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -940,6 +940,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 			if (skb_vlan_tag_present(skb))
+ 				desc->len += VLAN_HLEN;
+ 
++			/* read descriptor before incrementing head. */
+ 			smp_store_release(&tfile->head,
+ 					  (head + 1) & TUN_RING_MASK);
+ 		} else {
