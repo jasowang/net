@@ -1164,7 +1164,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_queue_empty(&sk->sk_receive_queue))
+	if (!skb_queue_empty(&sk->sk_receive_queue) ||
+	    tfile->head != tfile->tail)
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
