@@ -22,14 +22,16 @@ IFF_TX_RING and when this is set:
 - new spinlocks were introduced to synchronize among producers (and so
   did for consumers).
 
-Pktgen test shows about 8% improvement:
+Pktgen test shows about 8% improvement on guest receiving pps:
 
 Before: ~1480000pps
 After : ~1600000pps
 
+(I'm not sure noblocking read is still needed, so it was not included
+ in this patch)
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
-Nonblock reading was not supported in this patch.
+
 
 
 ---
