@@ -928,8 +928,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		spin_lock_irqsave(&tfile->wlock, flags);
 
 		head = tfile->head;
-		/* The spin_unlock() and next spin_lock() provide
-		 * needed ordering. */
 		tail = ACCESS_ONCE(tfile->tail);
 
 		if (CIRC_SPACE(head, tail, TUN_RING_SIZE) >= 1) {
