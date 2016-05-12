@@ -175,9 +175,11 @@ struct tun_file {
 	};
 	struct list_head next;
 	struct tun_struct *detached;
+	/* reader lock */
 	spinlock_t rlock;
 	unsigned long tail;
 	struct tun_desc tx_descs[TUN_RING_SIZE];
+	/* writer lock */
 	spinlock_t wlock;
 	unsigned long head;
 };
