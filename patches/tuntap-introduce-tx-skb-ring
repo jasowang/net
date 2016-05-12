@@ -1,5 +1,5 @@
 Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    d2941ddf88827b63fb51872194cb7d31b6dd157d
+Top:    e2d86c570cdcf4687fc5f27cd935d818f4a8da80
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-12 09:19:33 +0800
 
@@ -33,7 +33,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..894f781 100644
+index 425e983..7a5687f 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -150,7 +150,17 @@ index 425e983..894f781 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
-@@ -1494,11 +1554,36 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1104,7 +1164,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, sk_sleep(sk), wait);
+ 
+-	if (!skb_queue_empty(&sk->sk_receive_queue))
++	if (!skb_queue_empty(&sk->sk_receive_queue) ||
++	    tfile->head != tfile->tail)
+ 		mask |= POLLIN | POLLRDNORM;
+ 
+ 	if (sock_writeable(sk) ||
+@@ -1494,11 +1555,36 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->dev->reg_state != NETREG_REGISTERED)
  		return -EIO;
  
@@ -192,7 +202,7 @@ index 425e983..894f781 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1714,42 @@ out:
+@@ -1629,8 +1715,42 @@ out:
  	return ret;
  }
  
@@ -235,7 +245,7 @@ index 425e983..894f781 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2313,6 +2432,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2313,6 +2433,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -243,7 +253,7 @@ index 425e983..894f781 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2332,6 +2452,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2332,6 +2453,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	INIT_LIST_HEAD(&tfile->next);
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
