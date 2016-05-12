@@ -1,7 +1,7 @@
-Bottom: c611acb839902e61e2239e159ccabddeabd5103a
+Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
 Top:    d2941ddf88827b63fb51872194cb7d31b6dd157d
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2016-05-10 21:40:23 +0800
+Date:   2016-05-12 09:19:33 +0800
 
 tuntap: introduce tx skb ring
 
@@ -28,7 +28,6 @@ Before: ~1480000pps
 After : ~1600000pps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -299,6 +298,18 @@ index f744eeb..236ba52 100644
  		       vhost_vq_avail_empty(&net->dev, vq))
  			cpu_relax_lowlatency();
  
+diff --git a/include/linux/net.h b/include/linux/net.h
+index 72c1e06..29b5dbc 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -132,6 +132,7 @@ struct module;
+ struct proto_ops {
+ 	int		family;
+ 	struct module	*owner;
++	int		(*peek_len)  (struct socket *sock);
+ 	int		(*release)   (struct socket *sock);
+ 	int		(*bind)	     (struct socket *sock,
+ 				      struct sockaddr *myaddr,
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
 index 3cb5e1d..d64ddc1 100644
 --- a/include/uapi/linux/if_tun.h
