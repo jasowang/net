@@ -1,0 +1,10 @@
+Bottom: e2d86c570cdcf4687fc5f27cd935d818f4a8da80
+Top:    e2d86c570cdcf4687fc5f27cd935d818f4a8da80
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-12 10:02:02 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+
