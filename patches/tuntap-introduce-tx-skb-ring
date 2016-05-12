@@ -1,5 +1,5 @@
 Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    15ec088bcc2a7d161a305c58076a862060b8d57c
+Top:    87b979fc647e6cfacbbda727f84fabecde4e72a0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-12 09:19:33 +0800
 
@@ -35,7 +35,7 @@ Nonblock reading was not supported in this patch.
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..91aca2c 100644
+index 425e983..e4c981a 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -175,7 +175,7 @@ index 425e983..91aca2c 100644
 -	if (!skb)
 -		return err;
 +	if (tun->flags & IFF_TX_RING) {
-+		unsigned head, tail;
++		unsigned long head, tail;
 +		struct tun_desc *desc;
 +
 +		spin_lock(&tfile->rlock);
@@ -207,7 +207,7 @@ index 425e983..91aca2c 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1718,42 @@ out:
+@@ -1629,8 +1718,43 @@ out:
  	return ret;
  }
  
@@ -223,6 +223,7 @@ index 425e983..91aca2c 100644
 +	if (tun->flags & IFF_TX_RING) {
 +		unsigned long head = ACCESS_ONCE(tfile->head);
 +		unsigned long tail = ACCESS_ONCE(tfile->tail);
++
 +		if (head != tail)
 +			ret = tfile->tx_descs[tail].len;
 +	} else {
@@ -250,7 +251,7 @@ index 425e983..91aca2c 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2313,6 +2436,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2313,6 +2437,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -258,7 +259,7 @@ index 425e983..91aca2c 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2332,6 +2456,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2332,6 +2457,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	INIT_LIST_HEAD(&tfile->next);
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
