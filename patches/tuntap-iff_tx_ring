@@ -5,6 +5,8 @@ Date:   2016-05-12 10:23:46 +0800
 
 tuntap: IFF_TX_RING
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
