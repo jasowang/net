@@ -1559,7 +1559,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return -EIO;
 
 	if (tun->flags & IFF_TX_RING) {
-		unsigned head, tail;
+		unsigned long head, tail;
 		struct tun_desc *desc;
 
 		spin_lock(&tfile->rlock);
@@ -1730,6 +1730,7 @@ static int tun_peek_len(struct socket *sock)
 	if (tun->flags & IFF_TX_RING) {
 		unsigned long head = ACCESS_ONCE(tfile->head);
 		unsigned long tail = ACCESS_ONCE(tfile->tail);
+
 		if (head != tail)
 			ret = tfile->tx_descs[tail].len;
 	} else {
