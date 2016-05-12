@@ -1,9 +1,8 @@
 Version: 1
-Previous: 4a5c2662ad666e620a0482ef8ebb690fe487c477
-Head: 964a3de6e79285c05e41c82df5ff255ac55345ce
+Previous: 7e491df7058c0e44ee7dc2cff0a99ee7e364c87e
+Head: c871136d5dd17b76479220363b0c0ad69fd6b679
 Applied:
-  tuntap-introduce-tx-skb-ring: e18e7e07c8583f70512bfda34d2560f3c8f82805
-  refresh-temp-0: 964a3de6e79285c05e41c82df5ff255ac55345ce
+  tuntap-introduce-tx-skb-ring: c871136d5dd17b76479220363b0c0ad69fd6b679
 Unapplied:
   tuntap-iff_tx_ring: 28a8d7a8626dde009311db715d43e3458cd8944d
   formal-patch: cbb978ea17736a2a0578803c7580f89787d6528a
