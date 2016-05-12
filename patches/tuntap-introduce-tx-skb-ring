@@ -10,8 +10,9 @@ efficient since it requires spinlocks to synchronize between producer
 and consumer.
 
 This patch tries to address this by using circular buffer which allows
-lockless synchronization. This is done by introducing a new flag
-IFF_TX_RING and when this is set:
+lockless synchronization. This is done by switching from
+sk_receive_queue to a tx skb ring with a new flag IFF_TX_RING and when
+this is set:
 
 - store pointer to skb in circular buffer in tun_net_xmit(), and read
   it from the circular buffer in tun_do_read().
