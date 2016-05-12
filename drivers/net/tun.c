@@ -144,6 +144,11 @@ struct tun_pcpu_stats {
 	u32 rx_frame_errors;
 };
 
+struct tun_desc {
+	struct sk_buff *skb;
+	int len; /* Cached skb len for peeking */
+};
+
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
  * to serve as one transmit queue for tuntap device. The sock_fprog and
@@ -827,6 +832,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	u32 numqueues = 0;
+	unsigned long flags;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -1687,6 +1693,7 @@ static int tun_peek(struct socket *sock, bool exact)
 
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops tun_socket_ops = {
+	.peek    = tun_peek,
 	.sendmsg = tun_sendmsg,
 	.recvmsg = tun_recvmsg,
 };
@@ -2362,13 +2369,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 {
 	struct net *net = current->nsproxy->net_ns;
 	struct tun_file *tfile;
-
 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
 
 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
+
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -2388,6 +2395,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+	tfile->head = 0;
+	tfile->tail = 0;
+
+	spin_lock_init(&tfile->rlock);
+	spin_lock_init(&tfile->wlock);
 
 	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
 		sock_put(&tfile->sk);
