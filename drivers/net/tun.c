@@ -2457,7 +2457,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
-	tfile->head = tfile->tail = 0;
+	tfile->head = 0;
+	tfile->tail = 0;
 
 	spin_lock_init(&tfile->rlock);
 	spin_lock_init(&tfile->wlock);
