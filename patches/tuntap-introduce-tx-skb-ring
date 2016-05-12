@@ -28,6 +28,8 @@ Before: ~1480000pps
 After : ~1600000pps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+Nonblock reading was not supported in this patch.
 
 
 ---
