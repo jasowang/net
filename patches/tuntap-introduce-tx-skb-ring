@@ -13,19 +13,20 @@ This patch tries to address this by using circular buffer which allows
 lockless synchronization. This is done by introducing a new flag
 IFF_TX_RING and when this is set:
 
-- store pointer to skb in circular buffer in tun_net_xmit(), and read if
-  from tun_do_read().
-- introduce a new proto_ops peek_head_len which could be implemented
-  by specific socket which does not use sk_receive_queue.
+- store pointer to skb in circular buffer in tun_net_xmit(), and read
+  it from the circular buffer in tun_do_read().
+- introduce a new proto_ops peek which could be implemented by
+  specific socket which does not use sk_receive_queue.
 - store skb length in circular buffer too, and implement a lockless
-  peek_head_len for tuntap.
+  peek for tuntap.
+- change vhost_net to use proto_ops->peek() instead
 - new spinlocks were introduced to synchronize among producers (and so
   did for consumers).
 
-Pktgen test shows about 8% improvement on guest receiving pps:
+Pktgen test shows about 9% improvement on guest receiving pps:
 
 Before: ~1480000pps
-After : ~1600000pps
+After : ~1610000pps
 
 (I'm not sure noblocking read is still needed, so it was not included
  in this patch)
