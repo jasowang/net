@@ -123,6 +123,7 @@ struct vhost_virtqueue {
 	u64 log_addr;
 
 	struct iovec iov[UIO_MAXIOV];
+	struct iovec iotlb_iov[64];
 	struct iovec *indirect;
 	struct vring_used_elem *heads;
 	/* Protected by virtqueue mutex. */
@@ -195,6 +196,7 @@ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
 
 int vhost_log_write(struct vhost_virtqueue *vq, struct vhost_log *log,
 		    unsigned int log_num, u64 len);
+int vq_iotlb_prefetch(struct vhost_virtqueue *vq);
 
 #define vq_err(vq, fmt, ...) do {                                  \
 		printk(pr_fmt(fmt), ##__VA_ARGS__);       \
