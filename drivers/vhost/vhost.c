@@ -420,7 +420,6 @@ void vhost_dev_init(struct vhost_dev *dev,
 	dev->iotlb = NULL;
 	dev->mm = NULL;
 	spin_lock_init(&dev->work_lock);
-	spin_lock_init(&dev->iotlb_lock);
 	INIT_LIST_HEAD(&dev->work_list);
 	dev->worker = NULL;
 
@@ -1122,6 +1121,20 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 }
 EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
 
+static void vhost_dev_lock_vqs(struct vhost_dev *d)
+{
+	int i = 0;
+	for (i = 0; i < d->nvqs; ++i)
+		mutex_lock(&d->vqs[i]->mutex);
+}
+
+static void vhost_dev_unlock_vqs(struct vhost_dev *d)
+{
+	int i = 0;
+	for (i = 0; i < d->nvqs; ++i)
+		mutex_unlock(&d->vqs[i]->mutex);
+}
+
 static int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 {
 	struct vhost_umem *niotlb, *oiotlb;
@@ -1133,10 +1146,10 @@ static int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 	} else
 		niotlb = NULL;
 
-	spin_lock(&d->iotlb_lock);
+	vhost_dev_lock_vqs(d);
 	oiotlb = d->iotlb;
 	d->iotlb = niotlb;
-	spin_unlock(&d->iotlb_lock);
+	vhost_dev_unlock_vqs(d);
 
 	vhost_umem_clean(oiotlb);
 
@@ -1153,16 +1166,23 @@ static void vhost_complete_iotlb_update(struct vhost_dev *d,
 
 	for (i = 0; i < d->nvqs; i++) {
 		vq = d->vqs[i];
-		mutex_lock(&vq->mutex);
 		req = &vq->pending_request;
 		if (entry->iova <= req->iova &&
 		    entry->iova + entry->size - 1 > req->iova &&
 		    req->flags.type == VHOST_IOTLB_MISS) {
+			/* check permission before poll vq */
 			*req = *entry;
 			vhost_poll_queue(&vq->poll);
 		}
-		mutex_unlock(&vq->mutex);
 	}
+}
+
+static void vhost_dump_iotlb_entry(char *msg, struct vhost_iotlb_entry *e)
+{
+#if 0
+	printk("%s: iova %lx, size %lx, uaddr %lx, perm %x\n", msg,
+		e->iova, e->size, e->userspace_addr, e->flags.perm);
+#endif
 }
 
 /* Caller must have device mutex */
@@ -1250,9 +1270,9 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 			goto done;
 		}
 
-		spin_lock(&d->iotlb_lock);
+		vhost_dev_lock_vqs(d);
 		if (!d->iotlb) {
-			spin_unlock(&d->iotlb_lock);
+			vhost_dev_unlock_vqs(d);
 			r = -EFAULT;
 			goto done;
 		}
@@ -1267,9 +1287,11 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 						 entry.iova + entry.size - 1,
                                                  entry.userspace_addr,
                                                  entry.flags.perm)) {
+				/* FIXME: EAGAIN? */
 				r = -ENOMEM;
 				break;
 			}
+			vhost_dump_iotlb_entry("iotlb update", &entry);
 			break;
 		case VHOST_IOTLB_INVALIDATE:
 			vhost_del_umem_range(d->iotlb,
@@ -1279,11 +1301,10 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 		default:
 			r = -EINVAL;
 		}
-		spin_unlock(&d->iotlb_lock);
+		vhost_dev_unlock_vqs(d);
 
 		if (!r && entry.flags.type != VHOST_IOTLB_INVALIDATE)
 			vhost_complete_iotlb_update(d, &entry);
-
 		break;
 	default:
 		r = -ENOIOCTLCMD;
@@ -1458,6 +1479,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova)
 	pending->iova = iova;
 	pending->flags.type = VHOST_IOTLB_MISS;
 
+	vhost_dump_iotlb_entry("miss", pending);
 	ret = __copy_to_user(vq->iotlb_request, pending,
 			     sizeof(struct vhost_iotlb_entry));
 	if (ret) {
@@ -1479,8 +1501,6 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 	struct iovec *_iov;
 	u64 s = 0;
 	int ret = 0;
-
-	spin_lock(&dev->iotlb_lock);
 
 	while ((u64)len > s) {
 		u64 size;
@@ -1512,8 +1532,6 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 		addr += size;
 		++ret;
 	}
-
-	spin_unlock(&dev->iotlb_lock);
 
 	if (ret == -EAGAIN)
 		vhost_iotlb_miss(vq, addr);
@@ -1563,7 +1581,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	}
 
 	ret = translate_desc(vq, vhost64_to_cpu(vq, indirect->addr), len, vq->indirect,
-			     UIO_MAXIOV, access);
+			     UIO_MAXIOV, VHOST_ACCESS_RO);
 	if (unlikely(ret < 0)) {
 		if (ret != -EAGAIN)
 			vq_err(vq, "Translation failure %d in indirect.\n", ret);
