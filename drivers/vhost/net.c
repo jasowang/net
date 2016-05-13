@@ -353,6 +353,9 @@ static void handle_tx(struct vhost_net *net)
 	if (!sock)
 		goto out;
 
+	if (!vq_iotlb_prefetch(vq))
+		goto out;
+
 	vhost_disable_notify(&net->dev, vq);
 
 	hdr_size = nvq->vhost_hlen;
@@ -613,6 +616,9 @@ static void handle_rx(struct vhost_net *net)
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
 	if (!sock)
+		goto out;
+
+	if (!vq_iotlb_prefetch(vq))
 		goto out;
 	vhost_disable_notify(&net->dev, vq);
 
@@ -966,6 +972,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 
 	/* Verify that ring has been setup correctly. */
 	if (!vhost_vq_access_ok(vq)) {
+		printk("vhost_vq_access_ok()!\n");
 		r = -EFAULT;
 		goto err_vq;
 	}
