@@ -1,0 +1,22 @@
+Bottom: e5b3d94be2e4092164426e987a5fb1d8bf9ae188
+Top:    ccb7531bdc15c607f048af065601fa2a3e1de9ae
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-17 13:51:13 +0800
+
+Refresh of skb_ring-abstraction
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 821144d..6d1bb99 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -244,7 +244,7 @@ int skb_ring_queue(struct skb_ring *ring, struct sk_buff *skb)
+ 		if (skb_vlan_tag_present(skb))
+ 			desc->len += VLAN_HLEN;
+ 
+-		/* read descriptor before incrementing tail. */
++		/* produce descriptor before incrementing head. */
+ 		smp_store_release(&ring->head,
+ 				(head + 1) & TUN_RING_MASK);
+ 	} else {
