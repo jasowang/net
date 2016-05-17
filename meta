@@ -1,6 +1,6 @@
 Version: 1
-Previous: 58ad5f3c57054aa912da7f0ae445438503520eeb
-Head: 914fabf2aece53134d5617a49a9007e738152984
+Previous: 6cf88bf3208025b2438c3bc2dbd2e5d7d40ccc7a
+Head: 6607f945c5aab9e5b22c8c158fed2cbce8a3e30e
 Applied:
   tuntap-introduce-tx-skb-ring: 94a86fb996563d2c2be0e8dfcd774bcfd75f1a01
   skb_ring-abstraction: 914fabf2aece53134d5617a49a9007e738152984
