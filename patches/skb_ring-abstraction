@@ -1,5 +1,5 @@
 Bottom: 93d22b773013eb925d3d2b12445bb0a69a1f0b91
-Top:    ccb7531bdc15c607f048af065601fa2a3e1de9ae
+Top:    9355bdc6d05d627fef534117248d996cbca7929f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 13:46:19 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 300636b..6d1bb99 100644
+index 300636b..8fafb9e 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -145,11 +145,141 @@ struct tun_pcpu_stats {
@@ -230,7 +230,7 @@ index 300636b..6d1bb99 100644
 -					  (head + 1) & TUN_RING_MASK);
 -		} else {
 -			spin_unlock(&tfile->wlock);
-+		if (!skb_ring_queue(&tfile->tx_ring, skb))
++		if (skb_ring_queue(&tfile->tx_ring, skb))
  			goto drop;
 -		}
 -
@@ -298,16 +298,16 @@ index 300636b..6d1bb99 100644
  	} else {
  		struct sk_buff *head;
  
-@@ -2461,11 +2524,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2461,11 +2524,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	INIT_LIST_HEAD(&tfile->next);
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 -	tfile->head = 0;
 -	tfile->tail = 0;
--
+ 
 -	spin_lock_init(&tfile->rlock);
 -	spin_lock_init(&tfile->wlock);
-+	if (!skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
++	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
 +		sock_put(&tfile->sk);
 +		return -ENOMEM;
 +	}
