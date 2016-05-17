@@ -71,6 +71,7 @@
 #include <net/sock.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
+#include <linux/skb_ring.h>
 
 #include <asm/uaccess.h>
 
@@ -130,6 +131,7 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
+#define TUN_RING_SIZE 256
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
@@ -167,6 +169,7 @@ struct tun_file {
 	};
 	struct list_head next;
 	struct tun_struct *detached;
+	struct skb_ring tx_ring;
 };
 
 struct tun_flow_entry {
@@ -515,7 +518,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
-	skb_queue_purge(&tfile->sk.sk_receive_queue);
+	skb_ring_purge(&tfile->tx_ring);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -888,8 +891,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	/* Enqueue packet */
-	skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	if (tun->flags & IFF_TX_RING) {
+		if (skb_ring_queue(&tfile->tx_ring, skb))
+			goto drop;
+	} else {
+		/* Enqueue packet */
+		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+	}
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
@@ -1085,6 +1093,14 @@ static void tun_net_init(struct net_device *dev)
 	}
 }
 
+static bool tun_queue_not_empty(struct tun_file *tfile)
+{
+	struct sock *sk = tfile->socket.sk;
+
+	return (!skb_queue_empty(&sk->sk_receive_queue) ||
+		skb_ring_peek(&tfile->tx_ring));
+}
+
 /* Character device part */
 
 /* Poll */
@@ -1104,7 +1120,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_queue_empty(&sk->sk_receive_queue))
+	if (!skb_ring_empty(&tfile->tx_ring))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
@@ -1494,11 +1510,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->dev->reg_state != NETREG_REGISTERED)
 		return -EIO;
 
-	/* Read frames from queue */
-	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
-				  &peeked, &off, &err);
-	if (!skb)
-		return err;
+	if (tun->flags & IFF_TX_RING) {
+		skb = skb_ring_dequeue(&tfile->tx_ring);
+		if (!skb)
+			return -EAGAIN;
+	} else {
+		/* Read frames from queue */
+		skb = __skb_recv_datagram(tfile->socket.sk,
+					  noblock ? MSG_DONTWAIT : 0,
+					  &peeked, &off, &err);
+		if (!skb)
+			return err;
+	}
 
 	ret = tun_put_user(tun, tfile, skb, to);
 	if (unlikely(ret < 0))
@@ -1625,6 +1648,39 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
 		ret = flags & MSG_TRUNC ? ret : total_len;
 	}
 out:
+	tun_put(tun);
+	return ret;
+}
+
+static int tun_peek(struct socket *sock, bool exact)
+{
+	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+	struct sock *sk = sock->sk;
+	struct tun_struct *tun;
+	int ret = 0;
+
+	if (!exact)
+		return tun_queue_not_empty(tfile);
+
+	tun = __tun_get(tfile);
+	if (!tun)
+		return 0;
+
+	if (tun->flags & IFF_TX_RING) {
+		return skb_ring_peek(&tfile->tx_ring);
+	} else {
+		struct sk_buff *head;
+
+		spin_lock_bh(&sk->sk_receive_queue.lock);
+		head = skb_peek(&sk->sk_receive_queue);
+		if (likely(head)) {
+			ret = head->len;
+			if (skb_vlan_tag_present(head))
+				ret += VLAN_HLEN;
+		}
+		spin_unlock_bh(&sk->sk_receive_queue.lock);
+	}
+
 	tun_put(tun);
 	return ret;
 }
@@ -2332,6 +2388,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+
+	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
+		sock_put(&tfile->sk);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
