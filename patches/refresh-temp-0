@@ -1,0 +1,27 @@
+Bottom: 574cb4a88a884db790c980a8e82a57c32feede30
+Top:    93d22b773013eb925d3d2b12445bb0a69a1f0b91
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-17 11:57:22 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 01e2d70..300636b 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -536,12 +536,9 @@ static void tun_queue_purge(struct tun_file *tfile)
+ 	skb_queue_purge(&tfile->sk.sk_receive_queue);
+ 	spin_lock(&tfile->rlock);
+ 
+-	head = ACCESS_ONCE(tfile->head);
++	head = smp_load_acquire(&tfile->head);
+ 	tail = tfile->tail;
+ 
+-	/* read tail before reading descriptor at tail */
+-	smp_rmb();
+-
+ 	while (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
+ 		desc = &tfile->tx_descs[tail];
+ 		skb = desc->skb;
