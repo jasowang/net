@@ -1,5 +1,5 @@
 Bottom: 93d22b773013eb925d3d2b12445bb0a69a1f0b91
-Top:    e5b3d94be2e4092164426e987a5fb1d8bf9ae188
+Top:    ccb7531bdc15c607f048af065601fa2a3e1de9ae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 13:46:19 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 300636b..821144d 100644
+index 300636b..6d1bb99 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -145,11 +145,141 @@ struct tun_pcpu_stats {
@@ -118,7 +118,7 @@ index 300636b..821144d 100644
 +		if (skb_vlan_tag_present(skb))
 +			desc->len += VLAN_HLEN;
 +
-+		/* read descriptor before incrementing tail. */
++		/* produce descriptor before incrementing head. */
 +		smp_store_release(&ring->head,
 +				(head + 1) & TUN_RING_MASK);
 +	} else {
