@@ -244,7 +244,7 @@ int skb_ring_queue(struct skb_ring *ring, struct sk_buff *skb)
 		if (skb_vlan_tag_present(skb))
 			desc->len += VLAN_HLEN;
 
-		/* read descriptor before incrementing tail. */
+		/* produce descriptor before incrementing head. */
 		smp_store_release(&ring->head,
 				(head + 1) & TUN_RING_MASK);
 	} else {
