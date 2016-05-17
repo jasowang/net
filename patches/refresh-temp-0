@@ -1,0 +1,29 @@
+Bottom: 20d5d52dafc6abc6c2f893f1320dfa483131e62f
+Top:    e5b3d94be2e4092164426e987a5fb1d8bf9ae188
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-17 13:48:54 +0800
+
+Refresh of skb_ring-abstraction
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index b77aecd..821144d 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -189,7 +189,7 @@ void skb_ring_purge(struct skb_ring *ring)
+ 	unsigned long head, tail;
+ 
+ 	spin_lock_bh(&ring->rlock);
+-	/* FIXME: wlock ? */
++	spin_lock(&ring->wlock);
+ 
+ 	head = smp_load_acquire(&ring->head);
+ 	tail = ring->tail;
+@@ -202,6 +202,7 @@ void skb_ring_purge(struct skb_ring *ring)
+ 		smp_store_release(&ring->tail, (tail + 1) & TUN_RING_MASK);
+ 	}
+ 
++	spin_unlock(&ring->wlock);
+ 	spin_unlock_bh(&ring->rlock);
+ }
