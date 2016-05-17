@@ -71,7 +71,7 @@
 #include <net/sock.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
-#include <linux/circ_buf.h>
+#include <linux/skb_ring.h>
 
 #include <asm/uaccess.h>
 
@@ -145,6 +145,7 @@ struct tun_pcpu_stats {
 	u32 rx_frame_errors;
 };
 
+#if 0
 struct skb_desc {
 	struct sk_buff *skb;
 	int len; /* Cached skb len for peeking */
@@ -279,6 +280,7 @@ struct sk_buff *skb_ring_dequeue(struct skb_ring *ring)
 
 	return skb;
 }
+#endif
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
