@@ -1,0 +1,11 @@
+Bottom: 93d22b773013eb925d3d2b12445bb0a69a1f0b91
+Top:    93d22b773013eb925d3d2b12445bb0a69a1f0b91
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-17 13:46:19 +0800
+
+skb_ring abstraction.
+
+
+---
+
+
