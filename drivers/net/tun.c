@@ -145,10 +145,140 @@ struct tun_pcpu_stats {
 	u32 rx_frame_errors;
 };
 
-struct tun_desc {
+struct skb_desc {
 	struct sk_buff *skb;
 	int len; /* Cached skb len for peeking */
 };
+
+struct skb_ring {
+	/* reader lock */
+	spinlock_t rlock;
+	unsigned long tail;
+	unsigned long size;
+	struct skb_desc *descs;
+	unsigned long head;
+	/* writer lock */
+	spinlock_t wlock;
+};
+
+int skb_ring_empty(struct skb_ring *ring)
+{
+	return ACCESS_ONCE(ring->head) == ACCESS_ONCE(ring->tail);
+}
+
+int skb_ring_init(struct skb_ring *ring, unsigned long size)
+{
+	spin_lock_init(&ring->rlock);
+	spin_lock_init(&ring->wlock);
+
+	ring->head = 0;
+	ring->tail = 0;
+
+	ring->descs = kmalloc(size * sizeof *ring->descs, GFP_ATOMIC);
+	if (!ring->descs)
+		return -ENOMEM;
+
+	ring->size = size;
+	/* FIXEME: check power of 2 */
+
+	return 0;
+}
+
+void skb_ring_purge(struct skb_ring *ring)
+{
+	unsigned long head, tail;
+
+	spin_lock_bh(&ring->rlock);
+	spin_lock(&ring->wlock);
+
+	head = smp_load_acquire(&ring->head);
+	tail = ring->tail;
+
+	while (CIRC_CNT(head, tail, ring->size) >= 1) {
+		struct skb_desc *desc = &ring->descs[tail];
+		struct sk_buff *skb = desc->skb;
+		kfree_skb(skb);
+		/* read descriptor before incrementing tail. */
+		smp_store_release(&ring->tail, (tail + 1) & TUN_RING_MASK);
+	}
+
+	spin_unlock(&ring->wlock);
+	spin_unlock_bh(&ring->rlock);
+}
+
+int skb_ring_peek(struct skb_ring *ring)
+{
+	unsigned long head = smp_load_acquire(&ring->head);
+	unsigned long tail = ACCESS_ONCE(ring->tail);
+	int ret = 0;
+
+	if (CIRC_SPACE(head, tail, ring->size) >= 1)
+		ret = ring->descs[tail].len;
+
+	return ret;
+}
+
+int skb_ring_queue_len(struct skb_ring *ring)
+{
+	unsigned long head = ACCESS_ONCE(ring->head);
+	unsigned long tail = ACCESS_ONCE(ring->tail);
+
+	return CIRC_CNT(head, tail, ring->size);
+}
+
+int skb_ring_queue(struct skb_ring *ring, struct sk_buff *skb)
+{
+	unsigned long head, tail;
+	int ret = 0;
+
+	spin_lock(&ring->wlock);
+
+	tail = smp_load_acquire(&ring->tail);
+	head = ring->head;
+
+	if (CIRC_SPACE(head, tail, ring->size) >= 1) {
+		struct skb_desc *desc = &ring->descs[head];
+
+		desc->skb = skb;
+		desc->len = skb->len;
+		if (skb_vlan_tag_present(skb))
+			desc->len += VLAN_HLEN;
+
+		/* read descriptor before incrementing tail. */
+		smp_store_release(&ring->head,
+				(head + 1) & TUN_RING_MASK);
+	} else {
+		ret = -EFAULT;
+	}
+
+	spin_unlock(&ring->wlock);
+
+	return ret;
+}
+
+struct sk_buff *skb_ring_dequeue(struct skb_ring *ring)
+{
+	unsigned long head, tail;
+	struct sk_buff *skb = NULL;
+	struct skb_desc *desc;
+
+	spin_lock(&ring->rlock);
+	/* Read index before reading contents at that index. */
+	head = smp_load_acquire(&ring->head);
+	tail = ring->tail;
+
+	if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
+		desc = &ring->descs[tail];
+		skb = desc->skb;
+		/* read descriptor before incrementing tail. */
+		smp_store_release(&ring->tail,
+				(tail + 1) & TUN_RING_MASK);
+	}
+
+	spin_unlock(&ring->rlock);
+
+	return skb;
+}
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
@@ -175,13 +305,7 @@ struct tun_file {
 	};
 	struct list_head next;
 	struct tun_struct *detached;
-	/* reader lock */
-	spinlock_t rlock;
-	unsigned long tail;
-	struct tun_desc tx_descs[TUN_RING_SIZE];
-	/* writer lock */
-	spinlock_t wlock;
-	unsigned long head;
+	struct skb_ring tx_ring;
 };
 
 struct tun_flow_entry {
@@ -530,24 +654,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
-	unsigned long head, tail;
-	struct tun_desc *desc;
-	struct sk_buff *skb;
-	skb_queue_purge(&tfile->sk.sk_receive_queue);
-	spin_lock(&tfile->rlock);
-
-	head = smp_load_acquire(&tfile->head);
-	tail = tfile->tail;
-
-	while (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
-		desc = &tfile->tx_descs[tail];
-		skb = desc->skb;
-		kfree_skb(skb);
-		tail = (tail + 1) & TUN_RING_MASK;
-		/* read descriptor before incrementing tail. */
-		smp_store_release(&tfile->tail, tail & TUN_RING_MASK);
-	}
-	spin_unlock(&tfile->rlock);
+	skb_ring_purge(&tfile->tx_ring);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -856,7 +963,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	u32 numqueues = 0;
-	unsigned long flags;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -922,30 +1028,8 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	if (tun->flags & IFF_TX_RING) {
-		unsigned long head, tail;
-
-		spin_lock(&tfile->wlock);
-
-		head = tfile->head;
-		tail = smp_load_acquire(&tfile->tail);
-
-		if (CIRC_SPACE(head, tail, TUN_RING_SIZE) >= 1) {
-			struct tun_desc *desc = &tfile->tx_descs[head];
-
-			desc->skb = skb;
-			desc->len = skb->len;
-			if (skb_vlan_tag_present(skb))
-				desc->len += VLAN_HLEN;
-
-			/* read descriptor before incrementing tail. */
-			smp_store_release(&tfile->head,
-					  (head + 1) & TUN_RING_MASK);
-		} else {
-			spin_unlock(&tfile->wlock);
+		if (!skb_ring_queue(&tfile->tx_ring, skb))
 			goto drop;
-		}
-
-		spin_unlock(&tfile->wlock);
 	} else {
 		/* Enqueue packet */
 		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
@@ -1150,7 +1234,7 @@ static bool tun_queue_not_empty(struct tun_file *tfile)
 	struct sock *sk = tfile->socket.sk;
 
 	return (!skb_queue_empty(&sk->sk_receive_queue) ||
-		ACCESS_ONCE(tfile->head) != ACCESS_ONCE(tfile->tail));
+		skb_ring_peek(&tfile->tx_ring));
 }
 /* Character device part */
 
@@ -1171,7 +1255,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (tun_queue_not_empty(tfile))
+	if (!skb_ring_empty(&tfile->tx_ring))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
@@ -1562,26 +1646,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return -EIO;
 
 	if (tun->flags & IFF_TX_RING) {
-		unsigned long head, tail;
-		struct tun_desc *desc;
-
-		spin_lock(&tfile->rlock);
-		/* Read index before reading contents at that index. */
-		head = smp_load_acquire(&tfile->head);
-		tail = tfile->tail;
-
-		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
-			desc = &tfile->tx_descs[tail];
-			skb = desc->skb;
-			/* read descriptor before incrementing tail. */
-			smp_store_release(&tfile->tail,
-					  (tail + 1) & TUN_RING_MASK);
-		} else {
-			spin_unlock(&tfile->rlock);
+		skb = skb_ring_dequeue(&tfile->tx_ring);
+		if (!skb)
 			return -EAGAIN;
-		}
-
-		spin_unlock(&tfile->rlock);
 	} else {
 		/* Read frames from queue */
 		skb = __skb_recv_datagram(tfile->socket.sk,
@@ -1735,11 +1802,7 @@ static int tun_peek(struct socket *sock, bool exact)
 		return 0;
 
 	if (tun->flags & IFF_TX_RING) {
-		unsigned long head = ACCESS_ONCE(tfile->head);
-		unsigned long tail = ACCESS_ONCE(tfile->tail);
-
-		if (head != tail)
-			ret = tfile->tx_descs[tail].len;
+		return skb_ring_peek(&tfile->tx_ring);
 	} else {
 		struct sk_buff *head;
 
@@ -2461,11 +2524,10 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
-	tfile->head = 0;
-	tfile->tail = 0;
-
-	spin_lock_init(&tfile->rlock);
-	spin_lock_init(&tfile->wlock);
+	if (!skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
+		sock_put(&tfile->sk);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
