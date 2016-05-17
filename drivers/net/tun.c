@@ -71,6 +71,7 @@
 #include <net/sock.h>
 #include <linux/seq_file.h>
 #include <linux/uio.h>
+#include <linux/skb_ring.h>
 
 #include <asm/uaccess.h>
 
@@ -130,6 +131,7 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
+#define TUN_RING_SIZE 256
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
