@@ -189,7 +189,7 @@ void skb_ring_purge(struct skb_ring *ring)
 	unsigned long head, tail;
 
 	spin_lock_bh(&ring->rlock);
-	/* FIXME: wlock ? */
+	spin_lock(&ring->wlock);
 
 	head = smp_load_acquire(&ring->head);
 	tail = ring->tail;
@@ -202,6 +202,7 @@ void skb_ring_purge(struct skb_ring *ring)
 		smp_store_release(&ring->tail, (tail + 1) & TUN_RING_MASK);
 	}
 
+	spin_unlock(&ring->wlock);
 	spin_unlock_bh(&ring->rlock);
 }
 
