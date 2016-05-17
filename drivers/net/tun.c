@@ -832,7 +832,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	u32 numqueues = 0;
-	unsigned long flags;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -2395,11 +2394,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
-	tfile->head = 0;
-	tfile->tail = 0;
-
-	spin_lock_init(&tfile->rlock);
-	spin_lock_init(&tfile->wlock);
 
 	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
 		sock_put(&tfile->sk);
