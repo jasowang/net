@@ -1,10 +1,9 @@
 Version: 1
-Previous: 095a3b361897c03cd3f821016ec3681fe8888404
-Head: 79cfdce9d0d025e64165f2ce79942f4f4083977b
+Previous: 56ac070648f010c8e2d6ba0577c6e3751d88ad8d
+Head: 3124d6ddcace43a19d03ce231d314d7b0ec95449
 Applied:
   introduce-skb_ring: 2e4b7da3a63845f0a82ae0b0ce2106202b8d5934
-  skb_ring-abstraction: 2a6d31b0a4a903e0d7c23f9046330704c4667970
-  refresh-temp-0: 79cfdce9d0d025e64165f2ce79942f4f4083977b
+  skb_ring-abstraction: 3124d6ddcace43a19d03ce231d314d7b0ec95449
 Unapplied:
   tuntap-introduce-tx-skb-ring: 94a86fb996563d2c2be0e8dfcd774bcfd75f1a01
   tuntap-iff_tx_ring: 28a8d7a8626dde009311db715d43e3458cd8944d

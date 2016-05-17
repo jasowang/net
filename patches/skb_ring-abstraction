@@ -1,5 +1,5 @@
 Bottom: 6e7bf14bc462d29b0d1f10e7acf354b93e7bed4f
-Top:    4a71e0aea8cb3eb48489448281f980b137cfc6cb
+Top:    047a97283b3fb3edcc21dd1f7197cb97bffb1c90
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 13:46:19 +0800
 
@@ -11,10 +11,26 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..7bc0904 100644
+index 425e983..d5a3502 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -167,6 +167,7 @@ struct tun_file {
+@@ -71,6 +71,7 @@
+ #include <net/sock.h>
+ #include <linux/seq_file.h>
+ #include <linux/uio.h>
++#include <linux/skb_ring.h>
+ 
+ #include <asm/uaccess.h>
+ 
+@@ -130,6 +131,7 @@ struct tap_filter {
+ #define MAX_TAP_FLOWS  4096
+ 
+ #define TUN_FLOW_EXPIRE (3 * HZ)
++#define TUN_RING_SIZE 256
+ 
+ struct tun_pcpu_stats {
+ 	u64 rx_packets;
+@@ -167,6 +169,7 @@ struct tun_file {
  	};
  	struct list_head next;
  	struct tun_struct *detached;
@@ -22,7 +38,7 @@ index 425e983..7bc0904 100644
  };
  
  struct tun_flow_entry {
-@@ -515,7 +516,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -515,7 +518,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  
  static void tun_queue_purge(struct tun_file *tfile)
  {
@@ -31,7 +47,7 @@ index 425e983..7bc0904 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -888,8 +889,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -888,8 +891,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	nf_reset(skb);
  
@@ -47,7 +63,7 @@ index 425e983..7bc0904 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
-@@ -1085,6 +1091,14 @@ static void tun_net_init(struct net_device *dev)
+@@ -1085,6 +1093,14 @@ static void tun_net_init(struct net_device *dev)
  	}
  }
  
@@ -62,7 +78,7 @@ index 425e983..7bc0904 100644
  /* Character device part */
  
  /* Poll */
-@@ -1104,7 +1118,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+@@ -1104,7 +1120,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
  
  	poll_wait(file, sk_sleep(sk), wait);
  
@@ -71,7 +87,7 @@ index 425e983..7bc0904 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1494,11 +1508,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1510,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->dev->reg_state != NETREG_REGISTERED)
  		return -EIO;
  
@@ -95,7 +111,7 @@ index 425e983..7bc0904 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,6 +1650,39 @@ out:
+@@ -1629,6 +1652,39 @@ out:
  	return ret;
  }
  
@@ -135,7 +151,7 @@ index 425e983..7bc0904 100644
  /* Ops structure to mimic raw sockets with tun */
  static const struct proto_ops tun_socket_ops = {
  	.sendmsg = tun_sendmsg,
-@@ -2333,6 +2387,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2333,6 +2389,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
@@ -146,3 +162,16 @@ index 425e983..7bc0904 100644
 +
  	return 0;
  }
+ 
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index 3cb5e1d..f3b597c 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -61,6 +61,7 @@
+ #define IFF_TUN		0x0001
+ #define IFF_TAP		0x0002
+ #define IFF_NO_PI	0x1000
++#define IFF_TX_RING     0x0010
+ /* This flag has no real effect */
+ #define IFF_ONE_QUEUE	0x2000
+ #define IFF_VNET_HDR	0x4000
