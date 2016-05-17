@@ -930,7 +930,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 		spin_lock_irqsave(&tfile->wlock, flags);
 
 		head = tfile->head;
-		tail = ACCESS_ONCE(tfile->tail);
+		tail = smp_load_acquire(tfile->tail);
 
 		if (CIRC_SPACE(head, tail, TUN_RING_SIZE) >= 1) {
 			struct tun_desc *desc = &tfile->tx_descs[head];
@@ -1569,7 +1569,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		struct tun_desc *desc;
 
 		spin_lock(&tfile->rlock);
-		head = ACCESS_ONCE(tfile->head);
+		head = smp_load_acquire(tfile->head);
 		tail = tfile->tail;
 
 		if (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
