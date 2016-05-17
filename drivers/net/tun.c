@@ -536,11 +536,8 @@ static void tun_queue_purge(struct tun_file *tfile)
 	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	spin_lock(&tfile->rlock);
 
-	head = ACCESS_ONCE(tfile->head);
+	head = smp_load_acquire(&tfile->head);
 	tail = tfile->tail;
-
-	/* read tail before reading descriptor at tail */
-	smp_rmb();
 
 	while (CIRC_CNT(head, tail, TUN_RING_SIZE) >= 1) {
 		desc = &tfile->tx_descs[tail];
