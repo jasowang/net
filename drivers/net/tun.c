@@ -1028,7 +1028,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	nf_reset(skb);
 
 	if (tun->flags & IFF_TX_RING) {
-		if (!skb_ring_queue(&tfile->tx_ring, skb))
+		if (skb_ring_queue(&tfile->tx_ring, skb))
 			goto drop;
 	} else {
 		/* Enqueue packet */
@@ -2524,7 +2524,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
-	if (!skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
+
+	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
 		sock_put(&tfile->sk);
 		return -ENOMEM;
 	}
