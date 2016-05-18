@@ -19,6 +19,9 @@ sk_recv_datagram() before trying to wake up the process during uninit.
 Fixes: 9e641bdcfa4e ("net-tun: restructure tun_do_read for better
 sleep/wakeup efficiency")
 
+Cc: Eric Dumazet <edumazet@google.com>
+Cc: Xi Wang <xii@google.com>
+Cc: Michael S. Tsirkin <mst@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
