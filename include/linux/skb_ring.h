@@ -34,7 +34,8 @@ struct skb_ring {
 int skb_ring_init(struct skb_ring *ring, unsigned long size);
 void skb_ring_purge(struct skb_ring *ring);
 int skb_ring_queue(struct skb_ring *ring, struct sk_buff *skb);
-struct sk_buff *skb_ring_dequeue(struct skb_ring *ring);
+struct sk_buff *skb_ring_recv(struct skb_ring *ring, wait_queue_head_t* q,
+			      int nonblock, int *err);
 
 int skb_ring_empty(struct skb_ring *ring)
 {

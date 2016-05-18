@@ -76,8 +76,7 @@ int skb_ring_queue(struct skb_ring *ring, struct sk_buff *skb)
 }
 EXPORT_SYMBOL(skb_ring_queue);
 
-
-struct sk_buff *skb_ring_dequeue(struct skb_ring *ring)
+static struct sk_buff *skb_ring_dequeue(struct skb_ring *ring)
 {
 	unsigned long head, tail;
 	struct sk_buff *skb = NULL;
@@ -99,5 +98,41 @@ struct sk_buff *skb_ring_dequeue(struct skb_ring *ring)
 
 	return skb;
 }
-EXPORT_SYMBOL(skb_ring_dequeue);
+
+struct sk_buff *skb_ring_recv(struct skb_ring *ring, wait_queue_head_t* q,
+			      int noblock, int *err)
+{
+	DECLARE_WAITQUEUE(wait, current);
+	struct sk_buff *skb = NULL;
+
+	if (!noblock)
+		add_wait_queue(q, &wait);
+
+	while (skb) {
+		if (!noblock)
+			current->state = TASK_INTERRUPTIBLE;
+
+		if (!(skb = skb_ring_dequeue(ring))) {
+			if (noblock) {
+				*err = -EAGAIN;
+				break;
+			}
+			if (signal_pending(current)) {
+				*err = -ERESTARTSYS;
+				break;
+			}
+
+			schedule();
+			continue;
+		}
+	}
+
+	if (!noblock) {
+		current->state = TASK_RUNNING;
+		remove_wait_queue(q, &wait);
+	}
+
+	return skb;
+}
+EXPORT_SYMBOL(skb_ring_recv);
 
