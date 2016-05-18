@@ -24,8 +24,6 @@ Pktgen test shows about 9% improvement on guest receiving pps:
 Before: ~1480000pps
 After : ~1610000pps
 
-(I'm not sure noblocking read is still needed, so it was not included
- in this patch)
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
