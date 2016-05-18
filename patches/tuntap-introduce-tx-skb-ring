@@ -3,19 +3,14 @@ Top:    249648debdab7a30a9459f3117139ac8ad3a3ad7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 14:49:55 +0800
 
-tuntap: introduce tx skb ring
+tuntap: switch to use skb ring for tx
 
 We used to queue tx packets in sk_receive_queue, this is less
 efficient since it requires spinlocks to synchronize between producer
 and consumer.
 
-This patch tries to address this by using circular buffer which allows
-lockless synchronization. This is done by switching from
-sk_receive_queue to a tx skb ring with a new flag IFF_TX_RING and when
-this is set:
-
-- store pointer to skb in circular buffer in tun_net_xmit(), and read
-  it from the circular buffer in tun_do_read().
+This patch tries to address this by switching to use skb ring for tx
+and:
 - introduce a new proto_ops peek which could be implemented by
   specific socket which does not use sk_receive_queue.
 - store skb length in circular buffer too, and implement a lockless
@@ -32,6 +27,7 @@ After : ~1610000pps
 (I'm not sure noblocking read is still needed, so it was not included
  in this patch)
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
