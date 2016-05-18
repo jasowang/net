@@ -1,9 +1,9 @@
 Version: 1
-Previous: 328af65216d6895176eea8c0f8321dbd486699bb
-Head: c982152046b8b5ecaad26eee8df593a20b25db85
+Previous: 84b600ccb6686cfd106faa72dd6015436d53d276
+Head: 26879da58711aa604a1b866cbeedd7e0f78f90ad
 Applied:
-  tuntap-doing-wakeup-correctly: c982152046b8b5ecaad26eee8df593a20b25db85
 Unapplied:
+  tuntap-doing-wakeup-correctly: c982152046b8b5ecaad26eee8df593a20b25db85
   introduce-skb_ring: a99b257caedbfe5467d4d4f5087d6b20ee3f1361
   tuntap-introduce-tx-skb-ring: 96bc9abbe0d3fece094a6fd9436348391591cefc
   introduce-skb_ring_recv: 3288215bb1d38cb043af1d641d2926246d20e8f9
