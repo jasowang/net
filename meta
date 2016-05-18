@@ -1,7 +1,8 @@
 Version: 1
-Previous: 8c86e6377f165eae8c8f47ba95bac6fa9b5f3a13
+Previous: 05d4f6e2648a974f4dfdfd40c5025c393bf19250
 Head: d05f0a222c5b13877ad0b530482dbb811fb67f13
 Applied:
+  tuntap-correctly-wake-up: d05f0a222c5b13877ad0b530482dbb811fb67f13
 Unapplied:
   tuntap-doing-wakeup-correctly: c982152046b8b5ecaad26eee8df593a20b25db85
   introduce-skb_ring: a99b257caedbfe5467d4d4f5087d6b20ee3f1361
