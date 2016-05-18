@@ -1499,6 +1499,41 @@ done:
 	return total;
 }
 
+static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+				     int *err)
+{
+	DECLARE_WAITQUEUE(wait, current);
+	struct sk_buff *skb = NULL;
+
+	skb = skb_ring_dequeue(&tfile->tx_ring);
+	if (skb)
+		goto out;
+	if (noblock) {
+		*err = -EAGAIN;
+		goto out;
+	}
+
+	add_wait_queue(&tfile->wq.wait, &wait);
+	current->state = TASK_INTERRUPTIBLE;
+
+	do {
+		schedule();
+
+		if (signal_pending(current)) {
+			*err = -ERESTARTSYS;
+			break;
+		}
+
+		skb = skb_ring_dequeue(&tfile->tx_ring);
+	} while(skb);
+
+	current->state = TASK_RUNNING;
+	remove_wait_queue(&tfile->wq.wait, &wait);
+
+out:
+	return skb;
+}
+
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock)
@@ -1516,9 +1551,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return -EIO;
 
 	if (tun->flags & IFF_TX_RING) {
-		skb = skb_ring_dequeue(&tfile->tx_ring);
+		skb = tun_ring_recv(tfile, noblock, &err);
 		if (!skb)
-			return -EAGAIN;
+			return err;
 	} else {
 		/* Read frames from queue */
 		skb = __skb_recv_datagram(tfile->socket.sk,
