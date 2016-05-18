@@ -1,9 +1,5 @@
 /*
- *	Definitions for the 'struct sk_buff' memory handlers.
- *
- *	Authors:
- *		Alan Cox, <gw4pts@gw4pts.ampr.org>
- *		Florian La Roche, <rzsfl@rz.uni-sb.de>
+ *	skb ring implemented with circular buffer.
  *
  *	This program is free software; you can redistribute it and/or
  *	modify it under the terms of the GNU General Public License
