@@ -5,6 +5,8 @@ Date:   2016-05-18 13:54:51 +0800
 
 introduce skb_ring_recv
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
