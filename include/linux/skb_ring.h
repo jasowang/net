@@ -14,6 +14,7 @@
 #include <linux/spinlock.h>
 #include <linux/circ_buf.h>
 #include <linux/skbuff.h>
+#include <linux/compiler.h>
 
 struct skb_desc {
 	struct sk_buff *skb;
@@ -23,10 +24,10 @@ struct skb_desc {
 struct skb_ring {
 	/* reader lock */
 	spinlock_t rlock;
-	unsigned long tail;
-	unsigned long size;
+	unsigned long tail ____cacheline_aligned_in_smp;
+	unsigned long size ____cacheline_aligned_in_smp;
 	struct skb_desc *descs;
-	unsigned long head;
+	unsigned long head ____cacheline_aligned_in_smp;
         /* writer lock */;
 	spinlock_t wlock;
 };
