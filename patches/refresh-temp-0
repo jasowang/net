@@ -1,0 +1,33 @@
+Bottom: d5cf5b5c6fe6e23cc518680ae827d2ea7bab93fc
+Top:    8ec24a966d5c3df8cfe7dda104298a87f4f28662
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-19 13:54:23 +0800
+
+Refresh of tuntap-introduce-tx-skb-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 4594d55..e78aed5 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1517,14 +1517,16 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 	current->state = TASK_INTERRUPTIBLE;
+ 
+ 	do {
+-		schedule();
+-
++		skb = skb_ring_dequeue(&tfile->tx_ring);
++		if (skb)
++			break;
+ 		if (signal_pending(current)) {
+ 			*err = -ERESTARTSYS;
+ 			break;
+ 		}
++		if (
+ 
+-		skb = skb_ring_dequeue(&tfile->tx_ring);
++		schedule();
+ 	} while(skb);
+ 
+ 	current->state = TASK_RUNNING;
