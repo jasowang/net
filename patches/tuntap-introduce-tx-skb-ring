@@ -1,5 +1,5 @@
 Bottom: 83401534249699b3aaa0dce2863db1dbe3c25ea2
-Top:    249648debdab7a30a9459f3117139ac8ad3a3ad7
+Top:    d5cf5b5c6fe6e23cc518680ae827d2ea7bab93fc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 14:49:55 +0800
 
@@ -30,7 +30,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..4eca8f1 100644
+index 425e983..4594d55 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -114,7 +114,7 @@ index 425e983..4eca8f1 100644
  	poll_wait(file, sk_sleep(sk), wait);
  
 -	if (!skb_queue_empty(&sk->sk_receive_queue))
-+	if (!skb_ring_empty(&tfile->tx_ring))
++	if (tun_queue_not_empty(tfile))
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
