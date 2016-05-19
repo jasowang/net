@@ -47,7 +47,7 @@ int skb_ring_peek(struct skb_ring *ring)
 	unsigned long tail = ACCESS_ONCE(ring->tail);
 	int ret = 0;
 
-	if (CIRC_SPACE(head, tail, ring->size) >= 1)
+	if (CIRC_CNT(head, tail, ring->size) >= 1)
 		ret = ring->descs[tail].len;
 
 	return ret;
