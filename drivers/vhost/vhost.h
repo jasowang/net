@@ -146,6 +146,12 @@ struct vhost_virtqueue {
 
 #define VHOST_IOTLB_SIZE 2048
 
+struct vhost_msg_node {
+  struct vhost_msg msg;
+  struct vhost_virtqueue *vq;
+  struct list_head node;
+};
+
 struct vhost_dev {
 	struct mm_struct *mm;
 	struct mutex mutex;
@@ -159,6 +165,9 @@ struct vhost_dev {
 	struct vhost_umem *umem;
 	struct vhost_umem *iotlb;
 	spinlock_t iotlb_lock;
+	struct list_head read_list;
+	struct list_head pending_list;
+	wait_queue_head_t wait;
 };
 
 void vhost_dev_init(struct vhost_dev *, struct vhost_virtqueue **vqs, int nvqs);
@@ -197,6 +206,19 @@ bool vhost_enable_notify(struct vhost_dev *, struct vhost_virtqueue *);
 int vhost_log_write(struct vhost_virtqueue *vq, struct vhost_log *log,
 		    unsigned int log_num, u64 len);
 int vq_iotlb_prefetch(struct vhost_virtqueue *vq);
+
+struct vhost_msg_node *vhost_new_msg(struct vhost_virtqueue *vq, int type);
+void vhost_enqueue_msg(struct vhost_dev *dev,
+                       struct list_head *head,
+                       struct vhost_msg_node *node);
+struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+					 struct list_head *head);
+unsigned int vhost_chr_poll(struct file *file, struct vhost_dev *dev,
+                            poll_table *wait);
+ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+			    int noblock);
+ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+                             struct iov_iter *from);
 
 #define vq_err(vq, fmt, ...) do {                                  \
 		printk(pr_fmt(fmt), ##__VA_ARGS__);       \

@@ -353,8 +353,10 @@ static void handle_tx(struct vhost_net *net)
 	if (!sock)
 		goto out;
 
-	if (!vq_iotlb_prefetch(vq))
+	if (!vq_iotlb_prefetch(vq)) {
+		printk("prefetch fail at tx!\n");
 		goto out;
+	}
 
 	vhost_disable_notify(&net->dev, vq);
 
@@ -618,8 +620,10 @@ static void handle_rx(struct vhost_net *net)
 	if (!sock)
 		goto out;
 
-	if (!vq_iotlb_prefetch(vq))
+	if (!vq_iotlb_prefetch(vq)) {
+		printk("iotlb prefetch fail at rx!\n");
 		goto out;
+	}
 	vhost_disable_notify(&net->dev, vq);
 
 	vhost_hlen = nvq->vhost_hlen;
@@ -1176,9 +1180,40 @@ static long vhost_net_compat_ioctl(struct file *f, unsigned int ioctl,
 }
 #endif
 
+static ssize_t vhost_net_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
+{
+	struct file *file = iocb->ki_filp;
+	struct vhost_net *n = file->private_data;
+	struct vhost_dev *dev = &n->dev;
+	int noblock = file->f_flags & O_NONBLOCK;
+
+	return vhost_chr_read_iter(dev, to, noblock);
+}
+
+static ssize_t vhost_net_chr_write_iter(struct kiocb *iocb,
+					struct iov_iter *from)
+{
+	struct file *file = iocb->ki_filp;
+	struct vhost_net *n = file->private_data;
+	struct vhost_dev *dev = &n->dev;
+
+	return vhost_chr_write_iter(dev, from);
+}
+
+static unsigned int vhost_net_chr_poll(struct file *file, poll_table *wait)
+{
+	struct vhost_net *n = file->private_data;
+	struct vhost_dev *dev = &n->dev;
+
+	return vhost_chr_poll(file, dev, wait);
+}
+
 static const struct file_operations vhost_net_fops = {
 	.owner          = THIS_MODULE,
 	.release        = vhost_net_release,
+	.read_iter      = vhost_net_chr_read_iter,
+	.write_iter     = vhost_net_chr_write_iter,
+	.poll           = vhost_net_chr_poll,
 	.unlocked_ioctl = vhost_net_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl   = vhost_net_compat_ioctl,
