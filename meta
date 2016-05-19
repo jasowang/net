@@ -1,6 +1,6 @@
 Version: 1
-Previous: 30202e1d43f83bf954dfe4bff922c565e06b6c80
-Head: a99b257caedbfe5467d4d4f5087d6b20ee3f1361
+Previous: 5fd9b8a56d34bd2a6c0c7859f8869505c339d9c4
+Head: 3ac9ddfd6378df25ea1cf37cd0ee9ada54603c24
 Applied:
   introduce-skb_ring: a99b257caedbfe5467d4d4f5087d6b20ee3f1361
 Unapplied:
