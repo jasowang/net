@@ -1,5 +1,5 @@
 Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    5bd81bc351caaeb882c5f12d74ea1de314ee315f
+Top:    dfd947d3af54ca9d53239a891514910be5653b6b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 14:20:09 +0800
 
@@ -12,10 +12,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 diff --git a/include/linux/skb_ring.h b/include/linux/skb_ring.h
 new file mode 100644
-index 0000000..9666451
+index 0000000..9d5f8ac
 --- /dev/null
 +++ b/include/linux/skb_ring.h
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,65 @@
 +/*
 + *	skb ring implemented with circular buffer.
 + *
@@ -32,6 +32,7 @@ index 0000000..9666451
 +#include <linux/spinlock.h>
 +#include <linux/circ_buf.h>
 +#include <linux/skbuff.h>
++#include <linux/compiler.h>
 +
 +struct skb_desc {
 +	struct sk_buff *skb;
@@ -41,10 +42,10 @@ index 0000000..9666451
 +struct skb_ring {
 +	/* reader lock */
 +	spinlock_t rlock;
-+	unsigned long tail;
-+	unsigned long size;
++	unsigned long tail ____cacheline_aligned_in_smp;
++	unsigned long size ____cacheline_aligned_in_smp;
 +	struct skb_desc *descs;
-+	unsigned long head;
++	unsigned long head ____cacheline_aligned_in_smp;
 +        /* writer lock */;
 +	spinlock_t wlock;
 +};
