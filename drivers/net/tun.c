@@ -1517,14 +1517,16 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 	current->state = TASK_INTERRUPTIBLE;
 
 	do {
-		schedule();
-
+		skb = skb_ring_dequeue(&tfile->tx_ring);
+		if (skb)
+			break;
 		if (signal_pending(current)) {
 			*err = -ERESTARTSYS;
 			break;
 		}
+		if (
 
-		skb = skb_ring_dequeue(&tfile->tx_ring);
+		schedule();
 	} while(skb);
 
 	current->state = TASK_RUNNING;
