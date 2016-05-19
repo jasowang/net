@@ -1,5 +1,5 @@
 Bottom: 83401534249699b3aaa0dce2863db1dbe3c25ea2
-Top:    d5cf5b5c6fe6e23cc518680ae827d2ea7bab93fc
+Top:    8ec24a966d5c3df8cfe7dda104298a87f4f28662
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-17 14:49:55 +0800
 
@@ -30,7 +30,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 425e983..4594d55 100644
+index 425e983..e78aed5 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -118,7 +118,7 @@ index 425e983..4594d55 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1478,6 +1499,41 @@ done:
+@@ -1478,6 +1499,43 @@ done:
  	return total;
  }
  
@@ -140,14 +140,16 @@ index 425e983..4594d55 100644
 +	current->state = TASK_INTERRUPTIBLE;
 +
 +	do {
-+		schedule();
-+
++		skb = skb_ring_dequeue(&tfile->tx_ring);
++		if (skb)
++			break;
 +		if (signal_pending(current)) {
 +			*err = -ERESTARTSYS;
 +			break;
 +		}
++		if (
 +
-+		skb = skb_ring_dequeue(&tfile->tx_ring);
++		schedule();
 +	} while(skb);
 +
 +	current->state = TASK_RUNNING;
@@ -160,7 +162,7 @@ index 425e983..4594d55 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,11 +1550,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1552,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->dev->reg_state != NETREG_REGISTERED)
  		return -EIO;
  
@@ -184,7 +186,7 @@ index 425e983..4594d55 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1692,42 @@ out:
+@@ -1629,8 +1694,42 @@ out:
  	return ret;
  }
  
@@ -227,7 +229,7 @@ index 425e983..4594d55 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2306,13 +2403,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2306,13 +2405,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  {
  	struct net *net = current->nsproxy->net_ns;
  	struct tun_file *tfile;
@@ -242,7 +244,7 @@ index 425e983..4594d55 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2333,6 +2430,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2333,6 +2432,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
