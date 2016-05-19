@@ -524,6 +524,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 static void tun_queue_purge(struct tun_file *tfile)
 {
 	skb_ring_purge(&tfile->tx_ring);
+	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -589,13 +590,13 @@ static void tun_detach_all(struct net_device *dev)
 		tfile = rtnl_dereference(tun->tfiles[i]);
 		BUG_ON(!tfile);
 		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
-		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+		tfile->socket.sk->sk_state_change(tfile->socket.sk);
 		RCU_INIT_POINTER(tfile->tun, NULL);
 		--tun->numqueues;
 	}
 	list_for_each_entry(tfile, &tun->disabled, next) {
 		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
-		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+		tfile->socket.sk->sk_state_change(tfile->socket.sk);
 		RCU_INIT_POINTER(tfile->tun, NULL);
 	}
 	BUG_ON(tun->numqueues != 0);
@@ -1528,7 +1529,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 			break;
 		}
 		if (tfile->socket.sk->sk_shutdown & RCV_SHUTDOWN) {
-			&err = -EFAULT;
+			*err = -EFAULT;
 			break;
 		}
 
