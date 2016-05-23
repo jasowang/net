@@ -73,12 +73,6 @@ struct vhost_vring_iotlb_entry {
 	__u64 userspace_addr;
 };
 
-#define VHOST_CAP_IOTLB 0x1
-
-struct vhost_ctl_msg {
-  __u64 cap;
-};
-
 struct vhost_iotlb_msg {
   __u64 iova;
   __u64 size;
@@ -95,13 +89,11 @@ struct vhost_iotlb_msg {
 };
 
 #define VHOST_IOTLB_MSG 0x1
-#define VHOST_CTL_MSG   0x2
 
 struct vhost_msg {
   int type;
   union {
     struct vhost_iotlb_msg iotlb;
-    struct vhost_ctl_msg ctl;
   };
 };
 
@@ -213,6 +205,8 @@ struct vhost_memory {
 #define VHOST_F_LOG_ALL 26
 /* vhost-net should add virtio_net_hdr for RX, and strip for TX packets. */
 #define VHOST_NET_F_VIRTIO_NET_HDR 27
+/* Vhost have device IOTLB */
+#define VHOST_F_DEVICE_IOTLB 28
 
 /* VHOST_SCSI specific definitions */
 
