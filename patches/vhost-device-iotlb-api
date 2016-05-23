@@ -24,9 +24,8 @@ IOTLB through VHOST_UPDATE_IOTLB ioctl. Userspace is also in charge of
 snooping the IOTLB invalidation of IOMMU IOTLB and use
 VHOST_UPDATE_IOTLB to invalidate the possible entry in vhost.
 
-FIXME:
-- access_ok during IOTLB entry set, for saving efforts.
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
