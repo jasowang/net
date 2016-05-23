@@ -63,13 +63,15 @@ struct vhost_umem_node {
 	__u64 last;
 	__u64 size;
 	__u64 userspace_addr;
-	__u64 flags_padding;
+	__u32 perm;
+	__u32 flags_padding;
 	__u64 __subtree_last;
 };
 
 struct vhost_umem {
 	struct rb_root umem_tree;
 	struct list_head umem_list;
+	int numem;
 };
 
 /* The virtqueue structure describes a queue attached to a device. */
@@ -85,9 +87,13 @@ struct vhost_virtqueue {
 	struct file *kick;
 	struct file *call;
 	struct file *error;
+	struct file *iotlb_call;
 	struct eventfd_ctx *call_ctx;
 	struct eventfd_ctx *error_ctx;
 	struct eventfd_ctx *log_ctx;
+	struct eventfd_ctx *iotlb_call_ctx;
+	struct vhost_iotlb_entry __user *iotlb_request;
+	struct vhost_iotlb_entry pending_request;
 
 	struct vhost_poll poll;
 
@@ -137,6 +143,8 @@ struct vhost_virtqueue {
 	u32 busyloop_timeout;
 };
 
+#define VHOST_IOTLB_SIZE 2048
+
 struct vhost_dev {
 	struct mm_struct *mm;
 	struct mutex mutex;
@@ -148,6 +156,8 @@ struct vhost_dev {
 	struct list_head work_list;
 	struct task_struct *worker;
 	struct vhost_umem *umem;
+	struct vhost_umem *iotlb;
+	spinlock_t iotlb_lock;
 };
 
 void vhost_dev_init(struct vhost_dev *, struct vhost_virtqueue **vqs, int nvqs);
@@ -166,7 +176,8 @@ int vhost_log_access_ok(struct vhost_dev *);
 int vhost_get_vq_desc(struct vhost_virtqueue *,
 		      struct iovec iov[], unsigned int iov_count,
 		      unsigned int *out_num, unsigned int *in_num,
-		      struct vhost_log *log, unsigned int *log_num);
+		      struct vhost_log *log, unsigned int *log_num,
+		      int access);
 void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
 
 int vhost_vq_init_access(struct vhost_virtqueue *);
@@ -186,7 +197,7 @@ int vhost_log_write(struct vhost_virtqueue *vq, struct vhost_log *log,
 		    unsigned int log_num, u64 len);
 
 #define vq_err(vq, fmt, ...) do {                                  \
-		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
+		printk(pr_fmt(fmt), ##__VA_ARGS__);       \
 		if ((vq)->error_ctx)                               \
 				eventfd_signal((vq)->error_ctx, 1);\
 	} while (0)
