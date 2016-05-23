@@ -1,0 +1,11 @@
+Bottom: d7dee332fb825a63adf8e5f9850bf89dc6b86fcc
+Top:    d7dee332fb825a63adf8e5f9850bf89dc6b86fcc
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-23 18:44:41 +0800
+
+vhost: switch to use bit 63
+
+
+---
+
+
