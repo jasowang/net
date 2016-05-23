@@ -91,9 +91,6 @@ struct vhost_virtqueue {
 	struct eventfd_ctx *call_ctx;
 	struct eventfd_ctx *error_ctx;
 	struct eventfd_ctx *log_ctx;
-	struct eventfd_ctx *iotlb_call_ctx;
-	struct vhost_iotlb_entry __user *iotlb_request;
-	struct vhost_iotlb_entry pending_request;
 
 	struct vhost_poll poll;
 
