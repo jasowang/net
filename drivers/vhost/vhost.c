@@ -309,7 +309,6 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
-	vq->iotlb_call = NULL;
 	/* FIXME: no usage of vq->mem and vq->iotlb ? */
 	vq->umem = NULL;
 }
@@ -937,6 +936,24 @@ static void vhost_iotlb_notify_vq(struct vhost_dev *d,
 	spin_unlock(&d->iotlb_lock);
 }
 
+static int umem_access_ok(u64 uaddr, u64 size, int access)
+{
+	int ret;
+
+	if ((access & VHOST_ACCESS_RO) && !access_ok(VERIFY_READ,
+							uaddr, size)) {
+		printk("RO fail!\n");
+		return -EFAULT;
+	}
+	if ((access & VHOST_ACCESS_WO) && !access_ok(VERIFY_WRITE,
+							uaddr, size)) {
+		printk("WO fail!\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 int vhost_process_iotlb_msg(struct vhost_dev *dev,
 			    struct vhost_iotlb_msg *msg)
 {
@@ -947,8 +964,16 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
 	vhost_dev_lock_vqs(dev);
 	switch(msg->type) {
 	case VHOST_IOTLB_UPDATE:
-		if (!dev->iotlb)
+		if (!dev->iotlb) {
+			ret = -EFAULT;
 			goto done;
+		}
+		if (umem_access_ok(msg->uaddr, msg->size, msg->perm)) {
+			printk("fail to validate umem access at %lx"
+				" size %lx", msg->uaddr, msg->size);
+			ret = -EFAULT;
+			goto done;
+		}
 		if (vhost_new_umem_range(dev->iotlb, msg->iova, msg->size,
 					 msg->iova + msg->size - 1,
                                          msg->uaddr, msg->perm)) {
