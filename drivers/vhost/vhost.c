@@ -310,9 +310,6 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
 	vq->iotlb_call = NULL;
-	vq->iotlb_call_ctx = NULL;
-	vq->iotlb_request = NULL;
-	vq->pending_request.flags.type = VHOST_IOTLB_INVALIDATE;
 	/* FIXME: no usage of vq->mem and vq->iotlb ? */
 	vq->umem = NULL;
 }
@@ -816,14 +813,6 @@ out:
 	ret; \
 })
 
-static void vhost_dump_iotlb_entry(char *msg, struct vhost_iotlb_entry *e)
-{
-#if 0
-	printk("%s: iova %lx, size %lx, uaddr %lx, perm %x\n", msg,
-		e->iova, e->size, e->userspace_addr, e->flags.perm);
-#endif
-}
-
 static void vhost_dump_iotlb_msg(struct vhost_virtqueue *vq,
 				 struct vhost_iotlb_msg *msg,
 				 char *prompt)
@@ -1304,7 +1293,6 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 	struct vhost_vring_state s;
 	struct vhost_vring_file f;
 	struct vhost_vring_addr a;
-	struct vhost_vring_iotlb_entry e;
 	u32 idx;
 	long r;
 
@@ -1433,35 +1421,6 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		} else
 			filep = eventfp;
 		break;
-	case VHOST_SET_VRING_IOTLB_REQUEST:
-		r = -EFAULT;
-		if (copy_from_user(&e, argp, sizeof e))
-			break;
-		if (!access_ok(VERIFY_WRITE, e.userspace_addr,
-				sizeof(*vq->iotlb_request)))
-			break;
-		r = 0;
-		vq->iotlb_request = (struct vhost_iotlb_entry __user *)e.userspace_addr;
-		break;
-	case VHOST_SET_VRING_IOTLB_CALL:
-		if (copy_from_user(&f, argp, sizeof f)) {
-			r = -EFAULT;
-			break;
-		}
-		eventfp = f.fd == -1 ? NULL : eventfd_fget(f.fd);
-		if (IS_ERR(eventfp)) {
-			r = PTR_ERR(eventfp);
-			break;
-		}
-		if (eventfp != vq->iotlb_call) {
-			filep = vq->iotlb_call;
-			ctx = vq->iotlb_call_ctx;
-			vq->iotlb_call = eventfp;
-			vq->iotlb_call_ctx = eventfp ?
-				eventfd_ctx_fileget(eventfp) : NULL;
-		} else
-			filep = eventfp;
-		break;
 	case VHOST_SET_VRING_CALL:
 		if (copy_from_user(&f, argp, sizeof f)) {
 			r = -EFAULT;
@@ -1568,33 +1527,11 @@ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 }
 EXPORT_SYMBOL_GPL(vhost_init_device_iotlb);
 
-static void vhost_complete_iotlb_update(struct vhost_dev *d,
-					struct vhost_iotlb_entry *entry)
-{
-	struct vhost_iotlb_entry *req;
-	struct vhost_virtqueue *vq;
-	int i;
-
-
-	for (i = 0; i < d->nvqs; i++) {
-		vq = d->vqs[i];
-		req = &vq->pending_request;
-		if (entry->iova <= req->iova &&
-		    entry->iova + entry->size - 1 > req->iova &&
-		    req->flags.type == VHOST_IOTLB_MISS) {
-			/* check permission before poll vq */
-			*req = *entry;
-			vhost_poll_queue(&vq->poll);
-		}
-	}
-}
-
 /* Caller must have device mutex */
 long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 {
 	struct file *eventfp, *filep = NULL;
 	struct eventfd_ctx *ctx = NULL;
-	struct vhost_iotlb_entry entry;
 	u64 p;
 	long r;
 	int i, fd;
@@ -1662,10 +1599,6 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 			eventfd_ctx_put(ctx);
 		if (filep)
 			fput(filep);
-		break;
-	case VHOST_RUN_IOTLB:
-		/* FIXME: enable and disabled */
-		vhost_init_device_iotlb(d, true);
 		break;
 	default:
 		r = -ENOIOCTLCMD;
