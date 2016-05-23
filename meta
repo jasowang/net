@@ -1,17 +1,16 @@
 Version: 1
-Previous: bb9eedc787cbefe1682fea0b9821973dd890a56f
-Head: 2e2c9fd6ca7db99e1449dc651b2b4f70a651e350
+Previous: d0193e7a456fa9c2318aa67fdb956f2d0dab7551
+Head: a45022f9cc36380e2701128db68d0635824ae54a
 Applied:
   vhost-introduce-vhost-memory: fbda90d627b86dc65153e056843df2cd066e45f3
   vhost-convert-pre-sorted-vhost: fc556cda609e0bd7a97def659d54263255241620
-  vhost-device-iotlb-api: a64fd25558ac47480354f39918625a75692dfb4d
-  vhost-introduce-iotlb: b0d48fa51c32104497b8e8841d7e0b959642e210
-  vhost_net-support-read-write: 30ed3be4677a94b6ec3d29077344cee8500decd8
-  convert-to-use-feature: d6271158ff6c087be14bb7167ac95ee5fb2990ba
-  remove-old-api-lefts: ecc752adcd98473f654f1239e60077dfb90ce686
-  access-validation: 330441667b39c8ae8be046f8cd35c5ca88dc8fcb
-  vhost-correctly-defer-iotlb: 5335c9f43530e22168b597320f4748fdf6d14212
-  misc-fixes: 17b044ff856cbdca6ad50a85d15c052a62b23f8b
-  vhost-remove-unnecessary: 2e2c9fd6ca7db99e1449dc651b2b4f70a651e350
+  vhost-device-iotlb-api: 12f31fe228449d5b63c52b4232acf34370229ba5
+  vhost_net-support-read-write: af3faed839be997f8172d05814f70ae008f89b27
+  convert-to-use-feature: 7e689c7a1dd6ea54b95275ec00d2add530ac74e7
+  remove-old-api-lefts: 301784f6c34f49dd47943efa58abd7cdaf89a430
+  access-validation: 3e9ea3f20202f1ff2bf214a27129aa205e8746d3
+  vhost-correctly-defer-iotlb: d98d898de99f918d735679c98f4a91e0b23f35ef
+  misc-fixes: a67c18753a6e99a2d213e48097d03f02a24406fb
+  vhost-remove-unnecessary: a45022f9cc36380e2701128db68d0635824ae54a
 Unapplied:
 Hidden:
