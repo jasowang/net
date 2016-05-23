@@ -1096,7 +1096,7 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
 		mutex_unlock(&n->dev.mutex);
 		return -EFAULT;
 	}
-	if ((features & (1 << VHOST_F_DEVICE_IOTLB))) {
+	if ((features & (1ULL << VHOST_F_DEVICE_IOTLB))) {
 		if (vhost_init_device_iotlb(&n->dev, true))
 			return -EFAULT;
 	}
