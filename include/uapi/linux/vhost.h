@@ -47,6 +47,64 @@ struct vhost_vring_addr {
 	__u64 log_guest_addr;
 };
 
+struct vhost_iotlb_entry {
+	__u64 iova;
+	__u64 size;
+	__u64 userspace_addr;
+	struct {
+#define VHOST_ACCESS_RO      0x1
+#define VHOST_ACCESS_WO      0x2
+#define VHOST_ACCESS_RW      0x3
+		__u8  perm;
+#define VHOST_IOTLB_MISS           1
+#define VHOST_IOTLB_UPDATE         2
+#define VHOST_IOTLB_INVALIDATE     3
+		__u8  type;
+#define VHOST_IOTLB_INVALID        0x1
+#define VHOST_IOTLB_VALID          0x2
+		__u8  valid;
+		__u8  u8_padding;
+		__u32 padding;
+	} flags;
+};
+
+struct vhost_vring_iotlb_entry {
+	unsigned int index;
+	__u64 userspace_addr;
+};
+
+#define VHOST_CAP_IOTLB 0x1
+
+struct vhost_ctl_msg {
+  __u64 cap;
+};
+
+struct vhost_iotlb_msg {
+  __u64 iova;
+  __u64 size;
+  __u64 uaddr;
+#define VHOST_ACCESS_RO      0x1
+#define VHOST_ACCESS_WO      0x2
+#define VHOST_ACCESS_RW      0x3
+  __u8 perm;
+#define VHOST_IOTLB_MISS           1
+#define VHOST_IOTLB_UPDATE         2
+#define VHOST_IOTLB_INVALIDATE     3
+#define VHOST_IOTLB_ACCESS_FAIL    4
+  __u8 type;
+};
+
+#define VHOST_IOTLB_MSG 0x1
+#define VHOST_CTL_MSG   0x2
+
+struct vhost_msg {
+  int type;
+  union {
+    struct vhost_iotlb_msg iotlb;
+    struct vhost_ctl_msg ctl;
+  };
+};
+
 struct vhost_memory_region {
 	__u64 guest_phys_addr;
 	__u64 memory_size; /* bytes */
@@ -132,6 +190,15 @@ struct vhost_memory {
 /* Get busy loop timeout (in us) */
 #define VHOST_GET_VRING_BUSYLOOP_TIMEOUT _IOW(VHOST_VIRTIO, 0x24,	\
 					 struct vhost_vring_state)
+
+/* IOTLB */
+/* Specify an eventfd file descriptor to signle on IOTLB miss */
+#define VHOST_SET_VRING_IOTLB_CALL _IOW(VHOST_VIRTIO, 0x25, struct      \
+                                        vhost_vring_file)
+#define VHOST_SET_VRING_IOTLB_REQUEST _IOW(VHOST_VIRTIO, 0x26, struct   \
+                                           vhost_vring_iotlb_entry)
+#define VHOST_UPDATE_IOTLB _IOW(VHOST_VIRTIO, 0x27, struct vhost_iotlb_entry)
+#define VHOST_RUN_IOTLB _IOW(VHOST_VIRTIO, 0x28, int)
 
 /* VHOST_NET specific defines */
 
