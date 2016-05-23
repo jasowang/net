@@ -1542,9 +1542,11 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 }
 EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
 
-static int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
+int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 {
 	struct vhost_umem *niotlb, *oiotlb;
+
+	printk("init device iotlb!\n");
 
 	if (enabled) {
 		niotlb = vhost_umem_alloc();
@@ -1560,8 +1562,11 @@ static int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 
 	vhost_umem_clean(oiotlb);
 
+	printk("succeed!\n");
+
 	return 0;
 }
+EXPORT_SYMBOL_GPL(vhost_init_device_iotlb);
 
 static void vhost_complete_iotlb_update(struct vhost_dev *d,
 					struct vhost_iotlb_entry *entry)
