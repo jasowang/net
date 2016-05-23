@@ -87,7 +87,6 @@ struct vhost_virtqueue {
 	struct file *kick;
 	struct file *call;
 	struct file *error;
-	struct file *iotlb_call;
 	struct eventfd_ctx *call_ctx;
 	struct eventfd_ctx *error_ctx;
 	struct eventfd_ctx *log_ctx;
