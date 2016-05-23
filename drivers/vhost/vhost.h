@@ -124,6 +124,7 @@ struct vhost_virtqueue {
 	struct vring_used_elem *heads;
 	/* Protected by virtqueue mutex. */
 	struct vhost_umem *umem;
+	struct vhost_umem *iotlb;
 	void *private_data;
 	u64 acked_features;
 	/* Log write descriptors */
