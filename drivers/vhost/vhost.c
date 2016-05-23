@@ -739,15 +739,12 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
 		ret = translate_desc(vq, (u64)to, size, vq->iotlb_iov,
 				     ARRAY_SIZE(vq->iotlb_iov),
 				     VHOST_ACCESS_WO);
-		/* FIXME: no bug */
-		BUG_ON(ret == -EAGAIN);
 		if (ret < 0)
 			goto out;
 		iov_iter_init(&t, WRITE, vq->iotlb_iov, ret, size);
 		ret = copy_to_iter(from, size, &t);
-		/* FIXME: more robust check */
-		BUG_ON(ret == -EAGAIN);
-		ret = 0;
+		if (ret == size)
+			ret = 0;
 	}
 out:
 	return ret;
@@ -1171,7 +1168,7 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
 	struct vhost_dev *dev = vq->dev;
 	unsigned int num = vq->num;
 
-	if (!dev->iotlb)
+	if (!vq->iotlb)
 		return 0;
 
 	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)vq->desc,
