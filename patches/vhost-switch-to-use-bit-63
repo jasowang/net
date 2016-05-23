@@ -1,5 +1,5 @@
 Bottom: d7dee332fb825a63adf8e5f9850bf89dc6b86fcc
-Top:    34129bfd8b8c50b31d51d57fd15bb3602ba0d80e
+Top:    29d8762cbb07420dd0c2185e64828df55582ed84
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-23 18:44:41 +0800
 
@@ -23,6 +23,19 @@ index 20be32f..6961630 100644
  		if (vhost_init_device_iotlb(&n->dev, true))
  			return -EFAULT;
  	}
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 5833d72..fdae0e8 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1097,7 +1097,7 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
+ 	unsigned int num = vq->num;
+ 
+ 	if (!vq->iotlb)
+-		return 0;
++		return 1;
+ 
+ 	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)vq->desc,
+ 			       num * sizeof *vq->desc) &&
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
 index bb90660..19493ee 100644
 --- a/include/uapi/linux/vhost.h
