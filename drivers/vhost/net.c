@@ -308,7 +308,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 {
 	unsigned long uninitialized_var(endtime);
 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-				    out_num, in_num, NULL, NULL);
+				  out_num, in_num, NULL, NULL,
+				  VHOST_ACCESS_RO);
 
 	if (r == vq->num && vq->busyloop_timeout) {
 		preempt_disable();
@@ -318,7 +319,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 			cpu_relax_lowlatency();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-					out_num, in_num, NULL, NULL);
+				      out_num, in_num, NULL, NULL,
+				      VHOST_ACCESS_RO);
 	}
 
 	return r;
@@ -349,6 +351,9 @@ static void handle_tx(struct vhost_net *net)
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
 	if (!sock)
+		goto out;
+
+	if (!vq_iotlb_prefetch(vq))
 		goto out;
 
 	vhost_disable_notify(&net->dev, vq);
@@ -538,7 +543,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 		}
 		r = vhost_get_vq_desc(vq, vq->iov + seg,
 				      ARRAY_SIZE(vq->iov) - seg, &out,
-				      &in, log, log_num);
+				      &in, log, log_num, VHOST_ACCESS_WO);
 		if (unlikely(r < 0))
 			goto err;
 
@@ -611,6 +616,9 @@ static void handle_rx(struct vhost_net *net)
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
 	if (!sock)
+		goto out;
+
+	if (!vq_iotlb_prefetch(vq))
 		goto out;
 	vhost_disable_notify(&net->dev, vq);
 
@@ -964,6 +972,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 
 	/* Verify that ring has been setup correctly. */
 	if (!vhost_vq_access_ok(vq)) {
+		printk("vhost_vq_access_ok()!\n");
 		r = -EFAULT;
 		goto err_vq;
 	}
@@ -1152,7 +1161,7 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
 		r = vhost_dev_ioctl(&n->dev, ioctl, argp);
 		if (r == -ENOIOCTLCMD)
 			r = vhost_vring_ioctl(&n->dev, ioctl, argp);
-		else
+		else if (ioctl != VHOST_UPDATE_IOTLB)
 			vhost_net_flush(n);
 		mutex_unlock(&n->dev.mutex);
 		return r;
