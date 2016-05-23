@@ -1,0 +1,176 @@
+Bottom: 9070d73cddc0bec3846780f1479e2beaa60497bc
+Top:    0ce706393f93a48dc552bd42beaabfa2f5682960
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-23 13:52:11 +0800
+
+vhost: correctly defer iotlb
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 440979b..004cbe1 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -309,8 +309,8 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vhost_reset_is_le(vq);
+ 	vhost_disable_cross_endian(vq);
+ 	vq->busyloop_timeout = 0;
+-	/* FIXME: no usage of vq->mem and vq->iotlb ? */
+ 	vq->umem = NULL;
++	vq->iotlb = NULL;
+ }
+ 
+ static int vhost_worker(void *data)
+@@ -726,7 +726,7 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+ {
+ 	int ret;
+ 
+-	if (!vq->dev->iotlb)
++	if (!vq->iotlb)
+ 		return __copy_to_user(to, from, size);
+ 	else {
+ 		/* This function should be called after iotlb
+@@ -756,7 +756,7 @@ out:
+ #define vhost_put_user(vq, x, ptr) \
+ ({ \
+ 	int ret = -EFAULT; \
+-	if (!vq->dev->iotlb) { \
++	if (!vq->iotlb) { \
+ 		ret = __put_user(x, ptr); \
+ 	} else { \
+ 		__typeof__(*(ptr)) __x = (x);	\
+@@ -771,7 +771,7 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+ {
+ 	int ret;
+ 
+-	if (!vq->dev->iotlb)
++	if (!vq->iotlb)
+ 		return __copy_from_user(to, from, size);
+ 	else {
+ 		/* This function should be called after iotlb
+@@ -804,7 +804,7 @@ out:
+ #define vhost_get_user(vq, x, ptr) \
+ ({ \
+ 	int ret; \
+-	if (!vq->dev->iotlb) { \
++	if (!vq->iotlb) { \
+ 		ret = __get_user(x, ptr); \
+ 	} else { \
+ 		ret = vhost_copy_from_user(vq, &x, ptr, sizeof(*ptr));	\
+@@ -938,8 +938,6 @@ static void vhost_iotlb_notify_vq(struct vhost_dev *d,
+ 
+ static int umem_access_ok(u64 uaddr, u64 size, int access)
+ {
+-	int ret;
+-
+ 	if ((access & VHOST_ACCESS_RO) && !access_ok(VERIFY_READ,
+ 							uaddr, size)) {
+ 		printk("RO fail!\n");
+@@ -950,7 +948,6 @@ static int umem_access_ok(u64 uaddr, u64 size, int access)
+ 		printk("WO fail!\n");
+ 		return -EFAULT;
+ 	}
+-
+ 	return 0;
+ }
+ 
+@@ -980,7 +977,6 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ 			ret = -ENOMEM;
+ 			break;
+ 		}
+-		/* FIXME: verify userspace access here. */
+ 		vhost_iotlb_notify_vq(dev, msg);
+ 		break;
+ 	case VHOST_IOTLB_INVALIDATE:
+@@ -1144,7 +1140,7 @@ static int iotlb_access_ok(struct vhost_virtqueue *vq,
+ 			   int access, u64 addr, u64 len)
+ {
+ 	const struct vhost_umem_node *node;
+-	struct vhost_umem *umem = vq->dev->iotlb;
++	struct vhost_umem *umem = vq->iotlb;
+ 	u64 s = 0, size;
+ 
+ 	while (len > s) {
+@@ -1155,7 +1151,9 @@ static int iotlb_access_ok(struct vhost_virtqueue *vq,
+ 			vhost_iotlb_miss(vq, addr, access);
+ 			return false;
+ 		} else if (!(node->perm & access)) {
+-			/* FIXME: report access violation. Not really */
++			/* Report the possible access violation by
++			 * request another translation from userspace.
++			 */
+ 			return false;
+ 		}
+ 
+@@ -1213,15 +1211,13 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
+ /* Caller should have vq mutex and device mutex */
+ int vhost_vq_access_ok(struct vhost_virtqueue *vq)
+ {
+-	if (vq->dev->iotlb) {
++	if (vq->iotlb) {
+ 		printk("bypass access ok check!\n");
+ 		/* When device IOTLB was used, the access validation
+ 		 * will be validated during prefetching.
+ 		 */
+ 		return 1;
+ 	}
+-	/* FIXME: vq_log_access_ok, call for device iotlb should be ok ? */
+-
+ 	return vq_access_ok(vq, vq->num, vq->desc, vq->avail, vq->used) &&
+ 		vq_log_access_ok(vq, vq->log_base);
+ }
+@@ -1529,20 +1525,22 @@ EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
+ {
+ 	struct vhost_umem *niotlb, *oiotlb;
++	int i;
+ 
+ 	printk("init device iotlb!\n");
+ 
+-	if (enabled) {
+-		niotlb = vhost_umem_alloc();
+-		if (!niotlb)
+-			return -ENOMEM;
+-	} else
+-		niotlb = NULL;
++	niotlb = vhost_umem_alloc();
++	if (!niotlb)
++		return -ENOMEM;
+ 
+-	vhost_dev_lock_vqs(d);
+ 	oiotlb = d->iotlb;
+ 	d->iotlb = niotlb;
+-	vhost_dev_unlock_vqs(d);
++
++	for (i = 0; i < d->nvqs; ++i) {
++		mutex_lock(&d->vqs[i]->mutex);
++		d->vqs[i]->iotlb = niotlb;
++		mutex_unlock(&d->vqs[i]->mutex);
++	}
+ 
+ 	vhost_umem_clean(oiotlb);
+ 
+@@ -1766,7 +1764,7 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+ 	if (r)
+ 		goto err;
+ 	vq->signalled_used_valid = false;
+-	if (!vq->dev->iotlb &&
++	if (!vq->iotlb &&
+ 	    !access_ok(VERIFY_READ, &vq->used->idx, sizeof vq->used->idx)) {
+ 		r = -EFAULT;
+ 		goto err;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 860713ea..2154c25 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -124,6 +124,7 @@ struct vhost_virtqueue {
+ 	struct vring_used_elem *heads;
+ 	/* Protected by virtqueue mutex. */
+ 	struct vhost_umem *umem;
++	struct vhost_umem *iotlb;
+ 	void *private_data;
+ 	u64 acked_features;
+ 	/* Log write descriptors */

@@ -1,0 +1,210 @@
+Bottom: efc4d9b64a11079d7b3c03e4c4caf6522959f0f1
+Top:    cb7de6504ca3d1a7fbba6b9bd82b6f232bd235ab
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-23 11:50:40 +0800
+
+remove old API lefts
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index ad09121..88dda56 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -1171,7 +1171,7 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
+ 		r = vhost_dev_ioctl(&n->dev, ioctl, argp);
+ 		if (r == -ENOIOCTLCMD)
+ 			r = vhost_vring_ioctl(&n->dev, ioctl, argp);
+-		else if (ioctl != VHOST_UPDATE_IOTLB)
++		else
+ 			vhost_net_flush(n);
+ 		mutex_unlock(&n->dev.mutex);
+ 		return r;
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 84c1ed0..c01f09e 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -310,9 +310,6 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vhost_disable_cross_endian(vq);
+ 	vq->busyloop_timeout = 0;
+ 	vq->iotlb_call = NULL;
+-	vq->iotlb_call_ctx = NULL;
+-	vq->iotlb_request = NULL;
+-	vq->pending_request.flags.type = VHOST_IOTLB_INVALIDATE;
+ 	/* FIXME: no usage of vq->mem and vq->iotlb ? */
+ 	vq->umem = NULL;
+ }
+@@ -816,14 +813,6 @@ out:
+ 	ret; \
+ })
+ 
+-static void vhost_dump_iotlb_entry(char *msg, struct vhost_iotlb_entry *e)
+-{
+-#if 0
+-	printk("%s: iova %lx, size %lx, uaddr %lx, perm %x\n", msg,
+-		e->iova, e->size, e->userspace_addr, e->flags.perm);
+-#endif
+-}
+-
+ static void vhost_dump_iotlb_msg(struct vhost_virtqueue *vq,
+ 				 struct vhost_iotlb_msg *msg,
+ 				 char *prompt)
+@@ -1304,7 +1293,6 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+ 	struct vhost_vring_state s;
+ 	struct vhost_vring_file f;
+ 	struct vhost_vring_addr a;
+-	struct vhost_vring_iotlb_entry e;
+ 	u32 idx;
+ 	long r;
+ 
+@@ -1433,35 +1421,6 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+ 		} else
+ 			filep = eventfp;
+ 		break;
+-	case VHOST_SET_VRING_IOTLB_REQUEST:
+-		r = -EFAULT;
+-		if (copy_from_user(&e, argp, sizeof e))
+-			break;
+-		if (!access_ok(VERIFY_WRITE, e.userspace_addr,
+-				sizeof(*vq->iotlb_request)))
+-			break;
+-		r = 0;
+-		vq->iotlb_request = (struct vhost_iotlb_entry __user *)e.userspace_addr;
+-		break;
+-	case VHOST_SET_VRING_IOTLB_CALL:
+-		if (copy_from_user(&f, argp, sizeof f)) {
+-			r = -EFAULT;
+-			break;
+-		}
+-		eventfp = f.fd == -1 ? NULL : eventfd_fget(f.fd);
+-		if (IS_ERR(eventfp)) {
+-			r = PTR_ERR(eventfp);
+-			break;
+-		}
+-		if (eventfp != vq->iotlb_call) {
+-			filep = vq->iotlb_call;
+-			ctx = vq->iotlb_call_ctx;
+-			vq->iotlb_call = eventfp;
+-			vq->iotlb_call_ctx = eventfp ?
+-				eventfd_ctx_fileget(eventfp) : NULL;
+-		} else
+-			filep = eventfp;
+-		break;
+ 	case VHOST_SET_VRING_CALL:
+ 		if (copy_from_user(&f, argp, sizeof f)) {
+ 			r = -EFAULT;
+@@ -1568,33 +1527,11 @@ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
+ }
+ EXPORT_SYMBOL_GPL(vhost_init_device_iotlb);
+ 
+-static void vhost_complete_iotlb_update(struct vhost_dev *d,
+-					struct vhost_iotlb_entry *entry)
+-{
+-	struct vhost_iotlb_entry *req;
+-	struct vhost_virtqueue *vq;
+-	int i;
+-
+-
+-	for (i = 0; i < d->nvqs; i++) {
+-		vq = d->vqs[i];
+-		req = &vq->pending_request;
+-		if (entry->iova <= req->iova &&
+-		    entry->iova + entry->size - 1 > req->iova &&
+-		    req->flags.type == VHOST_IOTLB_MISS) {
+-			/* check permission before poll vq */
+-			*req = *entry;
+-			vhost_poll_queue(&vq->poll);
+-		}
+-	}
+-}
+-
+ /* Caller must have device mutex */
+ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
+ {
+ 	struct file *eventfp, *filep = NULL;
+ 	struct eventfd_ctx *ctx = NULL;
+-	struct vhost_iotlb_entry entry;
+ 	u64 p;
+ 	long r;
+ 	int i, fd;
+@@ -1663,10 +1600,6 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
+ 		if (filep)
+ 			fput(filep);
+ 		break;
+-	case VHOST_RUN_IOTLB:
+-		/* FIXME: enable and disabled */
+-		vhost_init_device_iotlb(d, true);
+-		break;
+ 	default:
+ 		r = -ENOIOCTLCMD;
+ 		break;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 50353d5..1d7c4ee 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -91,9 +91,6 @@ struct vhost_virtqueue {
+ 	struct eventfd_ctx *call_ctx;
+ 	struct eventfd_ctx *error_ctx;
+ 	struct eventfd_ctx *log_ctx;
+-	struct eventfd_ctx *iotlb_call_ctx;
+-	struct vhost_iotlb_entry __user *iotlb_request;
+-	struct vhost_iotlb_entry pending_request;
+ 
+ 	struct vhost_poll poll;
+ 
+diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
+index 2e4793a..bb90660 100644
+--- a/include/uapi/linux/vhost.h
++++ b/include/uapi/linux/vhost.h
+@@ -47,32 +47,6 @@ struct vhost_vring_addr {
+ 	__u64 log_guest_addr;
+ };
+ 
+-struct vhost_iotlb_entry {
+-	__u64 iova;
+-	__u64 size;
+-	__u64 userspace_addr;
+-	struct {
+-#define VHOST_ACCESS_RO      0x1
+-#define VHOST_ACCESS_WO      0x2
+-#define VHOST_ACCESS_RW      0x3
+-		__u8  perm;
+-#define VHOST_IOTLB_MISS           1
+-#define VHOST_IOTLB_UPDATE         2
+-#define VHOST_IOTLB_INVALIDATE     3
+-		__u8  type;
+-#define VHOST_IOTLB_INVALID        0x1
+-#define VHOST_IOTLB_VALID          0x2
+-		__u8  valid;
+-		__u8  u8_padding;
+-		__u32 padding;
+-	} flags;
+-};
+-
+-struct vhost_vring_iotlb_entry {
+-	unsigned int index;
+-	__u64 userspace_addr;
+-};
+-
+ struct vhost_iotlb_msg {
+   __u64 iova;
+   __u64 size;
+@@ -183,15 +157,6 @@ struct vhost_memory {
+ #define VHOST_GET_VRING_BUSYLOOP_TIMEOUT _IOW(VHOST_VIRTIO, 0x24,	\
+ 					 struct vhost_vring_state)
+ 
+-/* IOTLB */
+-/* Specify an eventfd file descriptor to signle on IOTLB miss */
+-#define VHOST_SET_VRING_IOTLB_CALL _IOW(VHOST_VIRTIO, 0x25, struct      \
+-                                        vhost_vring_file)
+-#define VHOST_SET_VRING_IOTLB_REQUEST _IOW(VHOST_VIRTIO, 0x26, struct   \
+-                                           vhost_vring_iotlb_entry)
+-#define VHOST_UPDATE_IOTLB _IOW(VHOST_VIRTIO, 0x27, struct vhost_iotlb_entry)
+-#define VHOST_RUN_IOTLB _IOW(VHOST_VIRTIO, 0x28, int)
+-
+ /* VHOST_NET specific defines */
+ 
+ /* Attach virtio net ring to a raw socket, or tap device.

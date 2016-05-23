@@ -1,0 +1,314 @@
+Bottom: efc93b05603c0217383aed824aafd0f8837f5715
+Top:    d7dee332fb825a63adf8e5f9850bf89dc6b86fcc
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-23 15:58:48 +0800
+
+vhost: remove unnecessary printks
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 88dda56..20be32f 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -354,10 +354,8 @@ static void handle_tx(struct vhost_net *net)
+ 	if (!sock)
+ 		goto out;
+ 
+-	if (!vq_iotlb_prefetch(vq)) {
+-		printk("prefetch fail at tx!\n");
++	if (!vq_iotlb_prefetch(vq))
+ 		goto out;
+-	}
+ 
+ 	vhost_disable_notify(&net->dev, vq);
+ 
+@@ -621,10 +619,9 @@ static void handle_rx(struct vhost_net *net)
+ 	if (!sock)
+ 		goto out;
+ 
+-	if (!vq_iotlb_prefetch(vq)) {
+-		printk("iotlb prefetch fail at rx!\n");
++	if (!vq_iotlb_prefetch(vq))
+ 		goto out;
+-	}
++
+ 	vhost_disable_notify(&net->dev, vq);
+ 
+ 	vhost_hlen = nvq->vhost_hlen;
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 10d6898..5833d72 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -781,17 +781,17 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+ 		ret = translate_desc(vq, (u64)from, size, vq->iotlb_iov,
+ 				     ARRAY_SIZE(vq->iotlb_iov),
+ 				     VHOST_ACCESS_WO);
+-		BUG_ON(ret == -EAGAIN);
+ 		if (ret < 0) {
+-			printk("translation failure %d!\n", ret);
++			vq_err(vq, "IOTLB translation failure: uaddr "
++			       "0x%llx size 0x%llx\n",
++			       (unsigned long long) from,
++			       (unsigned long long) size);
+ 			goto out;
+ 		}
+ 		iov_iter_init(&f, READ, vq->iotlb_iov, ret, size);
+ 		ret = copy_from_iter(to, size, &f);
+-		if (ret != size) {
+-			printk("copy from iter fail %d\n", ret);
+-		}
+-		ret = 0;
++		if (ret == size)
++			ret = 0;
+ 	}
+ 
+ out:
+@@ -809,51 +809,6 @@ out:
+ 	ret; \
+ })
+ 
+-static void vhost_dump_iotlb_msg(struct vhost_virtqueue *vq,
+-				 struct vhost_iotlb_msg *msg,
+-				 char *prompt)
+-{
+-	printk("[%p]%s: type ", vq, prompt);
+-
+-	switch (msg->type) {
+-	case VHOST_IOTLB_MISS:
+-		printk("iotlb miss ");
+-		break;
+-	case VHOST_IOTLB_UPDATE:
+-		printk("iotlb update ");
+-		break;
+-	case VHOST_IOTLB_INVALIDATE:
+-		printk("iotlb invalidate ");
+-		break;
+-	case VHOST_IOTLB_ACCESS_FAIL:
+-		printk("access fail ");
+-		break;
+-	default:
+-		printk("unknown type ");
+-		break;
+-	}
+-
+-	printk(" iova %llx, size %llx, uaddr %llx, perm ",
+-		msg->iova, msg->size, msg->uaddr);
+-
+-	switch (msg->perm) {
+-	case VHOST_ACCESS_RO:
+-		printk(" RO ");
+-		break;
+-	case VHOST_ACCESS_WO:
+-		printk(" WO ");
+-		break;
+-	case VHOST_ACCESS_RW:
+-		printk(" RW ");
+-		break;
+-	default:
+-		printk(" unknown access ");
+-		break;
+-	}
+-
+-	printk("\n");
+-}
+-
+ static void vhost_dev_lock_vqs(struct vhost_dev *d)
+ {
+ 	int i = 0;
+@@ -909,7 +864,6 @@ static void vhost_iotlb_notify_vq(struct vhost_dev *d,
+ 				  struct vhost_iotlb_msg *msg)
+ {
+ 	struct vhost_msg_node *node, *n;
+-	bool wake = false;
+ 
+ 	spin_lock(&d->iotlb_lock);
+ 
+@@ -918,33 +872,23 @@ static void vhost_iotlb_notify_vq(struct vhost_dev *d,
+ 		if (msg->iova <= vq_msg->iova &&
+ 		    msg->iova + msg->size - 1 > vq_msg->iova &&
+ 		    vq_msg->type == VHOST_IOTLB_MISS) {
+-			u64 delta = ktime_get_ns() - vq_msg->size;
+-			printk("wake rtt %lx\n", delta / NSEC_PER_MSEC);
+-			wake = true;
+ 			vhost_poll_queue(&node->vq->poll);
+ 			list_del(&node->node);
+ 			kfree(node);
+ 		}
+ 	}
+ 
+-	if (!wake)
+-		printk("no wake up!\n");
+-
+ 	spin_unlock(&d->iotlb_lock);
+ }
+ 
+ static int umem_access_ok(u64 uaddr, u64 size, int access)
+ {
+-	if ((access & VHOST_ACCESS_RO) && !access_ok(VERIFY_READ,
+-							uaddr, size)) {
+-		printk("RO fail!\n");
++	if ((access & VHOST_ACCESS_RO) &&
++	    !access_ok(VERIFY_READ, uaddr, size))
+ 		return -EFAULT;
+-	}
+-	if ((access & VHOST_ACCESS_WO) && !access_ok(VERIFY_WRITE,
+-							uaddr, size)) {
+-		printk("WO fail!\n");
++	if ((access & VHOST_ACCESS_WO) &&
++	    !access_ok(VERIFY_WRITE, uaddr, size))
+ 		return -EFAULT;
+-	}
+ 	return 0;
+ }
+ 
+@@ -953,8 +897,6 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ {
+ 	int ret = 0;
+ 
+-	vhost_dump_iotlb_msg(NULL, msg, "WRITE");
+-
+ 	vhost_dev_lock_vqs(dev);
+ 	switch(msg->type) {
+ 	case VHOST_IOTLB_UPDATE:
+@@ -963,8 +905,6 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ 			goto done;
+ 		}
+ 		if (umem_access_ok(msg->uaddr, msg->size, msg->perm)) {
+-			printk("fail to validate umem access at %lx"
+-				" size %lx", msg->uaddr, msg->size);
+ 			ret = -EFAULT;
+ 			goto done;
+ 		}
+@@ -981,7 +921,6 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ 				     msg->iova + msg->size - 1);
+ 		break;
+ 	default:
+-		printk("type error 0x%x!\n", msg->type);
+ 		ret = -EINVAL;
+ 		break;
+ 	}
+@@ -998,15 +937,11 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 	size_t ret;
+ 	int err;
+ 
+-	if (iov_iter_count(from) < size) {
+-		printk("size is too short!\n");
++	if (iov_iter_count(from) < size)
+ 		return 0;
+-	}
+ 	ret = copy_from_iter(&node.msg, size, from);
+-	if (ret != size) {
+-		printk("copy from iter fail!\n");
++	if (ret != size)
+ 		goto done;
+-	}
+ 
+ 	switch (node.msg.type) {
+ 	case VHOST_IOTLB_MSG:
+@@ -1015,7 +950,6 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			ret = err;
+ 		break;
+ 	default:
+-		printk("unknown msg type!\n");
+ 		ret = -EINVAL;
+ 		break;
+ 	}
+@@ -1080,18 +1014,14 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+ 	if (node) {
+ 		ret = copy_to_iter(&node->msg, size, to);
+ 
+-		printk("size %d ret %d\n", size, ret);
+-
+ 		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
+ 			kfree(node);
+-			printk("normal %d\n", ret);
+ 			return ret;
+ 		}
+ 
+ 		vhost_enqueue_msg(dev, &dev->pending_list, node);
+ 	}
+ 
+-	printk("miss %d\n", ret);
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(vhost_chr_read_iter);
+@@ -1112,7 +1042,6 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+ 	msg->perm = access;
+ 	msg->size = ktime_get_ns();
+ 
+-	vhost_dump_iotlb_msg(vq, msg, "MISS");
+ 	vhost_enqueue_msg(dev, &dev->read_list, node);
+ 
+ 	return 0;
+@@ -1165,7 +1094,6 @@ static int iotlb_access_ok(struct vhost_virtqueue *vq,
+ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
+ {
+ 	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
+-	struct vhost_dev *dev = vq->dev;
+ 	unsigned int num = vq->num;
+ 
+ 	if (!vq->iotlb)
+@@ -1209,7 +1137,6 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
+ int vhost_vq_access_ok(struct vhost_virtqueue *vq)
+ {
+ 	if (vq->iotlb) {
+-		printk("bypass access ok check!\n");
+ 		/* When device IOTLB was used, the access validation
+ 		 * will be validated during prefetching.
+ 		 */
+@@ -1524,8 +1451,6 @@ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
+ 	struct vhost_umem *niotlb, *oiotlb;
+ 	int i;
+ 
+-	printk("init device iotlb!\n");
+-
+ 	niotlb = vhost_umem_alloc();
+ 	if (!niotlb)
+ 		return -ENOMEM;
+@@ -1541,8 +1466,6 @@ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
+ 
+ 	vhost_umem_clean(oiotlb);
+ 
+-	printk("succeed!\n");
+-
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(vhost_init_device_iotlb);
+@@ -1768,7 +1691,8 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+ 	}
+ 	r = vhost_get_user(vq, last_used_idx, &vq->used->idx);
+ 	if (r) {
+-		printk("err iova is %lx!\n", &vq->used->idx);
++		vq_err(vq, "Can't access used idx at 0x%llx\n",
++			(unsigned long long) &vq->used->idx);
+ 		goto err;
+ 	}
+ 	vq->last_used_idx = vhost16_to_cpu(vq, last_used_idx);
+@@ -1793,7 +1717,6 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 	while ((u64)len > s) {
+ 		u64 size;
+ 		if (unlikely(ret >= iov_size)) {
+-			printk("no bufs !\n");
+ 			ret = -ENOBUFS;
+ 			break;
+ 		}
+@@ -1802,15 +1725,12 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 							addr, addr + len - 1);
+ 		if (node == NULL || node->start > addr) {
+ 			if (umem != dev->iotlb) {
+-				printk("not iotbl!\n");
+ 				ret = -EFAULT;
+ 				break;
+ 			}
+ 			ret = -EAGAIN;
+ 			break;
+ 		} else if (!(node->perm & access)) {
+-			printk("-EPERM perm %x access %x\n",
+-				node->perm, access);
+ 			ret = -EPERM;
+ 			break;
+ 		}
