@@ -1097,7 +1097,7 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
 	unsigned int num = vq->num;
 
 	if (!vq->iotlb)
-		return 0;
+		return 1;
 
 	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)vq->desc,
 			       num * sizeof *vq->desc) &&
