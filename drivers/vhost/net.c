@@ -974,7 +974,6 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 
 	/* Verify that ring has been setup correctly. */
 	if (!vhost_vq_access_ok(vq)) {
-		printk("vhost_vq_access_ok()!\n");
 		r = -EFAULT;
 		goto err_vq;
 	}
