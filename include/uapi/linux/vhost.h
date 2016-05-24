@@ -47,6 +47,7 @@ struct vhost_vring_addr {
 	__u64 log_guest_addr;
 };
 
+/* no alignment requirement */
 struct vhost_iotlb_msg {
   __u64 iova;
   __u64 size;
