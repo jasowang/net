@@ -1,5 +1,5 @@
 Bottom: 5f4fb25941738918ec9e7598815a1c42950f820d
-Top:    1a579fa7cbed51f78d516f1d918a502590e24973
+Top:    60230df43fea47a917e663b9de20e7bfa04d6f90
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-24 16:31:31 +0800
 
@@ -150,18 +150,10 @@ index a584239..0f45e3d 100644
  #ifdef CONFIG_COMPAT
  	.compat_ioctl   = vhost_net_compat_ioctl,
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 166e779..fcd81d7 100644
+index 166e779..7dd90f8 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -28,6 +28,7 @@
- #include <linux/module.h>
- #include <linux/sort.h>
- #include <linux/interval_tree_generic.h>
-+#include <linux/ktime.h>
- 
- #include "vhost.h"
- 
-@@ -35,6 +36,10 @@ static ushort max_mem_regions = 64;
+@@ -35,6 +35,10 @@ static ushort max_mem_regions = 64;
  module_param(max_mem_regions, ushort, 0444);
  MODULE_PARM_DESC(max_mem_regions,
  	"Maximum number of memory regions in memory map. (default: 64)");
@@ -172,7 +164,7 @@ index 166e779..fcd81d7 100644
  
  enum {
  	VHOST_MEMORY_F_LOG = 0x1,
-@@ -309,6 +314,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+@@ -309,6 +313,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
  	vhost_disable_cross_endian(vq);
  	vq->busyloop_timeout = 0;
  	vq->umem = NULL;
@@ -180,7 +172,7 @@ index 166e779..fcd81d7 100644
  }
  
  static int vhost_worker(void *data)
-@@ -413,9 +419,14 @@ void vhost_dev_init(struct vhost_dev *dev,
+@@ -413,9 +418,14 @@ void vhost_dev_init(struct vhost_dev *dev,
  	dev->log_ctx = NULL;
  	dev->log_file = NULL;
  	dev->umem = NULL;
@@ -195,7 +187,7 @@ index 166e779..fcd81d7 100644
  	dev->worker = NULL;
  
  	for (i = 0; i < dev->nvqs; ++i) {
-@@ -563,6 +574,15 @@ void vhost_dev_stop(struct vhost_dev *dev)
+@@ -563,6 +573,15 @@ void vhost_dev_stop(struct vhost_dev *dev)
  }
  EXPORT_SYMBOL_GPL(vhost_dev_stop);
  
@@ -211,7 +203,7 @@ index 166e779..fcd81d7 100644
  static void vhost_umem_clean(struct vhost_umem *umem)
  {
  	struct vhost_umem_node *node, *tmp;
-@@ -570,14 +590,31 @@ static void vhost_umem_clean(struct vhost_umem *umem)
+@@ -570,14 +589,31 @@ static void vhost_umem_clean(struct vhost_umem *umem)
  	if (!umem)
  		return;
  
@@ -248,7 +240,7 @@ index 166e779..fcd81d7 100644
  /* Caller should have device mutex if and only if locked is set */
  void vhost_dev_cleanup(struct vhost_dev *dev, bool locked)
  {
-@@ -606,6 +643,10 @@ void vhost_dev_cleanup(struct vhost_dev *dev, bool locked)
+@@ -606,6 +642,10 @@ void vhost_dev_cleanup(struct vhost_dev *dev, bool locked)
  	/* No one will access memory at this point */
  	vhost_umem_clean(dev->umem);
  	dev->umem = NULL;
@@ -259,7 +251,7 @@ index 166e779..fcd81d7 100644
  	WARN_ON(!list_empty(&dev->work_list));
  	if (dev->worker) {
  		kthread_stop(dev->worker);
-@@ -681,28 +722,343 @@ static int memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
+@@ -681,28 +721,343 @@ static int memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
  	return 1;
  }
  
@@ -607,7 +599,7 @@ index 166e779..fcd81d7 100644
  	return access_ok(VERIFY_READ, desc, num * sizeof *desc) &&
  	       access_ok(VERIFY_READ, avail,
  			 sizeof *avail + num * sizeof *avail->ring + s) &&
-@@ -710,6 +1066,54 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+@@ -710,6 +1065,54 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
  			sizeof *used + num * sizeof *used->ring + s);
  }
  
@@ -662,7 +654,7 @@ index 166e779..fcd81d7 100644
  /* Can we log writes? */
  /* Caller should have device mutex but not vq mutex */
  int vhost_log_access_ok(struct vhost_dev *dev)
-@@ -736,16 +1140,35 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
+@@ -736,16 +1139,35 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
  /* Caller should have vq mutex and device mutex */
  int vhost_vq_access_ok(struct vhost_virtqueue *vq)
  {
@@ -699,7 +691,7 @@ index 166e779..fcd81d7 100644
  	struct vhost_umem *newumem, *oldumem;
  	unsigned long size = offsetof(struct vhost_memory, regions);
  	int i;
-@@ -767,28 +1190,23 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
+@@ -767,28 +1189,23 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
  		return -EFAULT;
  	}
  
@@ -736,7 +728,7 @@ index 166e779..fcd81d7 100644
  	}
  
  	if (!memory_access_ok(d, newumem, 0))
-@@ -1032,6 +1450,30 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+@@ -1032,6 +1449,30 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  }
  EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
  
@@ -767,7 +759,7 @@ index 166e779..fcd81d7 100644
  /* Caller must have device mutex */
  long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
  {
-@@ -1246,15 +1688,20 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+@@ -1246,15 +1687,20 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
  	if (r)
  		goto err;
  	vq->signalled_used_valid = false;
@@ -790,7 +782,7 @@ index 166e779..fcd81d7 100644
  err:
  	vq->is_le = is_le;
  	return r;
-@@ -1262,10 +1709,11 @@ err:
+@@ -1262,10 +1708,11 @@ err:
  EXPORT_SYMBOL_GPL(vhost_vq_init_access);
  
  static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
@@ -804,7 +796,7 @@ index 166e779..fcd81d7 100644
  	struct iovec *_iov;
  	u64 s = 0;
  	int ret = 0;
-@@ -1276,12 +1724,21 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -1276,12 +1723,21 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  			ret = -ENOBUFS;
  			break;
  		}
@@ -827,7 +819,7 @@ index 166e779..fcd81d7 100644
  		_iov = iov + ret;
  		size = node->size - addr + node->start;
  		_iov->iov_len = min((u64)len - s, size);
-@@ -1292,6 +1749,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -1292,6 +1748,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  		++ret;
  	}
  
@@ -836,7 +828,7 @@ index 166e779..fcd81d7 100644
  	return ret;
  }
  
-@@ -1320,7 +1779,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1320,7 +1778,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
  			struct iovec iov[], unsigned int iov_size,
  			unsigned int *out_num, unsigned int *in_num,
  			struct vhost_log *log, unsigned int *log_num,
@@ -845,7 +837,7 @@ index 166e779..fcd81d7 100644
  {
  	struct vring_desc desc;
  	unsigned int i = 0, count, found = 0;
-@@ -1338,9 +1797,10 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1338,9 +1796,10 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	}
  
  	ret = translate_desc(vq, vhost64_to_cpu(vq, indirect->addr), len, vq->indirect,
@@ -858,7 +850,7 @@ index 166e779..fcd81d7 100644
  		return ret;
  	}
  	iov_iter_init(&from, READ, vq->indirect, ret, len);
-@@ -1380,10 +1840,11 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1380,10 +1839,11 @@ static int get_indirect(struct vhost_virtqueue *vq,
  
  		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
  				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
@@ -873,7 +865,7 @@ index 166e779..fcd81d7 100644
  			return ret;
  		}
  		/* If this is an input descriptor, increment that count. */
-@@ -1419,7 +1880,8 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1419,7 +1879,8 @@ static int get_indirect(struct vhost_virtqueue *vq,
  int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		      struct iovec iov[], unsigned int iov_size,
  		      unsigned int *out_num, unsigned int *in_num,
@@ -883,7 +875,7 @@ index 166e779..fcd81d7 100644
  {
  	struct vring_desc desc;
  	unsigned int i, head, found = 0;
-@@ -1498,10 +1960,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1498,10 +1959,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
  			ret = get_indirect(vq, iov, iov_size,
  					   out_num, in_num,
@@ -898,7 +890,7 @@ index 166e779..fcd81d7 100644
  				return ret;
  			}
  			continue;
-@@ -1509,10 +1972,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1509,10 +1971,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  
  		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
  				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
@@ -913,7 +905,7 @@ index 166e779..fcd81d7 100644
  			return ret;
  		}
  		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE)) {
-@@ -1781,6 +2245,47 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -1781,6 +2244,47 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  }
  EXPORT_SYMBOL_GPL(vhost_disable_notify);
  
