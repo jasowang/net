@@ -1,0 +1,22 @@
+Bottom: e3afcf1fb7fcf6e81bafa3d6b290913e98aeebcf
+Top:    1a579fa7cbed51f78d516f1d918a502590e24973
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-24 17:15:09 +0800
+
+Refresh of vhost-device-iotlb-api
+
+---
+
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 807b532..ab82eaa 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -217,7 +217,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+-		printk(pr_fmt(fmt), ##__VA_ARGS__);       \
++		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
+ 		if ((vq)->error_ctx)                               \
+ 				eventfd_signal((vq)->error_ctx, 1);\
+ 	} while (0)
