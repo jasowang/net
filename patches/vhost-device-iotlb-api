@@ -1,7 +1,7 @@
 Bottom: 5f4fb25941738918ec9e7598815a1c42950f820d
-Top:    d7dee332fb825a63adf8e5f9850bf89dc6b86fcc
+Top:    29d8762cbb07420dd0c2185e64828df55582ed84
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2016-05-23 16:02:54 +0800
+Date:   2016-05-24 16:31:31 +0800
 
 vhost: device IOTLB API
 
@@ -26,11 +26,10 @@ VHOST_UPDATE_IOTLB to invalidate the possible entry in vhost.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index a584239..20be32f 100644
+index a584239..6961630 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -61,7 +61,8 @@ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
@@ -105,7 +104,7 @@ index a584239..20be32f 100644
  		mutex_unlock(&n->dev.mutex);
  		return -EFAULT;
  	}
-+	if ((features & (1 << VHOST_F_DEVICE_IOTLB))) {
++	if ((features & (1ULL << VHOST_F_DEVICE_IOTLB))) {
 +		if (vhost_init_device_iotlb(&n->dev, true))
 +			return -EFAULT;
 +	}
@@ -155,7 +154,7 @@ index a584239..20be32f 100644
  #ifdef CONFIG_COMPAT
  	.compat_ioctl   = vhost_net_compat_ioctl,
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 166e779..5833d72 100644
+index 166e779..fdae0e8 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -28,6 +28,7 @@
@@ -640,7 +639,7 @@ index 166e779..5833d72 100644
 +	unsigned int num = vq->num;
 +
 +	if (!vq->iotlb)
-+		return 0;
++		return 1;
 +
 +	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)vq->desc,
 +			       num * sizeof *vq->desc) &&
@@ -1068,7 +1067,7 @@ index 1231cd1..17e21bb 100644
  
  	return n;
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
-index 61a8777..bb90660 100644
+index 61a8777..19493ee 100644
 --- a/include/uapi/linux/vhost.h
 +++ b/include/uapi/linux/vhost.h
 @@ -47,6 +47,30 @@ struct vhost_vring_addr {
@@ -1107,6 +1106,6 @@ index 61a8777..bb90660 100644
  /* vhost-net should add virtio_net_hdr for RX, and strip for TX packets. */
  #define VHOST_NET_F_VIRTIO_NET_HDR 27
 +/* Vhost have device IOTLB */
-+#define VHOST_F_DEVICE_IOTLB 28
++#define VHOST_F_DEVICE_IOTLB 63
  
  /* VHOST_SCSI specific definitions */
