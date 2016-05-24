@@ -9,22 +9,22 @@ This patch tries to implement an device IOTLB for vhost. This could be
 used with for co-operation with userspace(qemu) implementation of DMA
 remapping.
 
-The idea is simple. When vhost meets an IOTLB miss, it will request
-the assistance of userspace to do the translation, this is done
-through:
+The idea is simple, cache the translation in a software device IOTLB
+(interval tree) implementation in vhost and make vhost_net file
+descriptor could be read or wrote by a process. When vhost meets an
+IOTLB miss, the fault address, size and access could be read from the
+file. After userspace finishes the translation, it write the
+translated address to the vhost_net file to update the device IOTLB.
 
-- Fill the translation request in a preset userspace address (This
-  address is set through ioctl VHOST_SET_IOTLB_REQUEST_ENTRY).
-- Notify userspace through eventfd (This eventfd was set through ioctl
-  VHOST_SET_IOTLB_FD).
-- device IOTLB were started and stopped through VHOST_RUN_IOTLB ioctl
-
-When userspace finishes the translation, it will update the vhost
-IOTLB through VHOST_UPDATE_IOTLB ioctl. Userspace is also in charge of
-snooping the IOTLB invalidation of IOMMU IOTLB and use
-VHOST_UPDATE_IOTLB to invalidate the possible entry in vhost.
+When device IOTLB (VHOST_F_DEVICE_IOTLB) is enabled all vq address
+set by ioctl were treated as iova instead of virtual address and the
+accessing could only be done through IOTLB instead of direct userspace
+memory access. Before each rounds or vq processing, all vq metadata
+were prefetched in device IOTLB to make sure no translation fault
+happens during vq processing.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
