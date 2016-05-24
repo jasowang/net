@@ -141,8 +141,6 @@ struct vhost_virtqueue {
 	u32 busyloop_timeout;
 };
 
-#define VHOST_IOTLB_SIZE 2048
-
 struct vhost_msg_node {
   struct vhost_msg msg;
   struct vhost_virtqueue *vq;

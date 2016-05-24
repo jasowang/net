@@ -36,6 +36,10 @@ static ushort max_mem_regions = 64;
 module_param(max_mem_regions, ushort, 0444);
 MODULE_PARM_DESC(max_mem_regions,
 	"Maximum number of memory regions in memory map. (default: 64)");
+static int max_iotlb_entries = 2048;
+module_param(max_iotlb_entries, int, 0444);
+MODULE_PARM_DESC(max_iotlb_entries,
+	"Maximum number of iotlb entries. (default: 2048)");
 
 enum {
 	VHOST_MEMORY_F_LOG = 0x1,
@@ -832,7 +836,7 @@ static int vhost_new_umem_range(struct vhost_umem *umem,
 	if (!node)
 		return -ENOMEM;
 
-	if (umem->numem == VHOST_IOTLB_SIZE) {
+	if (umem->numem == max_iotlb_entries) {
 		tmp = list_last_entry(&umem->umem_list, typeof(*tmp), link);
 		vhost_umem_free(umem, tmp);
 	}
