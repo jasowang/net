@@ -1,10 +1,9 @@
 Version: 1
-Previous: fabfcb152c9eddd3a319d3c6a5402060d8817996
-Head: 0986bc6dda953df55b208d48fcced4e7a048d9a5
+Previous: 69f14b60ad7294c2a4a6523ad4457b1e9b2d538a
+Head: e66c533924f65ff5f0df70e516978cb38f187be5
 Applied:
   vhost-introduce-vhost-memory: fbda90d627b86dc65153e056843df2cd066e45f3
   vhost-convert-pre-sorted-vhost: fc556cda609e0bd7a97def659d54263255241620
-  vhost-device-iotlb-api: a7e0e06bc5d6e8e2ba21fcee96c79afcfe3244f8
-  refresh-temp: 0986bc6dda953df55b208d48fcced4e7a048d9a5
+  vhost-device-iotlb-api: e66c533924f65ff5f0df70e516978cb38f187be5
 Unapplied:
 Hidden:
