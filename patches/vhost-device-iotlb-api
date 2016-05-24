@@ -18,7 +18,7 @@ translated address to the vhost_net file to update the device IOTLB.
 
 When device IOTLB (VHOST_F_DEVICE_IOTLB) is enabled all vq address
 set by ioctl were treated as iova instead of virtual address and the
-accessing could only be done through IOTLB [1] instead of direct
+accessing could only be done through IOTLB instead of direct
 userspace memory access. Before each rounds or vq processing, all vq
 metadata were prefetched in device IOTLB to make sure no translation
 fault happens during vq processing.
