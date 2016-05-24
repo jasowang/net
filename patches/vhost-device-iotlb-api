@@ -1,5 +1,5 @@
 Bottom: 5f4fb25941738918ec9e7598815a1c42950f820d
-Top:    81826e534fbc052d88bf84eb0a6e91177c0d6d8e
+Top:    f0fcce7f458dec33f1190d5dd72075c4d8e0a34a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-24 16:31:31 +0800
 
@@ -1055,21 +1055,6 @@ index b93b6a0..2154c25 100644
  		if ((vq)->error_ctx)                               \
  				eventfd_signal((vq)->error_ctx, 1);\
  	} while (0)
-diff --git a/fs/eventfd.c b/fs/eventfd.c
-index 1231cd1..17e21bb 100644
---- a/fs/eventfd.c
-+++ b/fs/eventfd.c
-@@ -59,8 +59,9 @@ __u64 eventfd_signal(struct eventfd_ctx *ctx, __u64 n)
- 	if (ULLONG_MAX - ctx->count < n)
- 		n = ULLONG_MAX - ctx->count;
- 	ctx->count += n;
--	if (waitqueue_active(&ctx->wqh))
-+	if (waitqueue_active(&ctx->wqh)) {
- 		wake_up_locked_poll(&ctx->wqh, POLLIN);
-+	}
- 	spin_unlock_irqrestore(&ctx->wqh.lock, flags);
- 
- 	return n;
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
 index 61a8777..f2e5757 100644
 --- a/include/uapi/linux/vhost.h
