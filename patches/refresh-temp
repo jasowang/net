@@ -1,0 +1,24 @@
+Bottom: 81826e534fbc052d88bf84eb0a6e91177c0d6d8e
+Top:    f0fcce7f458dec33f1190d5dd72075c4d8e0a34a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-05-24 17:06:30 +0800
+
+Refresh of vhost-device-iotlb-api
+
+---
+
+diff --git a/fs/eventfd.c b/fs/eventfd.c
+index 17e21bb..1231cd1 100644
+--- a/fs/eventfd.c
++++ b/fs/eventfd.c
+@@ -59,9 +59,8 @@ __u64 eventfd_signal(struct eventfd_ctx *ctx, __u64 n)
+ 	if (ULLONG_MAX - ctx->count < n)
+ 		n = ULLONG_MAX - ctx->count;
+ 	ctx->count += n;
+-	if (waitqueue_active(&ctx->wqh)) {
++	if (waitqueue_active(&ctx->wqh))
+ 		wake_up_locked_poll(&ctx->wqh, POLLIN);
+-	}
+ 	spin_unlock_irqrestore(&ctx->wqh.lock, flags);
+ 
+ 	return n;
