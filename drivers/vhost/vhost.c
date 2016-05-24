@@ -28,7 +28,6 @@
 #include <linux/module.h>
 #include <linux/sort.h>
 #include <linux/interval_tree_generic.h>
-#include <linux/ktime.h>
 
 #include "vhost.h"
 
