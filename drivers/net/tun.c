@@ -72,6 +72,7 @@
 #include <linux/seq_file.h>
 #include <linux/uio.h>
 #include <linux/skb_ring.h>
+#include <linux/skb_array.h>
 
 #include <asm/uaccess.h>
 
@@ -175,6 +176,7 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_ring tx_ring;
+	struct skb_array tx_array;
 };
 
 struct tun_flow_entry {
@@ -523,6 +525,11 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 
 static void tun_queue_purge(struct tun_file *tfile)
 {
+	struct sk_buff *skb;
+
+	while ((skb = skb_array_consume_bh(&tfile->tx_array)) != NULL) {
+		kfree_skb(skb);
+	}
 	skb_ring_purge(&tfile->tx_ring);
 	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
@@ -900,6 +907,9 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (tun->flags & IFF_TX_RING) {
 		if (skb_ring_queue(&tfile->tx_ring, skb))
 			goto drop;
+	} else if (tun->flags & IFF_TX_ARRAY) {
+		if (__skb_array_produce(&tfile->tx_array, skb))
+			goto drop;
 	} else {
 		/* Enqueue packet */
 		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
@@ -1104,7 +1114,8 @@ static bool tun_queue_not_empty(struct tun_file *tfile)
 	struct sock *sk = tfile->socket.sk;
 
 	return (!skb_queue_empty(&sk->sk_receive_queue) ||
-		skb_ring_peek(&tfile->tx_ring));
+		skb_ring_peek(&tfile->tx_ring) ||
+		__skb_array_peek(&tfile->tx_array));
 }
 
 /* Character device part */
@@ -1501,12 +1512,15 @@ done:
 }
 
 static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
-				     int *err)
+				     int *err, bool ring)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	struct sk_buff *skb = NULL;
 
-	skb = skb_ring_dequeue(&tfile->tx_ring);
+	if (ring)
+		skb = skb_ring_dequeue(&tfile->tx_ring);
+	else
+		skb = skb_array_consume_bh(&tfile->tx_array);
 	if (skb)
 		goto out;
 	if (noblock) {
@@ -1518,7 +1532,10 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 	current->state = TASK_INTERRUPTIBLE;
 
 	do {
-		skb = skb_ring_dequeue(&tfile->tx_ring);
+		if (ring)
+			skb = skb_ring_dequeue(&tfile->tx_ring);
+		else
+			skb = skb_array_consume_bh(&tfile->tx_array);
 		if (skb)
 			break;
 		if (signal_pending(current)) {
@@ -1553,8 +1570,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (!iov_iter_count(to))
 		return 0;
 
-	if (tun->flags & IFF_TX_RING) {
-		skb = tun_ring_recv(tfile, noblock, &err);
+	if (tun->flags & IFF_TX_RING ||
+	    tun->flags & IFF_TX_ARRAY) {
+		skb = tun_ring_recv(tfile, noblock, &err,
+				    tun->flags & IFF_TX_RING);
 		if (!skb)
 			return err;
 	} else {
@@ -1711,6 +1730,8 @@ static int tun_peek(struct socket *sock, bool exact)
 
 	if (tun->flags & IFF_TX_RING) {
 		return skb_ring_peek(&tfile->tx_ring);
+	} else if (tun->flags & IFF_TX_ARRAY) {
+		return skb_array_peek_len(&tfile->tx_array);
 	} else {
 		struct sk_buff *head;
 
@@ -1872,7 +1893,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 
 		tun = netdev_priv(dev);
 		tun->dev = dev;
-		tun->flags = flags;
+		tun->flags = flags | IFF_TX_RING;
 		tun->txflt.count = 0;
 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
 
@@ -2434,6 +2455,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
 	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
+		sock_put(&tfile->sk);
+		return -ENOMEM;
+	}
+
+	if (skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
 		sock_put(&tfile->sk);
 		return -ENOMEM;
 	}

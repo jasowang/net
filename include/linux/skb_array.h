@@ -104,6 +104,20 @@ static inline struct sk_buff *skb_array_consume_bh(struct skb_array *a)
 	return skb;
 }
 
+static inline int skb_array_peek_len(struct skb_array *a)
+{
+	struct sk_buff *skb;
+	int ret = 0;
+
+	spin_lock(&a->consumer_lock);
+	skb = __skb_array_peek(a);
+	if (skb)
+		ret = skb->len;
+	spin_unlock(&a->consumer_lock);
+
+	return ret;
+}
+
 static inline int skb_array_init(struct skb_array *a, int size, gfp_t gfp)
 {
 	a->queue = kzalloc(ALIGN(size * sizeof *(a->queue), SMP_CACHE_BYTES),
