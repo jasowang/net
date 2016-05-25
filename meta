@@ -1,7 +1,8 @@
 Version: 1
-Previous: 3bf25eb04c35eb7492406bdd3c604f7dd2b78456
+Previous: 045d411a13de0d8c842253c01026333dfc27e6ba
 Head: 86df372d974005a8bcb9b7bae2a91528cf3920e0
 Applied:
+  skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
 Unapplied:
   introduce-skb_ring: 9183f6aa196d262a015c754f677a46839538292b
   refresh-of-tuntap-introduce-tx: 42b4e0ee2ae1101bd994d4ee1cb87ddbdf65804f
