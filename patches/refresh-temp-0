@@ -1,5 +1,5 @@
 Bottom: 060f940f54a5ef0c3a3c75a295a815a0cefab331
-Top:    bfc8225e89f28978e1c31e5ed685583bd7da4dc5
+Top:    b0ac998bf0ecd989de7b6d6f1ee3392f78c8f7f2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-25 17:25:08 +0800
 
@@ -8,7 +8,7 @@ Refresh of refresh-of-tuntap-introduce-tx
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0b1710d..b4a228c 100644
+index 0b1710d..986edee 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -72,6 +72,7 @@
@@ -116,7 +116,7 @@ index 0b1710d..b4a228c 100644
  		tun = netdev_priv(dev);
  		tun->dev = dev;
 -		tun->flags = flags;
-+		tun->flags = flags | IFF_TX_RING;
++		tun->flags = flags | IFF_TX_ARRAY;
  		tun->txflt.count = 0;
  		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
  
@@ -133,13 +133,26 @@ index 0b1710d..b4a228c 100644
  }
  
 diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
-index d2535ad..1ca8dd3 100644
+index d2535ad..a3d13ad 100644
 --- a/include/linux/skb_array.h
 +++ b/include/linux/skb_array.h
-@@ -104,6 +104,20 @@ static inline struct sk_buff *skb_array_consume_bh(struct skb_array *a)
+@@ -104,6 +104,33 @@ static inline struct sk_buff *skb_array_consume_bh(struct skb_array *a)
  	return skb;
  }
  
++static inline struct sk_buff *skb_array_consume(struct skb_array *a)
++{
++	struct sk_buff *skb;
++
++	spin_lock(&a->consumer_lock);
++	skb = __skb_array_peek(a);
++	if (skb)
++		__skb_array_consume(a);
++	spin_unlock(&a->consumer_lock);
++
++	return skb;
++}
++
 +static inline int skb_array_peek_len(struct skb_array *a)
 +{
 +	struct sk_buff *skb;
