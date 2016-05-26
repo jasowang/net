@@ -5,6 +5,8 @@ Date:   2016-05-26 12:01:35 +0800
 
 vhost_net: conditionally start tx polling
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
