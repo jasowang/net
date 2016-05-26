@@ -1,5 +1,5 @@
 Version: 1
-Previous: 752663e457dfe2ff8e10e5d4ad33d132c22b24ee
+Previous: 13e63062666b643709b8a5dbabe98248646fd063
 Head: 26879da58711aa604a1b866cbeedd7e0f78f90ad
 Applied:
 Unapplied:
@@ -9,7 +9,6 @@ Unapplied:
   refresh-of-tuntap-introduce-tx: b1f7b592a6cd2274027d8c8317fe9d761ac4aed4
   refresh-temp-0: bed770759e04b90498b83efc07192da27bd58931
   tuntap-correctly-wake-up: d05f0a222c5b13877ad0b530482dbb811fb67f13
-  tuntap-doing-wakeup-correctly: c982152046b8b5ecaad26eee8df593a20b25db85
   introduce-skb_ring_recv: 3288215bb1d38cb043af1d641d2926246d20e8f9
   tuntap-iff_tx_ring: 28a8d7a8626dde009311db715d43e3458cd8944d
   formal-patch: cbb978ea17736a2a0578803c7580f89787d6528a
