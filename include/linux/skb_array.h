@@ -104,6 +104,19 @@ static inline struct sk_buff *skb_array_consume_bh(struct skb_array *a)
 	return skb;
 }
 
+static inline struct sk_buff *skb_array_consume(struct skb_array *a)
+{
+	struct sk_buff *skb;
+
+	spin_lock(&a->consumer_lock);
+	skb = __skb_array_peek(a);
+	if (skb)
+		__skb_array_consume(a);
+	spin_unlock(&a->consumer_lock);
+
+	return skb;
+}
+
 static inline int skb_array_peek_len(struct skb_array *a)
 {
 	struct sk_buff *skb;
