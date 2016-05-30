@@ -1,12 +1,12 @@
 Version: 1
-Previous: b12f86c013cac739339fd0b784a4b6074f2c44d9
-Head: b1f7b592a6cd2274027d8c8317fe9d761ac4aed4
+Previous: fa0ebae674d69d89a05740b5032807d90026e161
+Head: bed770759e04b90498b83efc07192da27bd58931
 Applied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
   refresh-of-tuntap-introduce-tx: b1f7b592a6cd2274027d8c8317fe9d761ac4aed4
-Unapplied:
   refresh-temp-0: bed770759e04b90498b83efc07192da27bd58931
+Unapplied:
   vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
   tuntap-correctly-wake-up: d05f0a222c5b13877ad0b530482dbb811fb67f13
   introduce-skb_ring_recv: 3288215bb1d38cb043af1d641d2926246d20e8f9
