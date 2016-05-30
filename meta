@@ -1,10 +1,10 @@
 Version: 1
-Previous: 38688c25d25ef427b0dcd46df145563aa7667f8e
-Head: 86df372d974005a8bcb9b7bae2a91528cf3920e0
+Previous: 0acfffae52aeb32b3262b88c62e4d8e971aff529
+Head: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
 Applied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
-Unapplied:
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
+Unapplied:
   refresh-of-tuntap-introduce-tx: b1f7b592a6cd2274027d8c8317fe9d761ac4aed4
   refresh-temp-0: bed770759e04b90498b83efc07192da27bd58931
   vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
