@@ -1,7 +1,8 @@
 Version: 1
-Previous: d8090c72a1e3c59bff13930254d4e47dec0afb43
-Head: 26879da58711aa604a1b866cbeedd7e0f78f90ad
+Previous: 3666bf3b297f186e9664e14e1e296a24a4ebe520
+Head: d401931d1eb91551a68363825c59a543bbd4059f
 Applied:
+  tun-ex: d401931d1eb91551a68363825c59a543bbd4059f
 Unapplied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
