@@ -116,6 +116,7 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
+        u32 delayed;
 };
 
 struct vhost_dev {
