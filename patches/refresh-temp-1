@@ -1,0 +1,225 @@
+Bottom: 82d7af7eeb1564560ff90d87721ff6ea45ef3a8d
+Top:    947de0d1d4d084e37083fc169fea68463333d1a4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-01 16:59:53 +0800
+
+Refresh of tun-ex
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 0578357..e229119 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1163,6 +1163,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	int err;
+ 	u32 rxhash;
+ 	ssize_t n;
++	struct skb_msg *m = msg_control;
++	struct sk_buff_head *write_queue = &tfile->sk.sk_write_queue;
+ 
+ 	if (!(tun->dev->flags & IFF_UP))
+ 		return -EIO;
+@@ -1204,7 +1206,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 
+ 	good_linear = SKB_MAX_HEAD(align);
+ 
+-	if (msg_control) {
++	if (m && (m->flags & SKB_MSG_UBUF_INFO)) {
+ 		struct iov_iter i = *from;
+ 
+ 		/* There are 256 bytes to be copied in skb, so there is
+@@ -1239,8 +1241,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		err = zerocopy_sg_from_iter(skb, from);
+ 	else {
+ 		err = skb_copy_datagram_from_iter(skb, 0, from, len);
+-		if (!err && msg_control) {
+-			struct ubuf_info *uarg = msg_control;
++		if (!err && m && (m->flags & SKB_MSG_UBUF_INFO)) {
++			struct skb_msg *ctl = msg_control;
++			struct ubuf_info *uarg = ctl->ubuf;
+ 			uarg->callback(uarg, false);
+ 		}
+ 	}
+@@ -1321,7 +1324,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 
+ 	/* copy skb_ubuf_info for callback when skb has no error */
+ 	if (zerocopy) {
+-		skb_shinfo(skb)->destructor_arg = msg_control;
++		skb_shinfo(skb)->destructor_arg = m->ubuf;
+ 		skb_shinfo(skb)->tx_flags |= SKBTX_DEV_ZEROCOPY;
+ 		skb_shinfo(skb)->tx_flags |= SKBTX_SHARED_FRAG;
+ 	}
+@@ -1333,7 +1336,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (tun->numqueues == 1 && static_key_false(&rps_needed))
+ 		rxhash = skb_get_hash(skb);
+ #endif
+-	netif_rx_ni(skb);
++
++	spin_lock(&write_queue->lock);
++	__skb_queue_tail(&tfile->sk.sk_write_queue, skb);
++
++	if (m && (m->flags & SKB_MSG_MORE)) {
++		skb = NULL;
++	} else {
++		struct sk_buff_head send;
++		__skb_queue_head_init(&send);
++		skb_queue_splice_tail_init(&tfile->sk.sk_write_queue, &send);
++		skb_peek_tail(&send)->next = NULL;
++		skb = skb_peek(&send);
++	}
++	spin_unlock(&write_queue->lock);
++
++	if (skb)
++		netif_rx_ni(skb);
+ 
+ 	stats = get_cpu_ptr(tun->pcpu_stats);
+ 	u64_stats_update_begin(&stats->syncp);
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f744eeb..616d024 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -407,21 +407,34 @@ static void handle_tx(struct vhost_net *net)
+ 
+ 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
+ 		if (zcopy_used) {
++			struct skb_msg m;
+ 			struct ubuf_info *ubuf;
+ 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+ 
++			m.flags = SKB_MSG_UBUF_INFO;
++			m.ubuf = ubuf;
+ 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
+ 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+ 			ubuf->callback = vhost_zerocopy_callback;
+ 			ubuf->ctx = nvq->ubufs;
+ 			ubuf->desc = nvq->upend_idx;
+-			msg.msg_control = ubuf;
+-			msg.msg_controllen = sizeof(ubuf);
++			msg.msg_control = &m;
++			msg.msg_controllen = sizeof(msg);
+ 			ubufs = nvq->ubufs;
+ 			atomic_inc(&ubufs->refcount);
+ 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+ 		} else {
+-			msg.msg_control = NULL;
++			struct skb_msg m;
++			if (!vhost_vq_avail_empty(&net->dev, vq) &&
++				vq->delayed <= 16) {
++				vq->delayed ++;
++				m.flags |= SKB_MSG_MORE;
++			} else {
++				vq->delayed = 0;
++				m.flags = 0;
++			}
++			msg.msg_control = &m;
++			msg.msg_controllen = sizeof(msg);
+ 			ubufs = NULL;
+ 		}
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 669fef1..4d2a20b 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -304,6 +304,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vhost_reset_is_le(vq);
+ 	vhost_disable_cross_endian(vq);
+ 	vq->busyloop_timeout = 0;
++	vq->delayed = 0;
+ }
+ 
+ static int vhost_worker(void *data)
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index d36d8be..9bd3a15 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -116,6 +116,7 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++        u32 delayed;
+ };
+ 
+ struct vhost_dev {
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index c413c58..3d9b689 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -388,6 +388,13 @@ enum {
+ 				 SKBTX_SCHED_TSTAMP)
+ #define SKBTX_ANY_TSTAMP	(SKBTX_HW_TSTAMP | SKBTX_ANY_SW_TSTAMP)
+ 
++#define SKB_MSG_UBUF_INFO 1
++#define SKB_MSG_MORE      2
++struct skb_msg {
++	int flags;
++	struct ubuf_info *ubuf;
++};
++
+ /*
+  * The callback notifies userspace to release buffers when skb DMA is done in
+  * lower device, the skb last reference should be 0 when calling this.
+diff --git a/net/core/dev.c b/net/core/dev.c
+index d91dfbe..4640654 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3780,33 +3780,40 @@ drop:
+ 
+ static int netif_rx_internal(struct sk_buff *skb)
+ {
+-	int ret;
++	int ret = 0;
+ 
+-	net_timestamp_check(netdev_tstamp_prequeue, skb);
++	while (skb) {
++		struct sk_buff *next = skb->next;
++		skb->next = NULL;
++
++		net_timestamp_check(netdev_tstamp_prequeue, skb);
+ 
+-	trace_netif_rx(skb);
++		trace_netif_rx(skb);
+ #ifdef CONFIG_RPS
+-	if (static_key_false(&rps_needed)) {
+-		struct rps_dev_flow voidflow, *rflow = &voidflow;
+-		int cpu;
++		if (static_key_false(&rps_needed)) {
++			struct rps_dev_flow voidflow, *rflow = &voidflow;
++			int cpu;
+ 
+-		preempt_disable();
+-		rcu_read_lock();
++			preempt_disable();
++			rcu_read_lock();
+ 
+-		cpu = get_rps_cpu(skb->dev, skb, &rflow);
+-		if (cpu < 0)
+-			cpu = smp_processor_id();
++			cpu = get_rps_cpu(skb->dev, skb, &rflow);
++			if (cpu < 0)
++				cpu = smp_processor_id();
+ 
+-		ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
++			ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
+ 
+-		rcu_read_unlock();
+-		preempt_enable();
+-	} else
++			rcu_read_unlock();
++			preempt_enable();
++		} else
+ #endif
+-	{
+-		unsigned int qtail;
+-		ret = enqueue_to_backlog(skb, get_cpu(), &qtail);
+-		put_cpu();
++		{
++			unsigned int qtail;
++			ret = enqueue_to_backlog(skb, get_cpu(), &qtail);
++			put_cpu();
++		}
++
++		skb = next;
+ 	}
+ 	return ret;
+ }
