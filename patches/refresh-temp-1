@@ -1,0 +1,22 @@
+Bottom: dd8baaf567c556625ad7ac4041c1f8dc7cb52ed0
+Top:    913b532c721ca64719f276564812a6bdd5df08df
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-01 16:37:27 +0800
+
+Refresh of tun-ex
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b0a7667..616d024 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -426,7 +426,7 @@ static void handle_tx(struct vhost_net *net)
+ 		} else {
+ 			struct skb_msg m;
+ 			if (!vhost_vq_avail_empty(&net->dev, vq) &&
+-				vq->delayed <= 4) {
++				vq->delayed <= 16) {
+ 				vq->delayed ++;
+ 				m.flags |= SKB_MSG_MORE;
+ 			} else {
