@@ -388,6 +388,13 @@ enum {
 				 SKBTX_SCHED_TSTAMP)
 #define SKBTX_ANY_TSTAMP	(SKBTX_HW_TSTAMP | SKBTX_ANY_SW_TSTAMP)
 
+#define SKB_MSG_UBUF_INFO 1
+#define SKB_MSG_MORE      2
+struct skb_msg {
+	int flags;
+	struct ubuf_info *ubuf;
+};
+
 /*
  * The callback notifies userspace to release buffers when skb DMA is done in
  * lower device, the skb last reference should be 0 when calling this.
