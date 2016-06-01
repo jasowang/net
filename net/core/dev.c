@@ -3780,33 +3780,40 @@ drop:
 
 static int netif_rx_internal(struct sk_buff *skb)
 {
-	int ret;
+	int ret = 0;
 
-	net_timestamp_check(netdev_tstamp_prequeue, skb);
+	while (skb) {
+		struct sk_buff *next = skb->next;
+		skb->next = NULL;
 
-	trace_netif_rx(skb);
+		net_timestamp_check(netdev_tstamp_prequeue, skb);
+
+		trace_netif_rx(skb);
 #ifdef CONFIG_RPS
-	if (static_key_false(&rps_needed)) {
-		struct rps_dev_flow voidflow, *rflow = &voidflow;
-		int cpu;
+		if (static_key_false(&rps_needed)) {
+			struct rps_dev_flow voidflow, *rflow = &voidflow;
+			int cpu;
 
-		preempt_disable();
-		rcu_read_lock();
+			preempt_disable();
+			rcu_read_lock();
 
-		cpu = get_rps_cpu(skb->dev, skb, &rflow);
-		if (cpu < 0)
-			cpu = smp_processor_id();
+			cpu = get_rps_cpu(skb->dev, skb, &rflow);
+			if (cpu < 0)
+				cpu = smp_processor_id();
 
-		ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
+			ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
 
-		rcu_read_unlock();
-		preempt_enable();
-	} else
+			rcu_read_unlock();
+			preempt_enable();
+		} else
 #endif
-	{
-		unsigned int qtail;
-		ret = enqueue_to_backlog(skb, get_cpu(), &qtail);
-		put_cpu();
+		{
+			unsigned int qtail;
+			ret = enqueue_to_backlog(skb, get_cpu(), &qtail);
+			put_cpu();
+		}
+
+		skb = next;
 	}
 	return ret;
 }
