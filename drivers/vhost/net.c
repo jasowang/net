@@ -425,7 +425,14 @@ static void handle_tx(struct vhost_net *net)
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
 		} else {
 			struct skb_msg m;
-			m.flags = 0;
+			if (!vhost_vq_avail_empty(&net->dev, vq) &&
+				vq->delayed <= 4) {
+				vq->delayed ++;
+				m.flags |= SKB_MSG_MORE;
+			} else {
+				vq->delayed = 0;
+				m.flags = 0;
+			}
 			msg.msg_control = &m;
 			msg.msg_controllen = sizeof(msg);
 			ubufs = NULL;
