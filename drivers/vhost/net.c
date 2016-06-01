@@ -426,7 +426,7 @@ static void handle_tx(struct vhost_net *net)
 		} else {
 			struct skb_msg m;
 			if (!vhost_vq_avail_empty(&net->dev, vq) &&
-				vq->delayed <= 4) {
+				vq->delayed <= 16) {
 				vq->delayed ++;
 				m.flags |= SKB_MSG_MORE;
 			} else {
