@@ -5,6 +5,8 @@ Date:   2016-06-01 16:59:00 +0800
 
 tun: avoid compute hashing on tx
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
