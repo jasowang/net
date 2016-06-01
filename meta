@@ -1,10 +1,10 @@
 Version: 1
-Previous: d7e073d3c7266d8468e0f2dab760ef82c3d9d43f
-Head: be165ebe18974680077ff904a6b19db4037bc6bc
+Previous: d3490224658b37824c5bbfc7814ebc8f333db226
+Head: 2caa89a74e4084c268b2788652ef3911edbcf49b
 Applied:
   tun-avoid-compute-hashing-on: be165ebe18974680077ff904a6b19db4037bc6bc
+  tun-ex: 2caa89a74e4084c268b2788652ef3911edbcf49b
 Unapplied:
-  tun-ex: 8a3513097d91ec7e701bde9c8016e9ccd6a5d955
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
   refresh-of-tuntap-introduce-tx: b1f7b592a6cd2274027d8c8317fe9d761ac4aed4
