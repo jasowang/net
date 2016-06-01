@@ -1329,7 +1329,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_reset_network_header(skb);
 	skb_probe_transport_header(skb, 0);
 
-	rxhash = skb_get_hash(skb);
+#ifdef CONFIG_RPS
+	if (tun->numqueues == 1 && static_key_false(&rps_needed))
+		rxhash = skb_get_hash(skb);
+#endif
 	netif_rx_ni(skb);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
@@ -1339,7 +1342,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	u64_stats_update_end(&stats->syncp);
 	put_cpu_ptr(stats);
 
-	tun_flow_update(tun, rxhash, tfile);
+#ifdef CONFIG_RPS
+	if (tun->numqueues == 1 && static_key_false(&rps_needed))
+		tun_flow_update(tun, rxhash, tfile);
+#endif
 	return total_len;
 }
 
