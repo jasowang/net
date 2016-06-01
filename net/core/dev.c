@@ -3780,7 +3780,7 @@ drop:
 
 static int netif_rx_internal(struct sk_buff *skb)
 {
-	int ret;
+	int ret = 0;
 
 	while (skb) {
 		struct sk_buff *next = skb->next;

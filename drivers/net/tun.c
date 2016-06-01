@@ -1164,6 +1164,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	u32 rxhash;
 	ssize_t n;
 	struct skb_msg *m = msg_control;
+	struct sk_buff_head *write_queue = &tfile->sk.sk_write_queue;
 
 	if (!(tun->dev->flags & IFF_UP))
 		return -EIO;
@@ -1332,7 +1333,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	netif_rx_ni(skb);
+
+	spin_lock(&write_queue->lock);
+	__skb_queue_tail(&tfile->sk.sk_write_queue, skb);
+
+	if (m && (m->flags & SKB_MSG_MORE)) {
+		skb = NULL;
+	} else {
+		struct sk_buff_head send;
+		__skb_queue_head_init(&send);
+		skb_queue_splice_tail_init(&tfile->sk.sk_write_queue, &send);
+		skb_peek_tail(&send)->next = NULL;
+		skb = skb_peek(&send);
+	}
+	spin_unlock(&write_queue->lock);
+
+	if (skb)
+		netif_rx_ni(skb);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
