@@ -1163,6 +1163,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	int err;
 	u32 rxhash;
 	ssize_t n;
+	struct skb_msg *m = msg_control;
+	struct sk_buff_head *write_queue = &tfile->sk.sk_write_queue;
 
 	if (!(tun->dev->flags & IFF_UP))
 		return -EIO;
@@ -1204,7 +1206,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	good_linear = SKB_MAX_HEAD(align);
 
-	if (msg_control) {
+	if (m && (m->flags & SKB_MSG_UBUF_INFO)) {
 		struct iov_iter i = *from;
 
 		/* There are 256 bytes to be copied in skb, so there is
@@ -1239,8 +1241,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		err = zerocopy_sg_from_iter(skb, from);
 	else {
 		err = skb_copy_datagram_from_iter(skb, 0, from, len);
-		if (!err && msg_control) {
-			struct ubuf_info *uarg = msg_control;
+		if (!err && m && (m->flags & SKB_MSG_UBUF_INFO)) {
+			struct skb_msg *ctl = msg_control;
+			struct ubuf_info *uarg = ctl->ubuf;
 			uarg->callback(uarg, false);
 		}
 	}
@@ -1321,7 +1324,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	/* copy skb_ubuf_info for callback when skb has no error */
 	if (zerocopy) {
-		skb_shinfo(skb)->destructor_arg = msg_control;
+		skb_shinfo(skb)->destructor_arg = m->ubuf;
 		skb_shinfo(skb)->tx_flags |= SKBTX_DEV_ZEROCOPY;
 		skb_shinfo(skb)->tx_flags |= SKBTX_SHARED_FRAG;
 	}
@@ -1333,7 +1336,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->numqueues == 1 && static_key_false(&rps_needed))
 		rxhash = skb_get_hash(skb);
 #endif
-	netif_rx_ni(skb);
+
+	spin_lock(&write_queue->lock);
+	__skb_queue_tail(&tfile->sk.sk_write_queue, skb);
+
+	if (m && (m->flags & SKB_MSG_MORE)) {
+		skb = NULL;
+	} else {
+		struct sk_buff_head send;
+		__skb_queue_head_init(&send);
+		skb_queue_splice_tail_init(&tfile->sk.sk_write_queue, &send);
+		skb_peek_tail(&send)->next = NULL;
+		skb = skb_peek(&send);
+	}
+	spin_unlock(&write_queue->lock);
+
+	if (skb)
+		netif_rx_ni(skb);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
