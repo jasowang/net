@@ -407,21 +407,34 @@ static void handle_tx(struct vhost_net *net)
 
 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
 		if (zcopy_used) {
+			struct skb_msg m;
 			struct ubuf_info *ubuf;
 			ubuf = nvq->ubuf_info + nvq->upend_idx;
 
+			m.flags = SKB_MSG_UBUF_INFO;
+			m.ubuf = ubuf;
 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
 			ubuf->callback = vhost_zerocopy_callback;
 			ubuf->ctx = nvq->ubufs;
 			ubuf->desc = nvq->upend_idx;
-			msg.msg_control = ubuf;
-			msg.msg_controllen = sizeof(ubuf);
+			msg.msg_control = &m;
+			msg.msg_controllen = sizeof(msg);
 			ubufs = nvq->ubufs;
 			atomic_inc(&ubufs->refcount);
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
 		} else {
-			msg.msg_control = NULL;
+			struct skb_msg m;
+			if (!vhost_vq_avail_empty(&net->dev, vq) &&
+				vq->delayed <= 4) {
+				vq->delayed ++;
+				m.flags |= SKB_MSG_MORE;
+			} else {
+				vq->delayed = 0;
+				m.flags = 0;
+			}
+			msg.msg_control = &m;
+			msg.msg_controllen = sizeof(msg);
 			ubufs = NULL;
 		}
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
