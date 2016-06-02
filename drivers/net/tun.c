@@ -519,7 +519,6 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 static void tun_queue_purge(struct tun_file *tfile)
 {
 	struct sk_buff *skb;
-
 	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL) {
 		kfree_skb(skb);
 	}
@@ -1721,7 +1720,7 @@ static int tun_peek(struct socket *sock, bool exact)
 		return 0;
 
 	if (tun->flags & IFF_TX_ARRAY) {
-		return skb_array_peek_len(&tfile->tx_array);
+		ret = skb_array_peek_len(&tfile->tx_array);
 	} else {
 		struct sk_buff *head;
 
