@@ -1,5 +1,5 @@
 Bottom: 5dc656d73e3a066d1c67d171b9f77595dab96744
-Top:    9f1b60a77a7e1959d953b293a75a03a3b004ca44
+Top:    626fa6167c67ba142887a5dfa93471065387bc60
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -8,7 +8,7 @@ Refresh of tuntap-introduce-tx-skb-ring
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..eb6a47b 100644
+index e16487c..6ab12b1 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -233,14 +233,7 @@ index e16487c..eb6a47b 100644
  		tun->txflt.count = 0;
  		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
  
-@@ -2306,13 +2417,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
- {
- 	struct net *net = current->nsproxy->net_ns;
- 	struct tun_file *tfile;
--
- 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
- 
- 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
+@@ -2313,6 +2424,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
