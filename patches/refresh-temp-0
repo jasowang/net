@@ -1,5 +1,5 @@
 Bottom: ee25f8721509472b666ec39d8eaa4f53a6887b05
-Top:    ee25f8721509472b666ec39d8eaa4f53a6887b05
+Top:    b52161d769ac7f71bb62c5acc3cbb017f5f4392f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-25 17:25:08 +0800
 
@@ -7,4 +7,140 @@ Refresh of refresh-of-tuntap-introduce-tx
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 3e4bd3b..47c4cd0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -72,6 +72,7 @@
+ #include <linux/seq_file.h>
+ #include <linux/uio.h>
+ #include <linux/skb_ring.h>
++#include <linux/skb_array.h>
+ 
+ #include <asm/uaccess.h>
+ 
+@@ -175,6 +176,7 @@ struct tun_file {
+ 	struct list_head next;
+ 	struct tun_struct *detached;
+ 	struct skb_ring tx_ring;
++	struct skb_array tx_array;
+ };
+ 
+ struct tun_flow_entry {
+@@ -523,6 +525,11 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+ 
+ static void tun_queue_purge(struct tun_file *tfile)
+ {
++	struct sk_buff *skb;
++
++	while ((skb = skb_array_consume_bh(&tfile->tx_array)) != NULL) {
++		kfree_skb(skb);
++	}
+ 	skb_ring_purge(&tfile->tx_ring);
+ 	skb_queue_purge(&tfile->sk.sk_receive_queue);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
+@@ -903,6 +910,9 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	if (tun->flags & IFF_TX_RING) {
+ 		if (skb_ring_queue(&tfile->tx_ring, skb))
+ 			goto drop;
++	} else if (tun->flags & IFF_TX_ARRAY) {
++		if (__skb_array_produce(&tfile->tx_array, skb))
++			goto drop;
+ 	} else {
+ 		/* Enqueue packet */
+ 		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
+@@ -1107,7 +1117,8 @@ static bool tun_queue_not_empty(struct tun_file *tfile)
+ 	struct sock *sk = tfile->socket.sk;
+ 
+ 	return (!skb_queue_empty(&sk->sk_receive_queue) ||
+-		skb_ring_peek(&tfile->tx_ring));
++		skb_ring_peek(&tfile->tx_ring) ||
++		__skb_array_peek(&tfile->tx_array));
+ }
+ 
+ /* Character device part */
+@@ -1504,12 +1515,15 @@ done:
+ }
+ 
+ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+-				     int *err)
++				     int *err, bool ring)
+ {
+ 	DECLARE_WAITQUEUE(wait, current);
+ 	struct sk_buff *skb = NULL;
+ 
+-	skb = skb_ring_dequeue(&tfile->tx_ring);
++	if (ring)
++		skb = skb_ring_dequeue(&tfile->tx_ring);
++	else
++		skb = skb_array_consume_bh(&tfile->tx_array);
+ 	if (skb)
+ 		goto out;
+ 	if (noblock) {
+@@ -1521,7 +1535,10 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 	current->state = TASK_INTERRUPTIBLE;
+ 
+ 	do {
+-		skb = skb_ring_dequeue(&tfile->tx_ring);
++		if (ring)
++			skb = skb_ring_dequeue(&tfile->tx_ring);
++		else
++			skb = skb_array_consume_bh(&tfile->tx_array);
+ 		if (skb)
+ 			break;
+ 		if (signal_pending(current)) {
+@@ -1556,8 +1573,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (!iov_iter_count(to))
+ 		return 0;
+ 
+-	if (tun->flags & IFF_TX_RING) {
+-		skb = tun_ring_recv(tfile, noblock, &err);
++	if (tun->flags & IFF_TX_RING ||
++	    tun->flags & IFF_TX_ARRAY) {
++		skb = tun_ring_recv(tfile, noblock, &err,
++				    tun->flags & IFF_TX_RING);
+ 		if (!skb)
+ 			return err;
+ 	} else {
+@@ -1714,6 +1733,8 @@ static int tun_peek(struct socket *sock, bool exact)
+ 
+ 	if (tun->flags & IFF_TX_RING) {
+ 		return skb_ring_peek(&tfile->tx_ring);
++	} else if (tun->flags & IFF_TX_ARRAY) {
++		return skb_array_peek_len(&tfile->tx_array);
+ 	} else {
+ 		struct sk_buff *head;
+ 
+@@ -1875,7 +1896,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 
+ 		tun = netdev_priv(dev);
+ 		tun->dev = dev;
+-		tun->flags = flags;
++		tun->flags = flags | IFF_TX_ARRAY;
+ 		tun->txflt.count = 0;
+ 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
+ 
+@@ -2441,6 +2462,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 		return -ENOMEM;
+ 	}
+ 
++	if (skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
++		sock_put(&tfile->sk);
++		return -ENOMEM;
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index d64ddc1..d542c26 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -62,6 +62,7 @@
+ #define IFF_TAP		0x0002
+ #define IFF_NO_PI	0x1000
+ #define IFF_TX_RING	0x0010
++#define IFF_TX_ARRAY	0x0020
+ /* This flag has no real effect */
+ #define IFF_ONE_QUEUE	0x2000
+ #define IFF_VNET_HDR	0x4000
