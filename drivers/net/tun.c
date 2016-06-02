@@ -2417,6 +2417,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 {
 	struct net *net = current->nsproxy->net_ns;
 	struct tun_file *tfile;
+
 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
 
 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
