@@ -62,6 +62,7 @@
 #define IFF_TAP		0x0002
 #define IFF_NO_PI	0x1000
 #define IFF_TX_RING	0x0010
+#define IFF_TX_ARRAY	0x0020
 /* This flag has no real effect */
 #define IFF_ONE_QUEUE	0x2000
 #define IFF_VNET_HDR	0x4000
