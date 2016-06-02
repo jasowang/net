@@ -1,25 +1,26 @@
 Bottom: 5dc656d73e3a066d1c67d171b9f77595dab96744
-Top:    ee25f8721509472b666ec39d8eaa4f53a6887b05
+Top:    b52161d769ac7f71bb62c5acc3cbb017f5f4392f
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2016-05-19 14:07:01 +0800
+Date:   2016-06-02 15:54:35 +0800
 
 Refresh of tuntap-introduce-tx-skb-ring
 
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..3e4bd3b 100644
+index e16487c..47c4cd0 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -71,6 +71,7 @@
+@@ -71,6 +71,8 @@
  #include <net/sock.h>
  #include <linux/seq_file.h>
  #include <linux/uio.h>
 +#include <linux/skb_ring.h>
++#include <linux/skb_array.h>
  
  #include <asm/uaccess.h>
  
-@@ -130,6 +131,7 @@ struct tap_filter {
+@@ -130,6 +132,7 @@ struct tap_filter {
  #define MAX_TAP_FLOWS  4096
  
  #define TUN_FLOW_EXPIRE (3 * HZ)
@@ -27,7 +28,7 @@ index e16487c..3e4bd3b 100644
  
  struct tun_pcpu_stats {
  	u64 rx_packets;
-@@ -142,6 +144,11 @@ struct tun_pcpu_stats {
+@@ -142,6 +145,11 @@ struct tun_pcpu_stats {
  	u32 rx_frame_errors;
  };
  
@@ -39,23 +40,29 @@ index e16487c..3e4bd3b 100644
  /* A tun_file connects an open character device to a tuntap netdevice. It
   * also contains all socket related structures (except sock_fprog and tap_filter)
   * to serve as one transmit queue for tuntap device. The sock_fprog and
-@@ -167,6 +174,7 @@ struct tun_file {
+@@ -167,6 +175,8 @@ struct tun_file {
  	};
  	struct list_head next;
  	struct tun_struct *detached;
 +	struct skb_ring tx_ring;
++	struct skb_array tx_array;
  };
  
  struct tun_flow_entry {
-@@ -515,6 +523,7 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -515,6 +525,12 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  
  static void tun_queue_purge(struct tun_file *tfile)
  {
++	struct sk_buff *skb;
++
++	while ((skb = skb_array_consume_bh(&tfile->tx_array)) != NULL) {
++		kfree_skb(skb);
++	}
 +	skb_ring_purge(&tfile->tx_ring);
  	skb_queue_purge(&tfile->sk.sk_receive_queue);
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
-@@ -891,8 +900,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -891,8 +907,16 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	nf_reset(skb);
  
@@ -64,6 +71,9 @@ index e16487c..3e4bd3b 100644
 +	if (tun->flags & IFF_TX_RING) {
 +		if (skb_ring_queue(&tfile->tx_ring, skb))
 +			goto drop;
++	} else if (tun->flags & IFF_TX_ARRAY) {
++		if (__skb_array_produce(&tfile->tx_array, skb))
++			goto drop;
 +	} else {
 +		/* Enqueue packet */
 +		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
@@ -71,7 +81,7 @@ index e16487c..3e4bd3b 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
-@@ -1088,6 +1102,14 @@ static void tun_net_init(struct net_device *dev)
+@@ -1088,6 +1112,15 @@ static void tun_net_init(struct net_device *dev)
  	}
  }
  
@@ -80,13 +90,14 @@ index e16487c..3e4bd3b 100644
 +	struct sock *sk = tfile->socket.sk;
 +
 +	return (!skb_queue_empty(&sk->sk_receive_queue) ||
-+		skb_ring_peek(&tfile->tx_ring));
++		skb_ring_peek(&tfile->tx_ring) ||
++		__skb_array_peek(&tfile->tx_array));
 +}
 +
  /* Character device part */
  
  /* Poll */
-@@ -1107,7 +1129,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+@@ -1107,7 +1140,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
  
  	poll_wait(file, sk_sleep(sk), wait);
  
@@ -95,17 +106,20 @@ index e16487c..3e4bd3b 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1481,6 +1503,46 @@ done:
+@@ -1481,6 +1514,52 @@ done:
  	return total;
  }
  
 +static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
-+				     int *err)
++				     int *err, bool ring)
 +{
 +	DECLARE_WAITQUEUE(wait, current);
 +	struct sk_buff *skb = NULL;
 +
-+	skb = skb_ring_dequeue(&tfile->tx_ring);
++	if (ring)
++		skb = skb_ring_dequeue(&tfile->tx_ring);
++	else
++		skb = skb_array_consume_bh(&tfile->tx_array);
 +	if (skb)
 +		goto out;
 +	if (noblock) {
@@ -117,7 +131,10 @@ index e16487c..3e4bd3b 100644
 +	current->state = TASK_INTERRUPTIBLE;
 +
 +	do {
-+		skb = skb_ring_dequeue(&tfile->tx_ring);
++		if (ring)
++			skb = skb_ring_dequeue(&tfile->tx_ring);
++		else
++			skb = skb_array_consume_bh(&tfile->tx_array);
 +		if (skb)
 +			break;
 +		if (signal_pending(current)) {
@@ -142,7 +159,7 @@ index e16487c..3e4bd3b 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,11 +1556,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1573,20 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -151,8 +168,10 @@ index e16487c..3e4bd3b 100644
 -				  &peeked, &off, &err);
 -	if (!skb)
 -		return err;
-+	if (tun->flags & IFF_TX_RING) {
-+		skb = tun_ring_recv(tfile, noblock, &err);
++	if (tun->flags & IFF_TX_RING ||
++	    tun->flags & IFF_TX_ARRAY) {
++		skb = tun_ring_recv(tfile, noblock, &err,
++				    tun->flags & IFF_TX_RING);
 +		if (!skb)
 +			return err;
 +	} else {
@@ -166,7 +185,7 @@ index e16487c..3e4bd3b 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1698,42 @@ out:
+@@ -1629,8 +1717,44 @@ out:
  	return ret;
  }
  
@@ -186,6 +205,8 @@ index e16487c..3e4bd3b 100644
 +
 +	if (tun->flags & IFF_TX_RING) {
 +		return skb_ring_peek(&tfile->tx_ring);
++	} else if (tun->flags & IFF_TX_ARRAY) {
++		return skb_array_peek_len(&tfile->tx_array);
 +	} else {
 +		struct sk_buff *head;
 +
@@ -209,7 +230,16 @@ index e16487c..3e4bd3b 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2306,13 +2409,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -1772,7 +1896,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 
+ 		tun = netdev_priv(dev);
+ 		tun->dev = dev;
+-		tun->flags = flags;
++		tun->flags = flags | IFF_TX_ARRAY;
+ 		tun->txflt.count = 0;
+ 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
+ 
+@@ -2306,13 +2430,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  {
  	struct net *net = current->nsproxy->net_ns;
  	struct tun_file *tfile;
@@ -224,11 +254,16 @@ index e16487c..3e4bd3b 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2333,6 +2436,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2333,6 +2457,16 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
 +	if (skb_ring_init(&tfile->tx_ring, TUN_RING_SIZE)) {
++		sock_put(&tfile->sk);
++		return -ENOMEM;
++	}
++
++	if (skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
 +		sock_put(&tfile->sk);
 +		return -ENOMEM;
 +	}
@@ -294,14 +329,15 @@ index 9aa49a0..18dbb61 100644
  	int		(*bind)	     (struct socket *sock,
  				      struct sockaddr *myaddr,
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
-index 3cb5e1d..d64ddc1 100644
+index 3cb5e1d..d542c26 100644
 --- a/include/uapi/linux/if_tun.h
 +++ b/include/uapi/linux/if_tun.h
-@@ -61,6 +61,7 @@
+@@ -61,6 +61,8 @@
  #define IFF_TUN		0x0001
  #define IFF_TAP		0x0002
  #define IFF_NO_PI	0x1000
 +#define IFF_TX_RING	0x0010
++#define IFF_TX_ARRAY	0x0020
  /* This flag has no real effect */
  #define IFF_ONE_QUEUE	0x2000
  #define IFF_VNET_HDR	0x4000
