@@ -1,9 +1,10 @@
 Version: 1
-Previous: cf33fc0d9f77589a8d83f323112e063ea1580f1c
-Head: 378800341677202b34fcdff9089b02468222323f
+Previous: c5bde70c0927eeca15780dec9ddfd42aacdacf30
+Head: 71afd2afd2bd5a16a5d3c8288facdbc05a5444e5
 Applied:
   tun-avoid-compute-hashing-on: be165ebe18974680077ff904a6b19db4037bc6bc
   tun-ex: 378800341677202b34fcdff9089b02468222323f
+  batch-tx-packets: 71afd2afd2bd5a16a5d3c8288facdbc05a5444e5
 Unapplied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
