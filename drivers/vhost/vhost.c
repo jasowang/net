@@ -783,7 +783,7 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
 		struct iov_iter f;
 		ret = translate_desc(vq, (u64)from, size, vq->iotlb_iov,
 				     ARRAY_SIZE(vq->iotlb_iov),
-				     VHOST_ACCESS_WO);
+				     VHOST_ACCESS_RO);
 		if (ret < 0) {
 			vq_err(vq, "IOTLB translation failure: uaddr "
 			       "0x%llx size 0x%llx\n",
