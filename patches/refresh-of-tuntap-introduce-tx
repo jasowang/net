@@ -1,5 +1,5 @@
 Bottom: 5dc656d73e3a066d1c67d171b9f77595dab96744
-Top:    60d08721a7b86ac23c646b71349dd1940bd75182
+Top:    5b5c58ea699f130e8964f712a051806ffbad5433
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -8,7 +8,7 @@ Refresh of tuntap-introduce-tx-skb-ring
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..5cc6159 100644
+index e16487c..91db030 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -35,18 +35,32 @@ index e16487c..5cc6159 100644
  };
  
  struct tun_flow_entry {
-@@ -515,6 +518,10 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -513,8 +516,14 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+ 	return tun;
+ }
  
- static void tun_queue_purge(struct tun_file *tfile)
+-static void tun_queue_purge(struct tun_file *tfile)
++static void tun_queue_purge(struct tun_struct *tun, struct tun_file *tfile)
  {
 +	struct sk_buff *skb;
-+	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL) {
-+		kfree_skb(skb);
-+	}
++
++	if (tun->flags & IFF_TX_ARRAY)
++		while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
++			kfree_skb(skb);
++
  	skb_queue_purge(&tfile->sk.sk_receive_queue);
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
-@@ -560,6 +567,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -545,7 +554,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 		synchronize_net();
+ 		tun_flow_delete_by_queue(tun, tun->numqueues + 1);
+ 		/* Drop read queue */
+-		tun_queue_purge(tfile);
++		tun_queue_purge(tun, tfile);
+ 		tun_set_real_num_queues(tun);
+ 	} else if (tfile->detached && clean) {
+ 		tun = tun_enable_queue(tfile);
+@@ -560,6 +569,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  			    tun->dev->reg_state == NETREG_REGISTERED)
  				unregister_netdevice(tun->dev);
  		}
@@ -55,7 +69,22 @@ index e16487c..5cc6159 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -642,6 +651,13 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+@@ -596,12 +607,12 @@ static void tun_detach_all(struct net_device *dev)
+ 	for (i = 0; i < n; i++) {
+ 		tfile = rtnl_dereference(tun->tfiles[i]);
+ 		/* Drop read queue */
+-		tun_queue_purge(tfile);
++		tun_queue_purge(tun, tfile);
+ 		sock_put(&tfile->sk);
+ 	}
+ 	list_for_each_entry_safe(tfile, tmp, &tun->disabled, next) {
+ 		tun_enable_queue(tfile);
+-		tun_queue_purge(tfile);
++		tun_queue_purge(tun, tfile);
+ 		sock_put(&tfile->sk);
+ 	}
+ 	BUG_ON(tun->numdisabled != 0);
+@@ -642,6 +653,13 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  		if (!err)
  			goto out;
  	}
@@ -69,7 +98,7 @@ index e16487c..5cc6159 100644
  	tfile->queue_index = tun->numqueues;
  	tfile->socket.sk->sk_shutdown &= ~RCV_SHUTDOWN;
  	rcu_assign_pointer(tfile->tun, tun);
-@@ -891,8 +907,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -891,8 +909,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	nf_reset(skb);
  
@@ -85,7 +114,7 @@ index e16487c..5cc6159 100644
  
  	/* Notify and wake up reader process */
  	if (tfile->flags & TUN_FASYNC)
-@@ -1088,6 +1109,14 @@ static void tun_net_init(struct net_device *dev)
+@@ -1088,6 +1111,14 @@ static void tun_net_init(struct net_device *dev)
  	}
  }
  
@@ -100,7 +129,7 @@ index e16487c..5cc6159 100644
  /* Character device part */
  
  /* Poll */
-@@ -1107,7 +1136,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+@@ -1107,7 +1138,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
  
  	poll_wait(file, sk_sleep(sk), wait);
  
@@ -109,7 +138,7 @@ index e16487c..5cc6159 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1481,6 +1510,46 @@ done:
+@@ -1481,6 +1512,46 @@ done:
  	return total;
  }
  
@@ -156,7 +185,7 @@ index e16487c..5cc6159 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,11 +1563,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1565,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -180,7 +209,7 @@ index e16487c..5cc6159 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1705,42 @@ out:
+@@ -1629,8 +1707,42 @@ out:
  	return ret;
  }
  
@@ -223,16 +252,7 @@ index e16487c..5cc6159 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -1772,7 +1882,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
- 
- 		tun = netdev_priv(dev);
- 		tun->dev = dev;
--		tun->flags = flags;
-+		tun->flags = flags | IFF_TX_ARRAY;
- 		tun->txflt.count = 0;
- 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
- 
-@@ -2313,6 +2423,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2313,6 +2425,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
