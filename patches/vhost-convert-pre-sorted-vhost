@@ -1,5 +1,5 @@
-Bottom: 15937e38885e2101103206b72dbc6f248b3d2e5e
-Top:    5f4fb25941738918ec9e7598815a1c42950f820d
+Bottom: 576d4b6c2a44eec8ded65ca957d296e8b9d60ecd
+Top:    0bf9a5044fc53953cb46bfd937f508d8b66fa076
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-01-14 17:17:32 +0800
 
@@ -30,10 +30,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index beaeb17..a584239 100644
+index 3893ad9..7641543 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -1037,20 +1037,20 @@ static long vhost_net_reset_owner(struct vhost_net *n)
+@@ -1039,20 +1039,20 @@ static long vhost_net_reset_owner(struct vhost_net *n)
  	struct socket *tx_sock = NULL;
  	struct socket *rx_sock = NULL;
  	long err;

@@ -1,5 +1,5 @@
-Bottom: 5f4fb25941738918ec9e7598815a1c42950f820d
-Top:    60230df43fea47a917e663b9de20e7bfa04d6f90
+Bottom: 0bf9a5044fc53953cb46bfd937f508d8b66fa076
+Top:    f94c3354008fbf82b673f044fb3cd77a09e50856
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-24 16:31:31 +0800
 
@@ -33,7 +33,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index a584239..0f45e3d 100644
+index 7641543..7ceea39 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -61,7 +61,8 @@ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
@@ -46,7 +46,7 @@ index a584239..0f45e3d 100644
  };
  
  enum {
-@@ -308,7 +309,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+@@ -334,7 +335,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  {
  	unsigned long uninitialized_var(endtime);
  	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
@@ -56,7 +56,7 @@ index a584239..0f45e3d 100644
  
  	if (r == vq->num && vq->busyloop_timeout) {
  		preempt_disable();
-@@ -318,7 +320,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+@@ -344,7 +346,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  			cpu_relax_lowlatency();
  		preempt_enable();
  		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
@@ -66,7 +66,7 @@ index a584239..0f45e3d 100644
  	}
  
  	return r;
-@@ -351,6 +354,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -377,6 +380,9 @@ static void handle_tx(struct vhost_net *net)
  	if (!sock)
  		goto out;
  
@@ -76,7 +76,7 @@ index a584239..0f45e3d 100644
  	vhost_disable_notify(&net->dev, vq);
  
  	hdr_size = nvq->vhost_hlen;
-@@ -538,7 +544,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+@@ -564,7 +570,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
  		}
  		r = vhost_get_vq_desc(vq, vq->iov + seg,
  				      ARRAY_SIZE(vq->iov) - seg, &out,
@@ -85,7 +85,7 @@ index a584239..0f45e3d 100644
  		if (unlikely(r < 0))
  			goto err;
  
-@@ -612,6 +618,10 @@ static void handle_rx(struct vhost_net *net)
+@@ -638,6 +644,10 @@ static void handle_rx(struct vhost_net *net)
  	sock = vq->private_data;
  	if (!sock)
  		goto out;
@@ -94,9 +94,9 @@ index a584239..0f45e3d 100644
 +		goto out;
 +
  	vhost_disable_notify(&net->dev, vq);
+ 	vhost_net_disable_vq(net, vq);
  
- 	vhost_hlen = nvq->vhost_hlen;
-@@ -1085,6 +1095,11 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+@@ -1087,6 +1097,11 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
  		mutex_unlock(&n->dev.mutex);
  		return -EFAULT;
  	}
@@ -108,7 +108,7 @@ index a584239..0f45e3d 100644
  	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
  		mutex_lock(&n->vqs[i].vq.mutex);
  		n->vqs[i].vq.acked_features = features;
-@@ -1167,9 +1182,40 @@ static long vhost_net_compat_ioctl(struct file *f, unsigned int ioctl,
+@@ -1169,9 +1184,40 @@ static long vhost_net_compat_ioctl(struct file *f, unsigned int ioctl,
  }
  #endif
  
