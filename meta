@@ -1,6 +1,6 @@
 Version: 1
-Previous: d2feee44f007331857830795937da6e652dca66f
-Head: 26879da58711aa604a1b866cbeedd7e0f78f90ad
+Previous: b04356c1b1cd088f57f375e42641ee8847e20b0b
+Head: 40e4e713ebb279eb569584836d7cc6b799ed7f7f
 Applied:
 Unapplied:
   vhost-introduce-vhost-memory: fbda90d627b86dc65153e056843df2cd066e45f3
