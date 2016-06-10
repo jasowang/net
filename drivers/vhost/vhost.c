@@ -753,19 +753,6 @@ out:
 	return ret;
 }
 
-#define vhost_put_user(vq, x, ptr) \
-({ \
-	int ret = -EFAULT; \
-	if (!vq->iotlb) { \
-		ret = __put_user(x, ptr); \
-	} else { \
-		__typeof__(*(ptr)) __x = (x);	\
-		ret = vhost_copy_to_user(vq, ptr, &__x,		\
-					 sizeof(*ptr));		\
-	} \
-	ret; \
-})
-
 static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
 				void *from, unsigned size)
 {
@@ -801,13 +788,67 @@ out:
 	return ret;
 }
 
+static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
+				     void *addr, unsigned size)
+{
+	int ret;
+
+	/* This function should be called after iotlb
+	 * prefetch, which means we're sure that vq
+	 * could be access through iotlb. So -EAGAIN should
+	 * not happen in this case.
+	 */
+	/* TODO: more fast path */
+	ret = translate_desc(vq, (u64)addr, size, vq->iotlb_iov,
+			     ARRAY_SIZE(vq->iotlb_iov),
+			     VHOST_ACCESS_RO);
+	if (ret < 0) {
+		vq_err(vq, "IOTLB translation failure: uaddr "
+			"0x%llx size 0x%llx\n",
+			(unsigned long long) addr,
+			(unsigned long long) size);
+		return NULL;
+	}
+
+	if (ret != 1 || vq->iotlb_iov[0].iov_len != size) {
+		vq_err(vq, "Non atomic userspace memory access: uaddr "
+			"0x%llx size 0x%llx\n",
+			(unsigned long long) addr,
+			(unsigned long long) size);
+		return NULL;
+	}
+
+	return vq->iotlb_iov[0].iov_base;
+}
+
+#define vhost_put_user(vq, x, ptr) \
+({ \
+	int ret = -EFAULT; \
+	if (!vq->iotlb) { \
+		ret = __put_user(x, ptr); \
+	} else { \
+		__typeof__(ptr) to = \
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr, sizeof(*ptr)); \
+		if (to != NULL) \
+			ret = __put_user(x, to); \
+		else \
+			ret = -EFAULT;	\
+	} \
+	ret; \
+})
+
 #define vhost_get_user(vq, x, ptr) \
 ({ \
 	int ret; \
 	if (!vq->iotlb) { \
 		ret = __get_user(x, ptr); \
 	} else { \
-		ret = vhost_copy_from_user(vq, &x, ptr, sizeof(*ptr));	\
+		__typeof__(ptr) from = \
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr, sizeof(*ptr)); \
+		if (from != NULL) \
+			ret = __get_user(x, from); \
+		else \
+			ret = -EFAULT; \
 	} \
 	ret; \
 })
