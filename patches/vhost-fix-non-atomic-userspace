@@ -5,6 +5,8 @@ Date:   2016-06-10 11:19:19 +0800
 
 vhost: fix non-atomic userspace memory access
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
