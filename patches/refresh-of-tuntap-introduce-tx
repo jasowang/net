@@ -1,5 +1,5 @@
 Bottom: b991167686b0126e9da6c299c63dea4c91efc82e
-Top:    9596570004699f250fbadb23eb17cfef113dff48
+Top:    27a5382ee02f047829e51cf1ebf914720c1677f4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -318,15 +318,14 @@ index 9aa49a0..18dbb61 100644
  	int		(*bind)	     (struct socket *sock,
  				      struct sockaddr *myaddr,
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
-index 3cb5e1d..d542c26 100644
+index 3cb5e1d..080003c 100644
 --- a/include/uapi/linux/if_tun.h
 +++ b/include/uapi/linux/if_tun.h
-@@ -61,6 +61,8 @@
+@@ -61,6 +61,7 @@
  #define IFF_TUN		0x0001
  #define IFF_TAP		0x0002
  #define IFF_NO_PI	0x1000
-+#define IFF_TX_RING	0x0010
-+#define IFF_TX_ARRAY	0x0020
++#define IFF_TX_ARRAY	0x0010
  /* This flag has no real effect */
  #define IFF_ONE_QUEUE	0x2000
  #define IFF_VNET_HDR	0x4000
