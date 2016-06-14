@@ -3,7 +3,8 @@ Top:    27a5382ee02f047829e51cf1ebf914720c1677f4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
-Refresh of tuntap-introduce-tx-skb-ring
+tun: introduce tx array mode
+
 
 ---
 
