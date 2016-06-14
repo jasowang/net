@@ -1,5 +1,5 @@
-Bottom: dc15e35b2cf1ff8b59d22205af3b4df8b98caa26
-Top:    540a29c35e33ff59df143b18fb00ed9b498460e8
+Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
+Top:    93ba1d9e7aa8ad96771fef455e65347fc0093414
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8cc6bf4..ad2197e 100644
+index e16487c..0c46c9f 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -144,7 +144,7 @@ index 8cc6bf4..ad2197e 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1426,6 +1460,46 @@ done:
+@@ -1481,6 +1515,46 @@ done:
  	return total;
  }
  
@@ -191,7 +191,7 @@ index 8cc6bf4..ad2197e 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1439,11 +1513,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,11 +1568,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -215,7 +215,7 @@ index 8cc6bf4..ad2197e 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1574,8 +1655,41 @@ out:
+@@ -1629,8 +1710,41 @@ out:
  	return ret;
  }
  
@@ -258,10 +258,10 @@ index 8cc6bf4..ad2197e 100644
  	.recvmsg = tun_recvmsg,
  };
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 1d3e45f..082523d 100644
+index f744eeb..10ff494 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -481,10 +481,14 @@ out:
+@@ -455,10 +455,14 @@ out:
  
  static int peek_head_len(struct sock *sk)
  {
@@ -276,7 +276,7 @@ index 1d3e45f..082523d 100644
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
  	if (likely(head)) {
-@@ -497,6 +501,16 @@ static int peek_head_len(struct sock *sk)
+@@ -471,6 +475,16 @@ static int peek_head_len(struct sock *sk)
  	return len;
  }
  
@@ -293,7 +293,7 @@ index 1d3e45f..082523d 100644
  static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -513,7 +527,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -487,7 +501,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  		endtime = busy_clock() + vq->busyloop_timeout;
  
  		while (vhost_can_busy_poll(&net->dev, endtime) &&
