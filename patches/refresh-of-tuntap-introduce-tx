@@ -5,6 +5,8 @@ Date:   2016-06-02 15:54:35 +0800
 
 tun: introduce tx array mode
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
