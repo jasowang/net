@@ -1111,12 +1111,15 @@ static void tun_net_init(struct net_device *dev)
 	}
 }
 
-static int tun_queue_not_empty(struct tun_file *tfile)
+static int tun_queue_not_empty(struct tun_struct *tun,
+			       struct tun_file *tfile)
 {
 	struct sock *sk = tfile->socket.sk;
 
-	return !skb_queue_empty(&sk->sk_receive_queue) ||
-	       !skb_array_empty(&tfile->tx_array);
+	if (tun->flags & IFF_TX_ARRAY)
+		return !skb_array_empty(&tfile->tx_array);
+	else
+		return !skb_queue_empty(&sk->sk_receive_queue);
 }
 
 /* Character device part */
@@ -1138,7 +1141,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (tun_queue_not_empty(tfile))
+	if (tun_queue_not_empty(tun, tfile))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
@@ -1659,14 +1662,13 @@ static int tun_peek(struct socket *sock, bool exact)
 	struct tun_struct *tun;
 	int ret = 0;
 
-	if (!exact)
-		return tun_queue_not_empty(tfile);
-
 	tun = __tun_get(tfile);
 	if (!tun)
 		return 0;
 
-	if (tun->flags & IFF_TX_ARRAY) {
+	if (!exact) {
+		ret = tun_queue_not_empty(tun, tfile);
+	} else if (tun->flags & IFF_TX_ARRAY) {
 		ret = skb_array_peek_len(&tfile->tx_array);
 	} else {
 		struct sk_buff *head;
