@@ -1,0 +1,21 @@
+Bottom: 19ccba4b82a0868671bb541fa5e65d08ae62bcec
+Top:    64e7e6c416cdad9569d6b48ea8d7f9253e0b5bf5
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-14 13:50:27 +0800
+
+Refresh of refresh-of-tuntap-introduce-tx
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 501d40b..7f58ced 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2370,7 +2370,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 					    &tun_proto, 0);
+ 	if (!tfile)
+ 		return -ENOMEM;
+-
+ 	RCU_INIT_POINTER(tfile->tun, NULL);
+ 	tfile->flags = 0;
+ 	tfile->ifindex = 0;
