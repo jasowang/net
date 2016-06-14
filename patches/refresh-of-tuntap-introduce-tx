@@ -1,5 +1,5 @@
 Bottom: b991167686b0126e9da6c299c63dea4c91efc82e
-Top:    27a5382ee02f047829e51cf1ebf914720c1677f4
+Top:    19ccba4b82a0868671bb541fa5e65d08ae62bcec
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8cc6bf4..8eb60a3 100644
+index 8cc6bf4..501d40b 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -26,7 +26,7 @@ index 8cc6bf4..8eb60a3 100644
  #define MAX_TAP_FLOWS  4096
  
  #define TUN_FLOW_EXPIRE (3 * HZ)
-+#define TUN_RING_SIZE 256
++#define TUN_RING_SIZE 1000
  
  struct tun_pcpu_stats {
  	u64 rx_packets;
