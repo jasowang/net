@@ -1,0 +1,23 @@
+Bottom: 9596570004699f250fbadb23eb17cfef113dff48
+Top:    27a5382ee02f047829e51cf1ebf914720c1677f4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-14 12:34:26 +0800
+
+Refresh of refresh-of-tuntap-introduce-tx
+
+---
+
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index d542c26..080003c 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -61,8 +61,7 @@
+ #define IFF_TUN		0x0001
+ #define IFF_TAP		0x0002
+ #define IFF_NO_PI	0x1000
+-#define IFF_TX_RING	0x0010
+-#define IFF_TX_ARRAY	0x0020
++#define IFF_TX_ARRAY	0x0010
+ /* This flag has no real effect */
+ #define IFF_ONE_QUEUE	0x2000
+ #define IFF_VNET_HDR	0x4000
