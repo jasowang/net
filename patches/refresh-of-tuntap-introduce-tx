@@ -1,5 +1,5 @@
-Bottom: 5dc656d73e3a066d1c67d171b9f77595dab96744
-Top:    5b5c58ea699f130e8964f712a051806ffbad5433
+Bottom: dc15e35b2cf1ff8b59d22205af3b4df8b98caa26
+Top:    d05183075772cdf2c9b8741cdcb929430ebc44dc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -8,7 +8,7 @@ Refresh of tuntap-introduce-tx-skb-ring
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..91db030 100644
+index 8cc6bf4..8eb60a3 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -138,7 +138,7 @@ index e16487c..91db030 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1481,6 +1512,46 @@ done:
+@@ -1426,6 +1457,46 @@ done:
  	return total;
  }
  
@@ -185,7 +185,7 @@ index e16487c..91db030 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,11 +1565,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1439,11 +1510,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -209,7 +209,7 @@ index e16487c..91db030 100644
  
  	ret = tun_put_user(tun, tfile, skb, to);
  	if (unlikely(ret < 0))
-@@ -1629,8 +1707,42 @@ out:
+@@ -1574,8 +1652,42 @@ out:
  	return ret;
  }
  
@@ -252,7 +252,7 @@ index e16487c..91db030 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2313,6 +2425,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2258,6 +2370,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -261,10 +261,10 @@ index e16487c..91db030 100644
  	tfile->flags = 0;
  	tfile->ifindex = 0;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..10ff494 100644
+index 1d3e45f..082523d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -455,10 +455,14 @@ out:
+@@ -481,10 +481,14 @@ out:
  
  static int peek_head_len(struct sock *sk)
  {
@@ -279,7 +279,7 @@ index f744eeb..10ff494 100644
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
  	if (likely(head)) {
-@@ -471,6 +475,16 @@ static int peek_head_len(struct sock *sk)
+@@ -497,6 +501,16 @@ static int peek_head_len(struct sock *sk)
  	return len;
  }
  
@@ -296,7 +296,7 @@ index f744eeb..10ff494 100644
  static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -487,7 +501,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -513,7 +527,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  		endtime = busy_clock() + vq->busyloop_timeout;
  
  		while (vhost_can_busy_poll(&net->dev, endtime) &&
