@@ -5,6 +5,8 @@ Date:   2016-06-14 12:06:23 +0800
 
 net: introduce NETDEV_CHANGE_TX_QUEUE_LEN
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
