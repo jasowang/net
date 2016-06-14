@@ -131,7 +131,7 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
-#define TUN_RING_SIZE 256
+#define TUN_RING_SIZE 1000
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
