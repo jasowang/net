@@ -12,9 +12,8 @@ and consumer.
 This patch tries to address this by:
 
 - introduce a new mode which will be only enabled with IFF_TX_ARRAY
-  set.
-- in this mode, switch from sk_receive_queue to a fixed size of skb
-  array with 256 entries.
+  set and switch from sk_receive_queue to a fixed size of skb
+  array with 256 entries in this mode.
 - introduce a new proto_ops peek_len which was used for peeking the
   skb length.
 - implement a tun version of peek_len for vhost_net to use and convert
