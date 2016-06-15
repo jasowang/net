@@ -5,7 +5,30 @@ Date:   2016-06-15 10:41:47 +0800
 
 tun: introduce tx array mode
 
+We used to queue tx packets in sk_receive_queue, this is less
+efficient since it requires spinlocks to synchronize between producer
+and consumer.
+
+This patch tries to address this by:
+
+- introduce a new mode which will be only enabled with IFF_TX_ARRAY set.
+- in this mode, switch from sk_receive_queue to a fixed size of skb array with
+  256 entries.
+- introduce a new proto_ops peek_len which was used for peeking the skb length.
+- implement a tun version of peek_len for vhost_net to use and convert vhost_net
+  to use peek_len if it exist.
+
+Pktgen test shows about 18% improvement on guest receiving pps for small
+buffers:
+
+Before: ~1220000pps
+After : ~1440000pps
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+I don't implement resize since in multiqueue mode, we can not recover from
+partial success of resizing.
+
 
 ---
 
