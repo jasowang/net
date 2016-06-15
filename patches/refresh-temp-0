@@ -1,0 +1,22 @@
+Bottom: f10ff6f9972da1c57b4cf82c6ba9ea5d15b357c6
+Top:    52688dbe8e1b5000041f1ba3decb174d5595e3db
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-15 10:00:55 +0800
+
+Refresh of refresh-of-tuntap-introduce-tx
+
+---
+
+diff --git a/include/linux/net.h b/include/linux/net.h
+index af94770..d2f9830 100644
+--- a/include/linux/net.h
++++ b/include/linux/net.h
+@@ -185,7 +185,7 @@ struct proto_ops {
+ 	ssize_t 	(*splice_read)(struct socket *sock,  loff_t *ppos,
+ 				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
+ 	int		(*set_peek_off)(struct sock *sk, int val);
+-        int		(*peek_len) (struct socket *sock);
++	int		(*peek_len) (struct socket *sock);
+ };
+ 
+ #define DECLARE_SOCKADDR(type, dst, src)	\
