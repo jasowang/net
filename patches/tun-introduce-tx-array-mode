@@ -24,10 +24,16 @@ buffers:
 Before: ~1220000pps
 After : ~1440000pps
 
+The reason why I stick to new mode is because:
+
+- though resize is supported by skb array, in multiqueue mode, it's not easy to
+  recover from a partial success of queue resizing.
+- tx_queue_len is a user visible feature.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
-I don't implement resize since in multiqueue mode, we can not recover from
-partial success of resizing.
+- The patch is based on [PATCH v8 0/5] skb_array: array based FIFO for skbs
+
 
 
 ---
