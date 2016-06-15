@@ -18,7 +18,7 @@ This patch tries to address this by:
 - introduce a new proto_ops peek_len which was used for peeking the
   skb length.
 - implement a tun version of peek_len for vhost_net to use and convert
-  vhost_net  to use peek_len if it exist.
+  vhost_net to use peek_len if possible.
 
 Pktgen test shows about 18% improvement on guest receiving pps for small
 buffers:
