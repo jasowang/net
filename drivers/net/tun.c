@@ -131,7 +131,7 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
-#define TUN_RING_SIZE 1000
+#define TUN_RING_SIZE 256
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
@@ -520,9 +520,10 @@ static void tun_queue_purge(struct tun_struct *tun, struct tun_file *tfile)
 {
 	struct sk_buff *skb;
 
-	if (tun->flags & IFF_TX_ARRAY)
+	if (tun->flags & IFF_TX_ARRAY) {
 		while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
 			kfree_skb(skb);
+	}
 
 	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
@@ -569,7 +570,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 			    tun->dev->reg_state == NETREG_REGISTERED)
 				unregister_netdevice(tun->dev);
 		}
-		if (tun->flags & IFF_TX_ARRAY)
+		if (tun && tun->flags & IFF_TX_ARRAY)
 			skb_array_cleanup(&tfile->tx_array);
 		sock_put(&tfile->sk);
 	}
@@ -1721,9 +1722,7 @@ static int tun_peek(struct socket *sock, bool exact)
 	if (!tun)
 		return 0;
 
-	if (!exact) {
-		ret = tun_queue_not_empty(tun, tfile);
-	} else if (tun->flags & IFF_TX_ARRAY) {
+	if (tun->flags & IFF_TX_ARRAY) {
 		ret = skb_array_peek_len(&tfile->tx_array);
 	} else {
 		struct sk_buff *head;
@@ -1886,7 +1885,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 
 		tun = netdev_priv(dev);
 		tun->dev = dev;
-		tun->flags = flags;
+		tun->flags = flags | IFF_TX_ARRAY;
 		tun->txflt.count = 0;
 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
 
