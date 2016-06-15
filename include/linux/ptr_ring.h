@@ -164,7 +164,10 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
  */
 static inline void *__ptr_ring_peek(struct ptr_ring *r)
 {
-	return r->queue[r->consumer];
+	if (likely(r->size))
+		return r->queue[r->consumer];
+
+	return NULL;
 }
 
 /* Note: callers invoking this in a loop must use a compiler barrier,
