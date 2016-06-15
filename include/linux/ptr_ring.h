@@ -164,7 +164,10 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
  */
 static inline void *__ptr_ring_peek(struct ptr_ring *r)
 {
-	return r->queue[r->consumer];
+	if (likely(r->size))
+		return r->queue[r->consumer];
+
+	return NULL;
 }
 
 /* Note: callers invoking this in a loop must use a compiler barrier,
@@ -410,6 +413,8 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
 	}
 
 	for (i = 0; i < nrings; ++i) {
+		printk("nrings %d i %d lock %p\n",
+			nrings, i, &rings[i]->producer_lock);
 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
 						  size, gfp, destroy);
