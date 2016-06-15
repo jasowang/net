@@ -1569,18 +1569,15 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (!iov_iter_count(to))
 		return 0;
 
-	if (tun->flags & IFF_TX_ARRAY) {
+	if (tun->flags & IFF_TX_ARRAY)
 		skb = tun_ring_recv(tfile, noblock, &err);
-		if (!skb)
-			return err;
-	} else {
+	else
 		/* Read frames from queue */
 		skb = __skb_recv_datagram(tfile->socket.sk,
 					  noblock ? MSG_DONTWAIT : 0,
 					  &peeked, &off, &err);
-		if (!skb)
-			return err;
-	}
+	if (!skb)
+		return err;
 
 	ret = tun_put_user(tun, tfile, skb, to);
 	if (unlikely(ret < 0))
