@@ -32,14 +32,14 @@ The reason why I stick to new mode is because:
   not easy to recover from a partial success of queue resizing.
 - tx_queue_len is a user visible feature.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
 Changes from V1:
 - switch to use skb array instead of a customized circular buffer
 - add non-blocking support
 - rename .peek to .peek_len
 - drop lockless peeking since test show very minor improvement
 
-Signed-off-by: Jason Wang <jasowang@redhat.com>
----
 - The patch is based on [PATCH v8 0/5] skb_array: array based FIFO for skbs
 
 

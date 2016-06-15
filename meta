@@ -1,12 +1,12 @@
 Version: 1
-Previous: 450be5367384c72ea2ac9610c46518dd8cbf7d4d
-Head: da0bc9d2de2b9a1a4a2701202f253ccfad6e3b19
+Previous: 71ac433fcb844d9c76a462d619354712d601df07
+Head: 57faccfc7c2ee8938fc956059ae3df19f6cd2f0c
 Applied:
   ptr_ring-array-based-fifo-for: 7aa759df9ece6dab9fdbc8623091af8b44f56c98
   skb_array-array-based-fifo-for-0: 7ab7d8367898c738086b5cb780b361b327e7581b
   ptr_ring-resize-support: 8538206263b1bb3ef9894f0bf1fe9ff336a29bb6
   skb_array-resize-support: 4b2465ad2dd597a8f357a1d16649f2205846532d
-  tun-introduce-tx-array-mode: da0bc9d2de2b9a1a4a2701202f253ccfad6e3b19
+  tun-introduce-tx-array-mode: 57faccfc7c2ee8938fc956059ae3df19f6cd2f0c
 Unapplied:
   net-introduce: 9caaba1311a9b4a9667dccaa7c2d9975105c36af
   tun-avoid-compute-hashing-on: be165ebe18974680077ff904a6b19db4037bc6bc
