@@ -1885,7 +1885,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 
 		tun = netdev_priv(dev);
 		tun->dev = dev;
-		tun->flags = flags | IFF_TX_ARRAY;
+		tun->flags = flags;
 		tun->txflt.count = 0;
 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
 
