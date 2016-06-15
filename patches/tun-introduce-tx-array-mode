@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    d6c98d9104a3b62c176ca85af5d0b3ad6a11e610
+Top:    ab1609d226247298a7c944631319315efbe8561c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..5276303 100644
+index e16487c..d91c5f6 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -57,15 +57,6 @@ index e16487c..5276303 100644
  
  #include <asm/uaccess.h>
  
-@@ -114,7 +115,7 @@ do {								\
- #define TUN_VNET_BE     0x40000000
- 
- #define TUN_FEATURES (IFF_NO_PI | IFF_ONE_QUEUE | IFF_VNET_HDR | \
--		      IFF_MULTI_QUEUE)
-+		      IFF_MULTI_QUEUE | IFF_TX_ARRAY)
- #define GOODCOPY_LEN 128
- 
- #define FLT_EXACT_COUNT 8
 @@ -130,6 +131,7 @@ struct tap_filter {
  #define MAX_TAP_FLOWS  4096
  
@@ -293,6 +284,35 @@ index e16487c..5276303 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
+@@ -1643,7 +1753,8 @@ static struct proto tun_proto = {
+ 
+ static int tun_flags(struct tun_struct *tun)
+ {
+-	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN | IFF_TAP);
++	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN |
++			     IFF_TAP | IFF_TX_ARRAY);
+ }
+ 
+ static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,
+@@ -1755,6 +1866,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 		} else
+ 			return -EINVAL;
+ 
++		if (ifr->ifr_flags & IFF_TX_ARRAY)
++			flags |= IFF_TX_ARRAY;
++
+ 		if (*ifr->ifr_name)
+ 			name = ifr->ifr_name;
+ 
+@@ -1995,7 +2109,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 		 * This is needed because we never checked for invalid flags on
+ 		 * TUNSETIFF.
+ 		 */
+-		return put_user(IFF_TUN | IFF_TAP | TUN_FEATURES,
++		return put_user(IFF_TUN | IFF_TAP | IFF_TX_ARRAY | TUN_FEATURES,
+ 				(unsigned int __user*)argp);
+ 	} else if (cmd == TUNSETQUEUE)
+ 		return tun_set_queue(file, &ifr);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index f744eeb..236ba52 100644
 --- a/drivers/vhost/net.c
