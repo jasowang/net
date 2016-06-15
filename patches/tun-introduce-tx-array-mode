@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    41fafd48989de6bfdba6f02016d05ad6d47887ef
+Top:    9b6a0102750ee9eb746b46fa32f49a1ea77c4ff6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -359,14 +359,14 @@ index f744eeb..236ba52 100644
  			cpu_relax_lowlatency();
  
 diff --git a/include/linux/net.h b/include/linux/net.h
-index 9aa49a0..d2f9830 100644
+index 9aa49a0..b6b3843 100644
 --- a/include/linux/net.h
 +++ b/include/linux/net.h
 @@ -185,6 +185,7 @@ struct proto_ops {
  	ssize_t 	(*splice_read)(struct socket *sock,  loff_t *ppos,
  				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
  	int		(*set_peek_off)(struct sock *sk, int val);
-+	int		(*peek_len) (struct socket *sock);
++	int		(*peek_len)(struct socket *sock);
  };
  
  #define DECLARE_SOCKADDR(type, dst, src)	\
