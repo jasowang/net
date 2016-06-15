@@ -115,7 +115,7 @@ do {								\
 #define TUN_VNET_BE     0x40000000
 
 #define TUN_FEATURES (IFF_NO_PI | IFF_ONE_QUEUE | IFF_VNET_HDR | \
-		      IFF_MULTI_QUEUE | IFF_TX_ARRAY)
+		      IFF_MULTI_QUEUE)
 #define GOODCOPY_LEN 128
 
 #define FLT_EXACT_COUNT 8
@@ -1753,7 +1753,8 @@ static struct proto tun_proto = {
 
 static int tun_flags(struct tun_struct *tun)
 {
-	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN | IFF_TAP);
+	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN |
+			     IFF_TAP | IFF_TX_ARRAY);
 }
 
 static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,
@@ -1864,6 +1865,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			name = "tap%d";
 		} else
 			return -EINVAL;
+
+		if (ifr->ifr_flags & IFF_TX_ARRAY)
+			flags |= IFF_TX_ARRAY;
 
 		if (*ifr->ifr_name)
 			name = ifr->ifr_name;
@@ -2105,7 +2109,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		 * This is needed because we never checked for invalid flags on
 		 * TUNSETIFF.
 		 */
-		return put_user(IFF_TUN | IFF_TAP | TUN_FEATURES,
+		return put_user(IFF_TUN | IFF_TAP | IFF_TX_ARRAY | TUN_FEATURES,
 				(unsigned int __user*)argp);
 	} else if (cmd == TUNSETQUEUE)
 		return tun_set_queue(file, &ifr);
