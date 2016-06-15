@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    5ec1da356d5808f2fa755ce562b04eaf2f7eb750
+Top:    b053011fc79ad5b43c47ad140e990e7f99a120de
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..20bebc7 100644
+index e16487c..b1f1612 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -191,31 +191,24 @@ index e16487c..20bebc7 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,11 +1569,18 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1494,9 +1569,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
 -	/* Read frames from queue */
 -	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
 -				  &peeked, &off, &err);
--	if (!skb)
--		return err;
-+	if (tun->flags & IFF_TX_ARRAY) {
++	if (tun->flags & IFF_TX_ARRAY)
 +		skb = tun_ring_recv(tfile, noblock, &err);
-+		if (!skb)
-+			return err;
-+	} else {
++	else
 +		/* Read frames from queue */
 +		skb = __skb_recv_datagram(tfile->socket.sk,
 +					  noblock ? MSG_DONTWAIT : 0,
 +					  &peeked, &off, &err);
-+		if (!skb)
-+			return err;
-+	}
+ 	if (!skb)
+ 		return err;
  
- 	ret = tun_put_user(tun, tfile, skb, to);
- 	if (unlikely(ret < 0))
-@@ -1629,8 +1711,39 @@ out:
+@@ -1629,8 +1708,39 @@ out:
  	return ret;
  }
  
