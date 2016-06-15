@@ -35,6 +35,7 @@ The reason why I stick to new mode is because:
 Changes from V1:
 - switch to use skb array instead of a customized circular buffer
 - add non-blocking support
+- rename .peek to .peek_len
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
