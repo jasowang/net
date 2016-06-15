@@ -1533,7 +1533,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 	add_wait_queue(&tfile->wq.wait, &wait);
 	current->state = TASK_INTERRUPTIBLE;
 
-	do {
+	while (1) {
 		skb = skb_array_consume(&tfile->tx_array);
 		if (skb)
 			break;
@@ -1547,7 +1547,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 		}
 
 		schedule();
-	} while(skb);
+	};
 
 	current->state = TASK_RUNNING;
 	remove_wait_queue(&tfile->wq.wait, &wait);
