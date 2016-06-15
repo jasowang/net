@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    ddaf89b30f0811e14090dfbc141d9c760fa73891
+Top:    f10ff6f9972da1c57b4cf82c6ba9ea5d15b357c6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-02 15:54:35 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..d06ab7e 100644
+index e16487c..8e49d97 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -220,7 +220,7 @@ index e16487c..d06ab7e 100644
  	return ret;
  }
  
-+static int tun_peek(struct socket *sock)
++static int tun_peek_len(struct socket *sock)
 +{
 +	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 +	struct sock *sk = sock->sk;
@@ -252,7 +252,7 @@ index e16487c..d06ab7e 100644
 +
  /* Ops structure to mimic raw sockets with tun */
  static const struct proto_ops tun_socket_ops = {
-+	.peek    = tun_peek,
++	.peek_len = tun_peek_len,
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
@@ -266,7 +266,7 @@ index e16487c..d06ab7e 100644
  		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..10ff494 100644
+index f744eeb..236ba52 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -455,10 +455,14 @@ out:
@@ -278,8 +278,8 @@ index f744eeb..10ff494 100644
  	int len = 0;
  	unsigned long flags;
  
-+	if (sock->ops->peek)
-+		return sock->ops->peek(sock, true);
++	if (sock->ops->peek_len)
++		return sock->ops->peek_len(sock);
 +
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
@@ -292,8 +292,8 @@ index f744eeb..10ff494 100644
 +{
 +	struct socket *sock = sk->sk_socket;
 +
-+	if (sock->ops->peek)
-+		return sock->ops->peek(sock, false);
++	if (sock->ops->peek_len)
++		return sock->ops->peek_len(sock);
 +
 +	return skb_queue_empty(&sk->sk_receive_queue);
 +}
@@ -311,17 +311,17 @@ index f744eeb..10ff494 100644
  			cpu_relax_lowlatency();
  
 diff --git a/include/linux/net.h b/include/linux/net.h
-index 9aa49a0..18dbb61 100644
+index 9aa49a0..af94770 100644
 --- a/include/linux/net.h
 +++ b/include/linux/net.h
-@@ -132,6 +132,7 @@ struct module;
- struct proto_ops {
- 	int		family;
- 	struct module	*owner;
-+	int		(*peek) (struct socket *sock, bool exact);
- 	int		(*release)   (struct socket *sock);
- 	int		(*bind)	     (struct socket *sock,
- 				      struct sockaddr *myaddr,
+@@ -185,6 +185,7 @@ struct proto_ops {
+ 	ssize_t 	(*splice_read)(struct socket *sock,  loff_t *ppos,
+ 				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
+ 	int		(*set_peek_off)(struct sock *sk, int val);
++        int		(*peek_len) (struct socket *sock);
+ };
+ 
+ #define DECLARE_SOCKADDR(type, dst, src)	\
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
 index 3cb5e1d..080003c 100644
 --- a/include/uapi/linux/if_tun.h
