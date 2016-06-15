@@ -1711,7 +1711,7 @@ out:
 	return ret;
 }
 
-static int tun_peek(struct socket *sock, bool exact)
+static int tun_peek(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct sock *sk = sock->sk;
