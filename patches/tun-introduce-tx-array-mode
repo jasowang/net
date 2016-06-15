@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    f10ff6f9972da1c57b4cf82c6ba9ea5d15b357c6
+Top:    5ec1da356d5808f2fa755ce562b04eaf2f7eb750
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..8e49d97 100644
+index e16487c..20bebc7 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -255,15 +255,6 @@ index e16487c..8e49d97 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -1772,7 +1885,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
- 
- 		tun = netdev_priv(dev);
- 		tun->dev = dev;
--		tun->flags = flags;
-+		tun->flags = flags | IFF_TX_ARRAY;
- 		tun->txflt.count = 0;
- 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
- 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index f744eeb..236ba52 100644
 --- a/drivers/vhost/net.c
