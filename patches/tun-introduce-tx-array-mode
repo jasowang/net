@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    d52e563764ba9b50ed83e1792954bd39b07b266d
+Top:    d6c98d9104a3b62c176ca85af5d0b3ad6a11e610
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..b1f1612 100644
+index e16487c..5276303 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -21,6 +21,15 @@ index e16487c..b1f1612 100644
  
  #include <asm/uaccess.h>
  
+@@ -114,7 +115,7 @@ do {								\
+ #define TUN_VNET_BE     0x40000000
+ 
+ #define TUN_FEATURES (IFF_NO_PI | IFF_ONE_QUEUE | IFF_VNET_HDR | \
+-		      IFF_MULTI_QUEUE)
++		      IFF_MULTI_QUEUE | IFF_TX_ARRAY)
+ #define GOODCOPY_LEN 128
+ 
+ #define FLT_EXACT_COUNT 8
 @@ -130,6 +131,7 @@ struct tap_filter {
  #define MAX_TAP_FLOWS  4096
  
