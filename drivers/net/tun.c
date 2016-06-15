@@ -115,7 +115,7 @@ do {								\
 #define TUN_VNET_BE     0x40000000
 
 #define TUN_FEATURES (IFF_NO_PI | IFF_ONE_QUEUE | IFF_VNET_HDR | \
-		      IFF_MULTI_QUEUE)
+		      IFF_MULTI_QUEUE | IFF_TX_ARRAY)
 #define GOODCOPY_LEN 128
 
 #define FLT_EXACT_COUNT 8
