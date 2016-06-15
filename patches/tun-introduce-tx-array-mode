@@ -36,6 +36,7 @@ Changes from V1:
 - switch to use skb array instead of a customized circular buffer
 - add non-blocking support
 - rename .peek to .peek_len
+- drop lockless peeking since test show very minor improvement
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
