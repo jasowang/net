@@ -132,7 +132,6 @@ struct module;
 struct proto_ops {
 	int		family;
 	struct module	*owner;
-	int		(*peek) (struct socket *sock, bool exact);
 	int		(*release)   (struct socket *sock);
 	int		(*bind)	     (struct socket *sock,
 				      struct sockaddr *myaddr,
@@ -186,6 +185,7 @@ struct proto_ops {
 	ssize_t 	(*splice_read)(struct socket *sock,  loff_t *ppos,
 				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
 	int		(*set_peek_off)(struct sock *sk, int val);
+        int		(*peek_len) (struct socket *sock);
 };
 
 #define DECLARE_SOCKADDR(type, dst, src)	\

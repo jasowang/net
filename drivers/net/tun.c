@@ -1711,7 +1711,7 @@ out:
 	return ret;
 }
 
-static int tun_peek(struct socket *sock)
+static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct sock *sk = sock->sk;
@@ -1743,7 +1743,7 @@ static int tun_peek(struct socket *sock)
 
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops tun_socket_ops = {
-	.peek    = tun_peek,
+	.peek_len = tun_peek_len,
 	.sendmsg = tun_sendmsg,
 	.recvmsg = tun_recvmsg,
 };
