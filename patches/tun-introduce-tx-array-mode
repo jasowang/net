@@ -1,5 +1,5 @@
 Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    ab1609d226247298a7c944631319315efbe8561c
+Top:    41fafd48989de6bfdba6f02016d05ad6d47887ef
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..d91c5f6 100644
+index e16487c..b22e475 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -201,7 +201,7 @@ index e16487c..d91c5f6 100644
 +	add_wait_queue(&tfile->wq.wait, &wait);
 +	current->state = TASK_INTERRUPTIBLE;
 +
-+	do {
++	while (1) {
 +		skb = skb_array_consume(&tfile->tx_array);
 +		if (skb)
 +			break;
@@ -215,7 +215,7 @@ index e16487c..d91c5f6 100644
 +		}
 +
 +		schedule();
-+	} while(skb);
++	};
 +
 +	current->state = TASK_RUNNING;
 +	remove_wait_queue(&tfile->wq.wait, &wait);
