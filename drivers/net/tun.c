@@ -1187,7 +1187,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 /* Get packet from user space buffer */
 static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			    void *msg_control, struct iov_iter *from,
-			    int noblock)
+			    int noblock, bool more)
 {
 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
 	struct sk_buff *skb;
@@ -1370,9 +1370,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	rxhash = skb_get_hash(skb);
 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 
-	local_bh_disable();
-	napi_schedule(&tfile->napi);
-	local_bh_enable();
+	if (!more) {
+		local_bh_disable();
+		napi_schedule(&tfile->napi);
+		local_bh_enable();
+	}
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
@@ -1395,7 +1397,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (!tun)
 		return -EBADFD;
 
-	result = tun_get_user(tun, tfile, NULL, from, file->f_flags & O_NONBLOCK);
+	result = tun_get_user(tun, tfile, NULL, from,
+			      file->f_flags & O_NONBLOCK, false);
 
 	tun_put(tun);
 	return result;
@@ -1634,7 +1637,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 		return -EBADFD;
 
 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-			   m->msg_flags & MSG_DONTWAIT);
+			   m->msg_flags & MSG_DONTWAIT,
+			   m->msg_flags & MSG_MORE);
 	tun_put(tun);
 	return ret;
 }
