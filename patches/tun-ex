@@ -1,5 +1,5 @@
-Bottom: 82d7af7eeb1564560ff90d87721ff6ea45ef3a8d
-Top:    947de0d1d4d084e37083fc169fea68463333d1a4
+Bottom: 32291d504175afa36fda67c5705c6f7e11fcec4b
+Top:    0f6a873629be14ab52f78cce6fbed05cf856eb46
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-01 14:00:06 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0578357..e229119 100644
+index c18d097..dd12787 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1163,6 +1163,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1201,6 +1201,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	int err;
  	u32 rxhash;
  	ssize_t n;
@@ -23,7 +23,7 @@ index 0578357..e229119 100644
  
  	if (!(tun->dev->flags & IFF_UP))
  		return -EIO;
-@@ -1204,7 +1206,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1242,7 +1244,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  
  	good_linear = SKB_MAX_HEAD(align);
  
@@ -32,7 +32,7 @@ index 0578357..e229119 100644
  		struct iov_iter i = *from;
  
  		/* There are 256 bytes to be copied in skb, so there is
-@@ -1239,8 +1241,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1277,8 +1279,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  		err = zerocopy_sg_from_iter(skb, from);
  	else {
  		err = skb_copy_datagram_from_iter(skb, 0, from, len);
@@ -44,7 +44,7 @@ index 0578357..e229119 100644
  			uarg->callback(uarg, false);
  		}
  	}
-@@ -1321,7 +1324,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1359,7 +1362,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  
  	/* copy skb_ubuf_info for callback when skb has no error */
  	if (zerocopy) {
@@ -53,7 +53,7 @@ index 0578357..e229119 100644
  		skb_shinfo(skb)->tx_flags |= SKBTX_DEV_ZEROCOPY;
  		skb_shinfo(skb)->tx_flags |= SKBTX_SHARED_FRAG;
  	}
-@@ -1333,7 +1336,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1371,7 +1374,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->numqueues == 1 && static_key_false(&rps_needed))
  		rxhash = skb_get_hash(skb);
  #endif
@@ -79,7 +79,7 @@ index 0578357..e229119 100644
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..616d024 100644
+index 236ba52..6bb4987 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -407,21 +407,34 @@ static void handle_tx(struct vhost_net *net)
@@ -145,7 +145,7 @@ index d36d8be..9bd3a15 100644
  
  struct vhost_dev {
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index c413c58..3d9b689 100644
+index 65968a9..68710af 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
 @@ -388,6 +388,13 @@ enum {
@@ -163,10 +163,10 @@ index c413c58..3d9b689 100644
   * The callback notifies userspace to release buffers when skb DMA is done in
   * lower device, the skb last reference should be 0 when calling this.
 diff --git a/net/core/dev.c b/net/core/dev.c
-index d91dfbe..4640654 100644
+index 904ff43..f8ce942 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3780,33 +3780,40 @@ drop:
+@@ -3781,33 +3781,40 @@ drop:
  
  static int netif_rx_internal(struct sk_buff *skb)
  {
