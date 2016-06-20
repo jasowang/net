@@ -1,5 +1,5 @@
-Bottom: 9b6a0102750ee9eb746b46fa32f49a1ea77c4ff6
-Top:    32291d504175afa36fda67c5705c6f7e11fcec4b
+Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
+Top:    b8cf1a1c660e5c8cd9420cbe1cb9ada5c5b68d01
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-01 16:59:00 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index b22e475..c18d097 100644
+index e16487c..63a9368 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1367,7 +1367,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1332,7 +1332,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_reset_network_header(skb);
  	skb_probe_transport_header(skb, 0);
  
@@ -26,7 +26,7 @@ index b22e475..c18d097 100644
  	netif_rx_ni(skb);
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
-@@ -1377,7 +1380,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1342,7 +1345,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	u64_stats_update_end(&stats->syncp);
  	put_cpu_ptr(stats);
  
