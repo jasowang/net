@@ -637,6 +637,7 @@ static int tun_poll(struct napi_struct *napi, int budget)
 	struct sk_buff *skb;
 	unsigned received = 0;
 
+	/* FIXME: use skb_queue_splice_tail_init */
 	while (received < budget &&
 	       (skb = skb_dequeue(&tfile->socket.sk->sk_write_queue))
 		!= NULL) {
