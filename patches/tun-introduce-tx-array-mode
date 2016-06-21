@@ -1,5 +1,5 @@
-Bottom: 5750b540a14138aa263260dce70c3da7a7e21d42
-Top:    9b6a0102750ee9eb746b46fa32f49a1ea77c4ff6
+Bottom: b8cf1a1c660e5c8cd9420cbe1cb9ada5c5b68d01
+Top:    32291d504175afa36fda67c5705c6f7e11fcec4b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e16487c..b22e475 100644
+index 63a9368..c18d097 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -180,7 +180,7 @@ index e16487c..b22e475 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1481,6 +1516,46 @@ done:
+@@ -1487,6 +1522,46 @@ done:
  	return total;
  }
  
@@ -227,7 +227,7 @@ index e16487c..b22e475 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1494,9 +1569,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1500,9 +1575,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -244,7 +244,7 @@ index e16487c..b22e475 100644
  	if (!skb)
  		return err;
  
-@@ -1629,8 +1708,39 @@ out:
+@@ -1635,8 +1714,39 @@ out:
  	return ret;
  }
  
@@ -284,7 +284,7 @@ index e16487c..b22e475 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -1643,7 +1753,8 @@ static struct proto tun_proto = {
+@@ -1649,7 +1759,8 @@ static struct proto tun_proto = {
  
  static int tun_flags(struct tun_struct *tun)
  {
@@ -294,7 +294,7 @@ index e16487c..b22e475 100644
  }
  
  static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,
-@@ -1755,6 +1866,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+@@ -1761,6 +1872,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
  		} else
  			return -EINVAL;
  
@@ -304,7 +304,7 @@ index e16487c..b22e475 100644
  		if (*ifr->ifr_name)
  			name = ifr->ifr_name;
  
-@@ -1995,7 +2109,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2001,7 +2115,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		 * This is needed because we never checked for invalid flags on
  		 * TUNSETIFF.
  		 */
