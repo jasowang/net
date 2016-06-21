@@ -3,7 +3,7 @@ Top:    b8cf1a1c660e5c8cd9420cbe1cb9ada5c5b68d01
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-01 16:59:00 +0800
 
-tun: avoid compute hashing on tx
+tun: avoid compute hashing on rx
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
