@@ -1,5 +1,5 @@
 Bottom: 32291d504175afa36fda67c5705c6f7e11fcec4b
-Top:    b39db434325a86339f02637152f390f078a17d8b
+Top:    1b9be72a8706542c3b39af0e13c142c01379419c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index c18d097..34176cc 100644
+index c18d097..e635ae5 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -58,7 +58,7 @@ index c18d097..34176cc 100644
  		/* Drop read queue */
  		tun_queue_purge(tun, tfile);
  		sock_put(&tfile->sk);
-@@ -622,6 +631,30 @@ static void tun_detach_all(struct net_device *dev)
+@@ -622,6 +631,31 @@ static void tun_detach_all(struct net_device *dev)
  		module_put(THIS_MODULE);
  }
  
@@ -68,6 +68,7 @@ index c18d097..34176cc 100644
 +	struct sk_buff *skb;
 +	unsigned received = 0;
 +
++	/* FIXME: use skb_queue_splice_tail_init */
 +	while (received < budget &&
 +	       (skb = skb_dequeue(&tfile->socket.sk->sk_write_queue))
 +		!= NULL) {
@@ -89,7 +90,7 @@ index c18d097..34176cc 100644
  static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
  {
  	struct tun_file *tfile = file->private_data;
-@@ -672,6 +705,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+@@ -672,6 +706,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  	else
  		sock_hold(&tfile->sk);
  
@@ -98,7 +99,7 @@ index c18d097..34176cc 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1187,7 +1222,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1187,7 +1223,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -107,7 +108,7 @@ index c18d097..34176cc 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1371,7 +1406,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1371,7 +1407,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->numqueues == 1 && static_key_false(&rps_needed))
  		rxhash = skb_get_hash(skb);
  #endif
@@ -123,7 +124,7 @@ index c18d097..34176cc 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1397,7 +1439,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1397,7 +1440,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -133,7 +134,7 @@ index c18d097..34176cc 100644
  
  	tun_put(tun);
  	return result;
-@@ -1680,7 +1723,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1680,7 +1724,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
