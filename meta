@@ -1,6 +1,6 @@
 Version: 1
-Previous: 48fdd6280f7ebbdbea7f5d1b907984346eba8424
-Head: c90ad1292b8073a1669c80b4d980a9d691c86b8e
+Previous: 74a176783b18bc2f84886163a3a51e567835307b
+Head: 47244b8dce9a2a4a1c8246b1e176b7a68089d83c
 Applied:
   ptr_ring-array-based-fifo-for: 7aa759df9ece6dab9fdbc8623091af8b44f56c98
   skb_array-array-based-fifo-for-0: 7ab7d8367898c738086b5cb780b361b327e7581b
@@ -8,8 +8,7 @@ Applied:
   skb_array-resize-support: 4b2465ad2dd597a8f357a1d16649f2205846532d
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
   tun-introduce-tx-array-mode: f77c2dac849535a57881921ad5a0c86867a888e7
-  tuntap-convert-to-napi: fcd8a57ca11baa1fc6d8cdff9385723d08d9a086
-  refresh-temp-0: c90ad1292b8073a1669c80b4d980a9d691c86b8e
+  tuntap-convert-to-napi: 47244b8dce9a2a4a1c8246b1e176b7a68089d83c
 Unapplied:
   tun-ex: 2ab229a1b50d3ca6b399591ca7b3865f8e30b05b
   net-introduce: 9caaba1311a9b4a9667dccaa7c2d9975105c36af
