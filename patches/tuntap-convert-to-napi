@@ -1,5 +1,5 @@
 Bottom: 8fefebb369f5426a25ec7b1534e0d973f2cdcd1b
-Top:    1d7110f29ad1ba901810223233f63f8edcf2ae75
+Top:    2be0331ae34c155e459c2d381ce424e5f56c320a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 4884802..b886ef2 100644
+index 4884802..f39c13b 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,7 @@
@@ -22,15 +22,25 @@ index 4884802..b886ef2 100644
  
  /* Uncomment to enable debugging */
  /* #define TUN_DEBUG 1 */
-@@ -167,6 +168,7 @@ struct tun_file {
+@@ -167,6 +168,8 @@ struct tun_file {
  	};
  	struct list_head next;
  	struct tun_struct *detached;
 +	struct napi_struct napi;
++	struct sk_buff_head process_queue;
  };
  
  struct tun_flow_entry {
-@@ -526,6 +528,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -515,6 +518,8 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+ 
+ static void tun_queue_purge(struct tun_file *tfile)
+ {
++	skb_queue_purge(&tfile->sk.sk_write_queue);
++	skb_queue_purge(&tfile->process_queue);
+ 	skb_queue_purge(&tfile->sk.sk_receive_queue);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
+ }
+@@ -526,6 +531,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  
  	tun = rtnl_dereference(tfile->tun);
  
@@ -42,7 +52,7 @@ index 4884802..b886ef2 100644
  	if (tun && !tfile->detached) {
  		u16 index = tfile->queue_index;
  		BUG_ON(index >= tun->numqueues);
-@@ -579,6 +586,7 @@ static void tun_detach_all(struct net_device *dev)
+@@ -579,6 +589,7 @@ static void tun_detach_all(struct net_device *dev)
  
  	for (i = 0; i < n; i++) {
  		tfile = rtnl_dereference(tun->tfiles[i]);
@@ -50,7 +60,7 @@ index 4884802..b886ef2 100644
  		BUG_ON(!tfile);
  		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
  		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-@@ -595,6 +603,7 @@ static void tun_detach_all(struct net_device *dev)
+@@ -595,6 +606,7 @@ static void tun_detach_all(struct net_device *dev)
  	synchronize_net();
  	for (i = 0; i < n; i++) {
  		tfile = rtnl_dereference(tun->tfiles[i]);
@@ -58,22 +68,32 @@ index 4884802..b886ef2 100644
  		/* Drop read queue */
  		tun_queue_purge(tfile);
  		sock_put(&tfile->sk);
-@@ -610,6 +619,31 @@ static void tun_detach_all(struct net_device *dev)
+@@ -610,6 +622,41 @@ static void tun_detach_all(struct net_device *dev)
  		module_put(THIS_MODULE);
  }
  
 +static int tun_poll(struct napi_struct *napi, int budget)
 +{
 +	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
++	struct sk_buff_head *input_queue =
++	       &tfile->socket.sk->sk_write_queue;
 +	struct sk_buff *skb;
 +	unsigned received = 0;
 +
-+	/* FIXME: use skb_queue_splice_tail_init */
-+	while (received < budget &&
-+	       (skb = skb_dequeue(&tfile->socket.sk->sk_write_queue))
-+		!= NULL) {
++	while (1) {
++		while ((skb = __skb_dequeue(&tfile->process_queue))) {
 +			netif_receive_skb(skb);
-+			++received;
++			if (++received >= budget)
++				return received;
++		}
++
++		spin_lock(&input_queue->lock);
++		if (skb_queue_empty(input_queue)) {
++			spin_unlock(&input_queue->lock);
++			break;
++		}
++		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
++		spin_unlock(&input_queue->lock);
 +	}
 +
 +	if (received < budget) {
@@ -90,7 +110,7 @@ index 4884802..b886ef2 100644
  static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
  {
  	struct tun_file *tfile = file->private_data;
-@@ -653,6 +687,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+@@ -653,6 +700,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  	else
  		sock_hold(&tfile->sk);
  
@@ -99,7 +119,7 @@ index 4884802..b886ef2 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1152,7 +1188,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1152,7 +1201,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -108,7 +128,7 @@ index 4884802..b886ef2 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1298,7 +1334,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1298,7 +1347,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -123,7 +143,7 @@ index 4884802..b886ef2 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1321,7 +1363,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1321,7 +1376,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -133,7 +153,7 @@ index 4884802..b886ef2 100644
  
  	tun_put(tun);
  	return result;
-@@ -1540,7 +1583,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1540,7 +1596,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -143,6 +163,15 @@ index 4884802..b886ef2 100644
  	tun_put(tun);
  	return ret;
  }
+@@ -2276,6 +2333,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 	file->private_data = tfile;
+ 	INIT_LIST_HEAD(&tfile->next);
+ 
++	skb_queue_head_init(&tfile->process_queue);
++
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+ 
+ 	return 0;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index 1d3e45f..46726d3 100644
 --- a/drivers/vhost/net.c
