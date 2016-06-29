@@ -1,7 +1,8 @@
 Version: 1
-Previous: 5c5730d8a63603085c369591e5a9913e8da19e86
+Previous: 775644c97c9fb633d41cb66a8c5b92b476d75424
 Head: dad51d8ee002cadf0fddff2aeb7abcfa883f2a56
 Applied:
+  tun-introduce-tx-skb-ring: dad51d8ee002cadf0fddff2aeb7abcfa883f2a56
 Unapplied:
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
   ptr_ring-array-based-fifo-for: 7aa759df9ece6dab9fdbc8623091af8b44f56c98
