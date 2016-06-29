@@ -5,6 +5,10 @@ Date:   2016-06-22 21:18:19 +0300
 
 ptr_ring: support resizing multiple queues
 
+Sometimes, we need support resizing multiple queues at once. This is
+because it was not hard to recover to recover from a partial failure
+of multiple queues resizing.
+
 Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
 
 
