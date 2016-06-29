@@ -1,0 +1,22 @@
+Bottom: 7b6eac030f83d6f3a91dfc21c483df61685ad124
+Top:    eaabd0e6ca0d8c242043df0be95d775308abd153
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-29 15:34:09 +0800
+
+Refresh of tun-introduce-tx-array-mode
+
+---
+
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 0f9f639..38bf401 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -413,8 +413,6 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
+ 	}
+ 
+ 	for (i = 0; i < nrings; ++i) {
+-		printk("nrings %d i %d lock %p\n",
+-			nrings, i, &rings[i]->producer_lock);
+ 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
+ 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
+ 						  size, gfp, destroy);
