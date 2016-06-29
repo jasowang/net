@@ -10,6 +10,7 @@ because it was not hard to recover to recover from a partial failure
 of multiple queues resizing.
 
 Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
