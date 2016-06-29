@@ -21,8 +21,8 @@ This patch tries to address this by:
 Pktgen test shows about 18% improvement on guest receiving pps for small
 buffers:
 
-Before: ~1220000pps
-After : ~1440000pps
+Before: ~1300000pps
+After : ~1500000pps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
