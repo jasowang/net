@@ -3,17 +3,6 @@ Top:    9211707585a0c931aac7160ab30203227c55130e
 Author: Michael S. Tsirkin <mst@redhat.com>
 Date:   2016-06-22 21:18:19 +0300
 
-tun: introduce tx skb ring
-
-On Fri, Jun 17, 2016 at 03:41:20AM +0300, Michael S. Tsirkin wrote:
-> Would it help to have ptr_ring_resize that gets an array of
-> rings and resizes them both to same length?
-
-OK, here it is. Untested so far, and no skb wrapper.
-Pls let me know whether this is what you had in mind.
-
--->
-
 ptr_ring: support resizing multiple queues
 
 Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
