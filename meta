@@ -1,8 +1,9 @@
 Version: 1
-Previous: 9571cceb0d443ca618edafc3523273531b7d1837
-Head: 568b13d6d8c35c18d8a1beb3d1efac1713745a4a
+Previous: bab8d8dd1dac9c89e669ce82eb4c0e5996f82a26
+Head: a255ad93cf6b88ec9608cfa0eaec1f097c669516
 Applied:
   tun-introduce-tx-skb-ring: 568b13d6d8c35c18d8a1beb3d1efac1713745a4a
+  ptr_ring-support-zero-length: a255ad93cf6b88ec9608cfa0eaec1f097c669516
 Unapplied:
   skb_array-add-wrappers-for: e949d496a9fa446f24f171a314599a2304e114aa
   net-introduce: 9b88bdaa416954b305bf9225b929226c7522f582
