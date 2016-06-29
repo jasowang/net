@@ -1,5 +1,5 @@
 Bottom: d3f6f5114640396fae2d5a4cff55abe7cb31b6c1
-Top:    7b6eac030f83d6f3a91dfc21c483df61685ad124
+Top:    eaabd0e6ca0d8c242043df0be95d775308abd153
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -451,7 +451,7 @@ index 9aa49a0..b6b3843 100644
  
  #define DECLARE_SOCKADDR(type, dst, src)	\
 diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
-index afb2519..0f9f639 100644
+index afb2519..38bf401 100644
 --- a/include/linux/ptr_ring.h
 +++ b/include/linux/ptr_ring.h
 @@ -164,7 +164,10 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
@@ -466,15 +466,6 @@ index afb2519..0f9f639 100644
  }
  
  /* Note: callers invoking this in a loop must use a compiler barrier,
-@@ -410,6 +413,8 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
- 	}
- 
- 	for (i = 0; i < nrings; ++i) {
-+		printk("nrings %d i %d lock %p\n",
-+			nrings, i, &rings[i]->producer_lock);
- 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
- 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
- 						  size, gfp, destroy);
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
 index 3cb5e1d..080003c 100644
 --- a/include/uapi/linux/if_tun.h
