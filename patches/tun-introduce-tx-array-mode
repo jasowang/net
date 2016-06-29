@@ -18,7 +18,7 @@ This patch tries to address this by:
 - implement a tun version of peek_len for vhost_net to use and convert
   vhost_net to use peek_len if possible.
 
-Pktgen test shows about 18% improvement on guest receiving pps for small
+Pktgen test shows about 15.3% improvement on guest receiving pps for small
 buffers:
 
 Before: ~1300000pps
