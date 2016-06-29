@@ -413,8 +413,6 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
 	}
 
 	for (i = 0; i < nrings; ++i) {
-		printk("nrings %d i %d lock %p\n",
-			nrings, i, &rings[i]->producer_lock);
 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
 						  size, gfp, destroy);
