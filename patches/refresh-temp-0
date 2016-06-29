@@ -1,0 +1,31 @@
+Bottom: 97b051954e5a1efed7f339dc2840381238cee5b5
+Top:    f713e41675da5d2881fb03aa3241701763521795
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-29 11:16:13 +0800
+
+Refresh of skb_array-add-wrappers-for
+
+---
+
+diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
+index b96f9e8..f4dfade 100644
+--- a/include/linux/skb_array.h
++++ b/include/linux/skb_array.h
+@@ -161,12 +161,13 @@ static inline int skb_array_resize(struct skb_array *a, int size, gfp_t gfp)
+ 	return ptr_ring_resize(&a->ring, size, gfp, __skb_array_destroy_skb);
+ }
+ 
+-static inline int skb_raay_resize_multiple(struct skb_array **rings, int nrings,
+-					   int size, gfp_t gfp)
++static inline int skb_array_resize_multiple(struct skb_array **rings,
++					    int nrings, int size, gfp_t gfp)
+ {
+ 	BUILD_BUG_ON(offsetof(struct skb_array, ring));
+-	ptr_ring_resize_multiple((struct ptr_ring **)rings, nrings, size, gfp,
+-				 __skb_array_destroy_skb);
++	return ptr_ring_resize_multiple((struct ptr_ring **)rings,
++					nrings, size, gfp,
++					__skb_array_destroy_skb);
+ }
+ 
+ static inline void skb_array_cleanup(struct skb_array *a)
