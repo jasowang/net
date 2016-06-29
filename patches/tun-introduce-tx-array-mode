@@ -1,5 +1,5 @@
 Bottom: d3f6f5114640396fae2d5a4cff55abe7cb31b6c1
-Top:    830f3b212956eb37204edabac7fc40aad4bfcb88
+Top:    7b6eac030f83d6f3a91dfc21c483df61685ad124
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 4884802..4c5373a 100644
+index 4884802..f1bf507 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -322,7 +322,7 @@ index 4884802..4c5373a 100644
  				(unsigned int __user*)argp);
  	} else if (cmd == TUNSETQUEUE)
  		return tun_set_queue(file, &ifr);
-@@ -2397,6 +2511,54 @@ static const struct ethtool_ops tun_ethtool_ops = {
+@@ -2397,6 +2511,53 @@ static const struct ethtool_ops tun_ethtool_ops = {
  	.get_ts_info	= ethtool_op_get_ts_info,
  };
  
@@ -332,7 +332,7 @@ index 4884802..4c5373a 100644
 +	struct tun_file *tfile;
 +	struct skb_array **arrays;
 +	int n = tun->numqueues + tun->numdisabled;
-+	int ret;
++	int ret, i;
 +
 +	arrays = kmalloc(sizeof *arrays * n, GFP_KERNEL);
 +	if (!arrays)
@@ -357,11 +357,10 @@ index 4884802..4c5373a 100644
 +{
 +	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
 +	struct tun_struct *tun = netdev_priv(dev);
-+	int i;
 +
 +	switch (event) {
 +	case NETDEV_CHANGE_TX_QUEUE_LEN:
-+		if (!tun_queue_resize(tun))
++		if (tun_queue_resize(tun))
 +			return NOTIFY_BAD;
 +		break;
 +	default:
@@ -377,7 +376,7 @@ index 4884802..4c5373a 100644
  
  static int __init tun_init(void)
  {
-@@ -2416,6 +2578,8 @@ static int __init tun_init(void)
+@@ -2416,6 +2577,8 @@ static int __init tun_init(void)
  		pr_err("Can't register misc device %d\n", TUN_MINOR);
  		goto err_misc;
  	}
@@ -386,7 +385,7 @@ index 4884802..4c5373a 100644
  	return  0;
  err_misc:
  	rtnl_link_unregister(&tun_link_ops);
-@@ -2427,6 +2591,7 @@ static void tun_cleanup(void)
+@@ -2427,6 +2590,7 @@ static void tun_cleanup(void)
  {
  	misc_deregister(&tun_miscdev);
  	rtnl_link_unregister(&tun_link_ops);
@@ -451,6 +450,31 @@ index 9aa49a0..b6b3843 100644
  };
  
  #define DECLARE_SOCKADDR(type, dst, src)	\
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index afb2519..0f9f639 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -164,7 +164,10 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
+  */
+ static inline void *__ptr_ring_peek(struct ptr_ring *r)
+ {
+-	return r->queue[r->consumer];
++	if (likely(r->size))
++		return r->queue[r->consumer];
++
++	return NULL;
+ }
+ 
+ /* Note: callers invoking this in a loop must use a compiler barrier,
+@@ -410,6 +413,8 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
+ 	}
+ 
+ 	for (i = 0; i < nrings; ++i) {
++		printk("nrings %d i %d lock %p\n",
++			nrings, i, &rings[i]->producer_lock);
+ 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
+ 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
+ 						  size, gfp, destroy);
 diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
 index 3cb5e1d..080003c 100644
 --- a/include/uapi/linux/if_tun.h
