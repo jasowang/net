@@ -3,7 +3,7 @@ Top:    88943c6c894190c73169df45798c421280bad3c1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
-tun: introduce tx skb ring
+tun: switch to use skb array for tx
 
 We used to queue tx packets in sk_receive_queue, this is less
 efficient since it requires spinlocks to synchronize between producer
@@ -11,9 +11,8 @@ and consumer.
 
 This patch tries to address this by:
 
-- introduce a new mode which will be only enabled with IFF_TX_ARRAY
-  set and switch from sk_receive_queue to a fixed size of skb
-  array with 256 entries in this mode.
+- switch from sk_receive_queue to a skb_array, and resize it when
+  tx_queue_len was changed.
 - introduce a new proto_ops peek_len which was used for peeking the
   skb length.
 - implement a tun version of peek_len for vhost_net to use and convert
@@ -25,22 +24,8 @@ buffers:
 Before: ~1220000pps
 After : ~1440000pps
 
-The reason why I stick to new mode is because:
-
-- though resize is supported by skb array, in multiqueue mode, it's
-  not easy to recover from a partial success of queue resizing.
-- tx_queue_len is a user visible feature.
-
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
-- The patch is based on [PATCH v8 0/5] skb_array: array based FIFO for skbs
-
-Changes from V1:
-- switch to use skb array instead of a customized circular buffer
-- add non-blocking support
-- rename .peek to .peek_len
-- drop lockless peeking since test show very minor improvement
-
 
 
 ---

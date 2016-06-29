@@ -1,13 +1,13 @@
 Version: 1
-Previous: 91dc987f0992014b7323abdd8f4dc077bd5edf58
-Head: 8bbccd5bcc60059d4c427e4331339e1a73e626f7
+Previous: c881d6271d0d48c67927c618b28ea2e78eaec52b
+Head: 6d780f49918f5d647cf91a6be4275f8921d032f6
 Applied:
   ptr_ring-support-zero-length: aacbd3c51e3fac1b38ba6aed9944b780760625bb
   skb_array: 68bc84ed1ed20c525683f64db96eb1deb7ad22e4
   tun-introduce-tx-skb-ring: 575d1d9ec5aaaa03a2bdb3c1ca3dbb0bbcf86ac6
   skb_array-add-wrappers-for: b4965979d8f23e8a26b1a6d976afccc98a5523f6
   net-introduce: 34514287a84523bc94c3333b49a1177bcd232143
-  tun-introduce-tx-array-mode: 8bbccd5bcc60059d4c427e4331339e1a73e626f7
+  tun-introduce-tx-array-mode: 6d780f49918f5d647cf91a6be4275f8921d032f6
 Unapplied:
   debug: 092bf243413d9b8375b06e3ab907565983cd3c6b
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
