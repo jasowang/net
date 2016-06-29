@@ -1,13 +1,13 @@
 Version: 1
-Previous: 947db1fca1ba6e327aacb6fa0f84461cc76718d7
-Head: ea3f04d0f24275a5d74bff5b0b294cd4805c9639
+Previous: 71b6af4f4a2b8d592a149851137e90f464d62a75
+Head: 66cfc493ab99fb249d921688af75a31030d69ecb
 Applied:
   tun-introduce-tx-skb-ring: 568b13d6d8c35c18d8a1beb3d1efac1713745a4a
   ptr_ring-support-zero-length: db0df97ebef16393d0b814fe81ab1028876c8b4b
   skb_array-add-wrappers-for: ea3f04d0f24275a5d74bff5b0b294cd4805c9639
+  net-introduce: a338eb2394386c9abf3c4daee25b2b4a503c7f5f
+  tun-introduce-tx-array-mode: 66cfc493ab99fb249d921688af75a31030d69ecb
 Unapplied:
-  net-introduce: 9b88bdaa416954b305bf9225b929226c7522f582
-  tun-introduce-tx-array-mode: f8c3f69986a90cc4df4a2dde1483595e078b0e01
   debug: 092bf243413d9b8375b06e3ab907565983cd3c6b
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
   ptr_ring-array-based-fifo-for: 7aa759df9ece6dab9fdbc8623091af8b44f56c98
