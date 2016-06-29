@@ -1,5 +1,5 @@
 Bottom: 9ca4cc3baa19a00f749aca7155a855ce806060e3
-Top:    9ca4cc3baa19a00f749aca7155a855ce806060e3
+Top:    ce621c0fb8b7a1af319347774002dc5091d2b378
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-29 16:51:03 +0800
 
@@ -10,4 +10,22 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
+index 678bfbf..2dd0d1e 100644
+--- a/include/linux/skb_array.h
++++ b/include/linux/skb_array.h
+@@ -151,12 +151,12 @@ static inline int skb_array_init(struct skb_array *a, int size, gfp_t gfp)
+ 	return ptr_ring_init(&a->ring, size, gfp);
+ }
+ 
+-void __skb_array_destroy_skb(void *ptr)
++static void __skb_array_destroy_skb(void *ptr)
+ {
+ 	kfree_skb(ptr);
+ }
+ 
+-int skb_array_resize(struct skb_array *a, int size, gfp_t gfp)
++static inline int skb_array_resize(struct skb_array *a, int size, gfp_t gfp)
+ {
+ 	return ptr_ring_resize(&a->ring, size, gfp, __skb_array_destroy_skb);
+ }
