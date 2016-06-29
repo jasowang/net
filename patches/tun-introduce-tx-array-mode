@@ -1,5 +1,5 @@
 Bottom: 5930876cf24f57f81dbc59d0e93cadd0ed228996
-Top:    99f688da62217441275ebf9310cf077e461c30bd
+Top:    96de23eedda2ba538847717dd42aeb390710fd15
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 4884802..f1bf507 100644
+index 4884802..2f8130d 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -303,15 +303,6 @@ index 4884802..f1bf507 100644
 +
  		if (*ifr->ifr_name)
  			name = ifr->ifr_name;
- 
-@@ -1717,7 +1831,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
- 
- 		tun = netdev_priv(dev);
- 		tun->dev = dev;
--		tun->flags = flags;
-+		tun->flags = flags | IFF_TX_ARRAY;
- 		tun->txflt.count = 0;
- 		tun->vnet_hdr_sz = sizeof(struct virtio_net_hdr);
  
 @@ -1940,7 +2054,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		 * This is needed because we never checked for invalid flags on
