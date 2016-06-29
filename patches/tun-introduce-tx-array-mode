@@ -1,5 +1,5 @@
 Bottom: 5930876cf24f57f81dbc59d0e93cadd0ed228996
-Top:    46882658faa9df91e831be8e5d751d10359701dc
+Top:    e2a20bb253bb4adce12436705eebac81a0a8089d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 4884802..a92f947 100644
+index 4884802..ed76128 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -73,12 +73,9 @@ index 4884802..a92f947 100644
  };
  
  struct tun_flow_entry {
-@@ -513,9 +516,13 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
- 	return tun;
- }
+@@ -515,7 +518,11 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  
--static void tun_queue_purge(struct tun_file *tfile)
-+static void tun_queue_purge(struct tun_struct *tun, struct tun_file *tfile)
+ static void tun_queue_purge(struct tun_file *tfile)
  {
 -	skb_queue_purge(&tfile->sk.sk_receive_queue);
 +	struct sk_buff *skb;
@@ -89,15 +86,6 @@ index 4884802..a92f947 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -545,7 +552,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
- 		synchronize_net();
- 		tun_flow_delete_by_queue(tun, tun->numqueues + 1);
- 		/* Drop read queue */
--		tun_queue_purge(tfile);
-+		tun_queue_purge(tun, tfile);
- 		tun_set_real_num_queues(tun);
- 	} else if (tfile->detached && clean) {
- 		tun = tun_enable_queue(tfile);
 @@ -560,6 +567,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  			    tun->dev->reg_state == NETREG_REGISTERED)
  				unregister_netdevice(tun->dev);
@@ -107,21 +95,6 @@ index 4884802..a92f947 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -596,12 +605,12 @@ static void tun_detach_all(struct net_device *dev)
- 	for (i = 0; i < n; i++) {
- 		tfile = rtnl_dereference(tun->tfiles[i]);
- 		/* Drop read queue */
--		tun_queue_purge(tfile);
-+		tun_queue_purge(tun, tfile);
- 		sock_put(&tfile->sk);
- 	}
- 	list_for_each_entry_safe(tfile, tmp, &tun->disabled, next) {
- 		tun_enable_queue(tfile);
--		tun_queue_purge(tfile);
-+		tun_queue_purge(tun, tfile);
- 		sock_put(&tfile->sk);
- 	}
- 	BUG_ON(tun->numdisabled != 0);
 @@ -642,6 +651,13 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  		if (!err)
  			goto out;
