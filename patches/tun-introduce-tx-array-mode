@@ -1,5 +1,5 @@
-Bottom: b8cf1a1c660e5c8cd9420cbe1cb9ada5c5b68d01
-Top:    32291d504175afa36fda67c5705c6f7e11fcec4b
+Bottom: de6766846f3790854d22bb5e08e930f341ebabc5
+Top:    7735ecd8a4c5e10b81a20b7774ecab5ad7e46182
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -46,7 +46,7 @@ Changes from V1:
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 63a9368..c18d097 100644
+index 4884802..f562b169 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -180,7 +180,7 @@ index 63a9368..c18d097 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1487,6 +1522,46 @@ done:
+@@ -1426,6 +1461,46 @@ done:
  	return total;
  }
  
@@ -227,7 +227,7 @@ index 63a9368..c18d097 100644
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock)
-@@ -1500,9 +1575,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1439,9 +1514,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -244,7 +244,7 @@ index 63a9368..c18d097 100644
  	if (!skb)
  		return err;
  
-@@ -1635,8 +1714,39 @@ out:
+@@ -1574,8 +1653,39 @@ out:
  	return ret;
  }
  
@@ -284,7 +284,7 @@ index 63a9368..c18d097 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -1649,7 +1759,8 @@ static struct proto tun_proto = {
+@@ -1588,7 +1698,8 @@ static struct proto tun_proto = {
  
  static int tun_flags(struct tun_struct *tun)
  {
@@ -294,7 +294,7 @@ index 63a9368..c18d097 100644
  }
  
  static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,
-@@ -1761,6 +1872,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+@@ -1700,6 +1811,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
  		} else
  			return -EINVAL;
  
@@ -304,7 +304,7 @@ index 63a9368..c18d097 100644
  		if (*ifr->ifr_name)
  			name = ifr->ifr_name;
  
-@@ -2001,7 +2115,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -1940,7 +2054,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		 * This is needed because we never checked for invalid flags on
  		 * TUNSETIFF.
  		 */
@@ -314,10 +314,10 @@ index 63a9368..c18d097 100644
  	} else if (cmd == TUNSETQUEUE)
  		return tun_set_queue(file, &ifr);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..236ba52 100644
+index 1d3e45f..e032ca3 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -455,10 +455,14 @@ out:
+@@ -481,10 +481,14 @@ out:
  
  static int peek_head_len(struct sock *sk)
  {
@@ -332,7 +332,7 @@ index f744eeb..236ba52 100644
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
  	if (likely(head)) {
-@@ -471,6 +475,16 @@ static int peek_head_len(struct sock *sk)
+@@ -497,6 +501,16 @@ static int peek_head_len(struct sock *sk)
  	return len;
  }
  
@@ -349,7 +349,7 @@ index f744eeb..236ba52 100644
  static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -487,7 +501,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -513,7 +527,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  		endtime = busy_clock() + vq->busyloop_timeout;
  
  		while (vhost_can_busy_poll(&net->dev, endtime) &&
