@@ -1,0 +1,44 @@
+Bottom: 43cb54643a5ff6b56c3db029303a251176b11428
+Top:    97b051954e5a1efed7f339dc2840381238cee5b5
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-29 10:04:08 +0800
+
+skb_array: add wrappers for resizing
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
+index 678bfbf..b96f9e8 100644
+--- a/include/linux/skb_array.h
++++ b/include/linux/skb_array.h
+@@ -151,16 +151,24 @@ static inline int skb_array_init(struct skb_array *a, int size, gfp_t gfp)
+ 	return ptr_ring_init(&a->ring, size, gfp);
+ }
+ 
+-void __skb_array_destroy_skb(void *ptr)
++static void __skb_array_destroy_skb(void *ptr)
+ {
+ 	kfree_skb(ptr);
+ }
+ 
+-int skb_array_resize(struct skb_array *a, int size, gfp_t gfp)
++static inline int skb_array_resize(struct skb_array *a, int size, gfp_t gfp)
+ {
+ 	return ptr_ring_resize(&a->ring, size, gfp, __skb_array_destroy_skb);
+ }
+ 
++static inline int skb_raay_resize_multiple(struct skb_array **rings, int nrings,
++					   int size, gfp_t gfp)
++{
++	BUILD_BUG_ON(offsetof(struct skb_array, ring));
++	ptr_ring_resize_multiple((struct ptr_ring **)rings, nrings, size, gfp,
++				 __skb_array_destroy_skb);
++}
++
+ static inline void skb_array_cleanup(struct skb_array *a)
+ {
+ 	ptr_ring_cleanup(&a->ring, __skb_array_destroy_skb);
