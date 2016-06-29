@@ -1,0 +1,60 @@
+Bottom: 830f3b212956eb37204edabac7fc40aad4bfcb88
+Top:    7b6eac030f83d6f3a91dfc21c483df61685ad124
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-29 15:34:00 +0800
+
+Refresh of tun-introduce-tx-array-mode
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 4c5373a..f1bf507 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2517,7 +2517,7 @@ static int tun_queue_resize(struct tun_struct *tun)
+ 	struct tun_file *tfile;
+ 	struct skb_array **arrays;
+ 	int n = tun->numqueues + tun->numdisabled;
+-	int ret;
++	int ret, i;
+ 
+ 	arrays = kmalloc(sizeof *arrays * n, GFP_KERNEL);
+ 	if (!arrays)
+@@ -2542,11 +2542,10 @@ static int tun_device_event(struct notifier_block *unused,
+ {
+ 	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+ 	struct tun_struct *tun = netdev_priv(dev);
+-	int i;
+ 
+ 	switch (event) {
+ 	case NETDEV_CHANGE_TX_QUEUE_LEN:
+-		if (!tun_queue_resize(tun))
++		if (tun_queue_resize(tun))
+ 			return NOTIFY_BAD;
+ 		break;
+ 	default:
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index afb2519..0f9f639 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -164,7 +164,10 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
+  */
+ static inline void *__ptr_ring_peek(struct ptr_ring *r)
+ {
+-	return r->queue[r->consumer];
++	if (likely(r->size))
++		return r->queue[r->consumer];
++
++	return NULL;
+ }
+ 
+ /* Note: callers invoking this in a loop must use a compiler barrier,
+@@ -410,6 +413,8 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
+ 	}
+ 
+ 	for (i = 0; i < nrings; ++i) {
++		printk("nrings %d i %d lock %p\n",
++			nrings, i, &rings[i]->producer_lock);
+ 		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
+ 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
+ 						  size, gfp, destroy);
