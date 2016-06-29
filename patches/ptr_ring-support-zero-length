@@ -5,6 +5,9 @@ Date:   2016-06-29 15:35:25 +0800
 
 ptr_ring: support zero length ring
 
+Sometimes, we need zero length ring. But current code will crash since
+we don't do any check before accessing the ring. This patch fixes this.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
