@@ -409,13 +409,12 @@ static inline int ptr_ring_resize_multiple(struct ptr_ring **rings, int nrings,
 			goto nomem;
 	}
 
-	spin_lock_irqsave(&(rings[i])->producer_lock, flags);
-
-	for (i = 0; i < nrings; ++i)
+	for (i = 0; i < nrings; ++i) {
+		spin_lock_irqsave(&(rings[i])->producer_lock, flags);
 		queues[i] = __ptr_ring_swap_queue(rings[i], queues[i],
 						  size, gfp, destroy);
-
-	spin_unlock_irqrestore(&(rings[i])->producer_lock, flags);
+		spin_unlock_irqrestore(&(rings[i])->producer_lock, flags);
+	}
 
 	for (i = 0; i < nrings; ++i)
 		kfree(queues[i]);
