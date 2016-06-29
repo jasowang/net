@@ -5,6 +5,11 @@ Date:   2016-06-14 12:06:23 +0800
 
 net: introduce NETDEV_CHANGE_TX_QUEUE_LEN
 
+This patch introduces a new event - NETDEV_CHANGE_TX_QUEUE_LEN, this
+will be triggered when tx_queue_len. It could be used by net device
+who want to do some processing at that time. An example is tun who may
+want to resize tx array when tx_queue_len is changed.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
