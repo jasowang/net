@@ -1,6 +1,6 @@
 Version: 1
-Previous: a63660ccb6556fa3b72b5b6b3edd5a28b967326a
-Head: 0e9390ebf1fe0d38f7df66a3d8183cbc5349a564
+Previous: 5c5730d8a63603085c369591e5a9913e8da19e86
+Head: dad51d8ee002cadf0fddff2aeb7abcfa883f2a56
 Applied:
 Unapplied:
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
