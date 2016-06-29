@@ -1,6 +1,6 @@
 Version: 1
-Previous: b04d0fda312df4ec0d3b0d7ecb69ec9ee3858b6d
-Head: c65ca3add5f7878dec45cd0ccbf08e593cb9e3a3
+Previous: 68a7fe789dab3dc401b2242709e4a39d2b431de7
+Head: 05fe102e5210082b1b149e599d4126b5852c48d2
 Applied:
   tun-introduce-tx-skb-ring: c65ca3add5f7878dec45cd0ccbf08e593cb9e3a3
 Unapplied:
