@@ -520,12 +520,9 @@ static void tun_queue_purge(struct tun_struct *tun, struct tun_file *tfile)
 {
 	struct sk_buff *skb;
 
-	if (tun->flags & IFF_TX_ARRAY) {
-		while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
-			kfree_skb(skb);
-	}
+	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
+		kfree_skb(skb);
 
-	skb_queue_purge(&tfile->sk.sk_receive_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
 }
 
@@ -570,7 +567,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 			    tun->dev->reg_state == NETREG_REGISTERED)
 				unregister_netdevice(tun->dev);
 		}
-		if (tun && tun->flags & IFF_TX_ARRAY)
+		if (tun)
 			skb_array_cleanup(&tfile->tx_array);
 		sock_put(&tfile->sk);
 	}
@@ -655,7 +652,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
 			goto out;
 	}
 
-	if (!tfile->detached && tun->flags & IFF_TX_ARRAY &&
+	if (!tfile->detached &&
 	    skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
 		err = -ENOMEM;
 		goto out;
@@ -910,13 +907,8 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	if (tun->flags & IFF_TX_ARRAY) {
-		if (skb_array_produce(&tfile->tx_array, skb))
-			goto drop;
-	} else {
-		/* Enqueue packet */
-		skb_queue_tail(&tfile->socket.sk->sk_receive_queue, skb);
-	}
+	if (skb_array_produce(&tfile->tx_array, skb))
+		goto drop;
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
@@ -1112,17 +1104,6 @@ static void tun_net_init(struct net_device *dev)
 	}
 }
 
-static int tun_queue_not_empty(struct tun_struct *tun,
-			       struct tun_file *tfile)
-{
-	struct sock *sk = tfile->socket.sk;
-
-	if (tun->flags & IFF_TX_ARRAY)
-		return !skb_array_empty(&tfile->tx_array);
-	else
-		return !skb_queue_empty(&sk->sk_receive_queue);
-}
-
 /* Character device part */
 
 /* Poll */
@@ -1142,7 +1123,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (tun_queue_not_empty(tun, tfile))
+	if (!skb_array_empty(&tfile->tx_array))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sock_writeable(sk) ||
@@ -1507,20 +1488,14 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 {
 	struct sk_buff *skb;
 	ssize_t ret;
-	int peeked, err, off = 0;
+	int err;
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
 	if (!iov_iter_count(to))
 		return 0;
 
-	if (tun->flags & IFF_TX_ARRAY)
-		skb = tun_ring_recv(tfile, noblock, &err);
-	else
-		/* Read frames from queue */
-		skb = __skb_recv_datagram(tfile->socket.sk,
-					  noblock ? MSG_DONTWAIT : 0,
-					  &peeked, &off, &err);
+	skb = tun_ring_recv(tfile, noblock, &err);
 	if (!skb)
 		return err;
 
@@ -1656,7 +1631,6 @@ out:
 static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-	struct sock *sk = sock->sk;
 	struct tun_struct *tun;
 	int ret = 0;
 
@@ -1664,22 +1638,9 @@ static int tun_peek_len(struct socket *sock)
 	if (!tun)
 		return 0;
 
-	if (tun->flags & IFF_TX_ARRAY) {
-		ret = skb_array_peek_len(&tfile->tx_array);
-	} else {
-		struct sk_buff *head;
-
-		spin_lock_bh(&sk->sk_receive_queue.lock);
-		head = skb_peek(&sk->sk_receive_queue);
-		if (likely(head)) {
-			ret = head->len;
-			if (skb_vlan_tag_present(head))
-				ret += VLAN_HLEN;
-		}
-		spin_unlock_bh(&sk->sk_receive_queue.lock);
-	}
-
+	ret = skb_array_peek_len(&tfile->tx_array);
 	tun_put(tun);
+
 	return ret;
 }
 
@@ -1699,7 +1660,7 @@ static struct proto tun_proto = {
 static int tun_flags(struct tun_struct *tun)
 {
 	return tun->flags & (TUN_FEATURES | IFF_PERSIST | IFF_TUN |
-			     IFF_TAP | IFF_TX_ARRAY);
+			     IFF_TAP);
 }
 
 static ssize_t tun_show_flags(struct device *dev, struct device_attribute *attr,
@@ -1810,9 +1771,6 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 			name = "tap%d";
 		} else
 			return -EINVAL;
-
-		if (ifr->ifr_flags & IFF_TX_ARRAY)
-			flags |= IFF_TX_ARRAY;
 
 		if (*ifr->ifr_name)
 			name = ifr->ifr_name;
@@ -2054,7 +2012,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		 * This is needed because we never checked for invalid flags on
 		 * TUNSETIFF.
 		 */
-		return put_user(IFF_TUN | IFF_TAP | IFF_TX_ARRAY | TUN_FEATURES,
+		return put_user(IFF_TUN | IFF_TAP | TUN_FEATURES,
 				(unsigned int __user*)argp);
 	} else if (cmd == TUNSETQUEUE)
 		return tun_set_queue(file, &ifr);
