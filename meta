@@ -1,9 +1,9 @@
 Version: 1
-Previous: 099a87ccef8e164144312ad706d251e1f4fac7b0
-Head: 8a79813c140122b9448bb8d24ec58dff3b15ea31
+Previous: b04d0fda312df4ec0d3b0d7ecb69ec9ee3858b6d
+Head: c65ca3add5f7878dec45cd0ccbf08e593cb9e3a3
 Applied:
+  tun-introduce-tx-skb-ring: c65ca3add5f7878dec45cd0ccbf08e593cb9e3a3
 Unapplied:
-  tun-introduce-tx-skb-ring: dad51d8ee002cadf0fddff2aeb7abcfa883f2a56
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
   ptr_ring-array-based-fifo-for: 7aa759df9ece6dab9fdbc8623091af8b44f56c98
   skb_array-array-based-fifo-for-0: 7ab7d8367898c738086b5cb780b361b327e7581b
