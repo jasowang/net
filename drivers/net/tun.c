@@ -2517,7 +2517,7 @@ static int tun_queue_resize(struct tun_struct *tun)
 	struct tun_file *tfile;
 	struct skb_array **arrays;
 	int n = tun->numqueues + tun->numdisabled;
-	int ret;
+	int ret, i;
 
 	arrays = kmalloc(sizeof *arrays * n, GFP_KERNEL);
 	if (!arrays)
@@ -2542,11 +2542,10 @@ static int tun_device_event(struct notifier_block *unused,
 {
 	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
 	struct tun_struct *tun = netdev_priv(dev);
-	int i;
 
 	switch (event) {
 	case NETDEV_CHANGE_TX_QUEUE_LEN:
-		if (!tun_queue_resize(tun))
+		if (tun_queue_resize(tun))
 			return NOTIFY_BAD;
 		break;
 	default:
