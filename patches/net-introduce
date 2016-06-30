@@ -10,7 +10,9 @@ will be triggered when tx_queue_len. It could be used by net device
 who want to do some processing at that time. An example is tun who may
 want to resize tx array when tx_queue_len is changed.
 
+Cc: John Fastabend <john.r.fastabend@intel.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
