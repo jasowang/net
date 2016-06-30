@@ -1473,7 +1473,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 		}
 
 		schedule();
-	};
+	}
 
 	current->state = TASK_RUNNING;
 	remove_wait_queue(&tfile->wq.wait, &wait);
