@@ -1,0 +1,38 @@
+Bottom: 88943c6c894190c73169df45798c421280bad3c1
+Top:    776856eb5eb55bb249686829e3e90acf3410f361
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-30 09:53:55 +0800
+
+Refresh of tun-introduce-tx-array-mode
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 0a24857..15dd8fd 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -131,7 +131,6 @@ struct tap_filter {
+ #define MAX_TAP_FLOWS  4096
+ 
+ #define TUN_FLOW_EXPIRE (3 * HZ)
+-#define TUN_RING_SIZE 256
+ 
+ struct tun_pcpu_stats {
+ 	u64 rx_packets;
+@@ -622,6 +621,7 @@ static void tun_detach_all(struct net_device *dev)
+ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
+ {
+ 	struct tun_file *tfile = file->private_data;
++	struct net_device *dev = tun->dev;
+ 	int err;
+ 
+ 	err = security_tun_dev_attach(tfile->socket.sk, tun->security);
+@@ -653,7 +653,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+ 	}
+ 
+ 	if (!tfile->detached &&
+-	    skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
++	    skb_array_init(&tfile->tx_array, dev->tx_queue_len, GFP_KERNEL)) {
+ 		err = -ENOMEM;
+ 		goto out;
+ 	}
