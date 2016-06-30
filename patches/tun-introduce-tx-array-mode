@@ -1,5 +1,5 @@
 Bottom: 5930876cf24f57f81dbc59d0e93cadd0ed228996
-Top:    776856eb5eb55bb249686829e3e90acf3410f361
+Top:    c82ab5ec9aa0e485678e89188c94df1cf2cd7a69
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-06-15 10:41:47 +0800
 
@@ -30,7 +30,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 4884802..15dd8fd 100644
+index 4884802..3be69ea 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -71,6 +71,7 @@
@@ -113,7 +113,7 @@ index 4884802..15dd8fd 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (sock_writeable(sk) ||
-@@ -1426,22 +1442,60 @@ done:
+@@ -1426,22 +1442,61 @@ done:
  	return total;
  }
  
@@ -174,11 +174,12 @@ index 4884802..15dd8fd 100644
 -	/* Read frames from queue */
 -	skb = __skb_recv_datagram(tfile->socket.sk, noblock ? MSG_DONTWAIT : 0,
 -				  &peeked, &off, &err);
++	/* Read frames from ring */
 +	skb = tun_ring_recv(tfile, noblock, &err);
  	if (!skb)
  		return err;
  
-@@ -1574,8 +1628,25 @@ out:
+@@ -1574,8 +1629,25 @@ out:
  	return ret;
  }
  
@@ -204,7 +205,7 @@ index 4884802..15dd8fd 100644
  	.sendmsg = tun_sendmsg,
  	.recvmsg = tun_recvmsg,
  };
-@@ -2397,6 +2468,53 @@ static const struct ethtool_ops tun_ethtool_ops = {
+@@ -2397,6 +2469,53 @@ static const struct ethtool_ops tun_ethtool_ops = {
  	.get_ts_info	= ethtool_op_get_ts_info,
  };
  
@@ -258,7 +259,7 @@ index 4884802..15dd8fd 100644
  
  static int __init tun_init(void)
  {
-@@ -2416,6 +2534,8 @@ static int __init tun_init(void)
+@@ -2416,6 +2535,8 @@ static int __init tun_init(void)
  		pr_err("Can't register misc device %d\n", TUN_MINOR);
  		goto err_misc;
  	}
@@ -267,7 +268,7 @@ index 4884802..15dd8fd 100644
  	return  0;
  err_misc:
  	rtnl_link_unregister(&tun_link_ops);
-@@ -2427,6 +2547,7 @@ static void tun_cleanup(void)
+@@ -2427,6 +2548,7 @@ static void tun_cleanup(void)
  {
  	misc_deregister(&tun_miscdev);
  	rtnl_link_unregister(&tun_link_ops);
