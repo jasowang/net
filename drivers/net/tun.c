@@ -131,7 +131,6 @@ struct tap_filter {
 #define MAX_TAP_FLOWS  4096
 
 #define TUN_FLOW_EXPIRE (3 * HZ)
-#define TUN_RING_SIZE 256
 
 struct tun_pcpu_stats {
 	u64 rx_packets;
@@ -622,6 +621,7 @@ static void tun_detach_all(struct net_device *dev)
 static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
 {
 	struct tun_file *tfile = file->private_data;
+	struct net_device *dev = tun->dev;
 	int err;
 
 	err = security_tun_dev_attach(tfile->socket.sk, tun->security);
@@ -653,7 +653,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
 	}
 
 	if (!tfile->detached &&
-	    skb_array_init(&tfile->tx_array, TUN_RING_SIZE, GFP_KERNEL)) {
+	    skb_array_init(&tfile->tx_array, dev->tx_queue_len, GFP_KERNEL)) {
 		err = -ENOMEM;
 		goto out;
 	}
