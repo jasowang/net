@@ -1,0 +1,21 @@
+Bottom: 776856eb5eb55bb249686829e3e90acf3410f361
+Top:    c82ab5ec9aa0e485678e89188c94df1cf2cd7a69
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-06-30 09:55:19 +0800
+
+Refresh of tun-introduce-tx-array-mode
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 15dd8fd..3be69ea 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1495,6 +1495,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (!iov_iter_count(to))
+ 		return 0;
+ 
++	/* Read frames from ring */
+ 	skb = tun_ring_recv(tfile, noblock, &err);
+ 	if (!skb)
+ 		return err;
