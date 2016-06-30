@@ -1495,6 +1495,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (!iov_iter_count(to))
 		return 0;
 
+	/* Read frames from ring */
 	skb = tun_ring_recv(tfile, noblock, &err);
 	if (!skb)
 		return err;
