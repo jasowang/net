@@ -1,7 +1,7 @@
 Bottom: 0dc5c3add2b129fa79ce009e657823dbda62ccdf
-Top:    5930876cf24f57f81dbc59d0e93cadd0ed228996
+Top:    c24a4676bca606cd3812316f45201941008d4d95
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2016-06-14 12:06:23 +0800
+Date:   2016-06-30 14:34:51 +0800
 
 net: introduce NETDEV_CHANGE_TX_QUEUE_LEN
 
@@ -11,7 +11,6 @@ who want to do some processing at that time. An example is tun who may
 want to resize tx array when tx_queue_len is changed.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -52,3 +51,32 @@ index 7a0b616..6e4f347 100644
 +
  	return 0;
  }
+ 
+diff --git a/net/core/rtnetlink.c b/net/core/rtnetlink.c
+index eb49ca2..b16b779 100644
+--- a/net/core/rtnetlink.c
++++ b/net/core/rtnetlink.c
+@@ -1927,11 +1927,19 @@ static int do_setlink(const struct sk_buff *skb,
+ 
+ 	if (tb[IFLA_TXQLEN]) {
+ 		unsigned long value = nla_get_u32(tb[IFLA_TXQLEN]);
+-
+-		if (dev->tx_queue_len ^ value)
++		unsigned long orig_len = dev->tx_queue_len;
++
++		if (dev->tx_queue_len ^ value) {
++			dev->tx_queue_len = value;
++			err = call_netdevice_notifiers(
++			      NETDEV_CHANGE_TX_QUEUE_LEN, dev);
++			err = notifier_to_errno(err);
++			if (err) {
++				dev->tx_queue_len = orig_len;
++				goto errout;
++			}
+ 			status |= DO_SETLINK_NOTIFY;
+-
+-		dev->tx_queue_len = value;
++		}
+ 	}
+ 
+ 	if (tb[IFLA_OPERSTATE])
