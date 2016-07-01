@@ -1,5 +1,5 @@
 Version: 1
-Previous: 2f6b109292b1f31fe5e300ec33676c2eff7d77a4
+Previous: 0ee051d3dda3d28a39320d37e403a6bb6e6a6f77
 Head: 2a402ff27cd49b24ad70fae2fa3bae4ec1bcc04e
 Applied:
   ptr_ring-support-zero-length: 05c78045ec7d38fe1f179eb9fe0917ac37a85f3e
@@ -15,7 +15,6 @@ Unapplied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
   vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
-  refresh-temp: 0795857266adba073a7cf1b9e86d72a7cee80231
   lockless: 8b54c888274727bfd7f7e7cee1dcd5bd834a92f4
   signed-off-by-jason-wang: b25826bb9d34b18a86285552ae18fe775b37d66b
 Hidden:
