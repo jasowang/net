@@ -1,5 +1,5 @@
 Version: 1
-Previous: 584c95f271a2806ac17f775741ef1f57bd1b6d60
+Previous: 676aa74540fc2821010f70b5d4037a4e27ab5721
 Head: 2a402ff27cd49b24ad70fae2fa3bae4ec1bcc04e
 Applied:
   ptr_ring-support-zero-length: 05c78045ec7d38fe1f179eb9fe0917ac37a85f3e
@@ -15,7 +15,6 @@ Unapplied:
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
   introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
   vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
-  tuntap-iff_tx_ring: 28a8d7a8626dde009311db715d43e3458cd8944d
   formal-patch: cbb978ea17736a2a0578803c7580f89787d6528a
   refresh-temp: 0795857266adba073a7cf1b9e86d72a7cee80231
   lockless: 8b54c888274727bfd7f7e7cee1dcd5bd834a92f4
