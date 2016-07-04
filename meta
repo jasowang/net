@@ -1,7 +1,8 @@
 Version: 1
-Previous: ee3ffc8f155a310478a5fd5b2be5a2e602e090f0
-Head: 8186f6e382d8719d0a4bc0ef218c4dd7cf55b496
+Previous: 3a5df38c2157f550bf2b31eb4d4166cb95e941a5
+Head: 422751d0446c851510894382ea2a218c38fc0762
 Applied:
+  tun-fix-build-warnings: 422751d0446c851510894382ea2a218c38fc0762
 Unapplied:
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
