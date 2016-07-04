@@ -5,6 +5,8 @@ Date:   2016-07-04 13:14:40 +0800
 
 tun: fix build warnings
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
