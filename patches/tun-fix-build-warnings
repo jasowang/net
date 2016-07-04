@@ -1,5 +1,5 @@
 Bottom: 2da11ffacf4410d21d578f7db6c154dd26f50fee
-Top:    2da11ffacf4410d21d578f7db6c154dd26f50fee
+Top:    5d3b05061916a6a5f44d66ce301079291c3009cd
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-04 13:14:40 +0800
 
@@ -10,4 +10,43 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7475215..5eadb7a 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1447,12 +1447,13 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ {
+ 	DECLARE_WAITQUEUE(wait, current);
+ 	struct sk_buff *skb = NULL;
++	int error = 0;
+ 
+ 	skb = skb_array_consume(&tfile->tx_array);
+ 	if (skb)
+ 		goto out;
+ 	if (noblock) {
+-		*err = -EAGAIN;
++		error = -EAGAIN;
+ 		goto out;
+ 	}
+ 
+@@ -1464,11 +1465,11 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 		if (skb)
+ 			break;
+ 		if (signal_pending(current)) {
+-			*err = -ERESTARTSYS;
++			error = -ERESTARTSYS;
+ 			break;
+ 		}
+ 		if (tfile->socket.sk->sk_shutdown & RCV_SHUTDOWN) {
+-			*err = -EFAULT;
++			error = -EFAULT;
+ 			break;
+ 		}
+ 
+@@ -1479,6 +1480,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 	remove_wait_queue(&tfile->wq.wait, &wait);
+ 
+ out:
++	*err = error;
+ 	return skb;
+ }
