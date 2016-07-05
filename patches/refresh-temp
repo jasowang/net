@@ -1,0 +1,84 @@
+Bottom: 2da11ffacf4410d21d578f7db6c154dd26f50fee
+Top:    4815d809a495502d8460e633c3d932f5cfd4c1f2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-05 11:13:38 +0800
+
+Refresh of debug
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7475215..b4f1d05 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1206,9 +1206,15 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			return -EFAULT;
+ 
+ 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+-		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
++		    tun16_to_cpu(tun, gso.csum_start) +
++		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
++			tun16_to_cpu(tun, gso.hdr_len)) {
++			printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
++				tun16_to_cpu(tun, gso.csum_offset),
++				tun16_to_cpu(tun, gso.hdr_len));
+ 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+-
++			printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
++		}
+ 		if (tun16_to_cpu(tun, gso.hdr_len) > len)
+ 			return -EINVAL;
+ 		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso));
+@@ -1217,8 +1223,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
+ 		align += NET_IP_ALIGN;
+ 		if (unlikely(len < ETH_HLEN ||
+-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
++			     (gso.hdr_len && tun16_to_cpu(tun,
++						     gso.hdr_len) <
++		ETH_HLEN))) {
++			printk("[tun] hdr len is %d\n", gso.hdr_len);
+ 			return -EINVAL;
++		}
+ 	}
+ 
+ 	good_linear = SKB_MAX_HEAD(align);
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e032ca3..ff5319e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -371,6 +371,7 @@ static void handle_tx(struct vhost_net *net)
+ 	struct socket *sock;
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	bool zcopy, zcopy_used;
++	ssize_t n;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
+@@ -383,6 +384,7 @@ static void handle_tx(struct vhost_net *net)
+ 	zcopy = nvq->ubufs;
+ 
+ 	for (;;) {
++		struct iov_iter tmp;
+ 		/* Release DMAs done buffers first */
+ 		if (zcopy)
+ 			vhost_zerocopy_signal_used(net, vq);
+@@ -416,6 +418,18 @@ static void handle_tx(struct vhost_net *net)
+ 		/* Skip header. TODO: support TSO. */
+ 		len = iov_length(vq->iov, out);
+ 		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
++		iov_iter_init(&tmp, WRITE, vq->iov, out, len);
++		{
++			struct virtio_net_hdr gso = { 0 };
++			n = copy_from_iter(&gso, sizeof(gso), &tmp);
++			if (n != sizeof(gso))
++				printk("header error!\n");
++			if (gso.hdr_len && vhost16_to_cpu(vq,
++						gso.hdr_len) < ETH_HLEN)
++				printk("error %d\n",
++					vhost16_to_cpu(vq,
++						gso.hdr_len));
++		}
+ 		iov_iter_advance(&msg.msg_iter, hdr_size);
+ 		/* Sanity check */
+ 		if (!msg_data_left(&msg)) {
