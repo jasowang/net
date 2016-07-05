@@ -1,5 +1,5 @@
 Bottom: ea0e8c72d068f33300d94762d6103a465ca589c4
-Top:    6fc1057a21e6029ad5922a0d79577a0575a193d9
+Top:    6ff88adf99eab170366d46282b6a5090c481b8e5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-05 11:13:37 +0800
 
@@ -9,10 +9,10 @@ debug
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 7475215..b4f1d05 100644
+index 7475215..1b253ac 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1206,9 +1206,15 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1206,9 +1206,17 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			return -EFAULT;
  
  		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
@@ -20,17 +20,19 @@ index 7475215..b4f1d05 100644
 +		    tun16_to_cpu(tun, gso.csum_start) +
 +		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
 +			tun16_to_cpu(tun, gso.hdr_len)) {
-+			printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
++			if (!gso.csum_start || !gso.csum_offset)
++				printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
 +				tun16_to_cpu(tun, gso.csum_offset),
 +				tun16_to_cpu(tun, gso.hdr_len));
  			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
 -
-+			printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
++			if (!gso.csum_start || !gso.csum_offset)
++				printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
 +		}
  		if (tun16_to_cpu(tun, gso.hdr_len) > len)
  			return -EINVAL;
  		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso));
-@@ -1217,8 +1223,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1217,8 +1225,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
  		align += NET_IP_ALIGN;
  		if (unlikely(len < ETH_HLEN ||
@@ -44,8 +46,26 @@ index 7475215..b4f1d05 100644
  	}
  
  	good_linear = SKB_MAX_HEAD(align);
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 1dd08d4..34f5c49 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -843,6 +843,13 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	if (vi->mergeable_rx_bufs)
+ 		hdr->num_buffers = 0;
+ 
++	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
++		(!hdr->hdr.csum_start || !hdr->hdr.csum_offset)) {
++		printk("csum start %d csum offset %d\n",
++			hdr->hdr.csum_start, hdr->hdr.csum_offset);
++		dump_stack();
++	}
++
+ 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
+ 	if (can_push) {
+ 		__skb_push(skb, hdr_len);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index e032ca3..ff5319e 100644
+index e032ca3..a5ebfec 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -371,6 +371,7 @@ static void handle_tx(struct vhost_net *net)
@@ -64,7 +84,7 @@ index e032ca3..ff5319e 100644
  		/* Release DMAs done buffers first */
  		if (zcopy)
  			vhost_zerocopy_signal_used(net, vq);
-@@ -416,6 +418,18 @@ static void handle_tx(struct vhost_net *net)
+@@ -416,6 +418,26 @@ static void handle_tx(struct vhost_net *net)
  		/* Skip header. TODO: support TSO. */
  		len = iov_length(vq->iov, out);
  		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
@@ -72,6 +92,14 @@ index e032ca3..ff5319e 100644
 +		{
 +			struct virtio_net_hdr gso = { 0 };
 +			n = copy_from_iter(&gso, sizeof(gso), &tmp);
++			if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
++				(!gso.csum_start || !gso.csum_offset)) {
++				printk("start %d offset %d\n",
++					vhost16_to_cpu(vq,
++						gso.csum_start),
++					vhost16_to_cpu(vq,
++						gso.csum_offset));
++			}
 +			if (n != sizeof(gso))
 +				printk("header error!\n");
 +			if (gso.hdr_len && vhost16_to_cpu(vq,
