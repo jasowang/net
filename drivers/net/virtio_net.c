@@ -843,6 +843,13 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	if (vi->mergeable_rx_bufs)
 		hdr->num_buffers = 0;
 
+	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+		(!hdr->hdr.csum_start || !hdr->hdr.csum_offset)) {
+		printk("csum start %d csum offset %d\n",
+			hdr->hdr.csum_start, hdr->hdr.csum_offset);
+		dump_stack();
+	}
+
 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
 	if (can_push) {
 		__skb_push(skb, hdr_len);
