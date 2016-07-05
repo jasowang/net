@@ -1,5 +1,5 @@
 Bottom: 2da11ffacf4410d21d578f7db6c154dd26f50fee
-Top:    2da11ffacf4410d21d578f7db6c154dd26f50fee
+Top:    ea0e8c72d068f33300d94762d6103a465ca589c4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-05 11:48:56 +0800
 
@@ -7,4 +7,16 @@ Date:   2016-07-05 11:48:56 +0800
 
 ---
 
-
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index 1c912f8..7a6c955 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -91,6 +91,8 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 				skb_checksum_start_offset(skb));
+ 		hdr->csum_offset = __cpu_to_virtio16(little_endian,
+ 				skb->csum_offset);
++                if (!hdr->csum_start || !hdr->csum_offset)
++                  dump_stack();
+ 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
+ 	} /* else everything is zero */
