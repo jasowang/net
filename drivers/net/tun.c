@@ -1209,11 +1209,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		    tun16_to_cpu(tun, gso.csum_start) +
 		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
 			tun16_to_cpu(tun, gso.hdr_len)) {
-			printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
+			if (!gso.csum_start || !gso.csum_offset)
+				printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
 				tun16_to_cpu(tun, gso.csum_offset),
 				tun16_to_cpu(tun, gso.hdr_len));
 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
-			printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
+			if (!gso.csum_start || !gso.csum_offset)
+				printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
 		}
 		if (tun16_to_cpu(tun, gso.hdr_len) > len)
 			return -EINVAL;

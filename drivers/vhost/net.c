@@ -422,6 +422,14 @@ static void handle_tx(struct vhost_net *net)
 		{
 			struct virtio_net_hdr gso = { 0 };
 			n = copy_from_iter(&gso, sizeof(gso), &tmp);
+			if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+				(!gso.csum_start || !gso.csum_offset)) {
+				printk("start %d offset %d\n",
+					vhost16_to_cpu(vq,
+						gso.csum_start),
+					vhost16_to_cpu(vq,
+						gso.csum_offset));
+			}
 			if (n != sizeof(gso))
 				printk("header error!\n");
 			if (gso.hdr_len && vhost16_to_cpu(vq,
