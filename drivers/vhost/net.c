@@ -371,6 +371,7 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
+	ssize_t n;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -383,6 +384,7 @@ static void handle_tx(struct vhost_net *net)
 	zcopy = nvq->ubufs;
 
 	for (;;) {
+		struct iov_iter tmp;
 		/* Release DMAs done buffers first */
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
@@ -416,6 +418,30 @@ static void handle_tx(struct vhost_net *net)
 		/* Skip header. TODO: support TSO. */
 		len = iov_length(vq->iov, out);
 		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+		iov_iter_init(&tmp, WRITE, vq->iov, out, len);
+		{
+			struct virtio_net_hdr gso = { 0 };
+			n = copy_from_iter(&gso, sizeof(gso), &tmp);
+			if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+				(!gso.csum_start || !gso.csum_offset)) {
+				printk("start %d offset %d hdr_len %d\n",
+					vhost16_to_cpu(vq,
+						gso.csum_start),
+					vhost16_to_cpu(vq,
+						gso.csum_offset),
+					vhost16_to_cpu(vq,
+						gso.hdr_len));
+			}
+			if (n != sizeof(gso))
+				printk("header error!\n");
+			if (gso.hdr_len && vhost16_to_cpu(vq,
+						gso.hdr_len) < ETH_HLEN)
+				printk("error %d\n",
+					vhost16_to_cpu(vq,
+						gso.hdr_len));
+		}
+		if (hdr_size)
+			printk("advanced!\n");
 		iov_iter_advance(&msg.msg_iter, hdr_size);
 		/* Sanity check */
 		if (!msg_data_left(&msg)) {

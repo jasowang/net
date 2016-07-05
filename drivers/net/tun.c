@@ -1206,9 +1206,17 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			return -EFAULT;
 
 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
-		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
+		    tun16_to_cpu(tun, gso.csum_start) +
+		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
+			tun16_to_cpu(tun, gso.hdr_len)) {
+			if (!gso.csum_start || !gso.csum_offset)
+				printk("csum start %d csum offset %d hdr_len %d\n", tun16_to_cpu(tun, gso.csum_start),
+				tun16_to_cpu(tun, gso.csum_offset),
+				tun16_to_cpu(tun, gso.hdr_len));
 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
-
+			if (!gso.csum_start || !gso.csum_offset)
+				printk("adjusted %d\n", tun16_to_cpu(tun, gso.hdr_len));
+		}
 		if (tun16_to_cpu(tun, gso.hdr_len) > len)
 			return -EINVAL;
 		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso));
@@ -1217,8 +1225,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+			     (gso.hdr_len && tun16_to_cpu(tun,
+						     gso.hdr_len) <
+		ETH_HLEN))) {
+			printk("[tun] hdr len is %d\n", gso.hdr_len);
 			return -EINVAL;
+		}
 	}
 
 	good_linear = SKB_MAX_HEAD(align);

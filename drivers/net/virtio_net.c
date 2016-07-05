@@ -823,6 +823,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	unsigned num_sg;
 	unsigned hdr_len = vi->hdr_len;
 	bool can_push;
+	int ret;
 
 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
 
@@ -843,6 +844,13 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	if (vi->mergeable_rx_bufs)
 		hdr->num_buffers = 0;
 
+	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+		(!hdr->hdr.csum_start || !hdr->hdr.csum_offset)) {
+		printk("csum start %d csum offset %d\n",
+			hdr->hdr.csum_start, hdr->hdr.csum_offset);
+		dump_stack();
+	}
+
 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
 	if (can_push) {
 		__skb_push(skb, hdr_len);
@@ -853,7 +861,14 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 		sg_set_buf(sq->sg, hdr, hdr_len);
 		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
 	}
-	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+		(!hdr->hdr.csum_start || !hdr->hdr.csum_offset)) {
+		printk("2! csum start %d csum offset %d\n",
+			hdr->hdr.csum_start, hdr->hdr.csum_offset);
+		dump_stack();
+	}
+	return ret;
 }
 
 static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
