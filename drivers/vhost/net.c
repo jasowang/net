@@ -424,11 +424,13 @@ static void handle_tx(struct vhost_net *net)
 			n = copy_from_iter(&gso, sizeof(gso), &tmp);
 			if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
 				(!gso.csum_start || !gso.csum_offset)) {
-				printk("start %d offset %d\n",
+				printk("start %d offset %d hdr_len %d\n",
 					vhost16_to_cpu(vq,
 						gso.csum_start),
 					vhost16_to_cpu(vq,
-						gso.csum_offset));
+						gso.csum_offset),
+					vhost16_to_cpu(vq,
+						gso.hdr_len));
 			}
 			if (n != sizeof(gso))
 				printk("header error!\n");
@@ -438,6 +440,8 @@ static void handle_tx(struct vhost_net *net)
 					vhost16_to_cpu(vq,
 						gso.hdr_len));
 		}
+		if (hdr_size)
+			printk("advanced!\n");
 		iov_iter_advance(&msg.msg_iter, hdr_size);
 		/* Sanity check */
 		if (!msg_data_left(&msg)) {
