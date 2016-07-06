@@ -1,0 +1,79 @@
+Bottom: 6ff88adf99eab170366d46282b6a5090c481b8e5
+Top:    63b6aa6e76e9727c7aa4d5bb0dc821b4ba146eb4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-06 10:41:28 +0800
+
+Refresh of debug
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 34f5c49..fd38898 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -823,6 +823,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	unsigned num_sg;
+ 	unsigned hdr_len = vi->hdr_len;
+ 	bool can_push;
++	int ret;
+ 
+ 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
+ 
+@@ -860,7 +861,14 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 		sg_set_buf(sq->sg, hdr, hdr_len);
+ 		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
+ 	}
+-	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
++	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
++	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
++		(!hdr->hdr.csum_start || !hdr->hdr.csum_offset)) {
++		printk("2! csum start %d csum offset %d\n",
++			hdr->hdr.csum_start, hdr->hdr.csum_offset);
++		dump_stack();
++	}
++	return ret;
+ }
+ 
+ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index a5ebfec..49f6216 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -424,11 +424,13 @@ static void handle_tx(struct vhost_net *net)
+ 			n = copy_from_iter(&gso, sizeof(gso), &tmp);
+ 			if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+ 				(!gso.csum_start || !gso.csum_offset)) {
+-				printk("start %d offset %d\n",
++				printk("start %d offset %d hdr_len %d\n",
+ 					vhost16_to_cpu(vq,
+ 						gso.csum_start),
+ 					vhost16_to_cpu(vq,
+-						gso.csum_offset));
++						gso.csum_offset),
++					vhost16_to_cpu(vq,
++						gso.hdr_len));
+ 			}
+ 			if (n != sizeof(gso))
+ 				printk("header error!\n");
+@@ -438,6 +440,8 @@ static void handle_tx(struct vhost_net *net)
+ 					vhost16_to_cpu(vq,
+ 						gso.hdr_len));
+ 		}
++		if (hdr_size)
++			printk("advanced!\n");
+ 		iov_iter_advance(&msg.msg_iter, hdr_size);
+ 		/* Sanity check */
+ 		if (!msg_data_left(&msg)) {
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index 7a6c955..1c912f8 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -91,8 +91,6 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 				skb_checksum_start_offset(skb));
+ 		hdr->csum_offset = __cpu_to_virtio16(little_endian,
+ 				skb->csum_offset);
+-                if (!hdr->csum_start || !hdr->csum_offset)
+-                  dump_stack();
+ 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
+ 	} /* else everything is zero */
