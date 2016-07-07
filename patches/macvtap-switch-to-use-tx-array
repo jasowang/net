@@ -5,6 +5,8 @@ Date:   2016-07-07 17:42:12 +0800
 
 macvtap: switch to use tx array
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
