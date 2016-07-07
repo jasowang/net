@@ -365,10 +365,8 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 	if (!q)
 		return RX_HANDLER_PASS;
 
-#if 0
-	if (skb_queue_len(&q->sk.sk_receive_queue) >= dev->tx_queue_len)
+	if (__skb_array_full(&q->skb_array))
 		goto drop;
-#endif
 
 	skb_push(skb, ETH_HLEN);
 
