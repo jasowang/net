@@ -1,0 +1,24 @@
+Bottom: eed1869e8c249ed08ab05d2d3cd6cacd68263270
+Top:    38352df91d8e8744bba873e1802370a6ceef54f8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-07 17:45:12 +0800
+
+Refresh of macvtap-switch-to-use-tx-array
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index a51269c..8de5eff 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -365,10 +365,8 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
+ 	if (!q)
+ 		return RX_HANDLER_PASS;
+ 
+-#if 0
+-	if (skb_queue_len(&q->sk.sk_receive_queue) >= dev->tx_queue_len)
++	if (__skb_array_full(&q->skb_array))
+ 		goto drop;
+-#endif
+ 
+ 	skb_push(skb, ETH_HLEN);
