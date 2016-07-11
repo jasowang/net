@@ -1,0 +1,51 @@
+Bottom: 6284077ca025e2b09573bd404a771d5689fdec9b
+Top:    0ee4d415eb52086fa065755b2b924b6a6c149368
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-11 16:46:47 +0800
+
+Refresh of macvtap-switch-to-use-tx-array
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index 806e428..f2363f1 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -408,8 +408,9 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
+ 		 */
+ 		if (skb->ip_summed == CHECKSUM_PARTIAL &&
+ 		    !(features & NETIF_F_CSUM_MASK) &&
+-		    skb_checksum_help(skb))
++		    skb_checksum_help(skb)) {
+ 			goto drop;
++		}
+ 		if (skb_array_produce(&q->skb_array, skb))
+ 			goto drop;
+ 	}
+@@ -1194,10 +1195,18 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+ 	return ret;
+ }
+ 
++static int macvtap_peek_len(struct socket *sock)
++{
++	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
++					       sock);
++	return skb_array_peek_len(&q->skb_array);
++}
++
+ /* Ops structure to mimic raw sockets with tun */
+ static const struct proto_ops macvtap_socket_ops = {
+ 	.sendmsg = macvtap_sendmsg,
+ 	.recvmsg = macvtap_recvmsg,
++	.peek_len = macvtap_peek_len,
+ };
+ 
+ /* Get an underlying socket object from tun file.  Returns error unless file is
+@@ -1288,6 +1297,7 @@ static int macvtap_device_event(struct notifier_block *unused,
+ 	case NETDEV_CHANGE_TX_QUEUE_LEN:
+ 		if (macvtap_queue_resize(vlan))
+ 			return NOTIFY_BAD;
++		break;
+ 	}
+ 
+ 	return NOTIFY_DONE;
