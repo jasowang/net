@@ -408,8 +408,9 @@ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 		 */
 		if (skb->ip_summed == CHECKSUM_PARTIAL &&
 		    !(features & NETIF_F_CSUM_MASK) &&
-		    skb_checksum_help(skb))
+		    skb_checksum_help(skb)) {
 			goto drop;
+		}
 		if (skb_array_produce(&q->skb_array, skb))
 			goto drop;
 	}
@@ -1194,10 +1195,18 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	return ret;
 }
 
+static int macvtap_peek_len(struct socket *sock)
+{
+	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
+					       sock);
+	return skb_array_peek_len(&q->skb_array);
+}
+
 /* Ops structure to mimic raw sockets with tun */
 static const struct proto_ops macvtap_socket_ops = {
 	.sendmsg = macvtap_sendmsg,
 	.recvmsg = macvtap_recvmsg,
+	.peek_len = macvtap_peek_len,
 };
 
 /* Get an underlying socket object from tun file.  Returns error unless file is
@@ -1288,6 +1297,7 @@ static int macvtap_device_event(struct notifier_block *unused,
 	case NETDEV_CHANGE_TX_QUEUE_LEN:
 		if (macvtap_queue_resize(vlan))
 			return NOTIFY_BAD;
+		break;
 	}
 
 	return NOTIFY_DONE;
