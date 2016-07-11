@@ -1216,6 +1216,28 @@ struct socket *macvtap_get_socket(struct file *file)
 }
 EXPORT_SYMBOL_GPL(macvtap_get_socket);
 
+static int macvtap_queue_resize(struct macvlan_dev *vlan)
+{
+	struct net_device *dev = vlan->dev;
+	struct macvtap_queue *q;
+	struct skb_array **arrays;
+	int n = vlan->numqueues;
+	int ret, i = 0;
+
+	arrays = kmalloc(sizeof *arrays * n, GFP_KERNEL);
+	if (!arrays)
+		return -ENOMEM;
+
+	list_for_each_entry(q, &vlan->queue_list, next)
+		arrays[i++] = &q->skb_array;
+
+	ret = skb_array_resize_multiple(arrays, n,
+					dev->tx_queue_len, GFP_KERNEL);
+
+	kfree(arrays);
+	return ret;
+}
+
 static int macvtap_device_event(struct notifier_block *unused,
 				unsigned long event, void *ptr)
 {
@@ -1263,6 +1285,9 @@ static int macvtap_device_event(struct notifier_block *unused,
 		device_destroy(&macvtap_class, devt);
 		macvtap_free_minor(vlan);
 		break;
+	case NETDEV_CHANGE_TX_QUEUE_LEN:
+		if (macvtap_queue_resize(vlan))
+			return NOTIFY_BAD;
 	}
 
 	return NOTIFY_DONE;
