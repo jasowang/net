@@ -6,7 +6,8 @@
 
 static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 					const struct virtio_net_hdr *hdr,
-					bool little_endian)
+					bool little_endian,
+					bool has_data_valid)
 {
 	unsigned short gso_type = 0;
 
@@ -38,6 +39,9 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 
 		if (!skb_partial_csum_set(skb, start, off))
 			return -EINVAL;
+	} else if (has_data_valid &&
+		   hdr->flags & VIRTIO_NET_HDR_F_DATA_VALID) {
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
 	}
 
 	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
@@ -56,7 +60,8 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 
 static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 					  struct virtio_net_hdr *hdr,
-					  bool little_endian)
+					  bool little_endian,
+					  bool has_data_valid)
 {
 	memset(hdr, 0, sizeof(*hdr));
 
@@ -91,7 +96,7 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 				skb_checksum_start_offset(skb));
 		hdr->csum_offset = __cpu_to_virtio16(little_endian,
 				skb->csum_offset);
-	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+	} else if (has_data_valid && skb->ip_summed == CHECKSUM_UNNECESSARY) {
 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
 	} /* else everything is zero */
 

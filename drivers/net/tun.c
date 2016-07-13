@@ -1270,7 +1270,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		return -EFAULT;
 	}
 
-	err = virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun));
+	err = virtio_net_hdr_to_skb(skb, &gso,
+				    tun_is_little_endian(tun), false);
 	if (err) {
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
@@ -1386,7 +1387,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 			return -EINVAL;
 
 		ret = virtio_net_hdr_from_skb(skb, &gso,
-					      tun_is_little_endian(tun));
+					      tun_is_little_endian(tun), true);
 		if (ret) {
 			struct skb_shared_info *sinfo = skb_shinfo(skb);
 			pr_err("unexpected GSO type: "
