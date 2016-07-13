@@ -1,8 +1,9 @@
 Version: 1
-Previous: b54a8ca03439da4569fd49cd1042af7c2496bb35
-Head: c34e044230b53e4edb7a53afa610f5e624e837c3
+Previous: dfcfc45279490c321fa746af8b0daf75dd627520
+Head: 1705e83d961df48898b7f0ca4d69e34e924fc1d4
 Applied:
   macvtap-switch-to-use-tx-array: c34e044230b53e4edb7a53afa610f5e624e837c3
+  patch: 1705e83d961df48898b7f0ca4d69e34e924fc1d4
 Unapplied:
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
