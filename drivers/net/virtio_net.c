@@ -483,7 +483,8 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 
 	if (virtio_net_hdr_to_skb(skb, &hdr->hdr,
-				  virtio_is_little_endian(vi->vdev))) {
+				  virtio_is_little_endian(vi->vdev)),
+		                  false) {
 		net_warn_ratelimited("%s: bad gso: type: %u, size: %u\n",
 				     dev->name, hdr->hdr.gso_type,
 				     hdr->hdr.gso_size);
@@ -837,7 +838,8 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 		hdr = skb_vnet_hdr(skb);
 
 	if (virtio_net_hdr_from_skb(skb, &hdr->hdr,
-				    virtio_is_little_endian(vi->vdev)))
+				    virtio_is_little_endian(vi->vdev)),
+		                    true)
 		BUG();
 
 	if (vi->mergeable_rx_bufs)
