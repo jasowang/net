@@ -1,11 +1,11 @@
 Version: 1
-Previous: 8b336d7d4f92cecd05945a20aae11661fd07758b
+Previous: cd64f16efcfcc423dcb54a4896b426aaf6a7b53c
 Head: 6111864f0bd5c3bc743b2b67f05e3bc76564bf37
 Applied:
+Unapplied:
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
   vhost-convert-pre-sorted-vhost: 642fec9ea87936ef21b9506a0914cb23680c6de0
   vhost-device-iotlb-api: b731341460eaa30d6aeeddf38d4b607a4c78c020
   vhost-fix-access-for: fa7c65003608a8b4ae0f7896fd12d83609493664
-Unapplied:
   vhost-fix-non-atomic-userspace: 512a313fe3d21f3ea56ba68e7c1d4d37f7e2c858
 Hidden:
