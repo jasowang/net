@@ -1,5 +1,5 @@
 Bottom: 43088c8e47e6b7accab3ff2ded06ad636de12f26
-Top:    01a7cd717b66fb736f98bedbaec389f2a5137001
+Top:    f6ee6be12f8331629ab0d0f559cf2c7ac55ceb16
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-14 12:07:12 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 11d2f55..28969dc 100644
+index 11d2f55..79001be 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -285,6 +285,20 @@ void vhost_poll_queue(struct vhost_poll *poll)
@@ -43,7 +43,7 @@ index 11d2f55..28969dc 100644
  }
  
  static int vhost_worker(void *data)
-@@ -695,6 +710,28 @@ static int vq_memory_access_ok(void __user *log_base, struct vhost_umem *umem,
+@@ -695,6 +710,32 @@ static int vq_memory_access_ok(void __user *log_base, struct vhost_umem *umem,
  	return 1;
  }
  
@@ -57,9 +57,13 @@ index 11d2f55..28969dc 100644
 +	case VHOST_ADDR_AVAIL:
 +	case VHOST_ADDR_USED:
 +		node = vq->vq_iotlb[type];
++		break;
 +	default:
 +		BUG();
 +	}
++
++	if (!node)
++		return NULL;
 +
 +	BUG_ON(addr < node->start || (u64)addr > node->start + node->size);
 +
@@ -72,7 +76,7 @@ index 11d2f55..28969dc 100644
  /* Can we switch to this memory table? */
  /* Caller should have device mutex but not vq mutex */
  static int memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
-@@ -725,7 +762,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -725,7 +766,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  			  struct iovec iov[], int iov_size, int access);
  
  static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
@@ -81,7 +85,7 @@ index 11d2f55..28969dc 100644
  {
  	int ret;
  
-@@ -739,6 +776,12 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+@@ -739,6 +780,12 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
  		 */
  		/* TODO: more fast path */
  		struct iov_iter t;
@@ -94,7 +98,7 @@ index 11d2f55..28969dc 100644
  		ret = translate_desc(vq, (u64)(uintptr_t)to, size, vq->iotlb_iov,
  				     ARRAY_SIZE(vq->iotlb_iov),
  				     VHOST_ACCESS_WO);
-@@ -754,7 +797,7 @@ out:
+@@ -754,7 +801,7 @@ out:
  }
  
  static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
@@ -103,7 +107,7 @@ index 11d2f55..28969dc 100644
  {
  	int ret;
  
-@@ -767,7 +810,13 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+@@ -767,7 +814,13 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
  		 * not happen in this case.
  		 */
  		/* TODO: more fast path */
@@ -117,7 +121,7 @@ index 11d2f55..28969dc 100644
  		ret = translate_desc(vq, (u64)(uintptr_t)from, size, vq->iotlb_iov,
  				     ARRAY_SIZE(vq->iotlb_iov),
  				     VHOST_ACCESS_RO);
-@@ -788,8 +837,10 @@ out:
+@@ -788,8 +841,10 @@ out:
  }
  
  static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
@@ -129,7 +133,7 @@ index 11d2f55..28969dc 100644
  	int ret;
  
  	/* This function should be called after iotlb
-@@ -797,7 +848,10 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
+@@ -797,7 +852,10 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
  	 * could be access through iotlb. So -EAGAIN should
  	 * not happen in this case.
  	 */
@@ -141,7 +145,7 @@ index 11d2f55..28969dc 100644
  	ret = translate_desc(vq, (u64)(uintptr_t)addr, size, vq->iotlb_iov,
  			     ARRAY_SIZE(vq->iotlb_iov),
  			     VHOST_ACCESS_RO);
-@@ -818,14 +872,15 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
+@@ -818,14 +876,15 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
  	return vq->iotlb_iov[0].iov_base;
  }
  
@@ -159,7 +163,7 @@ index 11d2f55..28969dc 100644
  		if (to != NULL) \
  			ret = __put_user(x, to); \
  		else \
-@@ -834,14 +889,14 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
+@@ -834,14 +893,14 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
  	ret; \
  })
  
@@ -176,7 +180,7 @@ index 11d2f55..28969dc 100644
  		if (from != NULL) \
  			ret = __get_user(x, from); \
  		else \
-@@ -958,6 +1013,7 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
+@@ -958,6 +1017,7 @@ int vhost_process_iotlb_msg(struct vhost_dev *dev,
  		vhost_iotlb_notify_vq(dev, msg);
  		break;
  	case VHOST_IOTLB_INVALIDATE:
@@ -184,7 +188,7 @@ index 11d2f55..28969dc 100644
  		vhost_del_umem_range(dev->iotlb, msg->iova,
  				     msg->iova + msg->size - 1);
  		break;
-@@ -1101,12 +1157,26 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+@@ -1101,12 +1161,27 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
  			sizeof *used + num * sizeof *used->ring + s);
  }
  
@@ -197,6 +201,7 @@ index 11d2f55..28969dc 100644
 +	case VHOST_ADDR_AVAIL:
 +	case VHOST_ADDR_USED:
 +		vq->vq_iotlb[type] = node;
++		break;
 +	default:
 +		BUG();
 +	}
@@ -213,7 +218,7 @@ index 11d2f55..28969dc 100644
  
  	while (len > s) {
  		node = vhost_umem_interval_tree_iter_first(&umem->umem_tree,
-@@ -1123,6 +1193,10 @@ static int iotlb_access_ok(struct vhost_virtqueue *vq,
+@@ -1123,6 +1198,10 @@ static int iotlb_access_ok(struct vhost_virtqueue *vq,
  		}
  
  		size = node->size - addr + node->start;
@@ -224,7 +229,7 @@ index 11d2f55..28969dc 100644
  		s += size;
  		addr += size;
  	}
-@@ -1139,13 +1213,15 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
+@@ -1139,13 +1218,15 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
  		return 1;
  
  	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)(uintptr_t)vq->desc,
@@ -243,7 +248,7 @@ index 11d2f55..28969dc 100644
  }
  EXPORT_SYMBOL_GPL(vq_iotlb_prefetch);
  
-@@ -1670,7 +1746,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
+@@ -1670,7 +1751,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
  {
  	void __user *used;
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->used_flags),
@@ -252,7 +257,7 @@ index 11d2f55..28969dc 100644
  		return -EFAULT;
  	if (unlikely(vq->log_used)) {
  		/* Make sure the flag is seen before log. */
-@@ -1689,7 +1765,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
+@@ -1689,7 +1770,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
  static int vhost_update_avail_event(struct vhost_virtqueue *vq, u16 avail_event)
  {
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->avail_idx),
@@ -261,7 +266,7 @@ index 11d2f55..28969dc 100644
  		return -EFAULT;
  	if (unlikely(vq->log_used)) {
  		void __user *used;
-@@ -1728,7 +1804,7 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+@@ -1728,7 +1809,7 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
  		r = -EFAULT;
  		goto err;
  	}
@@ -270,7 +275,7 @@ index 11d2f55..28969dc 100644
  	if (r) {
  		vq_err(vq, "Can't access used idx at %p\n",
  		       &vq->used->idx);
-@@ -1931,7 +2007,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1931,7 +2012,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  
  	/* Check it isn't doing very strange things with descriptor numbers. */
  	last_avail_idx = vq->last_avail_idx;
@@ -280,7 +285,7 @@ index 11d2f55..28969dc 100644
  		vq_err(vq, "Failed to access avail idx at %p\n",
  		       &vq->avail->idx);
  		return -EFAULT;
-@@ -1954,7 +2031,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1954,7 +2036,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* Grab the next descriptor number they're advertising, and increment
  	 * the index we've seen. */
  	if (unlikely(vhost_get_user(vq, ring_head,
@@ -290,7 +295,7 @@ index 11d2f55..28969dc 100644
  		vq_err(vq, "Failed to read head: idx %d address %p\n",
  		       last_avail_idx,
  		       &vq->avail->ring[last_avail_idx % vq->num]);
-@@ -1990,7 +2068,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1990,7 +2073,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			return -EINVAL;
  		}
  		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
@@ -299,7 +304,7 @@ index 11d2f55..28969dc 100644
  		if (unlikely(ret)) {
  			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
  			       i, vq->desc + i);
-@@ -2084,15 +2162,18 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2084,15 +2167,18 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	start = vq->last_used_idx & (vq->num - 1);
  	used = vq->used->ring + start;
  	if (count == 1) {
@@ -321,7 +326,7 @@ index 11d2f55..28969dc 100644
  		vq_err(vq, "Failed to write used");
  		return -EFAULT;
  	}
-@@ -2137,7 +2218,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+@@ -2137,7 +2223,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
  	/* Make sure buffer is written before we update index. */
  	smp_wmb();
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->last_used_idx),
@@ -330,7 +335,7 @@ index 11d2f55..28969dc 100644
  		vq_err(vq, "Failed to increment used idx");
  		return -EFAULT;
  	}
-@@ -2169,7 +2250,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2169,7 +2255,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	if (!vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX)) {
  		__virtio16 flags;
@@ -340,7 +345,7 @@ index 11d2f55..28969dc 100644
  			vq_err(vq, "Failed to get flags");
  			return true;
  		}
-@@ -2183,7 +2265,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2183,7 +2270,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	if (unlikely(!v))
  		return true;
  
@@ -350,7 +355,7 @@ index 11d2f55..28969dc 100644
  		vq_err(vq, "Failed to get used event idx");
  		return true;
  	}
-@@ -2225,7 +2308,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2225,7 +2313,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__virtio16 avail_idx;
  	int r;
  
@@ -359,7 +364,7 @@ index 11d2f55..28969dc 100644
  	if (r)
  		return false;
  
-@@ -2260,7 +2343,7 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2260,7 +2348,7 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	/* They could have slipped one in as we were doing that: make
  	 * sure it's written, then check again. */
  	smp_mb();
