@@ -1,9 +1,8 @@
 Version: 1
-Previous: 4fefe860bc7b15f8fc0661357aef94651728ede4
-Head: 8d38a076f1aff93eb259aa5934478b44544786ee
+Previous: 0f44822cfc9a6466e1657b9e37c7dc584988f0d5
+Head: 43dd44c2a91eeef4f7c4374a9aaa62d021e3e375
 Applied:
-  add-a-vq-meta-data-iotlb: 704823ba31e177a4a751320a7c5f829e40c86bd5
-  refresh-temp: 8d38a076f1aff93eb259aa5934478b44544786ee
+  add-a-vq-meta-data-iotlb: 43dd44c2a91eeef4f7c4374a9aaa62d021e3e375
 Unapplied:
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
   vhost-convert-pre-sorted-vhost: 642fec9ea87936ef21b9506a0914cb23680c6de0
