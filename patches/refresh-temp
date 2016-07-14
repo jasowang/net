@@ -1,0 +1,158 @@
+Bottom: a75da3ea1fa08b52bd45a3c5a3abe71094b8fadf
+Top:    01a7cd717b66fb736f98bedbaec389f2a5137001
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-14 13:33:24 +0800
+
+Refresh of add-a-vq-meta-data-iotlb
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 93a772a..28969dc 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -288,17 +288,15 @@ EXPORT_SYMBOL_GPL(vhost_poll_queue);
+ static void __vhost_vq_iotlb_reset(struct vhost_virtqueue *vq)
+ {
+ 	int j;
+-
+ 	for (j = 0; j < VHOST_NUM_ADDRS; j++)
+ 			vq->vq_iotlb[j] = NULL;
+ }
+ 
+ static void vhost_vq_iotlb_reset(struct vhost_dev *d)
+ {
+-	int i, j;
+-
++	int i;
+ 	for (i = 0; i < d->nvqs; ++i)
+-		__vhost_vq_iotlb_reset(&d->vqs[i]);
++		__vhost_vq_iotlb_reset(d->vqs[i]);
+ }
+ 
+ static void vhost_vq_reset(struct vhost_dev *dev,
+@@ -713,26 +711,25 @@ static int vq_memory_access_ok(void __user *log_base, struct vhost_umem *umem,
+ }
+ 
+ static void __user *vhost_vq_iotlb_fetch(struct vhost_virtqueue *vq,
+-					 void *addr, unsigned size, int type)
++					 u64 addr, unsigned size, int type)
+ {
+-	struct vhost_umem_node *node;
+-	void __user *ret;
++	const struct vhost_umem_node *node;
+ 
+ 	switch (type) {
+-	case VHOST_DESC_ADDR:
+-	case VHOST_AVAIL_ADDR:
+-	case VHOST_USED_ADDR:
++	case VHOST_ADDR_DESC:
++	case VHOST_ADDR_AVAIL:
++	case VHOST_ADDR_USED:
+ 		node = vq->vq_iotlb[type];
+ 	default:
+ 		BUG();
+ 	}
+ 
+-	BUG_ON(addr < node->start || addr > node->start + node->size);
++	BUG_ON(addr < node->start || (u64)addr > node->start + node->size);
+ 
+-	if (addr + size >= node->start + node->size)
++	if ((u64)addr + size >= node->start + node->size)
+ 		return NULL;
+ 
+-	return node->userspace_addr + addr - node->start;
++	return (void *)(node->userspace_addr + (u64)addr - node->start);
+ }
+ 
+ /* Can we switch to this memory table? */
+@@ -779,7 +776,8 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+ 		 */
+ 		/* TODO: more fast path */
+ 		struct iov_iter t;
+-		void __user *uaddr = vhost_vq_iotlb_fetch(vq, to, size, type);
++		void __user *uaddr = vhost_vq_iotlb_fetch(vq,
++				     (u64)(uintptr_t)to, size, type);
+ 
+ 		if (uaddr)
+ 			return __copy_to_user(uaddr, from, size);
+@@ -812,17 +810,13 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+ 		 * not happen in this case.
+ 		 */
+ 		/* TODO: more fast path */
+-		void __user *uaddr = vhost_vq_iotlb_fetch(vq, from, size, type);
++		void __user *uaddr = vhost_vq_iotlb_fetch(vq,
++				     (u64)(uintptr_t)from, size, type);
+ 		struct iov_iter f;
+ 
+ 		if (uaddr)
+ 			return __copy_from_user(to, uaddr, size);
+ 
+-		if (node)
+-			return __copy_from_user(to,
+-						node->userspace_addr +
+-						from - node->start, size);
+-
+ 		ret = translate_desc(vq, (u64)(uintptr_t)from, size, vq->iotlb_iov,
+ 				     ARRAY_SIZE(vq->iotlb_iov),
+ 				     VHOST_ACCESS_RO);
+@@ -845,7 +839,8 @@ out:
+ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
+ 				     void *addr, unsigned size, int type)
+ {
+-	void __user *uaddr = vhost_vq_iotlb_fetch(vq, addr, size, type);
++	void __user *uaddr = vhost_vq_iotlb_fetch(vq,
++			     (u64)(uintptr_t)addr, size, type);
+ 	int ret;
+ 
+ 	/* This function should be called after iotlb
+@@ -1167,9 +1162,9 @@ static void vhost_vq_iotlb_update(struct vhost_virtqueue *vq,
+ 				  int type)
+ {
+ 	switch (type) {
+-	case VHOST_DESC_ADDR:
+-	case VHOST_AVAIL_ADDR:
+-	case VHOST_USED_ADDR:
++	case VHOST_ADDR_DESC:
++	case VHOST_ADDR_AVAIL:
++	case VHOST_ADDR_USED:
+ 		vq->vq_iotlb[type] = node;
+ 	default:
+ 		BUG();
+@@ -2270,8 +2265,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	if (unlikely(!v))
+ 		return true;
+ 
+-	if (vhost_get_user(vq, event, vhost_used_event(vq)),
+-		           VHOST_ADDR_AVAIL) {
++	if (vhost_get_user(vq, event, vhost_used_event(vq),
++			   VHOST_ADDR_AVAIL)) {
+ 		vq_err(vq, "Failed to get used event idx");
+ 		return true;
+ 	}
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 9a1bde3..b1b1aa6 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -75,9 +75,9 @@ struct vhost_umem {
+ };
+ 
+ enum vhost_uaddr_type {
+-	VHOST_DESC_ADDR = 0,
+-	VHOST_AVAIL_ADDR = 1,
+-	VHOST_USED_ADDR = 2,
++	VHOST_ADDR_DESC = 0,
++	VHOST_ADDR_AVAIL = 1,
++	VHOST_ADDR_USED = 2,
+ 	VHOST_NUM_ADDRS = 3,
+ };
+ 
+@@ -91,7 +91,7 @@ struct vhost_virtqueue {
+ 	struct vring_desc __user *desc;
+ 	struct vring_avail __user *avail;
+ 	struct vring_used __user *used;
+-	struct vhost_umem_node *vq_iotlb[VHOST_NUM_ADDRS];
++	const struct vhost_umem_node *vq_iotlb[VHOST_NUM_ADDRS];
+ 	struct file *kick;
+ 	struct file *call;
+ 	struct file *error;
