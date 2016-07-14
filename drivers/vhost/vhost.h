@@ -75,9 +75,9 @@ struct vhost_umem {
 };
 
 enum vhost_uaddr_type {
-	VHOST_DESC_ADDR = 0,
-	VHOST_AVAIL_ADDR = 1,
-	VHOST_USED_ADDR = 2,
+	VHOST_ADDR_DESC = 0,
+	VHOST_ADDR_AVAIL = 1,
+	VHOST_ADDR_USED = 2,
 	VHOST_NUM_ADDRS = 3,
 };
 
@@ -91,7 +91,7 @@ struct vhost_virtqueue {
 	struct vring_desc __user *desc;
 	struct vring_avail __user *avail;
 	struct vring_used __user *used;
-	struct vhost_umem_node *vq_iotlb[VHOST_NUM_ADDRS];
+	const struct vhost_umem_node *vq_iotlb[VHOST_NUM_ADDRS];
 	struct file *kick;
 	struct file *call;
 	struct file *error;
