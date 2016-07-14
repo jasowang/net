@@ -720,9 +720,13 @@ static void __user *vhost_vq_iotlb_fetch(struct vhost_virtqueue *vq,
 	case VHOST_ADDR_AVAIL:
 	case VHOST_ADDR_USED:
 		node = vq->vq_iotlb[type];
+		break;
 	default:
 		BUG();
 	}
+
+	if (!node)
+		return NULL;
 
 	BUG_ON(addr < node->start || (u64)addr > node->start + node->size);
 
@@ -1166,6 +1170,7 @@ static void vhost_vq_iotlb_update(struct vhost_virtqueue *vq,
 	case VHOST_ADDR_AVAIL:
 	case VHOST_ADDR_USED:
 		vq->vq_iotlb[type] = node;
+		break;
 	default:
 		BUG();
 	}
