@@ -304,6 +304,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
+	vq->delayed = 0;
 }
 
 static int vhost_worker(void *data)
