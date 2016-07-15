@@ -1,7 +1,8 @@
 Version: 1
-Previous: fe4c4ddfdab38bd4316c396186d507d0272f596a
+Previous: fed0ff8ec93656a48ce490247d30389c9a5e570d
 Head: 54cee70911bfb6b108608dee6f6fafdab6a2f350
 Applied:
+  add-a-vq-meta-data-iotlb: 54cee70911bfb6b108608dee6f6fafdab6a2f350
 Unapplied:
   vhost-forbid-iotlb: b05378dbdb269ce07e3e56d3922ce9d6859b1e81
   vhost-correctly-init-device: 76c1fbef1117842d430a2a89f985b839833f30a1
