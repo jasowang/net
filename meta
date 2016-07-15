@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2e24ff81868c37de6a0cf21eb76ea3a91c3ae9f5
-Head: 6648ed1e159c43f6032e55fef6d348e70d971e6c
+Previous: 0304fab1b8d46dc46d1e77a9476ad98b260bffe8
+Head: 76c1fbef1117842d430a2a89f985b839833f30a1
 Applied:
   vhost-forbid-iotlb: b05378dbdb269ce07e3e56d3922ce9d6859b1e81
   vhost-correctly-init-device: 76c1fbef1117842d430a2a89f985b839833f30a1
