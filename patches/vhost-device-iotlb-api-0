@@ -1,7 +1,7 @@
 Bottom: 07e172e8cbc17150b3f0e9effd79f5727c652815
-Top:    43088c8e47e6b7accab3ff2ded06ad636de12f26
+Top:    fabeb01435a5919491f7d1b327ea67c5a2e1111b
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2016-06-23 01:16:08 -0400
+Date:   2016-07-15 14:47:56 +0800
 
 vhost: device IOTLB API
 
@@ -30,11 +30,10 @@ bit slower. We can add fast path on top of this patch.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 4e97fb8..3b03ceb 100644
+index 4e97fb8..60c0df4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -61,7 +61,8 @@ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
@@ -90,10 +89,10 @@ index 4e97fb8..3b03ceb 100644
  		mutex_unlock(&n->dev.mutex);
  		return -EFAULT;
  	}
-+	if ((features & (1ULL << VHOST_F_DEVICE_IOTLB))) {
-+		if (vhost_init_device_iotlb(&n->dev, true))
-+			return -EFAULT;
-+	}
++
++	if (vhost_init_device_iotlb(&n->dev,
++				    features & (1ULL << VHOST_F_DEVICE_IOTLB)))
++		return -EFAULT;
 +
  	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
  		mutex_lock(&n->vqs[i].vq.mutex);
@@ -140,7 +139,7 @@ index 4e97fb8..3b03ceb 100644
  #ifdef CONFIG_COMPAT
  	.compat_ioctl   = vhost_net_compat_ioctl,
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 166e779..11d2f55 100644
+index 166e779..51e9998 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -35,6 +35,10 @@ static ushort max_mem_regions = 64;
@@ -241,7 +240,7 @@ index 166e779..11d2f55 100644
  	WARN_ON(!list_empty(&dev->work_list));
  	if (dev->worker) {
  		kthread_stop(dev->worker);
-@@ -681,28 +721,379 @@ static int memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
+@@ -681,28 +721,383 @@ static int memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
  	return 1;
  }
  
@@ -487,6 +486,10 @@ index 166e779..11d2f55 100644
 +		vhost_iotlb_notify_vq(dev, msg);
 +		break;
 +	case VHOST_IOTLB_INVALIDATE:
++		if (!dev->iotlb) {
++			ret = -EFAULT;
++			break;
++		}
 +		vhost_del_umem_range(dev->iotlb, msg->iova,
 +				     msg->iova + msg->size - 1);
 +		break;
@@ -626,7 +629,7 @@ index 166e779..11d2f55 100644
  	return access_ok(VERIFY_READ, desc, num * sizeof *desc) &&
  	       access_ok(VERIFY_READ, avail,
  			 sizeof *avail + num * sizeof *avail->ring + s) &&
-@@ -710,6 +1101,54 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+@@ -710,6 +1105,54 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
  			sizeof *used + num * sizeof *used->ring + s);
  }
  
@@ -681,7 +684,7 @@ index 166e779..11d2f55 100644
  /* Can we log writes? */
  /* Caller should have device mutex but not vq mutex */
  int vhost_log_access_ok(struct vhost_dev *dev)
-@@ -736,16 +1175,35 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
+@@ -736,16 +1179,35 @@ static int vq_log_access_ok(struct vhost_virtqueue *vq,
  /* Caller should have vq mutex and device mutex */
  int vhost_vq_access_ok(struct vhost_virtqueue *vq)
  {
@@ -718,7 +721,7 @@ index 166e779..11d2f55 100644
  	struct vhost_umem *newumem, *oldumem;
  	unsigned long size = offsetof(struct vhost_memory, regions);
  	int i;
-@@ -767,28 +1225,23 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
+@@ -767,28 +1229,23 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
  		return -EFAULT;
  	}
  
@@ -755,18 +758,20 @@ index 166e779..11d2f55 100644
  	}
  
  	if (!memory_access_ok(d, newumem, 0))
-@@ -1032,6 +1485,30 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+@@ -1032,6 +1489,32 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  }
  EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
  
 +int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 +{
-+	struct vhost_umem *niotlb, *oiotlb;
++	struct vhost_umem *niotlb = NULL, *oiotlb;
 +	int i;
 +
-+	niotlb = vhost_umem_alloc();
-+	if (!niotlb)
-+		return -ENOMEM;
++	if (enabled) {
++		niotlb = vhost_umem_alloc();
++		if (!niotlb)
++			return -ENOMEM;
++	}
 +
 +	oiotlb = d->iotlb;
 +	d->iotlb = niotlb;
@@ -786,7 +791,7 @@ index 166e779..11d2f55 100644
  /* Caller must have device mutex */
  long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
  {
-@@ -1246,15 +1723,20 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+@@ -1246,15 +1729,20 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
  	if (r)
  		goto err;
  	vq->signalled_used_valid = false;
@@ -809,7 +814,7 @@ index 166e779..11d2f55 100644
  err:
  	vq->is_le = is_le;
  	return r;
-@@ -1262,10 +1744,11 @@ err:
+@@ -1262,10 +1750,11 @@ err:
  EXPORT_SYMBOL_GPL(vhost_vq_init_access);
  
  static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
@@ -823,7 +828,7 @@ index 166e779..11d2f55 100644
  	struct iovec *_iov;
  	u64 s = 0;
  	int ret = 0;
-@@ -1276,12 +1759,21 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -1276,12 +1765,21 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  			ret = -ENOBUFS;
  			break;
  		}
@@ -846,7 +851,7 @@ index 166e779..11d2f55 100644
  		_iov = iov + ret;
  		size = node->size - addr + node->start;
  		_iov->iov_len = min((u64)len - s, size);
-@@ -1292,6 +1784,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -1292,6 +1790,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  		++ret;
  	}
  
@@ -855,7 +860,7 @@ index 166e779..11d2f55 100644
  	return ret;
  }
  
-@@ -1326,7 +1820,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1326,7 +1826,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	unsigned int i = 0, count, found = 0;
  	u32 len = vhost32_to_cpu(vq, indirect->len);
  	struct iov_iter from;
@@ -864,7 +869,7 @@ index 166e779..11d2f55 100644
  
  	/* Sanity check */
  	if (unlikely(len % sizeof desc)) {
-@@ -1338,9 +1832,10 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1338,9 +1838,10 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	}
  
  	ret = translate_desc(vq, vhost64_to_cpu(vq, indirect->addr), len, vq->indirect,
@@ -877,7 +882,7 @@ index 166e779..11d2f55 100644
  		return ret;
  	}
  	iov_iter_init(&from, READ, vq->indirect, ret, len);
-@@ -1378,16 +1873,22 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1378,16 +1879,22 @@ static int get_indirect(struct vhost_virtqueue *vq,
  			return -EINVAL;
  		}
  
@@ -904,7 +909,7 @@ index 166e779..11d2f55 100644
  			*in_num += ret;
  			if (unlikely(log)) {
  				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
-@@ -1426,7 +1927,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1426,7 +1933,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	u16 last_avail_idx;
  	__virtio16 avail_idx;
  	__virtio16 ring_head;
@@ -913,7 +918,7 @@ index 166e779..11d2f55 100644
  
  	/* Check it isn't doing very strange things with descriptor numbers. */
  	last_avail_idx = vq->last_avail_idx;
-@@ -1500,22 +2001,28 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1500,22 +2007,28 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  					   out_num, in_num,
  					   log, log_num, &desc);
  			if (unlikely(ret < 0)) {
@@ -948,7 +953,7 @@ index 166e779..11d2f55 100644
  			/* If this is an input descriptor,
  			 * increment that count. */
  			*in_num += ret;
-@@ -1781,6 +2288,47 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -1781,6 +2294,47 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  }
  EXPORT_SYMBOL_GPL(vhost_disable_notify);
  
