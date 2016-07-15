@@ -1,10 +1,9 @@
 Version: 1
-Previous: abcc7840bba88d8a4eb258e17de72fcaaf9b9a54
-Head: 70d56a562ca69ca4abc1c41033e33fa9cd520c15
+Previous: 6db64b502a7a5b8781aee55e310dfdd8f0d74dc9
+Head: 76c1fbef1117842d430a2a89f985b839833f30a1
 Applied:
   vhost-forbid-iotlb: b05378dbdb269ce07e3e56d3922ce9d6859b1e81
-  vhost-correctly-init-device: 297cd191c28f4f536bb12dd3b5a0c186eb7602b8
-  refresh-temp: 70d56a562ca69ca4abc1c41033e33fa9cd520c15
+  vhost-correctly-init-device: 76c1fbef1117842d430a2a89f985b839833f30a1
 Unapplied:
   add-a-vq-meta-data-iotlb: bcd8c77cccb6ffc2526196ae83f5721fcd3065c2
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
