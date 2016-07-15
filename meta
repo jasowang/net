@@ -1,5 +1,5 @@
 Version: 1
-Previous: 251561ccaed43156de5c66ad2d7fabec0ba08665
+Previous: 0fc42a265d091e2fd142bc36277dee0692b674f6
 Head: b38a75d2d32412477e2625211febb98b63087754
 Applied:
 Unapplied:
@@ -7,7 +7,6 @@ Unapplied:
   patch: 0cecbd61d7cc4e93c732602043ac42726912584f
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
-  tun-fix-build-warnings: b260f9753600e78b64a89af789540e8d3a4d8bef
   tuntap-convert-to-napi: 87cea2b34f50cc775cfc3c8a0b8364bbc8cc7dc7
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
   tun-ex: 2ab229a1b50d3ca6b399591ca7b3865f8e30b05b
