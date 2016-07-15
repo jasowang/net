@@ -1108,10 +1108,10 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
 		mutex_unlock(&n->dev.mutex);
 		return -EFAULT;
 	}
-	if ((features & (1ULL << VHOST_F_DEVICE_IOTLB))) {
-		if (vhost_init_device_iotlb(&n->dev, true))
-			return -EFAULT;
-	}
+
+	if (vhost_init_device_iotlb(&n->dev,
+				    features & (1ULL << VHOST_F_DEVICE_IOTLB)))
+		return -EFAULT;
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
 		mutex_lock(&n->vqs[i].vq.mutex);
