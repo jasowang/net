@@ -1,11 +1,12 @@
 Version: 1
-Previous: 54d7341495c1af5a52f48543e7549fa6595f0367
+Previous: 9d88e3ef0950c71a3c25a083e1b9a7b1a19848b8
 Head: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
 Applied:
   vhost-introduce-vhost-memory-0: f944e2f02af08d303a960ec8b05136cb92673e29
   vhost-convert-pre-sorted-vhost-0: beb76b7d81e6621458f7f1631984a99acb26e0ba
   vhost-device-iotlb-api-0: 3eb3efe694d473ceb7f30b27f5f0420125c739fe
   add-a-vq-meta-data-iotlb: a58ad20bb53c49ebd5ddebea36ecb7861acd43a5
+  tuntap-convert-to-napi: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
 Unapplied:
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
   vhost-convert-pre-sorted-vhost: 642fec9ea87936ef21b9506a0914cb23680c6de0
