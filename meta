@@ -1,6 +1,6 @@
 Version: 1
-Previous: aa3c541c6821b06937bfb627cb38af1a34a6ba3e
-Head: a58ad20bb53c49ebd5ddebea36ecb7861acd43a5
+Previous: 54d7341495c1af5a52f48543e7549fa6595f0367
+Head: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
 Applied:
   vhost-introduce-vhost-memory-0: f944e2f02af08d303a960ec8b05136cb92673e29
   vhost-convert-pre-sorted-vhost-0: beb76b7d81e6621458f7f1631984a99acb26e0ba
