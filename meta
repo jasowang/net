@@ -1,11 +1,11 @@
 Version: 1
-Previous: c72a80cc6c044e5a72770983070f902840fbe81a
-Head: 58d9c9cd23af617494870bfc4a7fdd0004bdba97
+Previous: 0136990572d55f44384b4169f8fff625ef16a175
+Head: 67b02e744daa38fa86110b432cd5bc85bf3ad218
 Applied:
+  patch: 67b02e744daa38fa86110b432cd5bc85bf3ad218
 Unapplied:
   tuntap-convert-to-napi: f06e17e307c833aa61439df9396a836f3d118ecb
   macvtap-switch-to-use-tx-array: c34e044230b53e4edb7a53afa610f5e624e837c3
-  patch: 0cecbd61d7cc4e93c732602043ac42726912584f
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d

@@ -1,5 +1,5 @@
-Bottom: 6e2488943dcb3ac1f365fb618e03ca1497b5a07a
-Top:    2ddd28f5120c266ec479ba78b05907982153f83f
+Bottom: bae9ec84351a22aafda64962dd5ef90659cee9f2
+Top:    8d95d85bc079eadb095b2e754eece7add2db45db
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-13 14:50:10 +0800
 
@@ -8,10 +8,10 @@ Date:   2016-07-13 14:50:10 +0800
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index f2363f1..6c1bd2d 100644
+index a38c0da..9df199b 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
-@@ -745,7 +745,7 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
+@@ -756,7 +756,7 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
  
  	if (vnet_hdr_len) {
  		err = virtio_net_hdr_to_skb(skb, &vnet_hdr,
@@ -20,7 +20,7 @@ index f2363f1..6c1bd2d 100644
  		if (err)
  			goto err_kfree;
  	}
-@@ -814,7 +814,8 @@ static ssize_t macvtap_put_user(struct macvtap_queue *q,
+@@ -825,7 +825,8 @@ static ssize_t macvtap_put_user(struct macvtap_queue *q,
  			return -EINVAL;
  
  		ret = virtio_net_hdr_from_skb(skb, &vnet_hdr,
