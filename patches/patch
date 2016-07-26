@@ -1,5 +1,5 @@
-Bottom: bae9ec84351a22aafda64962dd5ef90659cee9f2
-Top:    8d95d85bc079eadb095b2e754eece7add2db45db
+Bottom: ec43ad59bbc09fa3ddc8382f33100bd1434fe182
+Top:    9640b709cc6751961de8f3d23a78bda0f9a25fb4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-13 14:50:10 +0800
 
@@ -57,10 +57,10 @@ index 9c8b5bc..b16cf09 100644
  			struct skb_shared_info *sinfo = skb_shinfo(skb);
  			pr_err("unexpected GSO type: "
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 1dd08d4..80b866a 100644
+index 1b5f531..de539e3 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -483,7 +483,8 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -485,7 +485,8 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  		skb->ip_summed = CHECKSUM_UNNECESSARY;
  
  	if (virtio_net_hdr_to_skb(skb, &hdr->hdr,
@@ -70,7 +70,7 @@ index 1dd08d4..80b866a 100644
  		net_warn_ratelimited("%s: bad gso: type: %u, size: %u\n",
  				     dev->name, hdr->hdr.gso_type,
  				     hdr->hdr.gso_size);
-@@ -837,7 +838,8 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+@@ -839,7 +840,8 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
  		hdr = skb_vnet_hdr(skb);
  
  	if (virtio_net_hdr_from_skb(skb, &hdr->hdr,
