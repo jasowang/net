@@ -1,5 +1,5 @@
-Bottom: 579b56b3b42598c5db664ef276979ce37b7c6416
-Top:    2cc444d3094eb76f83c168e8ac80b6a7f2528cbe
+Bottom: ec43ad59bbc09fa3ddc8382f33100bd1434fe182
+Top:    62d9d87e0208b3a1caf2bc51e816078496cedc70
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-26 12:01:35 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f744eeb..2f75640 100644
+index e032ca3..cbe325d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -324,6 +324,32 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+@@ -350,6 +350,32 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  	return r;
  }
  
@@ -47,7 +47,7 @@ index f744eeb..2f75640 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -352,6 +378,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -378,6 +404,7 @@ static void handle_tx(struct vhost_net *net)
  		goto out;
  
  	vhost_disable_notify(&net->dev, vq);
@@ -55,7 +55,7 @@ index f744eeb..2f75640 100644
  
  	hdr_size = nvq->vhost_hlen;
  	zcopy = nvq->ubufs;
-@@ -433,6 +460,8 @@ static void handle_tx(struct vhost_net *net)
+@@ -459,6 +486,8 @@ static void handle_tx(struct vhost_net *net)
  					% UIO_MAXIOV;
  			}
  			vhost_discard_vq_desc(vq, 1);
@@ -64,36 +64,3 @@ index f744eeb..2f75640 100644
  			break;
  		}
  		if (err != len)
-@@ -782,32 +811,6 @@ static int vhost_net_open(struct inode *inode, struct file *f)
- 	return 0;
- }
- 
--static void vhost_net_disable_vq(struct vhost_net *n,
--				 struct vhost_virtqueue *vq)
--{
--	struct vhost_net_virtqueue *nvq =
--		container_of(vq, struct vhost_net_virtqueue, vq);
--	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
--	if (!vq->private_data)
--		return;
--	vhost_poll_stop(poll);
--}
--
--static int vhost_net_enable_vq(struct vhost_net *n,
--				struct vhost_virtqueue *vq)
--{
--	struct vhost_net_virtqueue *nvq =
--		container_of(vq, struct vhost_net_virtqueue, vq);
--	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
--	struct socket *sock;
--
--	sock = vq->private_data;
--	if (!sock)
--		return 0;
--
--	return vhost_poll_start(poll, sock->file);
--}
--
- static struct socket *vhost_net_stop_vq(struct vhost_net *n,
- 					struct vhost_virtqueue *vq)
- {

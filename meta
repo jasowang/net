@@ -1,7 +1,8 @@
 Version: 1
-Previous: 192fd25ba3914ffffd2744ce21d3e00fec252179
-Head: c43212bb7bebe24a93a7a7d86e767e1ce295d72a
+Previous: ac738fa28ba98eb6c2b4c7c7862be385ffa46c47
+Head: 04349110362f34ee8b0df4a42837e8377b38f191
 Applied:
+  vhost_net-conditionally-start: 04349110362f34ee8b0df4a42837e8377b38f191
 Unapplied:
   patch: d961cd107246197b3988a18b7fe5ab26c5c9a856
   tuntap-convert-to-napi: f06e17e307c833aa61439df9396a836f3d118ecb
@@ -10,5 +11,4 @@ Unapplied:
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
   tun-ex: 2ab229a1b50d3ca6b399591ca7b3865f8e30b05b
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
-  vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
 Hidden:
