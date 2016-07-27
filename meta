@@ -1,5 +1,5 @@
 Version: 1
-Previous: 354810b94117b9cda937809df2a992d57df72179
+Previous: 192fd25ba3914ffffd2744ce21d3e00fec252179
 Head: c43212bb7bebe24a93a7a7d86e767e1ce295d72a
 Applied:
 Unapplied:
@@ -10,6 +10,5 @@ Unapplied:
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
   tun-ex: 2ab229a1b50d3ca6b399591ca7b3865f8e30b05b
   skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
-  introduce-skb_ring: a496b0761946b92b54aa3e77b8dfdc95f9d648d5
   vhost_net-conditionally-start: 51a64e58b16f8b3d05ad24e1fd0490a07163b177
 Hidden:
