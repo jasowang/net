@@ -5,6 +5,8 @@ Date:   2016-07-28 14:28:13 +0800
 
 vhost_net: avoid peeking socket for non mergeable buffer case
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
