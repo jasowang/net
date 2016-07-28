@@ -676,7 +676,8 @@ static void handle_rx(struct vhost_net *net)
 						&in, vq_log, &log, 1);
 			if (headcount > 0) {
 				vhost_len = vq->heads[0].len;
-				sock_len -= vhost_hlen;
+				sock_len = vhost_len - vhost_hlen;
+
 			}
 		}
 
@@ -717,7 +718,7 @@ static void handle_rx(struct vhost_net *net)
 		/* Userspace might have consumed the packet meanwhile:
 		 * it's not supposed to do this usually, but might be hard
 		 * to prevent. Discard data we got (if any) and keep going. */
-		if (unlikely(err != sock_len)) {
+		if (mergeable && unlikely(err != sock_len)) {
 			pr_debug("Discarded rx packet: "
 				 " len %d, expected %zd\n", err, sock_len);
 			vhost_discard_vq_desc(vq, headcount);
