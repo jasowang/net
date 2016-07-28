@@ -1,12 +1,12 @@
 Version: 1
-Previous: 1c01fbfa30399973a51fcdb399c45d3e43d5375b
-Head: f2b748d167876153bf830b6f85ad38011f8166c5
+Previous: 4fa2fe813b75e12036cbdd9317fb3172c212aece
+Head: c43212bb7bebe24a93a7a7d86e767e1ce295d72a
 Applied:
+Unapplied:
   vhost_net-conditionally-start: 04349110362f34ee8b0df4a42837e8377b38f191
   vhost-simplify-work-flushing: 189880e6928a37b0e3fe283e59fa2fc53981a6fd
   vhost-lockless-enqueuing: 9843ea7acf7769b6f77119909da2825a54cdc9a5
   introduce-lockless-socket: f2b748d167876153bf830b6f85ad38011f8166c5
-Unapplied:
   patch: d961cd107246197b3988a18b7fe5ab26c5c9a856
   tuntap-convert-to-napi: f06e17e307c833aa61439df9396a836f3d118ecb
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
