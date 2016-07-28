@@ -533,12 +533,14 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+static int vhost_net_rx_peek_head_len(struct vhost_net *net,
+				      struct sock *sk)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
-	int len = peek_head_len(sk);
+	int mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+	int len = mergeable ? peek_head_len(sk) : sk_has_rx_data(sk);
 
 	if (!len && vq->busyloop_timeout) {
 		/* Both tx vq and rx socket were polled here */
@@ -626,7 +628,8 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 		++headcount;
 		seg += in;
 	}
-	heads[headcount - 1].len = cpu_to_vhost32(vq, len + datalen);
+	if (quota != 1)
+		heads[headcount - 1].len = cpu_to_vhost32(vq, len + datalen);
 	*iovcount = seg;
 	if (unlikely(log))
 		*log_num = nlogs;
@@ -689,11 +692,21 @@ static void handle_rx(struct vhost_net *net)
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
 
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
-		sock_len += sock_hlen;
-		vhost_len = sock_len + vhost_hlen;
-		headcount = get_rx_bufs(vq, vq->heads, vhost_len,
-					&in, vq_log, &log,
-					likely(mergeable) ? UIO_MAXIOV : 1);
+		if (mergeable) {
+			sock_len += sock_hlen;
+			vhost_len = sock_len + vhost_hlen;
+			headcount = get_rx_bufs(vq, vq->heads, vhost_len,
+						&in, vq_log, &log, UIO_MAXIOV);
+		} else {
+			headcount = get_rx_bufs(vq, vq->heads, 1,
+						&in, vq_log, &log, 1);
+			if (headcount > 0) {
+				vhost_len = vq->heads[0].len;
+				sock_len = vhost_len - vhost_hlen;
+
+			}
+		}
+
 		/* On error, stop handling until the next kick. */
 		if (unlikely(headcount < 0))
 			goto out;
@@ -731,7 +744,7 @@ static void handle_rx(struct vhost_net *net)
 		/* Userspace might have consumed the packet meanwhile:
 		 * it's not supposed to do this usually, but might be hard
 		 * to prevent. Discard data we got (if any) and keep going. */
-		if (unlikely(err != sock_len)) {
+		if (mergeable && unlikely(err != sock_len)) {
 			pr_debug("Discarded rx packet: "
 				 " len %d, expected %zd\n", err, sock_len);
 			vhost_discard_vq_desc(vq, headcount);
