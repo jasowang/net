@@ -1,5 +1,5 @@
-Bottom: e1a16ac1e112e71ae5ddbe311bf25f191c3777b5
-Top:    b6550e49457c6ea267697abff8ed1582537d4417
+Bottom: ec43ad59bbc09fa3ddc8382f33100bd1434fe182
+Top:    2ccee59db5d040f70528395a3ea9dd881d5e5020
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-28 14:14:20 +0800
 
@@ -54,10 +54,10 @@ index 9c8b5bc..80070d4 100644
  	if (!tun)
  		return 0;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index cbe325d..00c3d0c 100644
+index e032ca3..f70a91c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -516,7 +516,7 @@ static int peek_head_len(struct sock *sk)
+@@ -487,7 +487,7 @@ static int peek_head_len(struct sock *sk)
  	unsigned long flags;
  
  	if (sock->ops->peek_len)
@@ -66,7 +66,7 @@ index cbe325d..00c3d0c 100644
  
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
  	head = skb_peek(&sk->sk_receive_queue);
-@@ -535,7 +535,7 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -506,7 +506,7 @@ static int sk_has_rx_data(struct sock *sk)
  	struct socket *sock = sk->sk_socket;
  
  	if (sock->ops->peek_len)
