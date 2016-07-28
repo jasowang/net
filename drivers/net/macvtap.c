@@ -1203,11 +1203,15 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	return ret;
 }
 
-static int macvtap_peek_len(struct socket *sock)
+static int macvtap_peek_len(struct socket *sock, bool hint)
 {
 	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
 					       sock);
-	return skb_array_peek_len(&q->skb_array);
+
+	if (hint)
+		return !skb_array_empty(&q->skb_array);
+	else
+		return skb_array_peek_len(&q->skb_array);
 }
 
 /* Ops structure to mimic raw sockets with tun */
