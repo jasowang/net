@@ -1,0 +1,11 @@
+Bottom: 2ccee59db5d040f70528395a3ea9dd881d5e5020
+Top:    2ccee59db5d040f70528395a3ea9dd881d5e5020
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-07-28 14:28:13 +0800
+
+vhost_net: avoid peeking socket for non mergeable buffer case
+
+
+---
+
+

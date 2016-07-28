@@ -1,8 +1,9 @@
 Version: 1
-Previous: 6bfd82cbfdf8b24b67903d03d2ea68fe6674fe94
-Head: f5af51db8b54f85717be541e4906e70d5f87c910
+Previous: e4df78dcab485233b81a6c2b750341c4c1239dd6
+Head: a2ea1706c81f593be116331ef2bc642ff73666dd
 Applied:
   introduce-lockless-socket: f5af51db8b54f85717be541e4906e70d5f87c910
+  vhost_net-avoid-peeking-socket: a2ea1706c81f593be116331ef2bc642ff73666dd
 Unapplied:
   vhost_net-conditionally-start: 04349110362f34ee8b0df4a42837e8377b38f191
   vhost-simplify-work-flushing: 189880e6928a37b0e3fe283e59fa2fc53981a6fd
