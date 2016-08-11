@@ -3,8 +3,14 @@ Top:    997b58fc0f64bcd4842b6ffc8d9354302731768a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-08-11 14:57:34 +0800
 
-macvtap: avoid double freeing of skb_array
+macvtap: fix use after free for skb_array during release
 
+We've clean skb_array in macvtap_put_queue() but still try to pop from
+it during macvtap_sock_destruct(). Fix this use after free by moving
+the skb array cleanup to macvtap_sock_destruct() instead.
+
+Reported-by: Cornelia Huck <cornelia.huck@de.ibm.com>
+Tested-by: Cornelia Huck <cornelia.huck@de.ibm.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
