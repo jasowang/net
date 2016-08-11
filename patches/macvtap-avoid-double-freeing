@@ -5,6 +5,8 @@ Date:   2016-08-11 14:57:34 +0800
 
 macvtap: avoid double freeing of skb_array
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
