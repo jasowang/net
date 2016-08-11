@@ -1,7 +1,8 @@
 Version: 1
-Previous: 786de1970b238111d7e837a70ea812355856a70d
-Head: fff8019a08b60dce0c7f2858ebe44c5b84ed493b
+Previous: e8d5556d949f554e26c76bc924adac824d2df6f0
+Head: 102fc89c7a2bfc31fdd135abcfc62708e055dae0
 Applied:
+  macvtap-avoid-double-freeing: 102fc89c7a2bfc31fdd135abcfc62708e055dae0
 Unapplied:
   introduce-lockless-socket: f5af51db8b54f85717be541e4906e70d5f87c910
   vhost_net-avoid-peeking-socket: 0a42750895b101c983303142694689c259cc230a
