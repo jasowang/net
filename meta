@@ -1,5 +1,5 @@
 Version: 1
-Previous: fd7232b52a67e097ec50d043a879d613ec46dafa
+Previous: 0018e194039517e5781207b66de89f1c1b77729b
 Head: fff8019a08b60dce0c7f2858ebe44c5b84ed493b
 Applied:
 Unapplied:
@@ -7,8 +7,6 @@ Unapplied:
   vhost_net-avoid-peeking-socket: 0a42750895b101c983303142694689c259cc230a
   tuntap-convert-to-napi: a778d9923e268cf7cdd6d9d13503b09d8a85f3e7
   vhost_net-conditionally-start: 04349110362f34ee8b0df4a42837e8377b38f191
-  vhost-simplify-work-flushing: 189880e6928a37b0e3fe283e59fa2fc53981a6fd
-  vhost-lockless-enqueuing: 9843ea7acf7769b6f77119909da2825a54cdc9a5
   patch: d961cd107246197b3988a18b7fe5ab26c5c9a856
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
