@@ -2230,7 +2230,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	if (r)
 		return false;
 
-	return vhost16_to_cpu(vq, avail_idx) == vq->avail_idx;
+	return vhost16_to_cpu(vq, avail_idx) == vq->last_avail_idx;
 }
 EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);
 
