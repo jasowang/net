@@ -1,5 +1,5 @@
 Bottom: c1c387b898c0c6f8b2e220c242b81b60d758756b
-Top:    ec8e6d5e70508cf51f2a6d16c77a01c68f29cb22
+Top:    29cf8618b6309dd170695d2d84112d29928931e7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8093e39..fad2543 100644
+index 8093e39..27e1cb0 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -40,19 +40,20 @@ index 8093e39..fad2543 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -532,6 +537,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -532,6 +537,12 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  
  	tun = rtnl_dereference(tfile->tun);
  
 +	if (tun) {
 +		napi_disable(&tfile->napi);
-+		netif_napi_del(&tfile->napi);
++		if (clean)
++			netif_napi_del(&tfile->napi);
 +	}
 +
  	if (tun && !tfile->detached) {
  		u16 index = tfile->queue_index;
  		BUG_ON(index >= tun->numqueues);
-@@ -587,6 +597,7 @@ static void tun_detach_all(struct net_device *dev)
+@@ -587,6 +598,7 @@ static void tun_detach_all(struct net_device *dev)
  
  	for (i = 0; i < n; i++) {
  		tfile = rtnl_dereference(tun->tfiles[i]);
@@ -60,7 +61,7 @@ index 8093e39..fad2543 100644
  		BUG_ON(!tfile);
  		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
  		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-@@ -603,6 +614,7 @@ static void tun_detach_all(struct net_device *dev)
+@@ -603,6 +615,7 @@ static void tun_detach_all(struct net_device *dev)
  	synchronize_net();
  	for (i = 0; i < n; i++) {
  		tfile = rtnl_dereference(tun->tfiles[i]);
@@ -68,7 +69,7 @@ index 8093e39..fad2543 100644
  		/* Drop read queue */
  		tun_queue_purge(tfile);
  		sock_put(&tfile->sk);
-@@ -618,6 +630,41 @@ static void tun_detach_all(struct net_device *dev)
+@@ -618,6 +631,41 @@ static void tun_detach_all(struct net_device *dev)
  		module_put(THIS_MODULE);
  }
  
@@ -110,7 +111,7 @@ index 8093e39..fad2543 100644
  static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
  {
  	struct tun_file *tfile = file->private_data;
-@@ -669,6 +716,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+@@ -669,6 +717,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  	else
  		sock_hold(&tfile->sk);
  
@@ -119,7 +120,7 @@ index 8093e39..fad2543 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1158,7 +1207,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1158,7 +1208,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -128,7 +129,7 @@ index 8093e39..fad2543 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1304,7 +1353,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1304,7 +1354,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -143,7 +144,7 @@ index 8093e39..fad2543 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1327,7 +1382,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1327,7 +1383,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -153,7 +154,7 @@ index 8093e39..fad2543 100644
  
  	tun_put(tun);
  	return result;
-@@ -1587,7 +1643,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1587,7 +1644,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -163,7 +164,7 @@ index 8093e39..fad2543 100644
  	tun_put(tun);
  	return ret;
  }
-@@ -2340,6 +2397,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2340,6 +2398,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  
