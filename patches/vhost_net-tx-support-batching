@@ -5,6 +5,8 @@ Date:   2016-10-27 16:01:25 +0800
 
 vhost_net: tx support batching
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
