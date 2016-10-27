@@ -10,6 +10,8 @@ checking of vhost_vq_avail_empty() since latter is the cached avail
 index from guest but we want to know if there's pending available
 buffers in the virtqueue.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
