@@ -1,8 +1,8 @@
 Version: 1
-Previous: 5f04adaece06266d4154c6262e8c36b2c5310d96
-Head: 7d417688951090e42d5789e38e70d980dced416e
+Previous: 0526f405b60a376a446461255967684f1d297a15
+Head: b0c5ed96148cb389c91fe982018e26da7e90ab3b
 Applied:
-  tuntap-convert-to-napi: 7d417688951090e42d5789e38e70d980dced416e
+  tuntap-convert-to-napi: b0c5ed96148cb389c91fe982018e26da7e90ab3b
 Unapplied:
   vhost_net-conditionally-start: 8ef77fc4fbc2ac1be8ff7c32b23c70d55233a213
   introduce-lockless-socket: f5af51db8b54f85717be541e4906e70d5f87c910

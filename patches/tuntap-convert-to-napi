@@ -3,7 +3,7 @@ Top:    29cf8618b6309dd170695d2d84112d29928931e7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
-tuntap: convert to NAPI
+tuntap: rx batching
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
