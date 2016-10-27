@@ -1,10 +1,10 @@
 Version: 1
-Previous: 86f1986302bffe6b80f902cecf71d3183451ea5c
-Head: 115a461693dfe5c152489d47d94c88184376093f
+Previous: 3c7394d1ba317edf35241dd30b23b4a8b214edcb
+Head: 1e8555f17720533601b2a49d4da133b05ea4be85
 Applied:
   tun-rx-batching: 1e8555f17720533601b2a49d4da133b05ea4be85
-  vhost_net-tx-support-batching: 115a461693dfe5c152489d47d94c88184376093f
 Unapplied:
+  vhost_net-tx-support-batching: 115a461693dfe5c152489d47d94c88184376093f
   vhost_net-conditionally-start: 8ef77fc4fbc2ac1be8ff7c32b23c70d55233a213
   introduce-lockless-socket: f5af51db8b54f85717be541e4906e70d5f87c910
   vhost_net-avoid-peeking-socket: 0a42750895b101c983303142694689c259cc230a
