@@ -7,7 +7,8 @@ vhost: better detection of available buffers
 
 We should use vq->last_avail_idx instead of vq->avail_idx in the
 checking of vhost_vq_avail_empty() since latter is the cached avail
-index from guest.
+index from guest but we want to know if there's pending available
+buffers in the virtqueue.
 
 
 ---
