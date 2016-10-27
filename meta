@@ -1,8 +1,9 @@
 Version: 1
-Previous: 30a35823fee4fba415035bbd9b5a7f45e484807e
-Head: 1e8555f17720533601b2a49d4da133b05ea4be85
+Previous: 864061bee97e404a9bdad2940b327ce2b235240f
+Head: 55b41259fdd23881875a4a7de8b2809d0e65e6c8
 Applied:
   tun-rx-batching: 1e8555f17720533601b2a49d4da133b05ea4be85
+  vhost_net-tx-support-batching: 55b41259fdd23881875a4a7de8b2809d0e65e6c8
 Unapplied:
   vhost_net-conditionally-start: 8ef77fc4fbc2ac1be8ff7c32b23c70d55233a213
   introduce-lockless-socket: f5af51db8b54f85717be541e4906e70d5f87c910
