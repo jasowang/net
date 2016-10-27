@@ -539,7 +539,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 
 	if (tun) {
 		napi_disable(&tfile->napi);
-		netif_napi_del(&tfile->napi);
+		if (clean)
+			netif_napi_del(&tfile->napi);
 	}
 
 	if (tun && !tfile->detached) {
