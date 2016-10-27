@@ -1,0 +1,23 @@
+Bottom: ec8e6d5e70508cf51f2a6d16c77a01c68f29cb22
+Top:    29cf8618b6309dd170695d2d84112d29928931e7
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-10-27 15:50:51 +0800
+
+Refresh of tuntap-convert-to-napi
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index fad2543..27e1cb0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -539,7 +539,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 
+ 	if (tun) {
+ 		napi_disable(&tfile->napi);
+-		netif_napi_del(&tfile->napi);
++		if (clean)
++			netif_napi_del(&tfile->napi);
+ 	}
+ 
+ 	if (tun && !tfile->detached) {
