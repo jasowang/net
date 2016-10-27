@@ -1,0 +1,21 @@
+Bottom: 7d318552e5adae4e28d33acb8af714df51e62087
+Top:    c129c7b180987070e05f0ea63060d11e514e4832
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-10-27 16:09:40 +0800
+
+Refresh of vhost-better-detection-of
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index c6f2d89..fdf4cdf 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2230,7 +2230,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	if (r)
+ 		return false;
+ 
+-	return vhost16_to_cpu(vq, avail_idx) == vq->avail_idx;
++	return vhost16_to_cpu(vq, avail_idx) == vq->last_avail_idx;
+ }
+ EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);

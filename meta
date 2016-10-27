@@ -1,9 +1,10 @@
 Version: 1
-Previous: a8b9cbe58f3e0c720ae086497072f9e5ae164310
-Head: 6e443406245a3a518626e8ec70935ff1d368ac9c
+Previous: 16ee5a4265dc267dd2a6ce30825c5a40b2068b0f
+Head: ac127c97502c1c518ce529c580df99efa5a941eb
 Applied:
   tun-rx-batching: 1e8555f17720533601b2a49d4da133b05ea4be85
   vhost-better-detection-of: 6e443406245a3a518626e8ec70935ff1d368ac9c
+  refresh-temp: ac127c97502c1c518ce529c580df99efa5a941eb
 Unapplied:
   vhost_net-tx-support-batching: 115a461693dfe5c152489d47d94c88184376093f
   vhost_net-conditionally-start: 8ef77fc4fbc2ac1be8ff7c32b23c70d55233a213
