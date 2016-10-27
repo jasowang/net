@@ -1,0 +1,212 @@
+Bottom: c1c387b898c0c6f8b2e220c242b81b60d758756b
+Top:    ec8e6d5e70508cf51f2a6d16c77a01c68f29cb22
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-10-27 15:41:11 +0800
+
+Refresh of tuntap-convert-to-napi
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8093e39..fad2543 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -74,6 +74,7 @@
+ #include <linux/skb_array.h>
+ 
+ #include <asm/uaccess.h>
++#include <linux/interrupt.h>
+ 
+ /* Uncomment to enable debugging */
+ /* #define TUN_DEBUG 1 */
+@@ -169,6 +170,8 @@ struct tun_file {
+ 	struct list_head next;
+ 	struct tun_struct *detached;
+ 	struct skb_array tx_array;
++	struct napi_struct napi;
++	struct sk_buff_head process_queue;
+ };
+ 
+ struct tun_flow_entry {
+@@ -522,6 +525,8 @@ static void tun_queue_purge(struct tun_file *tfile)
+ 	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
+ 		kfree_skb(skb);
+ 
++	skb_queue_purge(&tfile->sk.sk_write_queue);
++	skb_queue_purge(&tfile->process_queue);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
+ }
+ 
+@@ -532,6 +537,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 
+ 	tun = rtnl_dereference(tfile->tun);
+ 
++	if (tun) {
++		napi_disable(&tfile->napi);
++		netif_napi_del(&tfile->napi);
++	}
++
+ 	if (tun && !tfile->detached) {
+ 		u16 index = tfile->queue_index;
+ 		BUG_ON(index >= tun->numqueues);
+@@ -587,6 +597,7 @@ static void tun_detach_all(struct net_device *dev)
+ 
+ 	for (i = 0; i < n; i++) {
+ 		tfile = rtnl_dereference(tun->tfiles[i]);
++		napi_disable(&tfile->napi);
+ 		BUG_ON(!tfile);
+ 		tfile->socket.sk->sk_shutdown = RCV_SHUTDOWN;
+ 		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+@@ -603,6 +614,7 @@ static void tun_detach_all(struct net_device *dev)
+ 	synchronize_net();
+ 	for (i = 0; i < n; i++) {
+ 		tfile = rtnl_dereference(tun->tfiles[i]);
++		netif_napi_del(&tfile->napi);
+ 		/* Drop read queue */
+ 		tun_queue_purge(tfile);
+ 		sock_put(&tfile->sk);
+@@ -618,6 +630,41 @@ static void tun_detach_all(struct net_device *dev)
+ 		module_put(THIS_MODULE);
+ }
+ 
++static int tun_poll(struct napi_struct *napi, int budget)
++{
++	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
++	struct sk_buff_head *input_queue =
++	       &tfile->socket.sk->sk_write_queue;
++	struct sk_buff *skb;
++	unsigned received = 0;
++
++	while (1) {
++		while ((skb = __skb_dequeue(&tfile->process_queue))) {
++			netif_receive_skb(skb);
++			if (++received >= budget)
++				return received;
++		}
++
++		spin_lock(&input_queue->lock);
++		if (skb_queue_empty(input_queue)) {
++			spin_unlock(&input_queue->lock);
++			break;
++		}
++		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
++		spin_unlock(&input_queue->lock);
++	}
++
++	if (received < budget) {
++		napi_complete(napi);
++		if (skb_peek(&tfile->socket.sk->sk_write_queue) &&
++		    unlikely(napi_schedule_prep(napi))) {
++			__napi_schedule(napi);
++		}
++	}
++
++	return received;
++}
++
+ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
+ {
+ 	struct tun_file *tfile = file->private_data;
+@@ -669,6 +716,8 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+ 	else
+ 		sock_hold(&tfile->sk);
+ 
++	netif_napi_add(tun->dev, &tfile->napi, tun_poll, 64);
++	napi_enable(&tfile->napi);
+ 	tun_set_real_num_queues(tun);
+ 
+ 	/* device is allowed to go away first, so no need to hold extra
+@@ -1158,7 +1207,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+ /* Get packet from user space buffer */
+ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			    void *msg_control, struct iov_iter *from,
+-			    int noblock)
++			    int noblock, bool more)
+ {
+ 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
+ 	struct sk_buff *skb;
+@@ -1304,7 +1353,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_probe_transport_header(skb, 0);
+ 
+ 	rxhash = skb_get_hash(skb);
+-	netif_rx_ni(skb);
++	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
++
++	if (!more) {
++		local_bh_disable();
++		napi_schedule(&tfile->napi);
++		local_bh_enable();
++	}
+ 
+ 	stats = get_cpu_ptr(tun->pcpu_stats);
+ 	u64_stats_update_begin(&stats->syncp);
+@@ -1327,7 +1382,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+ 	if (!tun)
+ 		return -EBADFD;
+ 
+-	result = tun_get_user(tun, tfile, NULL, from, file->f_flags & O_NONBLOCK);
++	result = tun_get_user(tun, tfile, NULL, from,
++			      file->f_flags & O_NONBLOCK, false);
+ 
+ 	tun_put(tun);
+ 	return result;
+@@ -1587,7 +1643,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ 		return -EBADFD;
+ 
+ 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+-			   m->msg_flags & MSG_DONTWAIT);
++			   m->msg_flags & MSG_DONTWAIT,
++			   m->msg_flags & MSG_MORE);
+ 	tun_put(tun);
+ 	return ret;
+ }
+@@ -2340,6 +2397,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 	file->private_data = tfile;
+ 	INIT_LIST_HEAD(&tfile->next);
+ 
++	skb_queue_head_init(&tfile->process_queue);
++
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+ 
+ 	return 0;
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5dc128a..ab9c104 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -454,6 +454,12 @@ static void handle_tx(struct vhost_net *net)
+ 			msg.msg_control = NULL;
+ 			ubufs = NULL;
+ 		}
++		if (!vhost_vq_avail_empty(&net->dev, vq) &&
++		    vq->delayed <= 16) {
++			vq->delayed++;
++			msg.msg_flags |= MSG_MORE;
++		} else
++			vq->delayed = 0;
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+ 		err = sock->ops->sendmsg(sock, &msg, len);
+ 		if (unlikely(err < 0)) {
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index c6f2d89..8214e33 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -311,6 +311,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vq->busyloop_timeout = 0;
+ 	vq->umem = NULL;
+ 	vq->iotlb = NULL;
++	vq->delayed = 0;
+ }
+ 
+ static int vhost_worker(void *data)
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 78f3c5f..bff28a0 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -132,6 +132,7 @@ struct vhost_virtqueue {
+ 	/* Log write descriptors */
+ 	void __user *log_base;
+ 	struct vhost_log *log;
++	u16 delayed;
+ 
+ 	/* Ring endianness. Defaults to legacy native endianness.
+ 	 * Set to true when starting a modern virtio device. */
