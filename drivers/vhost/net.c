@@ -454,6 +454,12 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+		if (!vhost_vq_avail_empty(&net->dev, vq) && vq->delayed <= 16) {
+			vq->delayed++;
+			msg.msg_flags |= MSG_MORE;
+		} else {
+			vq->delayed = 0;
+		}
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
