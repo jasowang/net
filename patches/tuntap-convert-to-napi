@@ -1,5 +1,5 @@
 Bottom: c1c387b898c0c6f8b2e220c242b81b60d758756b
-Top:    29cf8618b6309dd170695d2d84112d29928931e7
+Top:    7d318552e5adae4e28d33acb8af714df51e62087
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -173,44 +173,3 @@ index 8093e39..27e1cb0 100644
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
  	return 0;
-diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 5dc128a..ab9c104 100644
---- a/drivers/vhost/net.c
-+++ b/drivers/vhost/net.c
-@@ -454,6 +454,12 @@ static void handle_tx(struct vhost_net *net)
- 			msg.msg_control = NULL;
- 			ubufs = NULL;
- 		}
-+		if (!vhost_vq_avail_empty(&net->dev, vq) &&
-+		    vq->delayed <= 16) {
-+			vq->delayed++;
-+			msg.msg_flags |= MSG_MORE;
-+		} else
-+			vq->delayed = 0;
- 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
- 		err = sock->ops->sendmsg(sock, &msg, len);
- 		if (unlikely(err < 0)) {
-diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index c6f2d89..8214e33 100644
---- a/drivers/vhost/vhost.c
-+++ b/drivers/vhost/vhost.c
-@@ -311,6 +311,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
- 	vq->busyloop_timeout = 0;
- 	vq->umem = NULL;
- 	vq->iotlb = NULL;
-+	vq->delayed = 0;
- }
- 
- static int vhost_worker(void *data)
-diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 78f3c5f..bff28a0 100644
---- a/drivers/vhost/vhost.h
-+++ b/drivers/vhost/vhost.h
-@@ -132,6 +132,7 @@ struct vhost_virtqueue {
- 	/* Log write descriptors */
- 	void __user *log_base;
- 	struct vhost_log *log;
-+	u16 delayed;
- 
- 	/* Ring endianness. Defaults to legacy native endianness.
- 	 * Set to true when starting a modern virtio device. */
