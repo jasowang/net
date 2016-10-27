@@ -35,6 +35,10 @@ module_param(experimental_zcopytx, int, 0444);
 MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
 		                       " 1 -Enable; 0 - Disable");
 
+static int tx_batched = 1;
+module_param(tx_batched, int, 0444);
+MODULE_PARM_DESC(experimental_zcopytx, "Number of patckes batched during TX;");
+
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
 #define VHOST_NET_WEIGHT 0x80000
@@ -454,6 +458,16 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+		total_len += len;
+		if (vq->delayed < tx_batched &&
+		    total_len < VHOST_NET_WEIGHT &&
+		    !vhost_vq_avail_empty(&net->dev, vq)) {
+			vq->delayed++;
+			msg.msg_flags |= MSG_MORE;
+		} else {
+			vq->delayed = 0;
+			msg.msg_flags &= ~MSG_MORE;
+		}
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
@@ -472,7 +486,6 @@ static void handle_tx(struct vhost_net *net)
 			vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
-		total_len += len;
 		vhost_net_tx_packet(net);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
 			vhost_poll_queue(&vq->poll);
