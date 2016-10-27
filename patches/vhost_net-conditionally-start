@@ -1,5 +1,5 @@
-Bottom: ec43ad59bbc09fa3ddc8382f33100bd1434fe182
-Top:    62d9d87e0208b3a1caf2bc51e816078496cedc70
+Bottom: c1c387b898c0c6f8b2e220c242b81b60d758756b
+Top:    2addbe90cf25e30371e29a8720450dc057e29175
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-26 12:01:35 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index e032ca3..cbe325d 100644
+index 5dc128a..231a59c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -350,6 +350,32 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+@@ -351,6 +351,32 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  	return r;
  }
  
@@ -47,7 +47,7 @@ index e032ca3..cbe325d 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -378,6 +404,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -382,6 +408,7 @@ static void handle_tx(struct vhost_net *net)
  		goto out;
  
  	vhost_disable_notify(&net->dev, vq);
@@ -55,7 +55,7 @@ index e032ca3..cbe325d 100644
  
  	hdr_size = nvq->vhost_hlen;
  	zcopy = nvq->ubufs;
-@@ -459,6 +486,8 @@ static void handle_tx(struct vhost_net *net)
+@@ -463,6 +490,8 @@ static void handle_tx(struct vhost_net *net)
  					% UIO_MAXIOV;
  			}
  			vhost_discard_vq_desc(vq, 1);
