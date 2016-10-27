@@ -1,5 +1,5 @@
-Bottom: 7d318552e5adae4e28d33acb8af714df51e62087
-Top:    1d038b5a56d1d71fe1bb09f1ba8eddbb5cdedd94
+Bottom: c129c7b180987070e05f0ea63060d11e514e4832
+Top:    db2d4a15710640eed07e4ed008fcb933677011fb
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-10-27 16:01:25 +0800
 
@@ -28,7 +28,7 @@ index 5dc128a..cafca63 100644
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index c6f2d89..8214e33 100644
+index fdf4cdf..bc362c7 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -311,6 +311,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
