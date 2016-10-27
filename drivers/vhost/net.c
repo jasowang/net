@@ -454,6 +454,13 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+		total_len += len;
+		if (total_len < VHOST_NET_WEIGHT &&
+		    !vhost_vq_avail_empty(&net->dev, vq)) {
+			msg.msg_flags |= MSG_MORE;
+		} else {
+			msg.msg_flags &= ~MSG_MORE;
+		}
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
@@ -472,7 +479,6 @@ static void handle_tx(struct vhost_net *net)
 			vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
-		total_len += len;
 		vhost_net_tx_packet(net);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
 			vhost_poll_queue(&vq->poll);
