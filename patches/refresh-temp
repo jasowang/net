@@ -1,0 +1,74 @@
+Bottom: 73388ccbbf4d3e6eda5c1888e0fe73b2f999c55e
+Top:    f8457d5d93ee275c878912511d36219e6c27b06a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-07 10:49:00 +0800
+
+Refresh of introduce-lockless-socket
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index 070e329..000ef9f 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -1203,11 +1203,15 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+ 	return ret;
+ }
+ 
+-static int macvtap_peek_len(struct socket *sock)
++static int macvtap_peek_len(struct socket *sock, bool hint)
+ {
+ 	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
+ 					       sock);
+-	return skb_array_peek_len(&q->skb_array);
++
++	if (hint)
++		return !skb_array_empty(&q->skb_array);
++	else
++		return skb_array_peek_len(&q->skb_array);
+ }
+ 
+ /* Ops structure to mimic raw sockets with tun */
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 27e1cb0..309f51f 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1679,12 +1679,15 @@ out:
+ 	return ret;
+ }
+ 
+-static int tun_peek_len(struct socket *sock)
++static int tun_peek_len(struct socket *sock, bool hint)
+ {
+ 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+ 	struct tun_struct *tun;
+ 	int ret = 0;
+ 
++	if (hint)
++		return !skb_array_empty(&tfile->tx_array);
++
+ 	tun = __tun_get(tfile);
+ 	if (!tun)
+ 		return 0;
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 2fdddb1..c37475e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -526,7 +526,7 @@ static int peek_head_len(struct sock *sk)
+ 	unsigned long flags;
+ 
+ 	if (sock->ops->peek_len)
+-		return sock->ops->peek_len(sock);
++		return sock->ops->peek_len(sock, false);
+ 
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+ 	head = skb_peek(&sk->sk_receive_queue);
+@@ -545,7 +545,7 @@ static int sk_has_rx_data(struct sock *sk)
+ 	struct socket *sock = sk->sk_socket;
+ 
+ 	if (sock->ops->peek_len)
+-		return sock->ops->peek_len(sock);
++		return sock->ops->peek_len(sock, true);
+ 
+ 	return skb_queue_empty(&sk->sk_receive_queue);
+ }
