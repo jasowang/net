@@ -1,5 +1,5 @@
-Bottom: ec43ad59bbc09fa3ddc8382f33100bd1434fe182
-Top:    2ccee59db5d040f70528395a3ea9dd881d5e5020
+Bottom: 73388ccbbf4d3e6eda5c1888e0fe73b2f999c55e
+Top:    73388ccbbf4d3e6eda5c1888e0fe73b2f999c55e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-28 14:14:20 +0800
 
@@ -10,81 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index a38c0da..882e040 100644
---- a/drivers/net/macvtap.c
-+++ b/drivers/net/macvtap.c
-@@ -1206,11 +1206,15 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
- 	return ret;
- }
- 
--static int macvtap_peek_len(struct socket *sock)
-+static int macvtap_peek_len(struct socket *sock, bool hint)
- {
- 	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
- 					       sock);
--	return skb_array_peek_len(&q->skb_array);
-+
-+	if (hint)
-+		return !skb_array_empty(&q->skb_array);
-+	else
-+		return skb_array_peek_len(&q->skb_array);
- }
- 
- /* Ops structure to mimic raw sockets with tun */
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 9c8b5bc..80070d4 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -1631,12 +1631,15 @@ out:
- 	return ret;
- }
- 
--static int tun_peek_len(struct socket *sock)
-+static int tun_peek_len(struct socket *sock, bool hint)
- {
- 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
- 	struct tun_struct *tun;
- 	int ret = 0;
- 
-+	if (hint)
-+		return !skb_array_empty(&tfile->tx_array);
-+
- 	tun = __tun_get(tfile);
- 	if (!tun)
- 		return 0;
-diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index e032ca3..f70a91c 100644
---- a/drivers/vhost/net.c
-+++ b/drivers/vhost/net.c
-@@ -487,7 +487,7 @@ static int peek_head_len(struct sock *sk)
- 	unsigned long flags;
- 
- 	if (sock->ops->peek_len)
--		return sock->ops->peek_len(sock);
-+		return sock->ops->peek_len(sock, false);
- 
- 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
- 	head = skb_peek(&sk->sk_receive_queue);
-@@ -506,7 +506,7 @@ static int sk_has_rx_data(struct sock *sk)
- 	struct socket *sock = sk->sk_socket;
- 
- 	if (sock->ops->peek_len)
--		return sock->ops->peek_len(sock);
-+		return sock->ops->peek_len(sock, true);
- 
- 	return skb_queue_empty(&sk->sk_receive_queue);
- }
-diff --git a/include/linux/net.h b/include/linux/net.h
-index b9f0ff4..e0fc576 100644
---- a/include/linux/net.h
-+++ b/include/linux/net.h
-@@ -185,7 +185,7 @@ struct proto_ops {
- 	ssize_t 	(*splice_read)(struct socket *sock,  loff_t *ppos,
- 				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
- 	int		(*set_peek_off)(struct sock *sk, int val);
--	int		(*peek_len)(struct socket *sock);
-+	int		(*peek_len)(struct socket *sock, bool hint);
- };
- 
- #define DECLARE_SOCKADDR(type, dst, src)	\
+
