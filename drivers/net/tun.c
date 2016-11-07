@@ -1679,11 +1679,14 @@ out:
 	return ret;
 }
 
-static int tun_peek_len(struct socket *sock)
+static int tun_peek_len(struct socket *sock, bool hint)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun;
 	int ret = 0;
+
+	if (hint)
+		return !skb_array_empty(&tfile->tx_array);
 
 	tun = __tun_get(tfile);
 	if (!tun)

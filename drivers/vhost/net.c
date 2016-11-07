@@ -526,7 +526,7 @@ static int peek_head_len(struct sock *sk)
 	unsigned long flags;
 
 	if (sock->ops->peek_len)
-		return sock->ops->peek_len(sock);
+		return sock->ops->peek_len(sock, false);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
 	head = skb_peek(&sk->sk_receive_queue);
@@ -545,7 +545,7 @@ static int sk_has_rx_data(struct sock *sk)
 	struct socket *sock = sk->sk_socket;
 
 	if (sock->ops->peek_len)
-		return sock->ops->peek_len(sock);
+		return sock->ops->peek_len(sock, true);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
