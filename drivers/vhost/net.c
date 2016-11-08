@@ -461,11 +461,12 @@ static void handle_tx(struct vhost_net *net)
 		total_len += len;
 		if (vq->delayed < tx_batched &&
 		    total_len < VHOST_NET_WEIGHT &&
-		    !vhost_vq_avail_empty(&net->dev, vq)) &&
+		    !vhost_vq_avail_empty(&net->dev, vq)) {
 			vq->delayed++;
 			msg.msg_flags |= MSG_MORE;
 		} else {
 			vq->delayed = 0;
+			msg.msg_flags &= ~MSG_MORE;
 		}
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
