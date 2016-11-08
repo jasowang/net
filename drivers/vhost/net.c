@@ -458,8 +458,10 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
-		if (!vhost_vq_avail_empty(&net->dev, vq) &&
-		    vq->delayed < tx_batched) {
+		total_len += len;
+		if (vq->delayed < tx_batched &&
+		    total_len < VHOST_NET_WEIGHT &&
+		    !vhost_vq_avail_empty(&net->dev, vq)) &&
 			vq->delayed++;
 			msg.msg_flags |= MSG_MORE;
 		} else {
@@ -483,7 +485,6 @@ static void handle_tx(struct vhost_net *net)
 			vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
-		total_len += len;
 		vhost_net_tx_packet(net);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
 			vhost_poll_queue(&vq->poll);
