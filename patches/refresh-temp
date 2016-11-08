@@ -1,0 +1,34 @@
+Bottom: 195355795120ded0062dfd044df86f8d7e8651ce
+Top:    a2de1caa8d89582626ed66f6fbd39df185a3a3b1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-08 15:42:40 +0800
+
+Refresh of vhost_net-tx-support-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 83b9cf8..87c745c 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -458,8 +458,10 @@ static void handle_tx(struct vhost_net *net)
+ 			msg.msg_control = NULL;
+ 			ubufs = NULL;
+ 		}
+-		if (!vhost_vq_avail_empty(&net->dev, vq) &&
+-		    vq->delayed < tx_batched) {
++		total_len += len;
++		if (vq->delayed < tx_batched &&
++		    total_len < VHOST_NET_WEIGHT &&
++		    !vhost_vq_avail_empty(&net->dev, vq)) &&
+ 			vq->delayed++;
+ 			msg.msg_flags |= MSG_MORE;
+ 		} else {
+@@ -483,7 +485,6 @@ static void handle_tx(struct vhost_net *net)
+ 			vhost_add_used_and_signal(&net->dev, vq, head, 0);
+ 		else
+ 			vhost_zerocopy_signal_used(net, vq);
+-		total_len += len;
+ 		vhost_net_tx_packet(net);
+ 		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+ 			vhost_poll_queue(&vq->poll);
