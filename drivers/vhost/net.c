@@ -35,6 +35,10 @@ module_param(experimental_zcopytx, int, 0444);
 MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
 		                       " 1 -Enable; 0 - Disable");
 
+static int tx_batched = 1;
+module_param(tx_batched, int, 0444);
+MODULE_PARM_DESC(experimental_zcopytx, "Number of patckes batched during TX;");
+
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
 #define VHOST_NET_WEIGHT 0x80000
@@ -454,7 +458,8 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
-		if (!vhost_vq_avail_empty(&net->dev, vq) && vq->delayed <= 16) {
+		if (!vhost_vq_avail_empty(&net->dev, vq) &&
+		    vq->delayed < tx_batched) {
 			vq->delayed++;
 			msg.msg_flags |= MSG_MORE;
 		} else {
