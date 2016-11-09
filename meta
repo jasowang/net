@@ -1,10 +1,11 @@
 Version: 1
-Previous: a9353f488edf40d5604bd5f131965875ca25752c
-Head: 99a08ee47090f005c24bf5321c1a9b78dc3202c5
+Previous: c9d07c7701985d5a27ea66eca71fd879dc0c7bda
+Head: 661e2ea8bcfcb258ce035081aca3e5a665efb8c2
 Applied:
   tuntap-rx-batching: d39d6042032a068330c8eecbebaa2d106f82d539
   vhost-better-detection-of: ffbedc0027dd377af81b20ae321eac3bc2df6d18
   vhost_net-tx-support-batching: 99a08ee47090f005c24bf5321c1a9b78dc3202c5
+  refresh-temp: 661e2ea8bcfcb258ce035081aca3e5a665efb8c2
 Unapplied:
   vhost_net-conditionally-start: b5aef17c558057f6ccb0e31f3c3c523bab93d271
   introduce-lockless-socket: 89cd6230862d4f42822727f1df862dcad8815d63
