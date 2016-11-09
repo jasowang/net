@@ -1,5 +1,5 @@
-Bottom: c1c387b898c0c6f8b2e220c242b81b60d758756b
-Top:    7d318552e5adae4e28d33acb8af714df51e62087
+Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
+Top:    17a2ad9747dcff99198244167964e29c30d98545
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8093e39..27e1cb0 100644
+index 1588469..a5d550c 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -120,7 +120,7 @@ index 8093e39..27e1cb0 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1158,7 +1208,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1150,7 +1200,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -129,7 +129,7 @@ index 8093e39..27e1cb0 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1304,7 +1354,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1296,7 +1346,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -144,7 +144,7 @@ index 8093e39..27e1cb0 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1327,7 +1383,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1319,7 +1375,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -154,7 +154,7 @@ index 8093e39..27e1cb0 100644
  
  	tun_put(tun);
  	return result;
-@@ -1587,7 +1644,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1579,7 +1636,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -164,7 +164,7 @@ index 8093e39..27e1cb0 100644
  	tun_put(tun);
  	return ret;
  }
-@@ -2340,6 +2398,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2336,6 +2394,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  
