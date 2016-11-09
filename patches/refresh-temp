@@ -1,0 +1,22 @@
+Bottom: 5a68cfff4ff5701a441028ad4e972def99ff59c6
+Top:    2a6f3e2513d281d78b4672fdf1d1432088cc260c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-09 15:32:11 +0800
+
+Refresh of vhost_net-tx-support-batching
+
+---
+
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 78fffee..9f81a94 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -141,7 +141,7 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
+-	unsigned int delayed;
++	int delayed;
+ };
+ 
+ struct vhost_msg_node {
