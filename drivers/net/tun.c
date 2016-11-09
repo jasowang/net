@@ -636,7 +636,7 @@ static int tun_poll(struct napi_struct *napi, int budget)
 	struct sk_buff_head *input_queue =
 	       &tfile->socket.sk->sk_write_queue;
 	struct sk_buff *skb;
-	unsigned received = 0;
+	unsigned int received = 0;
 
 	while (1) {
 		while ((skb = __skb_dequeue(&tfile->process_queue))) {
