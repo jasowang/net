@@ -1,5 +1,5 @@
 Bottom: 2a515c75180ba4765b6d7e71b409ccec96bf7e13
-Top:    3c65040beba7c8100386db1cb4d0526bcfc90af9
+Top:    5a68cfff4ff5701a441028ad4e972def99ff59c6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-10-27 16:01:25 +0800
 
@@ -76,14 +76,14 @@ index fdf4cdf..bc362c7 100644
  
  static int vhost_worker(void *data)
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 78f3c5f..1fdf17f 100644
+index 78f3c5f..78fffee 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -141,6 +141,7 @@ struct vhost_virtqueue {
  	bool user_be;
  #endif
  	u32 busyloop_timeout;
-+	unsigned delayed;
++	unsigned int delayed;
  };
  
  struct vhost_msg_node {
