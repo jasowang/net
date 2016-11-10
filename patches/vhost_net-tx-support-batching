@@ -11,7 +11,7 @@ the virtqueue, set MSG_MORE flag for a hint for tuntap to batch the
 packets. The maximum number of batched tx packets were specified
 through a module parameter: tx_bached.
 
-When use 16 as tx_batched:
+When using 16 as tx_batched:
 
 Pktgen test shows 16% on tx pps in guest.
 Netperf test does not show obvious regression.
