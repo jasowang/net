@@ -1347,11 +1347,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	rxhash = skb_get_hash(skb);
 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 
-	if (!more) {
-		local_bh_disable();
+	if (!more)
 		napi_schedule(&tfile->napi);
-		local_bh_enable();
-	}
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
