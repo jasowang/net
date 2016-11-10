@@ -37,7 +37,7 @@ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
 
 static int tx_batched = 1;
 module_param(tx_batched, int, 0444);
-MODULE_PARM_DESC(tx_batched, "Number of patches batched in TX");
+MODULE_PARM_DESC(tx_batched, "Number of packets batched in TX");
 
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
