@@ -1,0 +1,22 @@
+Bottom: a8ce14c3bd4460bef044c079939a59cea57f393b
+Top:    0c5d7f45190f4348cc45465dfac81b958ee27281
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-10 11:36:19 +0800
+
+Refresh of vhost_net-tx-support-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 51c378e..e297c5ea 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -37,7 +37,7 @@ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
+ 
+ static int tx_batched = 1;
+ module_param(tx_batched, int, 0444);
+-MODULE_PARM_DESC(tx_batched, "Number of patches batched in TX");
++MODULE_PARM_DESC(tx_batched, "Number of packets batched in TX");
+ 
+ /* Max number of bytes transferred before requeueing the job.
+  * Using this limit prevents one virtqueue from starving others. */
