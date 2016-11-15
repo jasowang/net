@@ -1,8 +1,8 @@
 Version: 1
-Previous: 5a82d2de733f19209e14f538a8ad5a296bdc17f8
-Head: a881e7a830afeac05ad489b1f005377e603631ef
+Previous: 5c442d39ee168f2cbf2078897a968fee92b86b26
+Head: 74d3e46435a03c601b9c0073a12abf03a2f12161
 Applied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
-  tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
 Unapplied:
+  tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
 Hidden:
