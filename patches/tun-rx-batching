@@ -1,5 +1,5 @@
 Bottom: 298fa1d4fa60e340b892d6dd6919c30c938f8108
-Top:    64a704f6d45dd12a8651f0dde7f71202198a0899
+Top:    e43274d43766fa6827ecb7938ff67ce26b1c3f36
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-15 13:38:32 +0800
 
@@ -11,9 +11,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 1588469..9c6a933 100644
+index 1588469..50477f5b 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
+@@ -1150,7 +1150,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+ /* Get packet from user space buffer */
+ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			    void *msg_control, struct iov_iter *from,
+-			    int noblock)
++			    int noblock, int more)
+ {
+ 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
+ 	struct sk_buff *skb;
 @@ -1296,7 +1296,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  

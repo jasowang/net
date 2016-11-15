@@ -1,10 +1,9 @@
 Version: 1
-Previous: ff59267d0fda06f507d2172397135082f8e42704
-Head: fe2cb3b20884175aa85c9f0fa7a626d93010dc3f
+Previous: a9fe75bbe96c2ad2bb499d13ac7758acf75a7fee
+Head: ae57b70c3fe3414a2b07f4a768522d80ca68c484
 Applied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
-  tun-rx-batching: 643b2b97041110e5917726542103d87b779c593c
-  refresh-temp: fe2cb3b20884175aa85c9f0fa7a626d93010dc3f
+  tun-rx-batching: ae57b70c3fe3414a2b07f4a768522d80ca68c484
 Unapplied:
   tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
 Hidden:
