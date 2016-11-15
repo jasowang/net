@@ -1,9 +1,8 @@
 Version: 1
-Previous: 447ef3eb685280ad8ffe586c0ac43dda3475d608
-Head: c34b770f772c9f8e0d6a593d0be2f655d1ca9dea
+Previous: e95c24d393371435ae283be50cdef45fb3f799d7
+Head: 74d3e46435a03c601b9c0073a12abf03a2f12161
 Applied:
-  net-introduce-netif_rx_queued: db65c94012baabb1dc6c40986eb4dd71741332b6
-  refresh-temp: c34b770f772c9f8e0d6a593d0be2f655d1ca9dea
+  net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
 Unapplied:
   tuntap-rx-batching: cb2a587b5f9ef6f2840b7bfd8a6068ccd220f3d1
   vhost-better-detection-of: 36c087d534c6a12746fcce4a0879053487dd6671
