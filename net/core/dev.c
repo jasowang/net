@@ -155,7 +155,7 @@ struct list_head ptype_base[PTYPE_HASH_SIZE] __read_mostly;
 struct list_head ptype_all __read_mostly;	/* Taps */
 static struct list_head offload_base __read_mostly;
 
-static int netif_rx_internal(struct sk_buff *skb);
+static int netif_rx_internal(struct sk_buff *skb, int more);
 static int call_netdevice_notifiers_info(unsigned long val,
 					 struct net_device *dev,
 					 struct netdev_notifier_info *info);
@@ -1801,7 +1801,7 @@ EXPORT_SYMBOL_GPL(__dev_forward_skb);
  */
 int dev_forward_skb(struct net_device *dev, struct sk_buff *skb)
 {
-	return __dev_forward_skb(dev, skb) ?: netif_rx_internal(skb);
+	return __dev_forward_skb(dev, skb) ?: netif_rx_internal(skb, false);
 }
 EXPORT_SYMBOL_GPL(dev_forward_skb);
 
@@ -3715,7 +3715,7 @@ static bool skb_flow_limit(struct sk_buff *skb, unsigned int qlen)
  * queue (may be a remote CPU queue).
  */
 static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
-			      unsigned int *qtail)
+			      unsigned int *qtail, int more)
 {
 	struct softnet_data *sd;
 	unsigned long flags;
@@ -3730,7 +3730,7 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
 		goto drop;
 	qlen = skb_queue_len(&sd->input_pkt_queue);
 	if (qlen <= netdev_max_backlog && !skb_flow_limit(skb, qlen)) {
-		if (qlen) {
+		if (qlen || more) {
 enqueue:
 			__skb_queue_tail(&sd->input_pkt_queue, skb);
 			input_queue_tail_incr_save(sd, qtail);
@@ -3760,7 +3760,7 @@ drop:
 	return NET_RX_DROP;
 }
 
-static int netif_rx_internal(struct sk_buff *skb)
+static int netif_rx_internal(struct sk_buff *skb, int more)
 {
 	int ret;
 
@@ -3779,7 +3779,7 @@ static int netif_rx_internal(struct sk_buff *skb)
 		if (cpu < 0)
 			cpu = smp_processor_id();
 
-		ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
+		ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail, false);
 
 		rcu_read_unlock();
 		preempt_enable();
@@ -3787,7 +3787,7 @@ static int netif_rx_internal(struct sk_buff *skb)
 #endif
 	{
 		unsigned int qtail;
-		ret = enqueue_to_backlog(skb, get_cpu(), &qtail);
+		ret = enqueue_to_backlog(skb, get_cpu(), &qtail, more);
 		put_cpu();
 	}
 	return ret;
@@ -3812,7 +3812,7 @@ int netif_rx(struct sk_buff *skb)
 {
 	trace_netif_rx_entry(skb);
 
-	return netif_rx_internal(skb);
+	return netif_rx_internal(skb, false);
 }
 EXPORT_SYMBOL(netif_rx);
 
@@ -3823,7 +3823,7 @@ int netif_rx_ni(struct sk_buff *skb)
 	trace_netif_rx_ni_entry(skb);
 
 	preempt_disable();
-	err = netif_rx_internal(skb);
+	err = netif_rx_internal(skb, false);
 	if (local_softirq_pending())
 		do_softirq();
 	preempt_enable();
@@ -3837,7 +3837,7 @@ int netif_rx_queued(struct sk_buff *skb)
 	int err;
 
 	preempt_disable();
-	err = netif_rx_internal(skb);
+	err = netif_rx_internal(skb, true);
 	preempt_enable();
 
 	return err;
@@ -4267,7 +4267,7 @@ static int netif_receive_skb_internal(struct sk_buff *skb)
 		int cpu = get_rps_cpu(skb->dev, skb, &rflow);
 
 		if (cpu >= 0) {
-			ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
+			ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail, false);
 			rcu_read_unlock();
 			return ret;
 		}
