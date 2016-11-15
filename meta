@@ -1,11 +1,11 @@
 Version: 1
-Previous: 9a2a1c07bcf27f78dbbd096a1ed7e1a56ea9505e
-Head: a881e7a830afeac05ad489b1f005377e603631ef
+Previous: 30f287ff589355202b658b237509a841924d1e77
+Head: 95cb00ec1cdae7f8d5d34fd778c15ef067121877
 Applied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
   tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
+  vhost-better-detection-of: 95cb00ec1cdae7f8d5d34fd778c15ef067121877
 Unapplied:
-  vhost-better-detection-of: 36c087d534c6a12746fcce4a0879053487dd6671
   vhost_net-tx-support-batching: ef196ccfad341467460c9deaf7d32299465a15f9
   vhost_net-conditionally-start: b5aef17c558057f6ccb0e31f3c3c523bab93d271
   introduce-lockless-socket: 89cd6230862d4f42822727f1df862dcad8815d63
