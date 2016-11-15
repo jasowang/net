@@ -1,6 +1,6 @@
 Version: 1
-Previous: a9fe75bbe96c2ad2bb499d13ac7758acf75a7fee
-Head: ae57b70c3fe3414a2b07f4a768522d80ca68c484
+Previous: 5fa2846183f2c9070163fffb56d5d33cbcf54187
+Head: 5581874a5b52b32b788b07314d843bc492430b77
 Applied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
   tun-rx-batching: ae57b70c3fe3414a2b07f4a768522d80ca68c484
