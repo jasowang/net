@@ -1,10 +1,10 @@
 Version: 1
-Previous: 74fac2ee366e937ac177f0b7baf808eae21e9088
-Head: f5f99309fa7481f59a500f0d08f3379cd6424c1f
+Previous: d978f94c6c3c960f85739f5c732d0521683e8fd2
+Head: 43745a2d4a037dbeef6cefc55d17f53a990abfbd
 Applied:
+  tuntap-rx-batching: 43745a2d4a037dbeef6cefc55d17f53a990abfbd
 Unapplied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
-  tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
   vhost-better-detection-of: 95cb00ec1cdae7f8d5d34fd778c15ef067121877
   vhost_net-tx-support-batching: 41f57e2b3addc52fa06c26f3f3688b83c1f2b47d
   vhost_net-conditionally-start: b5aef17c558057f6ccb0e31f3c3c523bab93d271
