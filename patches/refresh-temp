@@ -1,0 +1,44 @@
+Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
+Top:    298fa1d4fa60e340b892d6dd6919c30c938f8108
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-15 13:30:03 +0800
+
+Refresh of net-introduce-netif_rx_queued
+
+---
+
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 66fd61c..1e2baed 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -3214,6 +3214,7 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
+ 
+ int netif_rx(struct sk_buff *skb);
+ int netif_rx_ni(struct sk_buff *skb);
++int netif_rx_queued(struct sk_buff *skb);
+ int netif_receive_skb(struct sk_buff *skb);
+ gro_result_t napi_gro_receive(struct napi_struct *napi, struct sk_buff *skb);
+ void napi_gro_flush(struct napi_struct *napi, bool flush_old);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 0260ad3..adf5e97 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3832,6 +3832,18 @@ int netif_rx_ni(struct sk_buff *skb)
+ }
+ EXPORT_SYMBOL(netif_rx_ni);
+ 
++int netif_rx_queued(struct sk_buff *skb)
++{
++	int err;
++
++	preempt_disable();
++	err = netif_rx_internal(skb);
++	preempt_enable();
++
++	return err;
++}
++EXPORT_SYMBOL(netif_rx_queued);
++
+ static __latent_entropy void net_tx_action(struct softirq_action *h)
+ {
+ 	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
