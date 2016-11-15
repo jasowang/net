@@ -3832,6 +3832,18 @@ int netif_rx_ni(struct sk_buff *skb)
 }
 EXPORT_SYMBOL(netif_rx_ni);
 
+int netif_rx_queued(struct sk_buff *skb)
+{
+	int err;
+
+	preempt_disable();
+	err = netif_rx_internal(skb);
+	preempt_enable();
+
+	return err;
+}
+EXPORT_SYMBOL(netif_rx_queued);
+
 static __latent_entropy void net_tx_action(struct softirq_action *h)
 {
 	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
