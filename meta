@@ -1,10 +1,10 @@
 Version: 1
-Previous: 8cec1060e8a35aaf5f247c4e5f577857a130e7de
-Head: cccb98aae56ea23c3abc164acbf85fddddcdd24a
+Previous: 8c78832b65214e2a1372e90880449a834319b58d
+Head: fd15b2a3c472e1a717c3eb495037ba08debb85f5
 Applied:
   net-introduce-netif_rx_queued: cccb98aae56ea23c3abc164acbf85fddddcdd24a
+  tun-rx-batching: fd15b2a3c472e1a717c3eb495037ba08debb85f5
 Unapplied:
-  tun-rx-batching: ae57b70c3fe3414a2b07f4a768522d80ca68c484
   vhost-better-detection-of: 1263c07cd9d057ba2335901d15891a2dc6382706
   vhost_net-tx-support-batching: 5581874a5b52b32b788b07314d843bc492430b77
   tuntap-rx-batching: a881e7a830afeac05ad489b1f005377e603631ef
