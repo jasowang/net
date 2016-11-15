@@ -1,0 +1,11 @@
+Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
+Top:    b1de394448ccd8c4851be4183f9d7f92aa319e35
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-15 13:29:57 +0800
+
+net: introduce netif_rx_queued()
+
+
+---
+
+
