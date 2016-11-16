@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
+Previous: 7732482e2b82f1b8411dcd452e0fd472f5d024e3
 Head: d9c7d5ef712d811cd235e3931cbfa352cbca49e0
 Applied:
+  tuntap-rx-batching: d9c7d5ef712d811cd235e3931cbfa352cbca49e0
 Unapplied:
 Hidden:
