@@ -2014,6 +2014,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			access = VHOST_ACCESS_WO;
 		else
 			access = VHOST_ACCESS_RO;
+		printk("desc.addr %p\n", desc.addr);
 		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
 				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
 				     iov_size - iov_count, access);

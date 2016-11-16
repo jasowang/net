@@ -372,6 +372,8 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
+	struct iov_iter header;
+	struct virtio_net_hdr hdr;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -420,6 +422,18 @@ static void handle_tx(struct vhost_net *net)
 		/* Skip header. TODO: support TSO. */
 		len = iov_length(vq->iov, out);
 		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+		iov_iter_init(&header, WRITE, vq->iov, out, len);
+		copy_from_iter(&hdr, sizeof(hdr), &header);
+		#if 0
+		if (hdr.hdr_len && hdr.hdr_len <= ETH_HLEN) {
+		}
+		if (hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+			printk("early csum, flags %d csum_start %d, offfset %d!\n",
+				hdr.csum_start,
+				hdr.csum_offset);
+		}
+		printk("vhost hdr size %d\n", hdr_size);
+		#endif
 		iov_iter_advance(&msg.msg_iter, hdr_size);
 		/* Sanity check */
 		if (!msg_data_left(&msg)) {

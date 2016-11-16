@@ -58,7 +58,13 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 					  struct virtio_net_hdr *hdr,
 					  bool little_endian)
 {
-	memset(hdr, 0, sizeof(*hdr));
+  	memset(hdr, 0, sizeof(*hdr));
+
+        if (skb->ip_summed == CHECKSUM_PARTIAL &&
+            (skb_checksum_start_offset(skb) == 0 ||
+             skb->csum_offset == 0)) {
+		printk("bug partial csum!\n");
+	}
 
 	if (skb_is_gso(skb)) {
 		struct skb_shared_info *sinfo = skb_shinfo(skb);
@@ -68,6 +74,7 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 						 skb_headlen(skb));
 		hdr->gso_size = __cpu_to_virtio16(little_endian,
 						  sinfo->gso_size);
+                printk("hdr_len is %d\n", hdr->hdr_len);
 		if (sinfo->gso_type & SKB_GSO_TCPV4)
 			hdr->gso_type = VIRTIO_NET_HDR_GSO_TCPV4;
 		else if (sinfo->gso_type & SKB_GSO_TCPV6)
@@ -78,8 +85,9 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 			return -EINVAL;
 		if (sinfo->gso_type & SKB_GSO_TCP_ECN)
 			hdr->gso_type |= VIRTIO_NET_HDR_GSO_ECN;
-	} else
+	} else {
 		hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+        }
 
 	if (skb->ip_summed == CHECKSUM_PARTIAL) {
 		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
@@ -91,6 +99,8 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 				skb_checksum_start_offset(skb));
 		hdr->csum_offset = __cpu_to_virtio16(little_endian,
 				skb->csum_offset);
+                if (hdr->csum_start == 0 || hdr->csum_offset == 0)
+			dump_stack();
 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
 	} /* else everything is zero */
