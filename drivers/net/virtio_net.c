@@ -821,11 +821,13 @@ static void free_old_xmit_skbs(struct send_queue *sq)
 static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 {
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
+	struct virtio_net_hdr hdr2;
 	const unsigned char *dest = ((struct ethhdr *)skb->data)->h_dest;
 	struct virtnet_info *vi = sq->vq->vdev->priv;
 	unsigned num_sg;
 	unsigned hdr_len = vi->hdr_len;
 	bool can_push;
+	int ret;
 
 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
 
@@ -843,12 +845,18 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 				    virtio_is_little_endian(vi->vdev)))
 		BUG();
 
+	hdr->num_buffers = 0xFF;
+	hdr->hdr.hdr_len = 0;
+
 	if (vi->mergeable_rx_bufs)
 		hdr->num_buffers = 0;
 
 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
 	if (can_push) {
 		__skb_push(skb, hdr_len);
+		skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
+		if (hdr2.hdr_len && hdr2.hdr_len < ETH_HLEN)
+			BUG();
 		num_sg = skb_to_sgvec(skb, sq->sg, 0, skb->len);
 		/* Pull header back to avoid skew in tx bytes calculations. */
 		__skb_pull(skb, hdr_len);
@@ -856,7 +864,16 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 		sg_set_buf(sq->sg, hdr, hdr_len);
 		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
 	}
-	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
+		BUG();
+
+	BUG_ON(hdr->hdr.gso_size != 0xFF);
+
+	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
+		BUG();
+
+	return ret;
 }
 
 static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)

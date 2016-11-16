@@ -68,6 +68,7 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 						 skb_headlen(skb));
 		hdr->gso_size = __cpu_to_virtio16(little_endian,
 						  sinfo->gso_size);
+                printk("hdr_len is %d\n", hdr->hdr_len);
 		if (sinfo->gso_type & SKB_GSO_TCPV4)
 			hdr->gso_type = VIRTIO_NET_HDR_GSO_TCPV4;
 		else if (sinfo->gso_type & SKB_GSO_TCPV6)
@@ -94,6 +95,8 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
 	} /* else everything is zero */
+
+        hdr->gso_size = 0xFF;
 
 	return 0;
 }

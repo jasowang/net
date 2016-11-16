@@ -1157,6 +1157,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	size_t total_len = iov_iter_count(from);
 	size_t len = total_len, align = tun->align, linear;
 	struct virtio_net_hdr gso = { 0 };
+	__virtio16 num_buffers;
 	struct tun_pcpu_stats *stats;
 	int good_linear;
 	int copylen;
@@ -1179,28 +1180,55 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	}
 
 	if (tun->flags & IFF_VNET_HDR) {
-		if (len < tun->vnet_hdr_sz)
+		if (len < tun->vnet_hdr_sz) {
+			printk("len is too small!\n");
 			return -EINVAL;
+		}
 		len -= tun->vnet_hdr_sz;
 
 		n = copy_from_iter(&gso, sizeof(gso), from);
-		if (n != sizeof(gso))
+		if (n != sizeof(gso)) {
+			printk("gso copy failed!\n");
 			return -EFAULT;
+		}
+
+		if (unlikely(len < ETH_HLEN ||
+			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+		{
+			printk("early!\n");
+		}
 
 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
 		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
 
-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
+		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
+			printk("hdr_len error!\n");
 			return -EINVAL;
-		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso));
+		}
+		copy_from_iter(&num_buffers, sizeof(num_buffers), from);
+		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso)
+				- sizeof(num_buffers));
 	}
 
 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
 			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+		{
+
+			int i;
+			printk("hdr check error!, gso.hdr_len is %x gso_type %x\n",
+				tun16_to_cpu(tun, gso.hdr_len), gso.gso_type);
+			printk("nbuffers %d\n", num_buffers);
+
+			for (i = 0; i < sizeof(struct virtio_net_hdr);
+			     i ++) {
+				printk("gso[%d] %x\n", i, ((char *)&gso)[i]);
+			}
+
 			return -EINVAL;
+		}
 	}
 
 	good_linear = SKB_MAX_HEAD(align);
@@ -1254,6 +1282,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	err = virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun));
 	if (err) {
+		printk("header conversion error!\n");
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
 		return -EINVAL;
