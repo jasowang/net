@@ -1,0 +1,206 @@
+Bottom: e1226f466d05c668e8c318d30dd4c18327e29a30
+Top:    a55d06329c1ec60516cafe4ff2ce8644e54cd416
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-17 15:14:58 +0800
+
+Refresh of had
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index f45f2e2..b322028 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1191,17 +1191,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			printk("gso copy failed!\n");
+ 			return -EFAULT;
+ 		}
+-
+-		if (unlikely(len < ETH_HLEN ||
+-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+-		{
+-			printk("early!\n");
+-		}
++#if 0
++		printk("csum start %d csum offset %d\n",
++			gso.csum_start, gso.csum_offset);
++#endif
+ 
+ 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+-		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
+-			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+-
++		    tun16_to_cpu(tun, gso.csum_start) +
++		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
++			tun16_to_cpu(tun, gso.hdr_len)) {
++#if 0
++			printk("correction! start %d offset %d hdr_len %d\n",
++				tun16_to_cpu(tun, gso.csum_start),
++				tun16_to_cpu(tun, gso.csum_offset),
++				tun16_to_cpu(tun, gso.hdr_len));
++#endif
++				gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
++		}
+ 		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
+ 			printk("hdr_len error!\n");
+ 			return -EINVAL;
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index b2a9a78..48049a2 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -805,8 +805,24 @@ static void free_old_xmit_skbs(struct send_queue *sq)
+ 	unsigned int len;
+ 	struct virtnet_info *vi = sq->vq->vdev->priv;
+ 	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
++	bool can_push;
++	unsigned hdr_len = vi->hdr_len;
++	struct virtio_net_hdr hdr2;
++	struct virtio_net_hdr_mrg_rxbuf *hdr;
+ 
+ 	while ((skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
++		can_push = vi->any_header_sg &&
++			!((unsigned long)skb->data & (__alignof__(*hdr) - 1)) &&
++			!skb_header_cloned(skb) && skb_headroom(skb) >= hdr_len;
++
++		if (can_push) {
++			__skb_push(skb, hdr_len);
++			skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
++			if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
++				(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
++				dump_stack();
++			__skb_pull(skb, hdr_len);
++		}
+ 		pr_debug("Sent skb %p\n", skb);
+ 
+ 		u64_stats_update_begin(&stats->tx_syncp);
+@@ -845,9 +861,6 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 				    virtio_is_little_endian(vi->vdev)))
+ 		BUG();
+ 
+-	hdr->num_buffers = 0xFF;
+-	hdr->hdr.hdr_len = 0;
+-
+ 	if (vi->mergeable_rx_bufs)
+ 		hdr->num_buffers = 0;
+ 
+@@ -855,24 +868,39 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	if (can_push) {
+ 		__skb_push(skb, hdr_len);
+ 		skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
+-		if (hdr2.hdr_len && hdr2.hdr_len < ETH_HLEN)
+-			BUG();
++		if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
++			(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
++			dump_stack();
+ 		num_sg = skb_to_sgvec(skb, sq->sg, 0, skb->len);
+ 		/* Pull header back to avoid skew in tx bytes calculations. */
+ 		__skb_pull(skb, hdr_len);
+ 	} else {
+ 		sg_set_buf(sq->sg, hdr, hdr_len);
++		printk("can't\n");
+ 		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
+ 	}
++
+ 	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
+ 		BUG();
+ 
+-	BUG_ON(hdr->hdr.gso_size != 0xFF);
++	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
++		(hdr->hdr.csum_start == 0 || hdr->hdr.csum_offset == 0))
++		dump_stack();
+ 
+ 	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+ 	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
+ 		BUG();
+ 
++	if (can_push) {
++		__skb_push(skb, hdr_len);
++		printk("phys %p\n", virt_to_phys(skb->data));
++		skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
++		if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
++			(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
++			dump_stack();
++		__skb_pull(skb, hdr_len);
++	}
++
+ 	return ret;
+ }
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 62dbad9..3fd4713 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -424,10 +424,16 @@ static void handle_tx(struct vhost_net *net)
+ 		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+ 		iov_iter_init(&header, WRITE, vq->iov, out, len);
+ 		copy_from_iter(&hdr, sizeof(hdr), &header);
++		#if 0
+ 		if (hdr.hdr_len && hdr.hdr_len <= ETH_HLEN) {
+-			printk("error len %d\n", hdr.hdr_len);
++		}
++		if (hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
++			printk("early csum, flags %d csum_start %d, offfset %d!\n",
++				hdr.csum_start,
++				hdr.csum_offset);
+ 		}
+ 		printk("vhost hdr size %d\n", hdr_size);
++		#endif
+ 		iov_iter_advance(&msg.msg_iter, hdr_size);
+ 		/* Sanity check */
+ 		if (!msg_data_left(&msg)) {
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index c6f2d89..d15af82 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2014,6 +2014,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			access = VHOST_ACCESS_WO;
+ 		else
+ 			access = VHOST_ACCESS_RO;
++		printk("desc.addr %p\n", desc.addr);
+ 		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+ 				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
+ 				     iov_size - iov_count, access);
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index 2c0f30a..bbd0f4f 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -58,7 +58,13 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 					  struct virtio_net_hdr *hdr,
+ 					  bool little_endian)
+ {
+-	memset(hdr, 0, sizeof(*hdr));
++  	memset(hdr, 0, sizeof(*hdr));
++
++        if (skb->ip_summed == CHECKSUM_PARTIAL &&
++            (skb_checksum_start_offset(skb) == 0 ||
++             skb->csum_offset == 0)) {
++		printk("bug partial csum!\n");
++	}
+ 
+ 	if (skb_is_gso(skb)) {
+ 		struct skb_shared_info *sinfo = skb_shinfo(skb);
+@@ -79,8 +85,9 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 			return -EINVAL;
+ 		if (sinfo->gso_type & SKB_GSO_TCP_ECN)
+ 			hdr->gso_type |= VIRTIO_NET_HDR_GSO_ECN;
+-	} else
++	} else {
+ 		hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
++        }
+ 
+ 	if (skb->ip_summed == CHECKSUM_PARTIAL) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
+@@ -92,12 +99,12 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 				skb_checksum_start_offset(skb));
+ 		hdr->csum_offset = __cpu_to_virtio16(little_endian,
+ 				skb->csum_offset);
++                if (hdr->csum_start == 0 || hdr->csum_offset == 0)
++			dump_stack();
+ 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
+ 	} /* else everything is zero */
+ 
+-        hdr->gso_size = 0xFF;
+-
+ 	return 0;
+ }
