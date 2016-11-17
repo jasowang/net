@@ -1,0 +1,48 @@
+Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
+Top:    bcf6283483ba4b4a74b60185f34ec30499ce272d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-17 15:26:08 +0800
+
+fix pktgen
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index 1c912f8..cba7d9c 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -58,8 +58,6 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 					  struct virtio_net_hdr *hdr,
+ 					  bool little_endian)
+ {
+-	memset(hdr, 0, sizeof(*hdr));
+-
+ 	if (skb_is_gso(skb)) {
+ 		struct skb_shared_info *sinfo = skb_shinfo(skb);
+ 
+@@ -78,8 +76,10 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 			return -EINVAL;
+ 		if (sinfo->gso_type & SKB_GSO_TCP_ECN)
+ 			hdr->gso_type |= VIRTIO_NET_HDR_GSO_ECN;
+-	} else
++	} else {
+ 		hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
++                hdr->hdr_len = hdr->gso_size = 0;
++        }
+ 
+ 	if (skb->ip_summed == CHECKSUM_PARTIAL) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
+@@ -93,7 +93,9 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 				skb->csum_offset);
+ 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
+-	} /* else everything is zero */
++	} /* else everything is zero */ {
++		hdr->csum_start = hdr->csum_offset = 0;
++	}
+ 
+ 	return 0;
+ }
