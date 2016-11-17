@@ -94,6 +94,7 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
 	} /* else everything is zero */ {
+		hdr->flags = 0;
 		hdr->csum_start = hdr->csum_offset = 0;
 	}
 
