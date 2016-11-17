@@ -1,0 +1,20 @@
+Bottom: bcf6283483ba4b4a74b60185f34ec30499ce272d
+Top:    7b44addcc9e47c07ac7fb99af6829bdedf30cf42
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-17 15:59:36 +0800
+
+Refresh of fix-pktgen
+
+---
+
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index cba7d9c..54c9767 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -94,6 +94,7 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+ 	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+ 		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
+ 	} /* else everything is zero */ {
++		hdr->flags = 0;
+ 		hdr->csum_start = hdr->csum_offset = 0;
+ 	}
