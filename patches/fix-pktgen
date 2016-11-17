@@ -1,5 +1,5 @@
 Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
-Top:    bcf6283483ba4b4a74b60185f34ec30499ce272d
+Top:    7b44addcc9e47c07ac7fb99af6829bdedf30cf42
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-17 15:26:08 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
-index 1c912f8..cba7d9c 100644
+index 1c912f8..54c9767 100644
 --- a/include/linux/virtio_net.h
 +++ b/include/linux/virtio_net.h
 @@ -58,8 +58,6 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
@@ -35,12 +35,13 @@ index 1c912f8..cba7d9c 100644
  
  	if (skb->ip_summed == CHECKSUM_PARTIAL) {
  		hdr->flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
-@@ -93,7 +93,9 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
+@@ -93,7 +93,10 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
  				skb->csum_offset);
  	} else if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
  		hdr->flags = VIRTIO_NET_HDR_F_DATA_VALID;
 -	} /* else everything is zero */
 +	} /* else everything is zero */ {
++		hdr->flags = 0;
 +		hdr->csum_start = hdr->csum_offset = 0;
 +	}
  
