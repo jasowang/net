@@ -805,8 +805,24 @@ static void free_old_xmit_skbs(struct send_queue *sq)
 	unsigned int len;
 	struct virtnet_info *vi = sq->vq->vdev->priv;
 	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
+	bool can_push;
+	unsigned hdr_len = vi->hdr_len;
+	struct virtio_net_hdr hdr2;
+	struct virtio_net_hdr_mrg_rxbuf *hdr;
 
 	while ((skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+		can_push = vi->any_header_sg &&
+			!((unsigned long)skb->data & (__alignof__(*hdr) - 1)) &&
+			!skb_header_cloned(skb) && skb_headroom(skb) >= hdr_len;
+
+		if (can_push) {
+			__skb_push(skb, hdr_len);
+			skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
+			if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+				(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
+				dump_stack();
+			__skb_pull(skb, hdr_len);
+		}
 		pr_debug("Sent skb %p\n", skb);
 
 		u64_stats_update_begin(&stats->tx_syncp);
@@ -845,9 +861,6 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 				    virtio_is_little_endian(vi->vdev)))
 		BUG();
 
-	hdr->num_buffers = 0xFF;
-	hdr->hdr.hdr_len = 0;
-
 	if (vi->mergeable_rx_bufs)
 		hdr->num_buffers = 0;
 
@@ -855,23 +868,38 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	if (can_push) {
 		__skb_push(skb, hdr_len);
 		skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
-		if (hdr2.hdr_len && hdr2.hdr_len < ETH_HLEN)
-			BUG();
+		if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+			(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
+			dump_stack();
 		num_sg = skb_to_sgvec(skb, sq->sg, 0, skb->len);
 		/* Pull header back to avoid skew in tx bytes calculations. */
 		__skb_pull(skb, hdr_len);
 	} else {
 		sg_set_buf(sq->sg, hdr, hdr_len);
+		printk("can't\n");
 		num_sg = skb_to_sgvec(skb, sq->sg + 1, 0, skb->len) + 1;
 	}
+
 	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
 		BUG();
 
-	BUG_ON(hdr->hdr.gso_size != 0xFF);
+	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM &&
+		(hdr->hdr.csum_start == 0 || hdr->hdr.csum_offset == 0))
+		dump_stack();
 
 	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
 	if (hdr->hdr.hdr_len && hdr->hdr.hdr_len < ETH_HLEN)
 		BUG();
+
+	if (can_push) {
+		__skb_push(skb, hdr_len);
+		printk("phys %p\n", virt_to_phys(skb->data));
+		skb_copy_bits(skb, 0, &hdr2, sizeof(hdr2));
+		if ((hdr2.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+			(hdr2.csum_offset == 0 || hdr2.csum_start == 0))
+			dump_stack();
+		__skb_pull(skb, hdr_len);
+	}
 
 	return ret;
 }

@@ -424,10 +424,16 @@ static void handle_tx(struct vhost_net *net)
 		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
 		iov_iter_init(&header, WRITE, vq->iov, out, len);
 		copy_from_iter(&hdr, sizeof(hdr), &header);
+		#if 0
 		if (hdr.hdr_len && hdr.hdr_len <= ETH_HLEN) {
-			printk("error len %d\n", hdr.hdr_len);
+		}
+		if (hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+			printk("early csum, flags %d csum_start %d, offfset %d!\n",
+				hdr.csum_start,
+				hdr.csum_offset);
 		}
 		printk("vhost hdr size %d\n", hdr_size);
+		#endif
 		iov_iter_advance(&msg.msg_iter, hdr_size);
 		/* Sanity check */
 		if (!msg_data_left(&msg)) {

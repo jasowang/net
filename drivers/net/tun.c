@@ -1191,17 +1191,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			printk("gso copy failed!\n");
 			return -EFAULT;
 		}
-
-		if (unlikely(len < ETH_HLEN ||
-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
-		{
-			printk("early!\n");
-		}
+#if 0
+		printk("csum start %d csum offset %d\n",
+			gso.csum_start, gso.csum_offset);
+#endif
 
 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
-		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
-			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
-
+		    tun16_to_cpu(tun, gso.csum_start) +
+		    tun16_to_cpu(tun, gso.csum_offset) + 2 >
+			tun16_to_cpu(tun, gso.hdr_len)) {
+#if 0
+			printk("correction! start %d offset %d hdr_len %d\n",
+				tun16_to_cpu(tun, gso.csum_start),
+				tun16_to_cpu(tun, gso.csum_offset),
+				tun16_to_cpu(tun, gso.hdr_len));
+#endif
+				gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+		}
 		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
 			printk("hdr_len error!\n");
 			return -EINVAL;
