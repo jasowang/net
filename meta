@@ -1,8 +1,8 @@
 Version: 1
-Previous: 5cd9d4d783225a44a35b993d1503a2883e283595
-Head: 55e1c58692b61bbcbb344864e26a1b5fa901494f
+Previous: 5f65af1c8cdea6515a1d39cb5f7ffa52d7d9bd92
+Head: 4071c1c4ba9a14a59919ad4f4c9e531b273faa47
 Applied:
   fix-pktgen: 55e1c58692b61bbcbb344864e26a1b5fa901494f
+  tuntap-rx-batching: 4071c1c4ba9a14a59919ad4f4c9e531b273faa47
 Unapplied:
-  tuntap-rx-batching: af681a6c7fb187272722315d783454edad8ae912
 Hidden:
