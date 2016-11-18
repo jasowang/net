@@ -1,0 +1,23 @@
+Bottom: 22cdce30b3f34eaf3fb19fa68e5f8b17662531a1
+Top:    8a11b6454061fd41b2ac7c82084b9bff33e003d6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-18 16:57:22 +0800
+
+Refresh of tuntap-rx-batching
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index d40583b..4f8a757 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1347,7 +1347,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	rxhash = skb_get_hash(skb);
+ 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
+ 
+-	if (!more) {
++	if (!more ||
++	    skb_queue_len(&tfile->socket.sk->sk_write_queue) >= 64) {
+ 		local_bh_disable();
+ 		napi_schedule(&tfile->napi);
+ 		local_bh_enable();
