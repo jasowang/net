@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9f1b4d54e3fdfb836d02dda84b5cf1ff4451d7ba
-Head: ccd78ad5960fd677e3ae5e60800fed6227d51119
+Previous: 19bba2186c35467b6da59539ac1b5eb91544754d
+Head: fd5627e6bce6418c659a2d1ce1cd0c2a3faad95b
 Applied:
   fix-pktgen: 67fa1cc462cdd35f841e7bd4d3122eae1a56dee3
   tuntap-rx-batching: ccd78ad5960fd677e3ae5e60800fed6227d51119
