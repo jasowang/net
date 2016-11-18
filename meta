@@ -1,8 +1,10 @@
 Version: 1
-Previous: 19bba2186c35467b6da59539ac1b5eb91544754d
+Previous: d1fdc303bc6794d9c3b324436ba445418bb35126
 Head: fd5627e6bce6418c659a2d1ce1cd0c2a3faad95b
 Applied:
   fix-pktgen: 67fa1cc462cdd35f841e7bd4d3122eae1a56dee3
   tuntap-rx-batching: ccd78ad5960fd677e3ae5e60800fed6227d51119
+  vhost-better-detection-of: be50d8d18b86c56bd29be1700908b856e2c25ed6
+  vhost_net-tx-support-batching: fd5627e6bce6418c659a2d1ce1cd0c2a3faad95b
 Unapplied:
 Hidden:
