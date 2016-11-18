@@ -1,0 +1,55 @@
+Bottom: 7b44addcc9e47c07ac7fb99af6829bdedf30cf42
+Top:    131025efc75d93b02b48c06f15d017ad0f4c92ff
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-18 16:20:45 +0800
+
+Refresh of fix-pktgen
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 2cafd12..ad97401 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -839,9 +839,41 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	else
+ 		hdr = skb_vnet_hdr(skb);
+ 
++#if 0
+ 	if (virtio_net_hdr_from_skb(skb, &hdr->hdr,
+ 				    virtio_is_little_endian(vi->vdev)))
+ 		BUG();
++#endif
++
++	if (skb->ip_summed == CHECKSUM_PARTIAL) {
++		hdr->hdr.flags = VIRTIO_NET_HDR_F_NEEDS_CSUM;
++		hdr->hdr.csum_start = cpu_to_virtio16(vi->vdev,
++						skb_checksum_start_offset(skb));
++		hdr->hdr.csum_offset = cpu_to_virtio16(vi->vdev,
++							 skb->csum_offset);
++	} else {
++		hdr->hdr.flags = 0;
++		hdr->hdr.csum_offset = hdr->hdr.csum_start = 0;
++	}
++
++	if (skb_is_gso(skb)) {
++		hdr->hdr.hdr_len = cpu_to_virtio16(vi->vdev, skb_headlen(skb));
++		hdr->hdr.gso_size = cpu_to_virtio16(vi->vdev,
++						    skb_shinfo(skb)->gso_size);
++		if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV4)
++			hdr->hdr.gso_type = VIRTIO_NET_HDR_GSO_TCPV4;
++		else if (skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6)
++			hdr->hdr.gso_type = VIRTIO_NET_HDR_GSO_TCPV6;
++		else if (skb_shinfo(skb)->gso_type & SKB_GSO_UDP)
++			hdr->hdr.gso_type = VIRTIO_NET_HDR_GSO_UDP;
++		else
++			BUG();
++		if (skb_shinfo(skb)->gso_type & SKB_GSO_TCP_ECN)
++			hdr->hdr.gso_type |= VIRTIO_NET_HDR_GSO_ECN;
++	} else {
++		hdr->hdr.gso_type = VIRTIO_NET_HDR_GSO_NONE;
++		hdr->hdr.gso_size = hdr->hdr.hdr_len = 0;
++	}
+ 
+ 	if (vi->mergeable_rx_bufs)
+ 		hdr->num_buffers = 0;
