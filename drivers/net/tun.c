@@ -1333,6 +1333,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
+	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
+		this_cpu_inc(tun->pcpu_stats->rx_dropped);
+		kfree_skb(skb);
+		return -E2BIG;
+	}
 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 
 	if (!more) {
