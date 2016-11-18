@@ -1347,7 +1347,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	rxhash = skb_get_hash(skb);
 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 
-	if (!more) {
+	if (!more ||
+	    skb_queue_len(&tfile->socket.sk->sk_write_queue) >= 64) {
 		local_bh_disable();
 		napi_schedule(&tfile->napi);
 		local_bh_enable();
