@@ -1,5 +1,5 @@
 Bottom: b1de394448ccd8c4851be4183f9d7f92aa319e35
-Top:    22cdce30b3f34eaf3fb19fa68e5f8b17662531a1
+Top:    8a11b6454061fd41b2ac7c82084b9bff33e003d6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -24,7 +24,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 1588469..d40583b 100644
+index 1588469..4f8a757 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -146,14 +146,15 @@ index 1588469..d40583b 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1296,7 +1345,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1296,7 +1345,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
 -	netif_rx_ni(skb);
 +	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 +
-+	if (!more) {
++	if (!more ||
++	    skb_queue_len(&tfile->socket.sk->sk_write_queue) >= 64) {
 +		local_bh_disable();
 +		napi_schedule(&tfile->napi);
 +		local_bh_enable();
@@ -161,7 +162,7 @@ index 1588469..d40583b 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1319,7 +1374,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1319,7 +1375,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -171,7 +172,7 @@ index 1588469..d40583b 100644
  
  	tun_put(tun);
  	return result;
-@@ -1579,7 +1635,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1579,7 +1636,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -181,7 +182,7 @@ index 1588469..d40583b 100644
  	tun_put(tun);
  	return ret;
  }
-@@ -2336,6 +2393,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2336,6 +2394,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  
