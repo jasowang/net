@@ -76,15 +76,15 @@
 #include <asm/uaccess.h>
 #include <linux/interrupt.h>
 
+int rx_batched = 1;
+module_param(rx_batched, int, 0444);
+MODULE_PARM_DESC(rx_batched, "Number of packets batched during rx");
+
 /* Uncomment to enable debugging */
 /* #define TUN_DEBUG 1 */
 
 #ifdef TUN_DEBUG
 static int debug;
-
-static int rx_batched = 1;
-module_param(rx_batched, int, 0444);
-MODULE_PARM_DESC(rx_batched, "Number of packets batched during rx");
 
 #define tun_debug(level, tun, fmt, args...)			\
 do {								\
