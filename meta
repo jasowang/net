@@ -1,9 +1,10 @@
 Version: 1
-Previous: 4aeb88a2625d022e99daa461ef064ed921bf7deb
-Head: 6e9fbcd4d9aa7c82f61d7b2c86ccda5da66a453a
+Previous: 56c19d19d83e43cd47be28d372bc6c384384d09b
+Head: 17f111266c060b977b43bedc9761479dbe25693d
 Applied:
   fix-pktgen: 67fa1cc462cdd35f841e7bd4d3122eae1a56dee3
   tuntap-napi: 6e9fbcd4d9aa7c82f61d7b2c86ccda5da66a453a
+  tun-rx-batching: 17f111266c060b977b43bedc9761479dbe25693d
 Unapplied:
   vhost-better-detection-of: be50d8d18b86c56bd29be1700908b856e2c25ed6
   vhost_net-tx-support-batching: fd5627e6bce6418c659a2d1ce1cd0c2a3faad95b
