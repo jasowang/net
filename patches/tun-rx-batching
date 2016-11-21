@@ -1,5 +1,5 @@
 Bottom: d9b1a287fc58d02a8717a42f9067cb05bc98da10
-Top:    72e1213f2c7fddbc77d6ed3c03202d017d18eac5
+Top:    f3cb67015705bc2edbeb63a26d7aaa7fc6160168
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-21 17:06:26 +0800
 
@@ -8,7 +8,7 @@ Date:   2016-11-21 17:06:26 +0800
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 43811e7..e06c3ea 100644
+index 43811e7..dd4be29 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -76,6 +76,10 @@
@@ -22,7 +22,54 @@ index 43811e7..e06c3ea 100644
  /* Uncomment to enable debugging */
  /* #define TUN_DEBUG 1 */
  
-@@ -1187,7 +1191,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -171,6 +175,7 @@ struct tun_file {
+ 	struct tun_struct *detached;
+ 	struct skb_array tx_array;
+ 	struct napi_struct napi;
++	struct sk_buff_head process_queue;
+ };
+ 
+ struct tun_flow_entry {
+@@ -525,6 +530,7 @@ static void tun_queue_purge(struct tun_file *tfile)
+ 		kfree_skb(skb);
+ 
+ 	skb_queue_purge(&tfile->sk.sk_write_queue);
++	skb_queue_purge(&tfile->process_queue);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
+ }
+ 
+@@ -636,15 +642,25 @@ static int tun_poll(struct napi_struct *napi, int budget)
+ 	struct sk_buff *skb;
+ 	unsigned int received = 0;
+ 
+-	while ((skb = skb_dequeue(input_queue))) {
+-		netif_receive_skb(skb);
+-		if (++received >= budget)
+-			return received;
++	while (1) {
++		while ((skb = __skb_dequeue(&tfile->process_queue))) {
++			netif_receive_skb(skb);
++			if (++received >= budget)
++				return received;
++		}
++
++		spin_lock(&input_queue->lock);
++		if (skb_queue_empty(input_queue)) {
++			spin_unlock(&input_queue->lock);
++			break;
++		}
++		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
++		spin_unlock(&input_queue->lock);
+ 	}
+ 
+ 	if (received < budget) {
+ 		napi_complete(napi);
+-		if (skb_peek(input_queue) &&
++		if (skb_peek(&tfile->socket.sk->sk_write_queue) &&
+ 		    unlikely(napi_schedule_prep(napi))) {
+ 			__napi_schedule(napi);
+ 		}
+@@ -1187,7 +1203,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -31,7 +78,7 @@ index 43811e7..e06c3ea 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1333,16 +1337,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1333,16 +1349,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -54,7 +101,7 @@ index 43811e7..e06c3ea 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1366,7 +1368,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1366,7 +1380,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  		return -EBADFD;
  
  	result = tun_get_user(tun, tfile, NULL, from,
@@ -63,7 +110,7 @@ index 43811e7..e06c3ea 100644
  
  	tun_put(tun);
  	return result;
-@@ -1626,7 +1628,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1626,7 +1640,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -73,3 +120,12 @@ index 43811e7..e06c3ea 100644
  	tun_put(tun);
  	return ret;
  }
+@@ -2383,6 +2398,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 	file->private_data = tfile;
+ 	INIT_LIST_HEAD(&tfile->next);
+ 
++	skb_queue_head_init(&tfile->process_queue);
++
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+ 
+ 	return 0;
