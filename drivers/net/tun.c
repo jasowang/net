@@ -1626,7 +1626,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 		return -EBADFD;
 
 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-			   m->msg_flags & MSG_DONTWAIT)
+			   m->msg_flags & MSG_DONTWAIT);
 	tun_put(tun);
 	return ret;
 }
