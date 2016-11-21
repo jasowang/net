@@ -75,6 +75,10 @@
 
 #include <asm/uaccess.h>
 
+static int rx_batched = 1;
+module_param(rx_batched, int, 0444);
+MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
+
 /* Uncomment to enable debugging */
 /* #define TUN_DEBUG 1 */
 
@@ -1140,10 +1144,32 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 	return skb;
 }
 
+static int tun_enqueue_batched(struct tun_file *tfile, struct sk_buff *skb,
+			       int more)
+{
+	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
+	int qlen;
+
+	spin_lock(&queue->lock);
+	__skb_queue_tail(queue, skb);
+	qlen = skb_queue_len(queue);
+	spin_unlock(&queue->lock);
+
+	local_bh_disable();
+	if (!more || qlen == rx_batched) {
+		struct sk_buff *skb;
+		while (skb = skb_dequeue(queue))
+			netif_receive_skb(skb);
+	}
+	local_bh_enable();
+
+	return 0;
+}
+
 /* Get packet from user space buffer */
 static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			    void *msg_control, struct iov_iter *from,
-			    int noblock)
+			    int noblock, bool more)
 {
 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
 	struct sk_buff *skb;
@@ -1288,9 +1314,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	local_bh_disable();
-	netif_receive_skb(skb);
-	local_bh_enable();
+	if (rx_batched == 1) {
+		local_bh_disable();
+		netif_receive_skb(skb);
+		local_bh_enable();
+	} else
+		tun_enqueue_batched(tfile, skb, more);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
@@ -1313,7 +1342,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (!tun)
 		return -EBADFD;
 
-	result = tun_get_user(tun, tfile, NULL, from, file->f_flags & O_NONBLOCK);
+	result = tun_get_user(tun, tfile, NULL, from,
+			      file->f_flags & O_NONBLOCK, false);
 
 	tun_put(tun);
 	return result;
@@ -1571,7 +1601,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 		return -EBADFD;
 
 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-			   m->msg_flags & MSG_DONTWAIT);
+			   m->msg_flags & MSG_DONTWAIT,
+			   m->msg_flags & MSG_MORE);
 	tun_put(tun);
 	return ret;
 }
