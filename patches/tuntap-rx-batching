@@ -1,0 +1,81 @@
+Bottom: 6959d9b40dbcf1f342d3d6c93f42957c5c08dd9c
+Top:    06bebe30a2cebda59404532ab9bd8b792ca755dd
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2014-02-24 11:05:40 +0800
+
+tuntap: rx batching
+
+Backlog were used for tuntap rx, but it can only process 1 packet at
+one time since it was scheduled during sendmsg() synchronously in
+process context. This lead bad cache utilization so this patch tries
+to do some batching before call rx NAPI. This is done through:
+
+- accept MSG_MORE as a hint from sendmsg() caller, if it was set,
+  batch the packet temporarily in a linked list and submit them all
+  once MSG_MORE were cleared.
+- implement a tuntap specific NAPI handler for processing this kind of
+  possible batching. (This could be done by extending backlog to
+  support skb like, but using a tun specific one looks cleaner and
+  easier for future extension).
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+(cherry picked from commit 823d3252741c6d8713abf3237820fc6ea8360d05)
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 761574a..a242ab2 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -175,6 +175,7 @@ struct tun_file {
+ 	struct tun_struct *detached;
+ 	struct skb_array tx_array;
+ 	struct napi_struct napi;
++	struct sk_buff_head process_queue;
+ };
+ 
+ struct tun_flow_entry {
+@@ -529,6 +530,7 @@ static void tun_queue_purge(struct tun_file *tfile)
+ 		kfree_skb(skb);
+ 
+ 	skb_queue_purge(&tfile->sk.sk_write_queue);
++	skb_queue_purge(&tfile->process_queue);
+ 	skb_queue_purge(&tfile->sk.sk_error_queue);
+ }
+ 
+@@ -640,10 +642,20 @@ static int tun_poll(struct napi_struct *napi, int budget)
+ 	struct sk_buff *skb;
+ 	unsigned int received = 0;
+ 
+-	while ((skb = skb_dequeue(input_queue))) {
+-		netif_receive_skb(skb);
+-		if (++received >= budget)
+-			return received;
++	while (1) {
++		while ((skb = __skb_dequeue(&tfile->process_queue))) {
++			netif_receive_skb(skb);
++			if (++received >= budget)
++				return received;
++		}
++
++		spin_lock(&input_queue->lock);
++		if (skb_queue_empty(input_queue)) {
++			spin_unlock(&input_queue->lock);
++			break;
++		}
++		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
++		spin_unlock(&input_queue->lock);
+ 	}
+ 
+ 	if (received < budget) {
+@@ -2386,6 +2398,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 	file->private_data = tfile;
+ 	INIT_LIST_HEAD(&tfile->next);
+ 
++	skb_queue_head_init(&tfile->process_queue);
++
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+ 
+ 	return 0;
