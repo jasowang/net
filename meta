@@ -1,10 +1,9 @@
 Version: 1
-Previous: 260fd12d5646a9cdea6e79241aadf1e5984ce8e5
-Head: 9e6b09a00fff4d1574d0f3105473436b3e683917
+Previous: d26e09d2c0e2c05db703a98c4cc26e1c5e2e6b97
+Head: 0c41d66b4235684b50bbcefd43ddc522d7e96150
 Applied:
   tuntap-remove-unnecessary: cd46a331b0a582a56e172e8a6a64c18611dc8195
-  tuntap-napi: 38ca57e92ab18d4d5b1264d475e97dbcdfd3a5e1
-  refresh-temp: 9e6b09a00fff4d1574d0f3105473436b3e683917
+  tuntap-napi: 0c41d66b4235684b50bbcefd43ddc522d7e96150
 Unapplied:
   tun-rx-batching: 470736d38e007befbe57c0254faa0c256742aaeb
   tuntap-rx-batching: 7da8a0c55ecab0420722f171de53fa90e32f8ef9
