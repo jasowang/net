@@ -1,5 +1,5 @@
-Bottom: d9b1a287fc58d02a8717a42f9067cb05bc98da10
-Top:    6959d9b40dbcf1f342d3d6c93f42957c5c08dd9c
+Bottom: b2f6b4efd6e7e9e1119dff2019baaec2f9ac7b46
+Top:    2f6869c07ccb52e48749909985b6b5098d6e407f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-21 17:18:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 43811e7..761574a 100644
+index fdf97be..146d35bc 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -76,6 +76,10 @@
@@ -25,7 +25,7 @@ index 43811e7..761574a 100644
  /* Uncomment to enable debugging */
  /* #define TUN_DEBUG 1 */
  
-@@ -1187,7 +1191,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1180,7 +1184,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -34,7 +34,7 @@ index 43811e7..761574a 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1333,16 +1337,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1325,16 +1329,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -57,7 +57,7 @@ index 43811e7..761574a 100644
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
  	u64_stats_update_begin(&stats->syncp);
-@@ -1366,7 +1368,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1358,7 +1360,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  		return -EBADFD;
  
  	result = tun_get_user(tun, tfile, NULL, from,
@@ -66,7 +66,7 @@ index 43811e7..761574a 100644
  
  	tun_put(tun);
  	return result;
-@@ -1626,7 +1628,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1616,7 +1618,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
