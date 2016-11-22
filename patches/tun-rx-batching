@@ -1,5 +1,5 @@
-Bottom: b2f6b4efd6e7e9e1119dff2019baaec2f9ac7b46
-Top:    2f6869c07ccb52e48749909985b6b5098d6e407f
+Bottom: 90c49b82a6756b466cb6a7d3b2735f9e656a62a2
+Top:    90c49b82a6756b466cb6a7d3b2735f9e656a62a2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-21 17:18:56 +0800
 
@@ -10,69 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index fdf97be..146d35bc 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -76,6 +76,10 @@
- #include <asm/uaccess.h>
- #include <linux/interrupt.h>
- 
-+static int rx_batched = 1;
-+module_param(rx_batched, int, 0444);
-+MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
-+
- /* Uncomment to enable debugging */
- /* #define TUN_DEBUG 1 */
- 
-@@ -1180,7 +1184,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
- /* Get packet from user space buffer */
- static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
- 			    void *msg_control, struct iov_iter *from,
--			    int noblock)
-+			    int noblock, bool more)
- {
- 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
- 	struct sk_buff *skb;
-@@ -1325,16 +1329,14 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
- 	skb_probe_transport_header(skb, 0);
- 
- 	rxhash = skb_get_hash(skb);
--	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
--		this_cpu_inc(tun->pcpu_stats->rx_dropped);
--		kfree_skb(skb);
--		return -E2BIG;
--	}
- 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
- 
--	local_bh_disable();
--	napi_schedule(&tfile->napi);
--	local_bh_enable();
-+	if (!more ||
-+	    skb_queue_len(&tfile->socket.sk->sk_write_queue) >= rx_batched) {
-+		local_bh_disable();
-+		napi_schedule(&tfile->napi);
-+		local_bh_enable();
-+	}
- 
- 	stats = get_cpu_ptr(tun->pcpu_stats);
- 	u64_stats_update_begin(&stats->syncp);
-@@ -1358,7 +1360,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
- 		return -EBADFD;
- 
- 	result = tun_get_user(tun, tfile, NULL, from,
--			      file->f_flags & O_NONBLOCK);
-+			      file->f_flags & O_NONBLOCK, false);
- 
- 	tun_put(tun);
- 	return result;
-@@ -1616,7 +1618,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
- 		return -EBADFD;
- 
- 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
--			   m->msg_flags & MSG_DONTWAIT);
-+			   m->msg_flags & MSG_DONTWAIT,
-+			   m->msg_flags & MSG_MORE);
- 	tun_put(tun);
- 	return ret;
- }
+
