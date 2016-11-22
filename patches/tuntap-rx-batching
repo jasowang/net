@@ -1,5 +1,5 @@
-Bottom: 2f6869c07ccb52e48749909985b6b5098d6e407f
-Top:    f512c2d1e45634c309a2b75a04bbbf301e036bef
+Bottom: c04d6b8801c31c0dbbd757698c02421db8e9b816
+Top:    1ee52e6b1aeedad1c023b6655b25656d37cd2dae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 146d35bc..2129b24 100644
+index d28f6a2..2c17924 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -175,6 +175,7 @@ struct tun_file {
@@ -70,7 +70,7 @@ index 146d35bc..2129b24 100644
  	}
  
  	if (received < budget) {
-@@ -2376,6 +2388,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2377,6 +2389,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  
