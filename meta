@@ -1,7 +1,8 @@
 Version: 1
-Previous: 1f7453eef935484a08cc818154d810dd1a4ec196
+Previous: 2a6f41ad852f74ab80274ef81490f9272528dff7
 Head: cd46a331b0a582a56e172e8a6a64c18611dc8195
 Applied:
+  tuntap-remove-unnecessary: cd46a331b0a582a56e172e8a6a64c18611dc8195
 Unapplied:
   fix-pktgen: 67fa1cc462cdd35f841e7bd4d3122eae1a56dee3
   tuntap-napi: 6e9fbcd4d9aa7c82f61d7b2c86ccda5da66a453a
