@@ -1,12 +1,11 @@
 Version: 1
-Previous: 54f1ca6b6c74362e8f23b8035353c3ed727a409c
-Head: 8d955f7a8f0b04729d5120a431892625da0dc911
+Previous: 7d36c5a52690a6eff71bca7797e937204ca50ec0
+Head: 6b79413bec0d43f1673b54e1f1e01dfdd623c660
 Applied:
   tuntap-remove-unnecessary: cd46a331b0a582a56e172e8a6a64c18611dc8195
   tuntap-napi: 0c41d66b4235684b50bbcefd43ddc522d7e96150
   vhost-better-detection-of: 428242b6e2ee5320a287bca2c1a315d8871cef45
-  vhost_net-tx-support-batching: 2a1507733c86177d25d876baa61d7788635a206e
-  refresh-temp: 8d955f7a8f0b04729d5120a431892625da0dc911
+  vhost_net-tx-support-batching: 6b79413bec0d43f1673b54e1f1e01dfdd623c660
 Unapplied:
   tun-rx-batching: 0ef997ea75f4cecefd9b8220f9adc0727c1f4d3e
   tuntap-rx-batching: 7da8a0c55ecab0420722f171de53fa90e32f8ef9
