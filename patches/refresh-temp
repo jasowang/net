@@ -1,0 +1,63 @@
+Bottom: 985e0c99b098055a10ba98ef7591f4aab2ef7a40
+Top:    d4b1fabb7da4621266b53dc280f9b31746c2359b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-22 14:54:31 +0800
+
+Refresh of vhost_net-tx-support-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 51c378e..df51cef 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -35,10 +35,6 @@ module_param(experimental_zcopytx, int, 0444);
+ MODULE_PARM_DESC(experimental_zcopytx, "Enable Zero Copy TX;"
+ 		                       " 1 -Enable; 0 - Disable");
+ 
+-static int tx_batched = 1;
+-module_param(tx_batched, int, 0444);
+-MODULE_PARM_DESC(tx_batched, "Number of patches batched in TX");
+-
+ /* Max number of bytes transferred before requeueing the job.
+  * Using this limit prevents one virtqueue from starving others. */
+ #define VHOST_NET_WEIGHT 0x80000
+@@ -459,13 +455,10 @@ static void handle_tx(struct vhost_net *net)
+ 			ubufs = NULL;
+ 		}
+ 		total_len += len;
+-		if (vq->delayed < tx_batched &&
+-		    total_len < VHOST_NET_WEIGHT &&
++		if (total_len < VHOST_NET_WEIGHT &&
+ 		    !vhost_vq_avail_empty(&net->dev, vq)) {
+-			vq->delayed++;
+ 			msg.msg_flags |= MSG_MORE;
+ 		} else {
+-			vq->delayed = 0;
+ 			msg.msg_flags &= ~MSG_MORE;
+ 		}
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index bc362c7..fdf4cdf 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -311,7 +311,6 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vq->busyloop_timeout = 0;
+ 	vq->umem = NULL;
+ 	vq->iotlb = NULL;
+-	vq->delayed = 0;
+ }
+ 
+ static int vhost_worker(void *data)
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 9f81a94..78f3c5f 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -141,7 +141,6 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
+-	int delayed;
+ };
+ 
+ struct vhost_msg_node {
