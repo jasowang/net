@@ -1334,6 +1334,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	local_bh_disable();
 	napi_schedule(&tfile->napi);
+	/* process bh soon */
 	local_bh_enable();
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
