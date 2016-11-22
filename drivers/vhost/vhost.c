@@ -311,7 +311,6 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->busyloop_timeout = 0;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
-	vq->delayed = 0;
 }
 
 static int vhost_worker(void *data)
