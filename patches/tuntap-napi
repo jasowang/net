@@ -3,20 +3,11 @@ Top:    b2f6b4efd6e7e9e1119dff2019baaec2f9ac7b46
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
-tuntap: rx batching
+tuntap: using NAPI for rx
 
-Backlog were used for tuntap rx, but it can only process 1 packet at
-one time since it was scheduled during sendmsg() synchronously in
-process context. This lead bad cache utilization so this patch tries
-to do some batching before call rx NAPI. This is done through:
-
-- accept MSG_MORE as a hint from sendmsg() caller, if it was set,
-  batch the packet temporarily in a linked list and submit them all
-  once MSG_MORE were cleared.
-- implement a tuntap specific NAPI handler for processing this kind of
-  possible batching. (This could be done by extending backlog to
-  support skb like, but using a tun specific one looks cleaner and
-  easier for future extension).
+This patch switches from backlog to tuntap specific NAPI for handling
+rx. This is done by using a dedicated skb list. This is needed for rx
+batching support.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
