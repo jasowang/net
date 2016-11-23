@@ -726,7 +726,7 @@ static void __user *vhost_vq_meta_fetch(struct vhost_virtqueue *vq,
 	if (!node)
 		return NULL;
 
-	BUG_ON(addr < node->start || addr + size >= node->start + node->size);
+	BUG_ON(addr < node->start || addr + size > node->start + node->size);
 
 	return (void *)(node->userspace_addr + (u64)addr - node->start);
 }
