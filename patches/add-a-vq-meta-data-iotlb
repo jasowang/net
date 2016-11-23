@@ -1,5 +1,5 @@
 Bottom: e89c6a2726865acaa28130f1fc62f864da472760
-Top:    82ccc1598b866dd10eb26d5d64d800db4829fcb0
+Top:    4bde380a913783f9c60c684e7e6f060449baffda
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-14 12:07:12 +0800
 
@@ -22,7 +22,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index c6f2d89..dbd9561 100644
+index c6f2d89..4c4b16e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -282,6 +282,20 @@ void vhost_poll_queue(struct vhost_poll *poll)
@@ -79,7 +79,7 @@ index c6f2d89..dbd9561 100644
 +	if (!node)
 +		return NULL;
 +
-+	BUG_ON(addr < node->start || addr + size >= node->start + node->size);
++	BUG_ON(addr < node->start || addr + size > node->start + node->size);
 +
 +	return (void *)(node->userspace_addr + (u64)addr - node->start);
 +}
