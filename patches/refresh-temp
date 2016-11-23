@@ -1,0 +1,55 @@
+Bottom: 4bde380a913783f9c60c684e7e6f060449baffda
+Top:    c26d863c5dc11498a04a7eec07edaff64c2bbe82
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-23 16:25:27 +0800
+
+Refresh of add-a-vq-meta-data-iotlb
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 4c4b16e..778af6f 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -708,20 +708,7 @@ static int vq_memory_access_ok(void __user *log_base, struct vhost_umem *umem,
+ static void __user *vhost_vq_meta_fetch(struct vhost_virtqueue *vq,
+ 					u64 addr, unsigned size, int type)
+ {
+-	const struct vhost_umem_node *node;
+-	int access = VHOST_ACCESS_RO;
+-
+-	switch (type) {
+-	case VHOST_ADDR_USED:
+-		access = VHOST_ACCESS_WO;
+-		/* fall through */
+-	case VHOST_ADDR_DESC:
+-	case VHOST_ADDR_AVAIL:
+-		node = vq->meta_iotlb[type];
+-		break;
+-	default:
+-		BUG();
+-	}
++	const struct vhost_umem_node *node = vq->meta_iotlb[type];
+ 
+ 	if (!node)
+ 		return NULL;
+@@ -1165,15 +1152,11 @@ static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
+ 				 const struct vhost_umem_node *node,
+ 				 int type)
+ {
+-	switch (type) {
+-	case VHOST_ADDR_DESC:
+-	case VHOST_ADDR_AVAIL:
+-	case VHOST_ADDR_USED:
++	int access = (type == VHOST_ADDR_USED) ?
++		     VHOST_ACCESS_WO : VHOST_ACCESS_RO;
++
++	if (likely(node->perm & access))
+ 		vq->meta_iotlb[type] = node;
+-		break;
+-	default:
+-		BUG();
+-	}
+ }
+ 
+ static int iotlb_access_ok(struct vhost_virtqueue *vq,
