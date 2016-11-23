@@ -1,7 +1,8 @@
 Version: 1
-Previous: 1f4ebe436cc4a227570a5641c501ea4410be3c25
+Previous: d8ce4c257622078001f3685df1ee225aee3e90fa
 Head: aab23655f1ad967481b393cf2e93e5bfc966fa61
 Applied:
+  macvtap-switch-to-use-tx-array: aab23655f1ad967481b393cf2e93e5bfc966fa61
 Unapplied:
   add-a-vq-meta-data-iotlb: a58ad20bb53c49ebd5ddebea36ecb7861acd43a5
   tuntap-convert-to-napi: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
