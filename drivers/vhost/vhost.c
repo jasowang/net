@@ -726,11 +726,7 @@ static void __user *vhost_vq_meta_fetch(struct vhost_virtqueue *vq,
 	if (!node)
 		return NULL;
 
-	BUG_ON(addr < node->start || (u64)addr >= node->start + node->size);
-
-	if (!(node->perm & access) &&
-	    (u64)addr + size >= node->start + node->size)
-		return NULL;
+	BUG_ON(addr < node->start || addr + size >= node->start + node->size);
 
 	return (void *)(node->userspace_addr + (u64)addr - node->start);
 }
@@ -777,7 +773,6 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
 		 * could be access through iotlb. So -EAGAIN should
 		 * not happen in this case.
 		 */
-		/* TODO: more fast path */
 		struct iov_iter t;
 		void __user *uaddr = vhost_vq_meta_fetch(vq,
 				     (u64)(uintptr_t)to, size, type);
@@ -812,7 +807,6 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
 		 * could be access through iotlb. So -EAGAIN should
 		 * not happen in this case.
 		 */
-		/* TODO: more fast path */
 		void __user *uaddr = vhost_vq_meta_fetch(vq,
 				     (u64)(uintptr_t)from, size, type);
 		struct iov_iter f;
@@ -1172,8 +1166,8 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
 }
 
 static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
-				  const struct vhost_umem_node *node,
-				  int type)
+				 const struct vhost_umem_node *node,
+				 int type)
 {
 	switch (type) {
 	case VHOST_ADDR_DESC:
