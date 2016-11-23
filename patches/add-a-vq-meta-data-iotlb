@@ -6,8 +6,8 @@ Date:   2016-07-14 12:07:12 +0800
 vhost: introduce O(1) vq metadata cache
 
 When device IOTLB is enabled, all address translations were stored in
-interval tree. O(lgN) seraching could be slow for virtqueue meta data
-(avail, used and descriptors), since they were accessed much often
+interval tree. O(lgN) searching time could be slow for virtqueue
+metadata (avail, used and descriptors), since they were accessed much often
 than other addresses. So this patch introduces an O(1) array which
 points to the interval tree nodes that store the translations of vq
 metadata. Those array were update during vq IOTLB prefetching and were
