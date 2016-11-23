@@ -1,9 +1,9 @@
 Version: 1
-Previous: d8ce4c257622078001f3685df1ee225aee3e90fa
-Head: aab23655f1ad967481b393cf2e93e5bfc966fa61
+Previous: 26a97e7982b0befecf66b592d6c5d75de232e2a4
+Head: b38a75d2d32412477e2625211febb98b63087754
 Applied:
-  macvtap-switch-to-use-tx-array: aab23655f1ad967481b393cf2e93e5bfc966fa61
 Unapplied:
+  macvtap-switch-to-use-tx-array: aab23655f1ad967481b393cf2e93e5bfc966fa61
   add-a-vq-meta-data-iotlb: a58ad20bb53c49ebd5ddebea36ecb7861acd43a5
   tuntap-convert-to-napi: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
