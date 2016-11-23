@@ -708,20 +708,7 @@ static int vq_memory_access_ok(void __user *log_base, struct vhost_umem *umem,
 static void __user *vhost_vq_meta_fetch(struct vhost_virtqueue *vq,
 					u64 addr, unsigned size, int type)
 {
-	const struct vhost_umem_node *node;
-	int access = VHOST_ACCESS_RO;
-
-	switch (type) {
-	case VHOST_ADDR_USED:
-		access = VHOST_ACCESS_WO;
-		/* fall through */
-	case VHOST_ADDR_DESC:
-	case VHOST_ADDR_AVAIL:
-		node = vq->meta_iotlb[type];
-		break;
-	default:
-		BUG();
-	}
+	const struct vhost_umem_node *node = vq->meta_iotlb[type];
 
 	if (!node)
 		return NULL;
@@ -1165,15 +1152,11 @@ static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
 				 const struct vhost_umem_node *node,
 				 int type)
 {
-	switch (type) {
-	case VHOST_ADDR_DESC:
-	case VHOST_ADDR_AVAIL:
-	case VHOST_ADDR_USED:
+	int access = (type == VHOST_ADDR_USED) ?
+		     VHOST_ACCESS_WO : VHOST_ACCESS_RO;
+
+	if (likely(node->perm & access))
 		vq->meta_iotlb[type] = node;
-		break;
-	default:
-		BUG();
-	}
 }
 
 static int iotlb_access_ok(struct vhost_virtqueue *vq,
