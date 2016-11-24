@@ -644,7 +644,7 @@ static int tun_poll(struct napi_struct *napi, int budget)
 
 	if (received < budget) {
 		napi_complete(napi);
-		if (skb_peek(input_queue) &&
+		if (!skb_queue_empty(input_queue) &&
 		    unlikely(napi_schedule_prep(napi))) {
 			__napi_schedule(napi);
 		}
