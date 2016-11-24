@@ -1,5 +1,5 @@
 Bottom: 99fc7e28fa3e3fac89982cb1cf9a1f717f030cf4
-Top:    90c49b82a6756b466cb6a7d3b2735f9e656a62a2
+Top:    5916de46b652ad610d70171503b9e2399d015834
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e2af2dd..b470156 100644
+index e2af2dd..8922a8c 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -90,7 +90,7 @@ index e2af2dd..b470156 100644
 +
 +	if (received < budget) {
 +		napi_complete(napi);
-+		if (skb_peek(input_queue) &&
++		if (!skb_queue_empty(input_queue) &&
 +		    unlikely(napi_schedule_prep(napi))) {
 +			__napi_schedule(napi);
 +		}
