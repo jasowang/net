@@ -5,6 +5,8 @@ Date:   2016-11-24 11:09:10 +0800
 
 tuntap: bypass unnecessary hash calculating
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

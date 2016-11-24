@@ -1,9 +1,9 @@
 Version: 1
-Previous: 377a1a4a3e61bcb670f3e3a61e71e28a3243d2b7
-Head: 33f9b92f36508b9e2e208f6bde5696079add669a
+Previous: 0a5659beaa0cc6cfa3d7af4af9cef22af6672644
+Head: c5fa374262e43e144d0a0152ab51572b54f5a38d
 Applied:
   add-a-vq-meta-data-iotlb: e12382da1a81dfdf50fc0e83f67d54c6c833c62f
-  tuntap-bypass-unnecessary-hash: 33f9b92f36508b9e2e208f6bde5696079add669a
+  tuntap-bypass-unnecessary-hash: c5fa374262e43e144d0a0152ab51572b54f5a38d
 Unapplied:
   tuntap-convert-to-napi: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
   vhost-introduce-vhost-memory: 6fdc833a84c937ce2522471cf744dcfdeb04cf03
