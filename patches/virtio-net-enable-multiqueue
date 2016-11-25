@@ -1,0 +1,31 @@
+Bottom: 08b17a57a6ab38417ceff1c9979521f21e7d96f0
+Top:    08b17a57a6ab38417ceff1c9979521f21e7d96f0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-25 12:31:54 +0800
+
+virtio-net: enable multiqueue by default
+
+We use single queue even if multiqueue is enabled and let admin to
+configure it through ethtool. This is used to avoid possible
+regression (small packet TCP stream transmission).
+
+This looks like an overkill since:
+
+- single queue user can disable multiqueue when launching qemu
+- brings extra troubles for the management since it needs extra admin tool in
+  guest to enable multiqueue by default.
+- multiqueue performs much better than single queue in most of the
+  cases
+
+So this patch enable multiqueue by default: if #queues is less than or
+equal to #vcpu, enable as much as queue pairs; if #queues is greater
+than #vcpu, enable #vcpu queue pairs.
+
+
+
+
+
+
+---
+
+
