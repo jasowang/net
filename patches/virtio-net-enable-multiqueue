@@ -11,8 +11,8 @@ regression (small packet TCP stream transmission). But looks like an
 overkill since:
 
 - single queue user can disable multiqueue when launching qemu
-- brings extra troubles for the management since it needs extra admin tool in
-  guest to enable multiqueue
+- brings extra troubles for the management since it needs extra admin
+  tool in guest to enable multiqueue
 - multiqueue performs much better than single queue in most of the
   cases
 
