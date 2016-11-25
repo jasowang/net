@@ -1,5 +1,5 @@
-Bottom: c04d6b8801c31c0dbbd757698c02421db8e9b816
-Top:    1ee52e6b1aeedad1c023b6655b25656d37cd2dae
+Bottom: 7ae054938b7812a9266766f23030116652ce2be4
+Top:    472dd8372ec04d4018b152a826cec091d7c9826e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index d28f6a2..2c17924 100644
+index 201bdae..55943d5 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -175,6 +175,7 @@ struct tun_file {
