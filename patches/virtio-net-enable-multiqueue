@@ -21,9 +21,7 @@ So this patch enable multiqueue by default: if #queues is less than or
 equal to #vcpu, enable as much as queue pairs; if #queues is greater
 than #vcpu, enable #vcpu queue pairs.
 
-
-
-
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
