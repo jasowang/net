@@ -1,9 +1,8 @@
 Version: 1
-Previous: a0563835bc5cc8c8a9a728da21127524b2ea6077
+Previous: b48f6cd37e3b91f8d6b24a6738e03bca2e7443f1
 Head: e796f49d826aadb856981c751efc086c6ce11a77
 Applied:
 Unapplied:
-  tuntap-remove-unnecessary: cd46a331b0a582a56e172e8a6a64c18611dc8195
   tuntap-napi: 2ae48f0c95f2bb1a022eec59735ed6a974ff5d8b
   vhost-better-detection-of: 428242b6e2ee5320a287bca2c1a315d8871cef45
   vhost_net-tx-support-batching: 06c3aa19281e3804e6ae3d21622869775066b8f5
