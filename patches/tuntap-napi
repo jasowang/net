@@ -1,5 +1,5 @@
 Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
-Top:    7068d631f5649797d65b9d0d3094741aa3e258d1
+Top:    1f8423bf887180ad2d3a0d5636edac3430136c66
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e2af2dd..7ded8ae 100644
+index e2af2dd..8925d89 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -70,19 +70,30 @@ index e2af2dd..7ded8ae 100644
  		/* Drop read queue */
  		tun_queue_purge(tfile);
  		sock_put(&tfile->sk);
-@@ -618,6 +628,27 @@ static void tun_detach_all(struct net_device *dev)
+@@ -618,6 +628,38 @@ static void tun_detach_all(struct net_device *dev)
  		module_put(THIS_MODULE);
  }
  
-+static int tun_poll(struct napi_struct *napi, int budget)
++static sk_buff *tun_dequeue(struct tfile *tfile)
 +{
-+	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
 +	struct sk_buff_head *input_queue =
 +	       &tfile->socket.sk->sk_write_queue;
 +	struct sk_buff *skb;
++
++	spin_lock(&input_queue->lock);
++	skb = __skb_dequeue(input_queue);
++	spin_unlock(&input_queue->lock);
++
++	return skb;
++}
++
++static int tun_poll(struct napi_struct *napi, int budget)
++{
++	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
++	struct sk_buff *skb;
 +	unsigned int received = 0;
 +
-+	while ((skb = skb_dequeue(input_queue))) {
++	while ((skb = tun_dequeue(tfile))) {
 +		netif_receive_skb(skb);
 +		if (++received >= budget)
 +			return received;
@@ -98,7 +109,7 @@ index e2af2dd..7ded8ae 100644
  static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filter)
  {
  	struct tun_file *tfile = file->private_data;
-@@ -666,9 +697,11 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
+@@ -666,9 +708,11 @@ static int tun_attach(struct tun_struct *tun, struct file *file, bool skip_filte
  
  	if (tfile->detached)
  		tun_enable_queue(tfile);
@@ -112,7 +123,7 @@ index e2af2dd..7ded8ae 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1140,6 +1173,24 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1140,6 +1184,24 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
@@ -137,7 +148,7 @@ index e2af2dd..7ded8ae 100644
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
-@@ -1288,12 +1339,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1288,12 +1350,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -167,7 +178,7 @@ index e2af2dd..7ded8ae 100644
  	u64_stats_update_end(&stats->syncp);
  	put_cpu_ptr(stats);
  
-@@ -1311,7 +1376,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1311,7 +1387,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
