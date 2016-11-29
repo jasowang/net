@@ -1,5 +1,5 @@
 Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
-Top:    bfd501521ebef6a9f4c571aba813a26b247c6646
+Top:    dd712c919689148521a5619ff798cbec70933c14
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e2af2dd..4c01e16 100644
+index e2af2dd..5f67071 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -93,7 +93,7 @@ index e2af2dd..4c01e16 100644
 +	struct sk_buff *skb;
 +	unsigned int received = 0;
 +
-+	while ((skb = tun_dequeue(input_queue))) {
++	while ((skb = skb_dequeue(input_queue))) {
 +		netif_receive_skb(skb);
 +		if (++received >= budget)
 +			return received;
@@ -148,17 +148,11 @@ index e2af2dd..4c01e16 100644
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
-@@ -1288,12 +1350,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1288,12 +1350,20 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
 -	netif_rx_ni(skb);
-+	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
-+		this_cpu_inc(tun->pcpu_stats->rx_dropped);
-+		kfree_skb(skb);
-+		return -E2BIG;
-+	}
-+	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 +
 +	local_bh_disable();
 +	err = tun_enqueue(tfile, skb);
@@ -178,7 +172,7 @@ index e2af2dd..4c01e16 100644
  	u64_stats_update_end(&stats->syncp);
  	put_cpu_ptr(stats);
  
-@@ -1311,7 +1387,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1311,7 +1381,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
