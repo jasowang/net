@@ -1,0 +1,24 @@
+Bottom: 9bc6d11ae8b9fabb854ea3fb526627e88408abac
+Top:    c90fcb8185745c4df0f3d5e513e16f4810033db8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-29 17:05:22 +0800
+
+Refresh of tun-rx-batching
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 73e6112..3e18742 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1357,10 +1357,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_probe_transport_header(skb, 0);
+ 
+ 	rxhash = skb_get_hash(skb);
+-<<<<<<< current
+-=======
+-	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
+->>>>>>> patched
+ 
+ 	local_bh_disable();
+ 	err = tun_enqueue(tfile, skb, more);
