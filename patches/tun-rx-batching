@@ -1,5 +1,5 @@
-Bottom: b032160065f760943507e40ad9033fe529236258
-Top:    40914bed85299500df2933adb6261250980f7685
+Bottom: d29dad9be923e273ae126fa1609a8fe8d1726c9d
+Top:    d29dad9be923e273ae126fa1609a8fe8d1726c9d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-21 17:18:56 +0800
 
@@ -10,85 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 594aa93..cf3a1ba 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -76,6 +76,10 @@
- #include <asm/uaccess.h>
- #include <linux/interrupt.h>
- 
-+static int rx_batched = 1;
-+module_param(rx_batched, int, 0444);
-+MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
-+
- /* Uncomment to enable debugging */
- /* #define TUN_DEBUG 1 */
- 
-@@ -1184,15 +1188,18 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
- 	return skb;
- }
- 
--static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb)
-+static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb, bool more)
- {
- 	struct sk_buff_head *list = &tfile->socket.sk->sk_write_queue;
-+	int qlen;
- 
- 	spin_lock(&list->lock);
--	if (skb_queue_len(list) >= 1)
-+	qlen = skb_queue_len(list);
-+	if (qlen > rx_batched)
- 		goto drop;
- 	__skb_queue_tail(list, skb);
--	napi_schedule(&tfile->napi);
-+	if (!more || qlen + 1 == rx_batched)
-+		napi_schedule(&tfile->napi);
- 	spin_unlock(&list->lock);
- 
- 	return 0;
-@@ -1205,7 +1212,7 @@ static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb)
- /* Get packet from user space buffer */
- static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
- 			    void *msg_control, struct iov_iter *from,
--			    int noblock)
-+			    int noblock, bool more)
- {
- 	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
- 	struct sk_buff *skb;
-@@ -1350,15 +1357,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
- 	skb_probe_transport_header(skb, 0);
- 
- 	rxhash = skb_get_hash(skb);
--	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
--		this_cpu_inc(tun->pcpu_stats->rx_dropped);
--		kfree_skb(skb);
--		return -E2BIG;
--	}
- 	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
- 
- 	local_bh_disable();
--	err = tun_enqueue(tfile, skb);
-+	err = tun_enqueue(tfile, skb, more);
- 	/* process bh soon */
- 	local_bh_enable();
- 
-@@ -1388,7 +1390,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
- 		return -EBADFD;
- 
- 	result = tun_get_user(tun, tfile, NULL, from,
--			      file->f_flags & O_NONBLOCK);
-+			      file->f_flags & O_NONBLOCK, false);
- 
- 	tun_put(tun);
- 	return result;
-@@ -1646,7 +1648,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
- 		return -EBADFD;
- 
- 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
--			   m->msg_flags & MSG_DONTWAIT);
-+			   m->msg_flags & MSG_DONTWAIT,
-+			   m->msg_flags & MSG_MORE);
- 	tun_put(tun);
- 	return ret;
- }
+
