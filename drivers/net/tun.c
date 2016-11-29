@@ -628,15 +628,26 @@ static void tun_detach_all(struct net_device *dev)
 		module_put(THIS_MODULE);
 }
 
-static int tun_poll(struct napi_struct *napi, int budget)
+static sk_buff *tun_dequeue(struct tfile *tfile)
 {
-	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
 	struct sk_buff_head *input_queue =
 	       &tfile->socket.sk->sk_write_queue;
 	struct sk_buff *skb;
+
+	spin_lock(&input_queue->lock);
+	skb = __skb_dequeue(input_queue);
+	spin_unlock(&input_queue->lock);
+
+	return skb;
+}
+
+static int tun_poll(struct napi_struct *napi, int budget)
+{
+	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
+	struct sk_buff *skb;
 	unsigned int received = 0;
 
-	while ((skb = skb_dequeue(input_queue))) {
+	while ((skb = tun_dequeue(tfile))) {
 		netif_receive_skb(skb);
 		if (++received >= budget)
 			return received;
