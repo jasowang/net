@@ -1,5 +1,5 @@
-Bottom: f3fd7bfdf4dbb6acfb8179b76ee2cff7c4d43754
-Top:    bd5a1be42841b59790c11d705886815d6dca3567
+Bottom: 40914bed85299500df2933adb6261250980f7685
+Top:    40914bed85299500df2933adb6261250980f7685
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -25,57 +25,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 10b0c6d..ba3f3c3 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -175,6 +175,7 @@ struct tun_file {
- 	struct tun_struct *detached;
- 	struct skb_array tx_array;
- 	struct napi_struct napi;
-+	struct sk_buff_head process_queue;
- };
- 
- struct tun_flow_entry {
-@@ -529,6 +530,7 @@ static void tun_queue_purge(struct tun_file *tfile)
- 		kfree_skb(skb);
- 
- 	skb_queue_purge(&tfile->sk.sk_write_queue);
-+	skb_queue_purge(&tfile->process_queue);
- 	skb_queue_purge(&tfile->sk.sk_error_queue);
- }
- 
-@@ -640,10 +642,20 @@ static int tun_poll(struct napi_struct *napi, int budget)
- 	struct sk_buff *skb;
- 	unsigned int received = 0;
- 
--	while ((skb = skb_dequeue(input_queue))) {
--		netif_receive_skb(skb);
--		if (++received >= budget)
--			return received;
-+	while (1) {
-+		while ((skb = __skb_dequeue(&tfile->process_queue))) {
-+			netif_receive_skb(skb);
-+			if (++received >= budget)
-+				return received;
-+		}
-+
-+		spin_lock(&input_queue->lock);
-+		if (skb_queue_empty(input_queue)) {
-+			spin_unlock(&input_queue->lock);
-+			break;
-+		}
-+		skb_queue_splice_tail_init(input_queue, &tfile->process_queue);
-+		spin_unlock(&input_queue->lock);
- 	}
- 
- 	napi_complete(napi);
-@@ -2395,6 +2407,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
- 	file->private_data = tfile;
- 	INIT_LIST_HEAD(&tfile->next);
- 
-+	skb_queue_head_init(&tfile->process_queue);
-+
- 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
- 
- 	return 0;
+
