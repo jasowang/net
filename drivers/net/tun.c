@@ -1357,10 +1357,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-<<<<<<< current
-=======
-	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
->>>>>>> patched
 
 	local_bh_disable();
 	err = tun_enqueue(tfile, skb, more);
