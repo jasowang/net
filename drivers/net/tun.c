@@ -647,7 +647,7 @@ static int tun_poll(struct napi_struct *napi, int budget)
 	struct sk_buff *skb;
 	unsigned int received = 0;
 
-	while ((skb = skb_dequeue(input_queue))) {
+	while ((skb = tun_dequeue(input_queue))) {
 		netif_receive_skb(skb);
 		if (++received >= budget)
 			return received;
