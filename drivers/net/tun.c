@@ -1192,9 +1192,9 @@ static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb)
 	if (skb_queue_len(list) >= 1)
 		goto drop;
 	__skb_queue_tail(list, skb);
-	napi_schedule(&tfile->napi);
 	spin_unlock(&list->lock);
 
+	napi_schedule(&tfile->napi);
 	return 0;
 drop:
 	spin_unlock(&list->lock);
