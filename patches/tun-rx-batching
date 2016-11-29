@@ -1,5 +1,5 @@
-Bottom: 7068d631f5649797d65b9d0d3094741aa3e258d1
-Top:    f3fd7bfdf4dbb6acfb8179b76ee2cff7c4d43754
+Bottom: b032160065f760943507e40ad9033fe529236258
+Top:    40914bed85299500df2933adb6261250980f7685
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-11-21 17:18:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 7ded8ae..10b0c6d 100644
+index 594aa93..cf3a1ba 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -76,6 +76,10 @@
@@ -25,7 +25,7 @@ index 7ded8ae..10b0c6d 100644
  /* Uncomment to enable debugging */
  /* #define TUN_DEBUG 1 */
  
-@@ -1173,15 +1177,18 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1184,15 +1188,18 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
@@ -47,7 +47,7 @@ index 7ded8ae..10b0c6d 100644
  	spin_unlock(&list->lock);
  
  	return 0;
-@@ -1194,7 +1201,7 @@ static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb)
+@@ -1205,7 +1212,7 @@ static int tun_enqueue(struct tun_file *tfile, struct sk_buff *skb)
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
@@ -56,7 +56,7 @@ index 7ded8ae..10b0c6d 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1339,15 +1346,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1350,15 +1357,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -73,7 +73,7 @@ index 7ded8ae..10b0c6d 100644
  	/* process bh soon */
  	local_bh_enable();
  
-@@ -1377,7 +1379,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1388,7 +1390,7 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  		return -EBADFD;
  
  	result = tun_get_user(tun, tfile, NULL, from,
@@ -82,7 +82,7 @@ index 7ded8ae..10b0c6d 100644
  
  	tun_put(tun);
  	return result;
-@@ -1635,7 +1637,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1646,7 +1648,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
