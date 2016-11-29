@@ -1,0 +1,30 @@
+Bottom: adcae26744614ce6b61d5d7378de4d6d4d7f19ba
+Top:    8cbcdeb309e48a876793bf051ed1a5fb2fad0172
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-29 15:02:33 +0800
+
+Refresh of vhost-better-detection-of
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index fdf4cdf..7860108 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2226,11 +2226,15 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	__virtio16 avail_idx;
+ 	int r;
+ 
++	if (vq->avail_idx != vq->last_avail_idx)
++		return false;
++
+ 	r = vhost_get_user(vq, avail_idx, &vq->avail->idx);
+-	if (r)
++	if (unlikely(r))
+ 		return false;
++	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 
+-	return vhost16_to_cpu(vq, avail_idx) == vq->last_avail_idx;
++	return vq->avail_idx == vq->last_avail_idx;
+ }
+ EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);
