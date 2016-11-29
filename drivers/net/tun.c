@@ -647,7 +647,7 @@ static int tun_poll(struct napi_struct *napi, int budget)
 	struct sk_buff *skb;
 	unsigned int received = 0;
 
-	while ((skb = tun_dequeue(input_queue))) {
+	while ((skb = skb_dequeue(input_queue))) {
 		netif_receive_skb(skb);
 		if (++received >= budget)
 			return received;
@@ -1350,12 +1350,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	if (skb_queue_len(&tfile->socket.sk->sk_write_queue) > 1) {
-		this_cpu_inc(tun->pcpu_stats->rx_dropped);
-		kfree_skb(skb);
-		return -E2BIG;
-	}
-	skb_queue_tail(&tfile->socket.sk->sk_write_queue, skb);
 
 	local_bh_disable();
 	err = tun_enqueue(tfile, skb);
