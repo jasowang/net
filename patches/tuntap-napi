@@ -1,5 +1,5 @@
 Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
-Top:    1f8423bf887180ad2d3a0d5636edac3430136c66
+Top:    b032160065f760943507e40ad9033fe529236258
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e2af2dd..8925d89 100644
+index e2af2dd..594aa93 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -74,6 +74,7 @@
@@ -74,10 +74,8 @@ index e2af2dd..8925d89 100644
  		module_put(THIS_MODULE);
  }
  
-+static sk_buff *tun_dequeue(struct tfile *tfile)
++static struct sk_buff *tun_dequeue(struct sk_buff_head *input_queue)
 +{
-+	struct sk_buff_head *input_queue =
-+	       &tfile->socket.sk->sk_write_queue;
 +	struct sk_buff *skb;
 +
 +	spin_lock(&input_queue->lock);
@@ -90,10 +88,12 @@ index e2af2dd..8925d89 100644
 +static int tun_poll(struct napi_struct *napi, int budget)
 +{
 +	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
++	struct sk_buff_head *input_queue =
++	       &tfile->socket.sk->sk_write_queue;
 +	struct sk_buff *skb;
 +	unsigned int received = 0;
 +
-+	while ((skb = tun_dequeue(tfile))) {
++	while ((skb = tun_dequeue(input_queue))) {
 +		netif_receive_skb(skb);
 +		if (++received >= budget)
 +			return received;
