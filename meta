@@ -1,7 +1,8 @@
 Version: 1
-Previous: 23413daaca2905825ec037312020959222d2134d
-Head: cc9d48e1b26588e90ceddd23b3cc19ec7098462e
+Previous: a123bada42cf942718d216b3e606fbe0f4f0df4d
+Head: a601cf5786157e004dce3e90eb2fccfdc9a53892
 Applied:
+  tuntap-use-netif_receive_skb: a601cf5786157e004dce3e90eb2fccfdc9a53892
 Unapplied:
   tuntap-use-symmetric-skb-hash: b33cccb0c33d9b218af11ac3dc2bbc08cef5c3dc
   tuntap-napi: d7bfb0740398510506e4654efb26f3e6904a6634

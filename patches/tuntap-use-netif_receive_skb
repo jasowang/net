@@ -1,0 +1,11 @@
+Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
+Top:    a085fee439f2b55abdb278b3259cf9793607a7d7
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-30 19:33:25 +0800
+
+tuntap: use netif_receive_skb()
+
+
+---
+
+
