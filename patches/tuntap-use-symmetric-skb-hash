@@ -9,6 +9,8 @@ We expect packets from both directions for a single flow to have the
 same hash in order to let flow cache to work correctly. So this patch
 switches to use symmetric skb hash instead for tun.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
