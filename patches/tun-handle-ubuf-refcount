@@ -12,7 +12,7 @@ an error afterwards, the error handling in vhost handle_tx() will try
 to decrease it again. This is wrong and fix this by delay the
 uarg->callback() until we're sure there's no errors.
 
-
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
