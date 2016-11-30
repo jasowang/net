@@ -1,0 +1,40 @@
+Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
+Top:    2ec1ae9d2df068a66ac411cd6583994067f77de8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-30 15:52:53 +0800
+
+Refresh of tuntap-use-symmetric-skb-hash
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index e2af2dd..4ce7a2a 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -463,7 +463,7 @@ static u16 tun_select_queue(struct net_device *dev, struct sk_buff *skb,
+ 	rcu_read_lock();
+ 	numqueues = ACCESS_ONCE(tun->numqueues);
+ 
+-	txq = skb_get_hash(skb);
++	txq = __skb_get_hash_symmetric(skb);
+ 	if (txq) {
+ 		e = tun_flow_find(&tun->flows[tun_hashfn(txq)], txq);
+ 		if (e) {
+@@ -853,7 +853,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 		 */
+ 		__u32 rxhash;
+ 
+-		rxhash = skb_get_hash(skb);
++		rxhash = __skb_get_hash_symmetric(skb);
+ 		if (rxhash) {
+ 			struct tun_flow_entry *e;
+ 			e = tun_flow_find(&tun->flows[tun_hashfn(rxhash)],
+@@ -1287,7 +1287,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_reset_network_header(skb);
+ 	skb_probe_transport_header(skb, 0);
+ 
+-	rxhash = skb_get_hash(skb);
++	rxhash = __skb_get_hash_symmetric(skb);
+ 	netif_rx_ni(skb);
+ 
+ 	stats = get_cpu_ptr(tun->pcpu_stats);
