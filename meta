@@ -1,11 +1,12 @@
 Version: 1
-Previous: 12a1ae2e97731d136ca12a398c6310c4ca26a68b
-Head: 673622f58c5d13860231f34ca31fea701a1d2998
+Previous: 18e08d49417453bcf62c867a755e2bdb2ccf598d
+Head: b6b7e3caa333d2564a9a8050e8a91a2e74a25135
 Applied:
   tuntap-napi: d7bfb0740398510506e4654efb26f3e6904a6634
   tun-rx-batching: a566b53ca7f455d218c061671e16246daebe4309
   vhost-better-detection-of: 98a0fa3259b841f08fa3c4a2077e8255e8c58382
   vhost_net-tx-support-batching: 673622f58c5d13860231f34ca31fea701a1d2998
+  tuntap-use-symmetric-skb-hash: b6b7e3caa333d2564a9a8050e8a91a2e74a25135
 Unapplied:
   tun-handle-ubuf-refcount: 3c2f8a5dae527a15da2d9c4f8e4a8d793636edbe
   macvtap: ce2321040e6b01776e3a5b3ec5704c8cbd85834b
