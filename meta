@@ -1,10 +1,9 @@
 Version: 1
-Previous: 9285b08bdbd38fe5b4311461f3aa5bafd175c1e0
-Head: ab166d6e84f75757331ec0350c9f03efde925cd7
+Previous: 8fb27fe9b0c883ecc68644bfb35fe04c92628eab
+Head: 85a3655e78f507bc9efe8a838cdced288904765d
 Applied:
   tuntap-use-netif_receive_skb: fd2145e42ede76d8e07d69dd13164e4ea5758aac
-  tun-rx-batching: 5939ebf9afe1b850469ed37d7788b81702fb3212
-  refresh-temp: ab166d6e84f75757331ec0350c9f03efde925cd7
+  tun-rx-batching: 85a3655e78f507bc9efe8a838cdced288904765d
 Unapplied:
   tuntap-use-symmetric-skb-hash: b33cccb0c33d9b218af11ac3dc2bbc08cef5c3dc
   tuntap-napi: d7bfb0740398510506e4654efb26f3e6904a6634
