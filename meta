@@ -1,9 +1,8 @@
 Version: 1
-Previous: d533b559023b34f8c8fb5a17566204fa9833926c
-Head: cae269939321bc022b6ee0b646a511b94619ad2c
+Previous: 6ba613d99386219b7a70e61cbd87df5e93e54d69
+Head: fd2145e42ede76d8e07d69dd13164e4ea5758aac
 Applied:
-  tuntap-use-netif_receive_skb: f882658bd292c829dcabaa9b14c8dd2b3ee3779f
-  refresh-temp: cae269939321bc022b6ee0b646a511b94619ad2c
+  tuntap-use-netif_receive_skb: fd2145e42ede76d8e07d69dd13164e4ea5758aac
 Unapplied:
   tuntap-use-symmetric-skb-hash: b33cccb0c33d9b218af11ac3dc2bbc08cef5c3dc
   tuntap-napi: d7bfb0740398510506e4654efb26f3e6904a6634
