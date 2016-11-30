@@ -1,0 +1,24 @@
+Bottom: a085fee439f2b55abdb278b3259cf9793607a7d7
+Top:    d317f1f31a9ee1da5816a547b6b4efb02ab2ca3f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-11-30 19:33:29 +0800
+
+Refresh of tuntap-use-netif_receive_skb
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index e2af2dd..c3e888d 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1288,7 +1288,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_probe_transport_header(skb, 0);
+ 
+ 	rxhash = skb_get_hash(skb);
+-	netif_rx_ni(skb);
++	local_bh_disable();
++	netif_receive_skb(skb);
++	local_bh_enable();
+ 
+ 	stats = get_cpu_ptr(tun->pcpu_stats);
+ 	u64_stats_update_begin(&stats->syncp);
