@@ -1288,7 +1288,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	netif_rx_ni(skb);
+	local_bh_disable();
+	netif_receive_skb(skb);
+	local_bh_enable();
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
