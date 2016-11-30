@@ -5,6 +5,8 @@ Date:   2016-11-30 19:33:25 +0800
 
 tuntap: use netif_receive_skb()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
