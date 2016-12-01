@@ -1148,20 +1148,26 @@ static int tun_enqueue_batched(struct tun_file *tfile, struct sk_buff *skb,
 			       int more)
 {
 	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
+	struct sk_buff_head process_queue;
 	int qlen;
+	bool rcv = false;
 
 	spin_lock(&queue->lock);
 	__skb_queue_tail(queue, skb);
 	qlen = skb_queue_len(queue);
+	if (!more || qlen == rx_batched) {
+		__skb_queue_head_init(&process_queue);
+		skb_queue_splice_tail_init(queue, &process_queue);
+		rcv = true;
+	}
 	spin_unlock(&queue->lock);
 
-	local_bh_disable();
-	if (!more || qlen == rx_batched) {
-		struct sk_buff *skb;
-		while (skb = skb_dequeue(queue))
+	if (rcv) {
+		local_bh_disable();
+		while (skb = __skb_dequeue(&process_queue))
 			netif_receive_skb(skb);
+		local_bh_enable();
 	}
-	local_bh_enable();
 
 	return 0;
 }
