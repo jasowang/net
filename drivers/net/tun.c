@@ -1144,6 +1144,28 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 	return skb;
 }
 
+static int tun_enqueue_batched(struct tun_file *tfile, struct sk_buff *skb,
+			       int more)
+{
+	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
+	int qlen;
+
+	spin_lock(&queue->lock);
+	__skb_queue_tail(queue, skb);
+	qlen = skb_queue_len(queue);
+	spin_unlock(&queue->lock);
+
+	local_bh_disable();
+	if (!more || qlen == rx_batched) {
+		struct sk_buff *skb;
+		while (skb = skb_dequeue(queue))
+			netif_receive_skb(skb);
+	}
+	local_bh_enable();
+
+	return 0;
+}
+
 /* Get packet from user space buffer */
 static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			    void *msg_control, struct iov_iter *from,
@@ -1292,9 +1314,12 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_probe_transport_header(skb, 0);
 
 	rxhash = skb_get_hash(skb);
-	local_bh_disable();
-	netif_receive_skb(skb);
-	local_bh_enable();
+	if (rx_batched == 1) {
+		local_bh_disable();
+		netif_receive_skb(skb);
+		local_bh_enable();
+	} else
+		tun_enqueue_batched(tfile, skb, more);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
