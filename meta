@@ -1,13 +1,12 @@
 Version: 1
-Previous: 586e3d99b16902b22630670c7b9d09f14a97c95b
-Head: 56f8fdbaff38eee4635b3d0c0dfe7de05735fdc9
+Previous: 9496a37e70fa4b3d0cbffbeed1d46a13b91a51fe
+Head: 28549b15004d83d891f8d92604bae4c84a50517b
 Applied:
   tuntap-use-netif_receive_skb: fd2145e42ede76d8e07d69dd13164e4ea5758aac
   vhost-better-detection-of: 23f647eb57a29934dec49b5f77fbc90513021acf
   vhost_net-tx-support-batching: 654045b351447c13f3b96144c60f349bb577b365
   tun-rx-batching: e1283bfe6d865008ad4f7edda20af416c4f58bb5
-  batching-for-tuntpa: 01c7d10e452045e1458565ac58baab157e27f4c4
-  refresh-temp: 56f8fdbaff38eee4635b3d0c0dfe7de05735fdc9
+  batching-for-tuntpa: 28549b15004d83d891f8d92604bae4c84a50517b
 Unapplied:
   tuntap-use-symmetric-skb-hash: b33cccb0c33d9b218af11ac3dc2bbc08cef5c3dc
   tuntap-napi: d7bfb0740398510506e4654efb26f3e6904a6634
