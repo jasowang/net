@@ -1,11 +1,11 @@
 Version: 1
-Previous: 09ce05497d0f26e42fc62a212e0e9c10b08214c9
-Head: a0a153bfda2ad3243d58186d1a6e8dbb34c3d4ff
+Previous: ddcedf7fddffd70d5297f55e7b5d5c08f6e9b74a
+Head: 1f122f4b5e254abcef67cde014590a86361f0c86
 Applied:
   tuntap-use-netif_receive_skb: fd2145e42ede76d8e07d69dd13164e4ea5758aac
   vhost-better-detection-of: 23f647eb57a29934dec49b5f77fbc90513021acf
   vhost_net-tx-support-batching: 654045b351447c13f3b96144c60f349bb577b365
-  tuntap-new-batching-method: a0a153bfda2ad3243d58186d1a6e8dbb34c3d4ff
+  tuntap-new-batching-method: 1f122f4b5e254abcef67cde014590a86361f0c86
 Unapplied:
   tun-rx-batching: e1283bfe6d865008ad4f7edda20af416c4f58bb5
   batching-for-tuntpa: 7016ca91c3a1bfdfd791134e8d3eaccd41cc9279
