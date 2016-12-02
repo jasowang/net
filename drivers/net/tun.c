@@ -75,6 +75,9 @@
 
 #include <asm/uaccess.h>
 
+static int rx_batched = 1;
+module_param(rx_batched, int, 0444);
+
 /* Uncomment to enable debugging */
 /* #define TUN_DEBUG 1 */
 
@@ -169,6 +172,8 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_array tx_array;
+	struct msghdr *msgs;
+	int rx_batched;
 };
 
 struct tun_flow_entry {
@@ -1566,12 +1571,24 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 	int ret;
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun = __tun_get(tfile);
+	bool more = m->msg_flags & MSG_MORE;
 
 	if (!tun)
 		return -EBADFD;
 
-	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-			   m->msg_flags & MSG_DONTWAIT);
+	tfile->msgs[tfile->rx_batched++] = *m;
+
+	if (!more || tfile->rx_batched == rx_batched) {
+		int i;
+		for (i = 0; i < tfile->rx_batched; i++) {
+			struct msghdr *mhdr = &tfile->msgs[i];
+			ret = tun_get_user(tun, tfile, mhdr->msg_control,
+					   &mhdr->msg_iter,
+					   mhdr->msg_flags & MSG_DONTWAIT);
+		}
+		tfile->rx_batched = 0;
+	}
+
 	tun_put(tun);
 	return ret;
 }
@@ -2303,16 +2320,26 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 {
 	struct net *net = current->nsproxy->net_ns;
 	struct tun_file *tfile;
+	struct msghdr *msgs;
 
 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
 
+	msgs = kmalloc(sizeof(*msgs) * rx_batched, GFP_KERNEL);
+	if (!msgs)
+		return -ENOMEM;
+
 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
 					    &tun_proto, 0);
-	if (!tfile)
+	if (!tfile) {
+		kfree(msgs);
 		return -ENOMEM;
+	}
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
+
+	tfile->msgs = msgs;
+	tfile->rx_batched = 0;
 
 	init_waitqueue_head(&tfile->wq.wait);
 	RCU_INIT_POINTER(tfile->socket.wq, &tfile->wq);
