@@ -1,5 +1,5 @@
 Version: 1
-Previous: 2277629baa14c2861ffec7cad5333381975ed16a
+Previous: e34e3fd2c90f3c3ac837bf026daa340b9059f487
 Head: 8107bff02b9b99d831086a79629bc422935ae912
 Applied:
   tuntap-use-netif_receive_skb: fd2145e42ede76d8e07d69dd13164e4ea5758aac
@@ -12,6 +12,5 @@ Unapplied:
   batching-for-tuntpa: 7016ca91c3a1bfdfd791134e8d3eaccd41cc9279
   tuntap-new-batching-method: b120a80ea7e646236d19289ae2635ed14e68217e
   tuntap-use-symmetric-skb-hash: b33cccb0c33d9b218af11ac3dc2bbc08cef5c3dc
-  macvtap: ce2321040e6b01776e3a5b3ec5704c8cbd85834b
   fix-pktgen: 67fa1cc462cdd35f841e7bd4d3122eae1a56dee3
 Hidden:
