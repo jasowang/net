@@ -1,5 +1,5 @@
-Bottom: 40914bed85299500df2933adb6261250980f7685
-Top:    bd5a1be42841b59790c11d705886815d6dca3567
+Bottom: f2f710ec81728db5fbc810d946517660e70ee397
+Top:    497ce59d4ea48215d51e6bd86ab1d12690348b1c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-02-24 11:05:40 +0800
 
@@ -26,10 +26,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index cf3a1ba..ba3f3c3 100644
+index ed1a70d..0ea448c 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -175,6 +175,7 @@ struct tun_file {
+@@ -171,6 +171,7 @@ struct tun_file {
  	struct tun_struct *detached;
  	struct skb_array tx_array;
  	struct napi_struct napi;
@@ -37,7 +37,7 @@ index cf3a1ba..ba3f3c3 100644
  };
  
  struct tun_flow_entry {
-@@ -529,6 +530,7 @@ static void tun_queue_purge(struct tun_file *tfile)
+@@ -525,6 +526,7 @@ static void tun_queue_purge(struct tun_file *tfile)
  		kfree_skb(skb);
  
  	skb_queue_purge(&tfile->sk.sk_write_queue);
@@ -45,7 +45,7 @@ index cf3a1ba..ba3f3c3 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -632,17 +634,6 @@ static void tun_detach_all(struct net_device *dev)
+@@ -628,17 +630,6 @@ static void tun_detach_all(struct net_device *dev)
  		module_put(THIS_MODULE);
  }
  
@@ -63,7 +63,7 @@ index cf3a1ba..ba3f3c3 100644
  static int tun_poll(struct napi_struct *napi, int budget)
  {
  	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
-@@ -651,10 +642,20 @@ static int tun_poll(struct napi_struct *napi, int budget)
+@@ -647,10 +638,20 @@ static int tun_poll(struct napi_struct *napi, int budget)
  	struct sk_buff *skb;
  	unsigned int received = 0;
  
@@ -88,7 +88,7 @@ index cf3a1ba..ba3f3c3 100644
  	}
  
  	napi_complete(napi);
-@@ -2406,6 +2407,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2397,6 +2398,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  
