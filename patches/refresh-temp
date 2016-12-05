@@ -1,0 +1,71 @@
+Bottom: 6ceefe3f8e6baeef9d64083192b734b79d6edaf8
+Top:    47875eee85b6bfd97c1f575875c093f264f147dd
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-05 14:30:40 +0800
+
+Refresh of add-a-vq-meta-data-iotlb
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 66c36c5..eaaebae 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -748,7 +748,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 			  struct iovec iov[], int iov_size, int access);
+ 
+ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+-			      const void *from, unsigned size, int type)
++			      const void *from, unsigned size)
+ {
+ 	int ret;
+ 
+@@ -762,7 +762,8 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+ 		 */
+ 		struct iov_iter t;
+ 		void __user *uaddr = vhost_vq_meta_fetch(vq,
+-				     (u64)(uintptr_t)to, size, type);
++				     (u64)(uintptr_t)to, size,
++				     VHOST_ADDR_DESC);
+ 
+ 		if (uaddr)
+ 			return __copy_to_user(uaddr, from, size);
+@@ -782,7 +783,7 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
+ }
+ 
+ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+-				void *from, unsigned size, int type)
++				void *from, unsigned size)
+ {
+ 	int ret;
+ 
+@@ -795,7 +796,8 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
+ 		 * not happen in this case.
+ 		 */
+ 		void __user *uaddr = vhost_vq_meta_fetch(vq,
+-				     (u64)(uintptr_t)from, size, type);
++				     (u64)(uintptr_t)from, size,
++				     VHOST_ADDR_DESC);
+ 		struct iov_iter f;
+ 
+ 		if (uaddr)
+@@ -2059,8 +2061,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
+-					   sizeof desc, VHOST_ADDR_DESC);
++		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc);
+ 		if (unlikely(ret)) {
+ 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+ 			       i, vq->desc + i);
+@@ -2164,8 +2165,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 			vq_err(vq, "Failed to write used len");
+ 			return -EFAULT;
+ 		}
+-	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used,
+-			              VHOST_ADDR_USED)) {
++	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
+ 		vq_err(vq, "Failed to write used");
+ 		return -EFAULT;
+ 	}
