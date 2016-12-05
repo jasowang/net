@@ -1,9 +1,9 @@
 Version: 1
-Previous: da7f96be110085ecd7895b80b1c194e0a590e29b
-Head: 9fc40330b78f10395ad4b24dd16b6b720e96ab7f
+Previous: e98fc5d6e1cac984a78a835a04e772f90a1ecc05
+Head: 300e9290c28cde7822b55fb9e8add3f81632c617
 Applied:
   add-a-vq-meta-data-iotlb: f3f5c0ca642fd083f71effcbae1e12c65c3ecd14
-  metadata-cache-more-tweak: 9fc40330b78f10395ad4b24dd16b6b720e96ab7f
+  metadata-cache-more-tweak: 300e9290c28cde7822b55fb9e8add3f81632c617
 Unapplied:
   tuntap-bypass-unnecessary-hash: c5fa374262e43e144d0a0152ab51572b54f5a38d
   tuntap-convert-to-napi: 4ca0726e38761f8a50dbf6ebcf2580473ed7053d
