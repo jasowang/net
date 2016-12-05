@@ -1,0 +1,23 @@
+Bottom: 7c2e7621b2e08ec88c523b34338df30ca905efaf
+Top:    f2cab3ef24502f1a2f23148cb274228ffad5491b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-05 14:54:03 +0800
+
+Refresh of add-a-vq-meta-data-iotlb
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index d12f0a8..49d1d7b 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2066,7 +2066,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc);
++		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
++					   sizeof desc);
+ 		if (unlikely(ret)) {
+ 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+ 			       i, vq->desc + i);
