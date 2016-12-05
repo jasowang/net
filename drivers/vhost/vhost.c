@@ -2031,7 +2031,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 	/* Grab the next descriptor number they're advertising, and increment
 	 * the index we've seen. */
 	if (unlikely(vhost_get_avail(vq, ring_head,
-		     &vq->avail->ring[last_avail_idx& (vq->num - 1)]))) {
+		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
 		vq_err(vq, "Failed to read head: idx %d address %p\n",
 		       last_avail_idx,
 		       &vq->avail->ring[last_avail_idx % vq->num]);
