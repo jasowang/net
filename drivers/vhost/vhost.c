@@ -748,7 +748,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 			  struct iovec iov[], int iov_size, int access);
 
 static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
-			      const void *from, unsigned size, int type)
+			      const void *from, unsigned size)
 {
 	int ret;
 
@@ -762,7 +762,7 @@ static int vhost_copy_to_user(struct vhost_virtqueue *vq, void *to,
 		 */
 		struct iov_iter t;
 		void __user *uaddr = vhost_vq_meta_fetch(vq,
-				     (u64)(uintptr_t)to, size, type);
+				     (u64)(uintptr_t)to, size, VHOST_ADDR_DESC);
 
 		if (uaddr)
 			return __copy_to_user(uaddr, from, size);
@@ -782,7 +782,7 @@ out:
 }
 
 static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
-				void *from, unsigned size, int type)
+				void *from, unsigned size)
 {
 	int ret;
 
@@ -795,7 +795,8 @@ static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
 		 * not happen in this case.
 		 */
 		void __user *uaddr = vhost_vq_meta_fetch(vq,
-				     (u64)(uintptr_t)from, size, type);
+				     (u64)(uintptr_t)from, size,
+				     VHOST_ADDR_DESC);
 		struct iov_iter f;
 
 		if (uaddr)
@@ -880,7 +881,7 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
 		ret = __get_user(x, ptr); \
 	} else { \
 		__typeof__(ptr) from = \
-			(__typeof__(ptr)) __vhost_get_user(vq, ptr,
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr, \
 							   sizeof(*ptr),type); \
 		if (from != NULL) \
 			ret = __get_user(x, from); \
@@ -2059,8 +2060,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
-					   sizeof desc, VHOST_ADDR_DESC);
+		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc);
 		if (unlikely(ret)) {
 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
 			       i, vq->desc + i);
@@ -2164,8 +2164,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 			vq_err(vq, "Failed to write used len");
 			return -EFAULT;
 		}
-	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used,
-			              VHOST_ADDR_USED)) {
+	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
 		vq_err(vq, "Failed to write used");
 		return -EFAULT;
 	}
