@@ -880,7 +880,7 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
 		ret = __get_user(x, ptr); \
 	} else { \
 		__typeof__(ptr) from = \
-			(__typeof__(ptr)) __vhost_get_user(vq, ptr,
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr, \
 							   sizeof(*ptr),type); \
 		if (from != NULL) \
 			ret = __get_user(x, from); \
