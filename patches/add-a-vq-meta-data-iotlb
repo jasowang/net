@@ -1,5 +1,5 @@
 Bottom: e89c6a2726865acaa28130f1fc62f864da472760
-Top:    719dbacd47f5b8647657bf0c185753ee136f14c8
+Top:    7c2e7621b2e08ec88c523b34338df30ca905efaf
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-14 12:07:12 +0800
 
@@ -22,7 +22,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index c6f2d89..c71f1ab 100644
+index c6f2d89..d12f0a8 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -282,6 +282,20 @@ void vhost_poll_queue(struct vhost_poll *poll)
@@ -273,17 +273,15 @@ index c6f2d89..c71f1ab 100644
  		vq_err(vq, "Failed to access avail idx at %p\n",
  		       &vq->avail->idx);
  		return -EFAULT;
-@@ -1954,8 +2030,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1954,7 +2030,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  
  	/* Grab the next descriptor number they're advertising, and increment
  	 * the index we've seen. */
 -	if (unlikely(vhost_get_user(vq, ring_head,
--		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
 +	if (unlikely(vhost_get_avail(vq, ring_head,
-+		     &vq->avail->ring[last_avail_idx& (vq->num - 1)]))) {
+ 		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
  		vq_err(vq, "Failed to read head: idx %d address %p\n",
  		       last_avail_idx,
- 		       &vq->avail->ring[last_avail_idx % vq->num]);
 @@ -1990,8 +2066,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			       i, vq->num, head);
  			return -EINVAL;
