@@ -881,7 +881,7 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
 		ret = __get_user(x, ptr); \
 	} else { \
 		__typeof__(ptr) from = \
-			(__typeof__(ptr)) __vhost_get_user(vq, ptr,
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr, \
 							   sizeof(*ptr),type); \
 		if (from != NULL) \
 			ret = __get_user(x, from); \
@@ -2060,7 +2060,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc)
+		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc);
 		if (unlikely(ret)) {
 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
 			       i, vq->desc + i);
