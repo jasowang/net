@@ -1,5 +1,5 @@
 Bottom: e89c6a2726865acaa28130f1fc62f864da472760
-Top:    7c2e7621b2e08ec88c523b34338df30ca905efaf
+Top:    f2cab3ef24502f1a2f23148cb274228ffad5491b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-14 12:07:12 +0800
 
@@ -22,7 +22,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index c6f2d89..d12f0a8 100644
+index c6f2d89..49d1d7b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -282,6 +282,20 @@ void vhost_poll_queue(struct vhost_poll *poll)
@@ -282,17 +282,7 @@ index c6f2d89..d12f0a8 100644
  		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
  		vq_err(vq, "Failed to read head: idx %d address %p\n",
  		       last_avail_idx,
-@@ -1990,8 +2066,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
- 			       i, vq->num, head);
- 			return -EINVAL;
- 		}
--		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
--					   sizeof desc);
-+		ret = vhost_copy_from_user(vq, &desc, vq->desc + i, sizeof desc);
- 		if (unlikely(ret)) {
- 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
- 			       i, vq->desc + i);
-@@ -2170,7 +2245,7 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2170,7 +2246,7 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	if (!vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX)) {
  		__virtio16 flags;
@@ -301,7 +291,7 @@ index c6f2d89..d12f0a8 100644
  			vq_err(vq, "Failed to get flags");
  			return true;
  		}
-@@ -2184,7 +2259,7 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2184,7 +2260,7 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	if (unlikely(!v))
  		return true;
  
@@ -310,7 +300,7 @@ index c6f2d89..d12f0a8 100644
  		vq_err(vq, "Failed to get used event idx");
  		return true;
  	}
-@@ -2226,7 +2301,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2226,7 +2302,7 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__virtio16 avail_idx;
  	int r;
  
@@ -319,7 +309,7 @@ index c6f2d89..d12f0a8 100644
  	if (r)
  		return false;
  
-@@ -2261,7 +2336,7 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2261,7 +2337,7 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	/* They could have slipped one in as we were doing that: make
  	 * sure it's written, then check again. */
  	smp_mb();
