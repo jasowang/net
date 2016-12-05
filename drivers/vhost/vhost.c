@@ -864,7 +864,7 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
 	} else { \
 		__typeof__(ptr) to = \
 			(__typeof__(ptr)) __vhost_get_user(vq, ptr,	\
-							sizeof(*ptr), type); \
+							   sizeof(*ptr), type); \
 		if (to != NULL) \
 			ret = __put_user(x, to); \
 		else \
@@ -880,7 +880,8 @@ static void __user *__vhost_get_user(struct vhost_virtqueue *vq,
 		ret = __get_user(x, ptr); \
 	} else { \
 		__typeof__(ptr) from = \
-			(__typeof__(ptr)) __vhost_get_user(vq, ptr, sizeof(*ptr),type); \
+			(__typeof__(ptr)) __vhost_get_user(vq, ptr,
+							   sizeof(*ptr),type); \
 		if (from != NULL) \
 			ret = __get_user(x, from); \
 		else \
