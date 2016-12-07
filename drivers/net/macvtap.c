@@ -686,8 +686,18 @@ static int macvtap_batch_xmit(struct macvtap_queue *q, struct sk_buff *skb,
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
-		while ((skb = __skb_dequeue(&process_queue)))
-			dev_queue_xmit(skb);
+		struct sk_buff *tmp = NULL;
+		struct sk_buff *head = NULL;
+		while ((skb = __skb_dequeue(&process_queue))) {
+			if (!tmp)
+				tmp = head = skb;
+			else {
+				tmp->next = skb;
+				tmp = skb;
+			}
+		}
+		tmp->next = NULL;
+		dev_queue_xmit(head);
 	}
 
 	return 0;
