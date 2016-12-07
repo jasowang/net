@@ -686,8 +686,10 @@ static int macvtap_batch_xmit(struct macvtap_queue *q, struct sk_buff *skb,
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
-		while ((skb = __skb_dequeue(&process_queue)))
-			dev_queue_xmit(skb);
+		while ((skb = __skb_dequeue(&process_queue))) {
+			skb->dev = q->vlan->lowerdev;
+			skb_direct_xmit(skb, skb->next != NULL);
+		}
 	}
 
 	return 0;
@@ -819,7 +821,7 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
 
 	if (vlan) {
 		if (!rx_batched) {
-			skv->dev = vlan->lowerdev;
+			skb->dev = vlan->lowerdev;
 			skb_direct_xmit(skb, false);
 		} else
 			macvtap_batch_xmit(q, skb, more);
