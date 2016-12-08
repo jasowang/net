@@ -1,10 +1,10 @@
 Version: 1
-Previous: 1389828ada152b244b2ac74cda701b0b861a8d2e
-Head: 785f8e1cc1e90180a575b99e19e4edb0c106fead
+Previous: 43e0c30a1c33100e18672f3ccc1837fb7ac9adb8
+Head: 0a47dfd40e6dc6d41f7a24e66863c361e0e74c6a
 Applied:
+Unapplied:
   macvtap-tx-batching: fb5a4b8249e2dfd46fe18492228e82e0596dbc89
   macvtap-submit-skb-list-for: 785f8e1cc1e90180a575b99e19e4edb0c106fead
-Unapplied:
   vhost_net-avoid-peeking-socket: bc0b2e4e767ec64a98ef7a73dbb1e3a83a1eef8e
   tuntap-rx-batching: cd586264bad2d4922bdb69ab88c6281abaae9bcb
   vhost-better-detection-of: 61bf4186550c173d8be5170536b713e8d7b5c7e0
