@@ -2894,6 +2894,44 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 }
 EXPORT_SYMBOL(netif_skb_features);
 
+int skb_direct_xmit(struct sk_buff *skb, bool more)
+{
+	struct net_device *dev = skb->dev;
+	netdev_features_t features;
+	struct netdev_queue *txq;
+	int ret = NETDEV_TX_BUSY;
+
+	if (unlikely(!netif_running(dev) ||
+		     !netif_carrier_ok(dev)))
+		goto drop;
+
+	features = netif_skb_features(skb);
+	if (skb_needs_linearize(skb, features) &&
+	    __skb_linearize(skb))
+		goto drop;
+
+	txq = skb_get_tx_queue(dev, skb);
+
+	local_bh_disable();
+
+	HARD_TX_LOCK(dev, txq, smp_processor_id());
+	if (!netif_xmit_frozen_or_drv_stopped(txq))
+		skb = dev_hard_start_xmit(skb, dev, txq, &ret);
+	HARD_TX_UNLOCK(dev, txq);
+
+	local_bh_enable();
+
+	if (!dev_xmit_complete(ret))
+		kfree_skb_list(skb);
+
+	return ret;
+drop:
+	atomic_long_inc(&dev->tx_dropped);
+	kfree_skb_list(skb);
+	return NET_XMIT_DROP;
+}
+EXPORT_SYMBOL(skb_direct_xmit);
+
 static int xmit_one(struct sk_buff *skb, struct net_device *dev,
 		    struct netdev_queue *txq, bool more)
 {
