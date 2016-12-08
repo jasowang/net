@@ -1,6 +1,6 @@
 Version: 1
-Previous: af873c3727bd58dcf44e3454f5158209517ebca1
-Head: d4aea20d889e05575bb331a3dadf176176f7d631
+Previous: 10cee46bc7f394f9dd944b7b7bdbadbfe3befdc3
+Head: 0a47dfd40e6dc6d41f7a24e66863c361e0e74c6a
 Applied:
 Unapplied:
   macvtap-tx-batching: a30ba2a3335852c1b0415fa4555e1a1886186a7d
