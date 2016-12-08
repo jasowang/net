@@ -1,8 +1,7 @@
 Version: 1
-Previous: 4ba578b72d79b5023a4035c6c1b602a1318e8bf4
+Previous: af873c3727bd58dcf44e3454f5158209517ebca1
 Head: d4aea20d889e05575bb331a3dadf176176f7d631
 Applied:
-  tun-use-netif_receive_skb: d4aea20d889e05575bb331a3dadf176176f7d631
 Unapplied:
   macvtap-tx-batching: a30ba2a3335852c1b0415fa4555e1a1886186a7d
   macvtap-submit-skb-list-for: 84120f193e57d3d75fa5d1af09e3e3df5d1ffc6c
