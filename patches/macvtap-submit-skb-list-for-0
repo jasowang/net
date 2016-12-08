@@ -1,0 +1,39 @@
+Bottom: a65d52fd237d7243aee2ca78f34f190ec4096661
+Top:    b2fd10268c0650a8a7a85794b3cf8bca92c6ef7d
+Author: = <=>
+Date:   2016-12-07 18:04:46 +0800
+
+macvtap: submit skb list for host kernel stack
+
+Signed-off-by: = <=>
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index af8f83a..dbd093a 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -686,8 +686,10 @@ static int macvtap_batch_xmit(struct macvtap_queue *q, struct sk_buff *skb,
+ 	spin_unlock(&queue->lock);
+ 
+ 	if (rcv) {
+-		while ((skb = __skb_dequeue(&process_queue)))
+-			dev_queue_xmit(skb);
++		while ((skb = __skb_dequeue(&process_queue))) {
++			skb->dev = q->vlan->lowerdev;
++			skb_direct_xmit(skb, skb->next != NULL);
++		}
+ 	}
+ 
+ 	return 0;
+@@ -819,7 +821,7 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
+ 
+ 	if (vlan) {
+ 		if (!rx_batched) {
+-			skv->dev = vlan->lowerdev;
++			skb->dev = vlan->lowerdev;
+ 			skb_direct_xmit(skb, false);
+ 		} else
+ 			macvtap_batch_xmit(q, skb, more);
