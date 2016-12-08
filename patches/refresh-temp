@@ -1,0 +1,22 @@
+Bottom: 9fd3c709a29a48f7a501286196dae16cd8cb1d44
+Top:    58468d0687a55cdf047c8dede587a62478b19f9f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-08 19:40:08 +0800
+
+Refresh of macvlan-use-skb_direct_xmit
+
+---
+
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index 70faae4..3c0a171 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -504,7 +504,7 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ xmit_world:
+ 	skb->dev = vlan->lowerdev;
+-	return skb_direct_xmit(skb, false);
++	return dev_queue_xmit(skb);
+ }
+ 
+ static inline netdev_tx_t macvlan_netpoll_send_skb(struct macvlan_dev *vlan, struct sk_buff *skb)
