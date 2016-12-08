@@ -1,6 +1,6 @@
 Version: 1
-Previous: c837af67641783de8c969b30c138618a52faf027
-Head: bfb5a205225118f78c5b4206fd952ffd5ea6b5b9
+Previous: 58ef9f52420ba3c7297ab470a328c7e9a0e3d841
+Head: bc03a119769daa9e38f77a2e381b7b2759e1b98d
 Applied:
   net-introduce-skb_direct_xmit: a19e242c7d01bb21a4149cde7a1b5d2e79c8e4df
   macvlan-use-skb_direct_xmit: 6899f504b55e499bab944995f63f2cfc416baa21
