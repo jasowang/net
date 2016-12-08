@@ -780,8 +780,8 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
 	}
 
 	if (vlan) {
-		skb->dev = vlan->dev;
-		dev_queue_xmit(skb);
+		skb->dev = vlan->lowerdev;
+		skb_direct_xmit(skb, false);
 	} else {
 		kfree_skb(skb);
 	}
