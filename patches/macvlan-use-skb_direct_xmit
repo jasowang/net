@@ -1,0 +1,40 @@
+Bottom: da003840aa5b76224d070c7fae566668e12dab38
+Top:    9fd3c709a29a48f7a501286196dae16cd8cb1d44
+Author: = <=>
+Date:   2016-12-08 17:47:06 +0800
+
+macvlan: use skb_direct_xmit()
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index 3c0a171..70faae4 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -504,7 +504,7 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ xmit_world:
+ 	skb->dev = vlan->lowerdev;
+-	return dev_queue_xmit(skb);
++	return skb_direct_xmit(skb, false);
+ }
+ 
+ static inline netdev_tx_t macvlan_netpoll_send_skb(struct macvlan_dev *vlan, struct sk_buff *skb)
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index 52a9d81..98e1374 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -780,8 +780,8 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
+ 	}
+ 
+ 	if (vlan) {
+-		skb->dev = vlan->dev;
+-		dev_queue_xmit(skb);
++		skb->dev = vlan->lowerdev;
++		skb_direct_xmit(skb, false);
+ 	} else {
+ 		kfree_skb(skb);
+ 	}

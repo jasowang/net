@@ -1,7 +1,9 @@
 Version: 1
-Previous: e6d7fe26e35779a41ddacad208b9445a6e2135fb
+Previous: 51fa18b8b7467d3971870c58d39217ac243e1d94
 Head: b4e6cb4d59886ecd013238a3738fe09ae417ea90
 Applied:
+  net-introduce-skb_direct_xmit: a19e242c7d01bb21a4149cde7a1b5d2e79c8e4df
+  macvlan-use-skb_direct_xmit: b4e6cb4d59886ecd013238a3738fe09ae417ea90
 Unapplied:
   macvtap-tx-batching: fb5a4b8249e2dfd46fe18492228e82e0596dbc89
   macvtap-submit-skb-list-for: 785f8e1cc1e90180a575b99e19e4edb0c106fead

@@ -1,0 +1,117 @@
+Bottom: a4b273519593dd2321156b103734a2efce1828a1
+Top:    da003840aa5b76224d070c7fae566668e12dab38
+Author: = <=>
+Date:   2016-12-08 17:40:33 +0800
+
+net: introduce skb_direct_xmit()
+
+Signed-off-by: = <=>
+
+
+---
+
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 1ff5ea6..af7e4c0 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -2421,6 +2421,7 @@ void dev_disable_lro(struct net_device *dev);
+ int dev_loopback_xmit(struct net *net, struct sock *sk, struct sk_buff *newskb);
+ int dev_queue_xmit(struct sk_buff *skb);
+ int dev_queue_xmit_accel(struct sk_buff *skb, void *accel_priv);
++int skb_direct_xmit(struct sk_buff *skb, bool more);
+ int register_netdevice(struct net_device *dev);
+ void unregister_netdevice_queue(struct net_device *dev, struct list_head *head);
+ void unregister_netdevice_many(struct list_head *head);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index bffb525..f4e5f0e 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -2880,6 +2880,44 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
+ }
+ EXPORT_SYMBOL(netif_skb_features);
+ 
++int skb_direct_xmit(struct sk_buff *skb, bool more)
++{
++	struct net_device *dev = skb->dev;
++	netdev_features_t features;
++	struct netdev_queue *txq;
++	int ret = NETDEV_TX_BUSY;
++
++	if (unlikely(!netif_running(dev) ||
++		     !netif_carrier_ok(dev)))
++		goto drop;
++
++	features = netif_skb_features(skb);
++	if (skb_needs_linearize(skb, features) &&
++	    __skb_linearize(skb))
++		goto drop;
++
++	txq = skb_get_tx_queue(dev, skb);
++
++	local_bh_disable();
++
++	HARD_TX_LOCK(dev, txq, smp_processor_id());
++	if (!netif_xmit_frozen_or_drv_stopped(txq))
++		ret = netdev_start_xmit(skb, dev, txq, more);
++	HARD_TX_UNLOCK(dev, txq);
++
++	local_bh_enable();
++
++	if (!dev_xmit_complete(ret))
++		kfree_skb(skb);
++
++	return ret;
++drop:
++	atomic_long_inc(&dev->tx_dropped);
++	kfree_skb(skb);
++	return NET_XMIT_DROP;
++}
++EXPORT_SYMBOL(skb_direct_xmit);
++
+ static int xmit_one(struct sk_buff *skb, struct net_device *dev,
+ 		    struct netdev_queue *txq, bool more)
+ {
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index 89f2e8c..376e86d 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -249,38 +249,7 @@ static void __fanout_link(struct sock *sk, struct packet_sock *po);
+ 
+ static int packet_direct_xmit(struct sk_buff *skb)
+ {
+-	struct net_device *dev = skb->dev;
+-	struct sk_buff *orig_skb = skb;
+-	struct netdev_queue *txq;
+-	int ret = NETDEV_TX_BUSY;
+-
+-	if (unlikely(!netif_running(dev) ||
+-		     !netif_carrier_ok(dev)))
+-		goto drop;
+-
+-	skb = validate_xmit_skb_list(skb, dev);
+-	if (skb != orig_skb)
+-		goto drop;
+-
+-	txq = skb_get_tx_queue(dev, skb);
+-
+-	local_bh_disable();
+-
+-	HARD_TX_LOCK(dev, txq, smp_processor_id());
+-	if (!netif_xmit_frozen_or_drv_stopped(txq))
+-		ret = netdev_start_xmit(skb, dev, txq, false);
+-	HARD_TX_UNLOCK(dev, txq);
+-
+-	local_bh_enable();
+-
+-	if (!dev_xmit_complete(ret))
+-		kfree_skb(skb);
+-
+-	return ret;
+-drop:
+-	atomic_long_inc(&dev->tx_dropped);
+-	kfree_skb_list(skb);
+-	return NET_XMIT_DROP;
++	return skb_direct_xmit(skb, false);
+ }
+ 
+ static struct net_device *packet_cached_dev_get(struct packet_sock *po)
