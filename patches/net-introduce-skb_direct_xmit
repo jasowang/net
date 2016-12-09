@@ -1,5 +1,5 @@
 Bottom: a4b273519593dd2321156b103734a2efce1828a1
-Top:    da003840aa5b76224d070c7fae566668e12dab38
+Top:    6792732a4bcf1c365885aa4c88ce2e1dda5a6a1a
 Author: = <=>
 Date:   2016-12-08 17:40:33 +0800
 
@@ -23,7 +23,7 @@ index 1ff5ea6..af7e4c0 100644
  void unregister_netdevice_queue(struct net_device *dev, struct list_head *head);
  void unregister_netdevice_many(struct list_head *head);
 diff --git a/net/core/dev.c b/net/core/dev.c
-index bffb525..f4e5f0e 100644
+index bffb525..87a02b0 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -2880,6 +2880,44 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
@@ -52,18 +52,18 @@ index bffb525..f4e5f0e 100644
 +
 +	HARD_TX_LOCK(dev, txq, smp_processor_id());
 +	if (!netif_xmit_frozen_or_drv_stopped(txq))
-+		ret = netdev_start_xmit(skb, dev, txq, more);
++		skb = dev_hard_start_xmit(skb, dev, txq, &ret);
 +	HARD_TX_UNLOCK(dev, txq);
 +
 +	local_bh_enable();
 +
 +	if (!dev_xmit_complete(ret))
-+		kfree_skb(skb);
++		kfree_skb_list(skb);
 +
 +	return ret;
 +drop:
 +	atomic_long_inc(&dev->tx_dropped);
-+	kfree_skb(skb);
++	kfree_skb_list(skb);
 +	return NET_XMIT_DROP;
 +}
 +EXPORT_SYMBOL(skb_direct_xmit);
