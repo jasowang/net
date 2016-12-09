@@ -2902,18 +2902,18 @@ int skb_direct_xmit(struct sk_buff *skb, bool more)
 
 	HARD_TX_LOCK(dev, txq, smp_processor_id());
 	if (!netif_xmit_frozen_or_drv_stopped(txq))
-		ret = netdev_start_xmit(skb, dev, txq, more);
+		skb = dev_hard_start_xmit(skb, dev, txq, &ret);
 	HARD_TX_UNLOCK(dev, txq);
 
 	local_bh_enable();
 
 	if (!dev_xmit_complete(ret))
-		kfree_skb(skb);
+		kfree_skb_list(skb);
 
 	return ret;
 drop:
 	atomic_long_inc(&dev->tx_dropped);
-	kfree_skb(skb);
+	kfree_skb_list(skb);
 	return NET_XMIT_DROP;
 }
 EXPORT_SYMBOL(skb_direct_xmit);
