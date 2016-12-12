@@ -1,8 +1,8 @@
 Version: 1
-Previous: 2aaf1fd73975c46097e6856bc3829a2fde6b01e7
-Head: 7755adf2d5a61da8f5d5db0d895270d53917a62a
+Previous: 6bcb4bcd398befa512150d45303ca8abc2383b50
+Head: c1cb978cb6ed12bdc02a3902f19e2984510657d1
 Applied:
-  vhost-optmize-vhost_signal: 7755adf2d5a61da8f5d5db0d895270d53917a62a
+  vhost-optmize-vhost_signal: c1cb978cb6ed12bdc02a3902f19e2984510657d1
 Unapplied:
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
