@@ -1,5 +1,5 @@
 Bottom: 2f47271a763a580df89a081a03731b78027fea6c
-Top:    b9e0447f13dde18035398a751db2ac1588af8902
+Top:    5b93c85fbebff45326b607a0757ca424b88300a0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 10:22:50 +0800
 
@@ -19,7 +19,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 2663543..224e236 100644
+index 2663543..5d2f627 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -290,6 +290,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -61,10 +61,15 @@ index 2663543..224e236 100644
  		if (vhost_get_user(vq, flags, &vq->avail->flags)) {
  			vq_err(vq, "Failed to get flags");
  			return true;
-@@ -2184,11 +2185,22 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2184,11 +2185,27 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	if (unlikely(!v))
  		return true;
  
++	/* We're sure if the following conditions are met, there's no
++	 * need to notify guest:
++	 * 1) cached used event is ahead of new
++	 * 2) old to new updating does not cross cached used event.
++	 */
 +	if (vring_need_event(vq->last_used_event, new + vq->num, new) &&
 +	    !vring_need_event(vq->last_used_event, new, old))
 +		return false;
