@@ -1,0 +1,25 @@
+Bottom: b9e0447f13dde18035398a751db2ac1588af8902
+Top:    5b93c85fbebff45326b607a0757ca424b88300a0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-12 13:33:36 +0800
+
+Refresh of vhost-optmize-vhost_signal
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 224e236..5d2f627 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2185,6 +2185,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	if (unlikely(!v))
+ 		return true;
+ 
++	/* We're sure if the following conditions are met, there's no
++	 * need to notify guest:
++	 * 1) cached used event is ahead of new
++	 * 2) old to new updating does not cross cached used event.
++	 */
+ 	if (vring_need_event(vq->last_used_event, new + vq->num, new) &&
+ 	    !vring_need_event(vq->last_used_event, new, old))
+ 		return false;
