@@ -2185,6 +2185,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	if (unlikely(!v))
 		return true;
 
+	/* We're sure if the following conditions are met, there's no
+	 * need to notify guest:
+	 * 1) cached used event is ahead of new
+	 * 2) old to new updating does not cross cached used event.
+	 */
 	if (vring_need_event(vq->last_used_event, new + vq->num, new) &&
 	    !vring_need_event(vq->last_used_event, new, old))
 		return false;
