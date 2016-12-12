@@ -3,18 +3,15 @@ Top:    b9e0447f13dde18035398a751db2ac1588af8902
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 10:22:50 +0800
 
-vhost: cache used event for better performance of vhost_notify()
+vhost: cache used event for better performance
 
-When event index was enabled, we need to check used event each time
-which requires 1) memory barriers and 2) userspace memory
-access. Those is not a requirement each time and could be optimized
-by:
+When event index was enabled, we need to fetch used event from
+userspace memory each time. This userspace fetch (with memory
+barriers) could be saved sometime when 1) caching used event and 2)
+if used event is ahead of new and old to new updating does not cross
+it, we're sure there's no need to notify guest.
 
-- cache used event
-- if we're sure used event is ahead of new, we're sure there's no need
-  to notify guest.
-
-Guest pktgen test with Linux driver shows ~3.5% improvement on pps.
+Guest pktgen test with Linux driver shows ~3.5% improvement.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
