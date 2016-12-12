@@ -686,10 +686,18 @@ static int macvtap_batch_xmit(struct macvtap_queue *q, struct sk_buff *skb,
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
+		struct sk_buff *head = NULL;
+		struct sk_buff *tmp;
 		while ((skb = __skb_dequeue(&process_queue))) {
-			skb->dev = q->vlan->lowerdev;
-			skb_direct_xmit(skb, skb->next != NULL);
+			if (!head)
+				head = tmp = skb;
+			else {
+				tmp->next = skb;
+				tmp = skb;
+			}
 		}
+		head->dev = q->vlan->lowerdev;
+		skb_direct_xmit(head, false);
 	}
 
 	return 0;
