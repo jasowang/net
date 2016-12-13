@@ -1,0 +1,11 @@
+Bottom: c0cf73cdfaee9d00ee452bd869307fdbb9325ae4
+Top:    c0cf73cdfaee9d00ee452bd869307fdbb9325ae4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-13 12:00:05 +0800
+
+virtio-net: correctly enable multiqueue
+
+
+---
+
+
