@@ -1,5 +1,5 @@
-Bottom: 5b93c85fbebff45326b607a0757ca424b88300a0
-Top:    69b2fcd9742be32120ce71a75a1933c264b60f58
+Bottom: 2f47271a763a580df89a081a03731b78027fea6c
+Top:    79f478c643c8de407a82515c28adc80b3637e66b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-10-27 16:04:38 +0800
 
@@ -23,10 +23,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 5d2f627..7c57e3a 100644
+index 2663543..69e91dd 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2243,11 +2243,15 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2226,11 +2226,15 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__virtio16 avail_idx;
  	int r;
  
