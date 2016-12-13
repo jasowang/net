@@ -5,6 +5,8 @@ Date:   2016-12-13 12:00:05 +0800
 
 virtio-net: correctly enable multiqueue
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

@@ -1,9 +1,9 @@
 Version: 1
-Previous: 8b3acd361d12359edeb4be4d2e0caa084c65b3f6
-Head: eb86f0e85181fc711069850665fe5c9dd3283b22
+Previous: 33399bb9beac0dbc18c85bb5b2234887b4c58f3a
+Head: 2bc620c63f87232b78f16ecc2b2117906858515e
 Applied:
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
-  virtio-net-correctly-enable: eb86f0e85181fc711069850665fe5c9dd3283b22
+  virtio-net-correctly-enable: 2bc620c63f87232b78f16ecc2b2117906858515e
 Unapplied:
   vhost-better-detection-of-0: f44c719bb293feaef6d1c24d147af550b73b93c7
   vhost_net-tx-batching-0: 4858eb29be00143b52310eff3f62d98d9ec3d3ed
