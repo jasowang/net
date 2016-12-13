@@ -1,13 +1,13 @@
 Version: 1
-Previous: 1950b90d673babbadfb1de31d036e982d0a6ceef
-Head: 54281f092384fed275ae4c644345596becc36b7a
+Previous: 45ab03cbeb69b01ca720bc1efc67edd29dca8a06
+Head: c937a78398661f36b4263ac2bba4801ec26cc707
 Applied:
   vhost-better-detection-of-0: 6f32f02976969917500c1e2ab1713874f079c600
   vhost_net-tx-batching-0: 54281f092384fed275ae4c644345596becc36b7a
+  tun-rx-batching: c937a78398661f36b4263ac2bba4801ec26cc707
 Unapplied:
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
   virtio-net-correctly-enable: eb775b1687fa56cbffd417368441a032ea318798
-  tun-rx-batching: 939a765dd9bae54ca41b631a45a0e37ea2fa9bcb
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
   macvtap-tx-batching-0: cafc0db41c192355a6adddf0b6f3ed36d7e10b93
