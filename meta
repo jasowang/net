@@ -1,7 +1,8 @@
 Version: 1
-Previous: 8f14bc4a94b2139d4d8f4ae8e89bf41bb4588863
+Previous: 294b063edbbefe80d136bcb9c3e6930d754a4335
 Head: 0c522c8cdcea94f5a50917f2ef263ab659f5349c
 Applied:
+  vhost-introduce-o-1-vq: 0c522c8cdcea94f5a50917f2ef263ab659f5349c
 Unapplied:
   add-a-vq-meta-data-iotlb: ff87f4a426059eb4ed43c1e2d4d0b435e2623e47
   tuntap-bypass-unnecessary-hash: c5fa374262e43e144d0a0152ab51572b54f5a38d
