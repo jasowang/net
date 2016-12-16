@@ -23,6 +23,8 @@
 #include <net/sock.h>
 #include <linux/virtio_net.h>
 #include <linux/skb_array.h>
+#include <linux/netdevice.h>
+#include <linux/bpf.h>
 
 /*
  * A macvtap queue is the central object of this driver, it connects
@@ -354,8 +356,8 @@ static void macvtap_del_queues(struct net_device *dev)
 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
 }
 
-static int macvtap_xdp_rx(const struct sk_buff *skb,
-			  const struct bpf_insn *filter)
+static unsigned int macvtap_xdp_rx(const struct sk_buff *skb,
+				   const struct bpf_insn *filter)
 {
 	struct xdp_buff *buff;
 	struct net_device *dev = ((struct xdp_buff *)skb)->dev;
@@ -506,6 +508,10 @@ static int macvtap_newlink(struct net *src_net,
 			   struct nlattr *data[])
 {
 	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct net_device *lowerdev = vlan->lowerdev;
+	const struct net_device_ops *ops = lowerdev->netdev_ops;
+	struct netdev_xdp xdp = {};
+	struct bpf_prog *prog;
 	int err;
 
 	INIT_LIST_HEAD(&vlan->queue_list);
@@ -515,9 +521,30 @@ static int macvtap_newlink(struct net *src_net,
 	 */
 	vlan->tap_features = TUN_OFFLOADS;
 
+	if (!ops->ndo_xdp)
+		return -EOPNOTSUPP;
+
+	prog = bpf_prog_alloc(0, GFP_KERNEL);
+	if (!prog)
+		return -ENOMEM;
+
+#if 0
 	err = netdev_rx_handler_register(dev, macvtap_handle_frame, vlan);
-	if (err)
+	if (err) {
 		return err;
+	}
+#endif
+
+	atomic_set(&prog->aux->refcnt, 1);
+	prog->bpf_func = macvtap_xdp_rx;
+
+	xdp.command = XDP_SETUP_PROG;
+	xdp.prog = prog;
+	err = ops->ndo_xdp(lowerdev, &xdp);
+	if (err < 0) {
+		bpf_prog_put(prog);
+		return -EFAULT;
+	}
 
 	/* Don't put anything that may fail after macvlan_common_newlink
 	 * because we can't undo what it does.
