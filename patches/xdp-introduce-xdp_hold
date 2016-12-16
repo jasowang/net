@@ -1,5 +1,5 @@
 Bottom: 5443b430419fc07b750ee98358ff646fef9e996a
-Top:    434d1f79bbb4588b345db38c99d911a6ede96936
+Top:    af783a8e21b42ceab0ffb5a59dd643d10d4c11da
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:29:34 +0800
 
@@ -8,6 +8,19 @@ XDP: introduce XDP_HOLD
 
 ---
 
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+index 9fea7e4..87c314c 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+@@ -916,6 +916,8 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
+ 			switch (act) {
+ 			case XDP_PASS:
+ 				break;
++			case XDP_HOLD:
++				goto next;
+ 			case XDP_TX:
+ 				if (likely(!mlx4_en_xmit_frame(ring, frags, dev,
+ 							length, cq->ring,
 diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
 index 7d9b283..4e177aa 100644
 --- a/include/uapi/linux/bpf.h
