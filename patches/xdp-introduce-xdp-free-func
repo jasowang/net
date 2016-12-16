@@ -1,5 +1,5 @@
 Bottom: 5457ff3d97cd834b2c10a828bc3ea68455bbff96
-Top:    96dfad980da67407a7c93f1f4f961535edf33036
+Top:    f1461e27a310bcba5bc27c10f61f02e952bdffd2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:27:59 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
-index 6562f78..9fef266f 100644
+index 6562f78..9fea7e4 100644
 --- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
 +++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
 @@ -782,6 +782,14 @@ static int check_csum(struct mlx4_cqe *cqe, struct sk_buff *skb, void *va,
@@ -29,26 +29,28 @@ index 6562f78..9fef266f 100644
  int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int budget)
  {
  	struct mlx4_en_priv *priv = netdev_priv(dev);
-@@ -899,6 +907,9 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
+@@ -899,6 +907,10 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
  			xdp.data = page_address(frags[0].page) +
  							frags[0].page_offset;
  			xdp.data_end = xdp.data + length;
 +			xdp.data = ring;
 +			xdp.private = private;
 +			xdp.free = mlx4_en_xdp_buff_free;
++			xdp.netdev = dev;
  
  			act = bpf_prog_run_xdp(xdp_prog, &xdp);
  			switch (act) {
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 1f09c52..830d28e 100644
+index 1f09c52..13fdcd6 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
-@@ -435,8 +435,23 @@ struct bpf_skb_data_end {
+@@ -435,8 +435,24 @@ struct bpf_skb_data_end {
  struct xdp_buff {
  	void *data;
  	void *data_end;
 +	void *ring;
 +	void *private;
++	struct net_device *netdev;
 +	void (*free) (const void *ring, const void *private);
  };
  
