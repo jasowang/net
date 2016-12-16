@@ -353,6 +353,13 @@ static void macvtap_del_queues(struct net_device *dev)
 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
 }
 
+static macvtap_xdp_rx(const struct sk_buff *skb, const struct bfp_insn *filter)
+{
+	struct xdp_buff *buff = (struct xdp_buff *)skb;
+
+	if (__ptr_ring_full(&
+}
+
 static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 {
 	struct sk_buff *skb = *pskb;
