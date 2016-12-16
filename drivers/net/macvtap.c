@@ -845,6 +845,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
 }
 
+static ssize_t macvtap_put_user_xdp(struct macvtap_queue *q,
+				    const struct xdp_buff *xdp,
+				    struct iov_iter *iter)
+{
+	int ret;
+	int vnet_hdr_len = 0;
+	int len = xdp->data_end - xdp->data;
+	int total;
+	struct virtio_net_hdr hdr;
+
+	memset(&hdr, 0, sizeof(hdr));
+
+	hdr.gso_type = VIRTIO_NET_HDR_GSO_NONE;
+
+	if (q->flags & IFF_VNET_HDR) {
+		struct virtio_net_hdr vnet_hdr;
+		vnet_hdr_len = q->vnet_hdr_sz;
+		if (iov_iter_count(iter) < vnet_hdr_len)
+			return -EINVAL;
+
+		if (copy_to_iter(&vnet_hdr, sizeof(vnet_hdr), iter) !=
+		    sizeof(vnet_hdr))
+			return -EFAULT;
+
+		iov_iter_advance(iter, vnet_hdr_len - sizeof(vnet_hdr));
+	}
+	total = vnet_hdr_len;
+	total += len;
+
+	ret = copy_to_iter(xdp->data, len, iter);
+
+	return ret ? ret : total;
+}
+
 /* Put packet to the user space buffer */
 static ssize_t macvtap_put_user(struct macvtap_queue *q,
 				const struct sk_buff *skb,
