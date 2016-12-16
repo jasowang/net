@@ -1,5 +1,5 @@
 Bottom: 6ce21e3ce6012d1136f69d476e10f4b4a1195da9
-Top:    90d25b8276c78150b68fd32e082334d1a97d451b
+Top:    cc93e0fa125f9f1892306d94aa785e9a125b8a35
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 5da9861..280c9a0 100644
+index 5da9861..d7f3c55 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
 @@ -45,6 +45,7 @@ struct macvtap_queue {
@@ -22,7 +22,21 @@ index 5da9861..280c9a0 100644
  };
  
  #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
-@@ -536,6 +537,11 @@ static void macvtap_sock_destruct(struct sock *sk)
+@@ -352,6 +353,13 @@ static void macvtap_del_queues(struct net_device *dev)
+ 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
+ }
+ 
++static macvtap_xdp_rx(const struct sk_buff *skb, const struct bfp_insn *filter)
++{
++	struct xdp_buff *buff = (struct xdp_buff *)skb;
++
++	if (__ptr_ring_full(&
++}
++
+ static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
+ {
+ 	struct sk_buff *skb = *pskb;
+@@ -536,6 +544,11 @@ static void macvtap_sock_destruct(struct sock *sk)
  	skb_array_cleanup(&q->skb_array);
  }
  
@@ -34,7 +48,7 @@ index 5da9861..280c9a0 100644
  static int macvtap_open(struct inode *inode, struct file *file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -580,6 +586,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -580,6 +593,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
  		goto err_array;
  
@@ -44,7 +58,7 @@ index 5da9861..280c9a0 100644
  	err = macvtap_set_queue(dev, file, q);
  	if (err)
  		goto err_queue;
-@@ -590,6 +599,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -590,6 +606,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	return err;
  
  err_queue:
