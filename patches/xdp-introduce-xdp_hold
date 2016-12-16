@@ -1,5 +1,5 @@
 Bottom: 96dfad980da67407a7c93f1f4f961535edf33036
-Top:    96dfad980da67407a7c93f1f4f961535edf33036
+Top:    6ce21e3ce6012d1136f69d476e10f4b4a1195da9
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:29:34 +0800
 
@@ -8,4 +8,15 @@ XDP: introduce XDP_HOLD
 
 ---
 
-
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 7d9b283..4e177aa 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -530,6 +530,7 @@ enum xdp_action {
+ 	XDP_DROP,
+ 	XDP_PASS,
+ 	XDP_TX,
++	XDP_HOLD,
+ };
+ 
+ /* user accessible metadata for XDP packet hook
