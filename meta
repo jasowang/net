@@ -1,9 +1,9 @@
 Version: 1
-Previous: 4b2b6372269a61ec677716115212df9e8ab32cf6
-Head: 3ce5583461d579bd7066aa30fd15ba7ff022dcdd
+Previous: 391c9cd085fab8af92797f9520ecd201c9fe673a
+Head: b3b69cfe387da942156838fddf0ee63ffaa8a603
 Applied:
   vhost-introduce-o-1-vq: eaada13fae8abec82e46bdf7f150d8e19375f619
-  xdp-introduce-xdp-free-func: 3ce5583461d579bd7066aa30fd15ba7ff022dcdd
+  xdp-introduce-xdp-free-func: b3b69cfe387da942156838fddf0ee63ffaa8a603
 Unapplied:
   add-a-vq-meta-data-iotlb: ff87f4a426059eb4ed43c1e2d4d0b435e2623e47
   tuntap-bypass-unnecessary-hash: c5fa374262e43e144d0a0152ab51572b54f5a38d
