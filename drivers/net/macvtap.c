@@ -45,6 +45,7 @@ struct macvtap_queue {
 	bool enabled;
 	struct list_head next;
 	struct skb_array skb_array;
+	struct xdp_array xdp_array;
 };
 
 #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
@@ -580,6 +581,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
 		goto err_array;
 
+	if (ptr_ring_init(&q->xdp_array, dev->xdp_array, GFP_KERNEL))
+		goto err_xdp;
+
 	err = macvtap_set_queue(dev, file, q);
 	if (err)
 		goto err_queue;
@@ -590,6 +594,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	return err;
 
 err_queue:
+	ptr_ring_cleanup(&q->xdp_array, kfree);
+err_xdp:
 	skb_array_cleanup(&q->skb_array);
 err_array:
 	sock_put(&q->sk);
