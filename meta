@@ -1,12 +1,11 @@
 Version: 1
-Previous: 9c25a222897de2653a2ae31770d4833ddc0861af
-Head: 960cae0a62284587e3acbb64c8d0c1981f4e093f
+Previous: 2fdb61410a6894585b5a76a92cb344a45d99810d
+Head: 757768636c1aca8e450a22b61e7baa97afcf557f
 Applied:
   vhost-introduce-o-1-vq: eaada13fae8abec82e46bdf7f150d8e19375f619
   xdp-introduce-xdp-free-func: 335e664a0127307411d93d98c0c17672126f4fb1
   xdp-introduce-xdp_hold: 749d30045193dbdd7a643343891732cd659039ad
-  macvtap-xdp-fast-rx-support: 2a439d8d37ad787d05c85e2f8469f8e4293b22c8
-  refresh-temp: 960cae0a62284587e3acbb64c8d0c1981f4e093f
+  macvtap-xdp-fast-rx-support: 757768636c1aca8e450a22b61e7baa97afcf557f
 Unapplied:
   add-a-vq-meta-data-iotlb: ff87f4a426059eb4ed43c1e2d4d0b435e2623e47
   tuntap-bypass-unnecessary-hash: c5fa374262e43e144d0a0152ab51572b54f5a38d
