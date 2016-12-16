@@ -16,12 +16,15 @@
 #include <linux/idr.h>
 #include <linux/fs.h>
 #include <linux/uio.h>
+#include <linux/filter.h>
 
 #include <net/net_namespace.h>
 #include <net/rtnetlink.h>
 #include <net/sock.h>
 #include <linux/virtio_net.h>
 #include <linux/skb_array.h>
+#include <linux/netdevice.h>
+#include <linux/bpf.h>
 
 /*
  * A macvtap queue is the central object of this driver, it connects
@@ -45,6 +48,7 @@ struct macvtap_queue {
 	bool enabled;
 	struct list_head next;
 	struct skb_array skb_array;
+	struct ptr_ring xdp_array;
 };
 
 #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
@@ -352,6 +356,35 @@ static void macvtap_del_queues(struct net_device *dev)
 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
 }
 
+static unsigned int macvtap_xdp_rx(const void *ctx,
+				   const struct bpf_insn *filter)
+{
+	struct xdp_buff *buff;
+	struct net_device *dev = ((struct xdp_buff *)ctx)->dev;
+	struct macvlan_dev *vlan;
+	struct macvtap_queue *q;
+
+	vlan = macvtap_get_vlan_rcu(dev);
+	if (!vlan)
+		return XDP_PASS;
+
+	buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
+	if (!buff)
+		return XDP_DROP;
+
+	q = rcu_dereference(vlan->taps[0]);
+	if (!ptr_ring_produce(&q->xdp_array, buff))
+		goto drop;
+
+	wake_up_interruptible_poll(sk_sleep(&q->sk), POLLIN |
+				   POLLRDNORM | POLLRDBAND);
+
+	return XDP_HOLD;
+drop:
+	kfree(buff);
+	return XDP_DROP;
+}
+
 static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 {
 	struct sk_buff *skb = *pskb;
@@ -475,6 +508,10 @@ static int macvtap_newlink(struct net *src_net,
 			   struct nlattr *data[])
 {
 	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct net_device *lowerdev;
+	const struct net_device_ops *ops;
+	struct netdev_xdp xdp = {};
+	struct bpf_prog *prog;
 	int err;
 
 	INIT_LIST_HEAD(&vlan->queue_list);
@@ -484,9 +521,39 @@ static int macvtap_newlink(struct net *src_net,
 	 */
 	vlan->tap_features = TUN_OFFLOADS;
 
+	if (!tb[IFLA_LINK])
+		return -EINVAL;
+
+	lowerdev = __dev_get_by_index(src_net, nla_get_u32(tb[IFLA_LINK]));
+	if (lowerdev == NULL)
+		return -ENODEV;
+
+	ops = lowerdev->netdev_ops;
+
+	if (!ops->ndo_xdp)
+		return -EOPNOTSUPP;
+
+	prog = bpf_prog_alloc(PAGE_SIZE, GFP_KERNEL);
+	if (!prog)
+		return -ENOMEM;
+
+#if 0
 	err = netdev_rx_handler_register(dev, macvtap_handle_frame, vlan);
-	if (err)
+	if (err) {
 		return err;
+	}
+#endif
+
+	atomic_set(&prog->aux->refcnt, 1);
+	prog->bpf_func = macvtap_xdp_rx;
+
+	xdp.command = XDP_SETUP_PROG;
+	xdp.prog = prog;
+	err = ops->ndo_xdp(lowerdev, &xdp);
+	if (err < 0) {
+		bpf_prog_put(prog);
+		return -EFAULT;
+	}
 
 	/* Don't put anything that may fail after macvlan_common_newlink
 	 * because we can't undo what it does.
@@ -542,6 +609,11 @@ static void macvtap_sock_destruct(struct sock *sk)
 	skb_array_cleanup(&q->skb_array);
 }
 
+static void macvtap_xdp_free(void *ptr)
+{
+	kfree(ptr);
+}
+
 static int macvtap_open(struct inode *inode, struct file *file)
 {
 	struct net *net = current->nsproxy->net_ns;
@@ -586,6 +658,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
 		goto err_array;
 
+	if (ptr_ring_init(&q->xdp_array, dev->tx_queue_len, GFP_KERNEL))
+		goto err_xdp;
+
 	err = macvtap_set_queue(dev, file, q);
 	if (err)
 		goto err_queue;
@@ -596,6 +671,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	return err;
 
 err_queue:
+	ptr_ring_cleanup(&q->xdp_array, macvtap_xdp_free);
+err_xdp:
 	skb_array_cleanup(&q->skb_array);
 err_array:
 	sock_put(&q->sk);
@@ -808,6 +885,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
 }
 
+static ssize_t macvtap_put_user_xdp(struct macvtap_queue *q,
+				    const struct xdp_buff *xdp,
+				    struct iov_iter *iter)
+{
+	int ret;
+	int vnet_hdr_len = 0;
+	int len = xdp->data_end - xdp->data;
+	int total;
+	struct virtio_net_hdr hdr;
+
+	memset(&hdr, 0, sizeof(hdr));
+
+	hdr.gso_type = VIRTIO_NET_HDR_GSO_NONE;
+
+	if (q->flags & IFF_VNET_HDR) {
+		struct virtio_net_hdr vnet_hdr;
+		vnet_hdr_len = q->vnet_hdr_sz;
+		if (iov_iter_count(iter) < vnet_hdr_len)
+			return -EINVAL;
+
+		if (copy_to_iter(&vnet_hdr, sizeof(vnet_hdr), iter) !=
+		    sizeof(vnet_hdr))
+			return -EFAULT;
+
+		iov_iter_advance(iter, vnet_hdr_len - sizeof(vnet_hdr));
+	}
+	total = vnet_hdr_len;
+	total += len;
+
+	ret = copy_to_iter(xdp->data, len, iter);
+
+	return ret ? ret : total;
+}
+
 /* Put packet to the user space buffer */
 static ssize_t macvtap_put_user(struct macvtap_queue *q,
 				const struct sk_buff *skb,
@@ -904,6 +1015,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
 			kfree_skb(skb);
 		else
 			consume_skb(skb);
+	}
+	return ret;
+}
+
+static ssize_t macvtap_do_read_xdp(struct macvtap_queue *q,
+				   struct iov_iter *to,
+				   int noblock)
+{
+	DEFINE_WAIT(wait);
+	struct xdp_buff *xdp;
+	ssize_t ret = 0;
+
+	if (!iov_iter_count(to))
+		return 0;
+
+	while (1) {
+		if (!noblock)
+			prepare_to_wait(sk_sleep(&q->sk), &wait,
+					TASK_INTERRUPTIBLE);
+
+		/* Read frames from the queue */
+		xdp = ptr_ring_consume(&q->xdp_array);
+		if (xdp)
+			break;
+		if (noblock) {
+			ret = -EAGAIN;
+			break;
+		}
+		if (signal_pending(current)) {
+			ret = -ERESTARTSYS;
+			break;
+		}
+		/* Nothing to read, let's sleep */
+		schedule();
+	}
+	if (!noblock)
+		finish_wait(sk_sleep(&q->sk), &wait);
+
+	if (xdp) {
+		ret = macvtap_put_user_xdp(q, xdp, to);
+		xdp_buff_free(xdp);
+		kfree(xdp);
 	}
 	return ret;
 }
@@ -1197,7 +1350,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	int ret;
 	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
 		return -EINVAL;
-	ret = macvtap_do_read(q, &m->msg_iter, flags & MSG_DONTWAIT);
+	if (true)
+		ret = macvtap_do_read_xdp(q, &m->msg_iter,
+					  flags & MSG_DONTWAIT);
+	else
+		ret = macvtap_do_read(q, &m->msg_iter,
+				      flags & MSG_DONTWAIT);
 	if (ret > total_len) {
 		m->msg_flags |= MSG_TRUNC;
 		ret = flags & MSG_TRUNC ? ret : total_len;
@@ -1205,11 +1363,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	return ret;
 }
 
+static int macvtap_xdp_peek_len(void *data)
+{
+	struct xdp_buff *buff = data;
+
+	return buff->data_end - buff->data;
+}
+
 static int macvtap_peek_len(struct socket *sock)
 {
 	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
 					       sock);
-	return skb_array_peek_len(&q->skb_array);
+//	return skb_array_peek_len(&q->skb_array);
+	return PTR_RING_PEEK_CALL(&q->xdp_array, macvtap_xdp_peek_len);
 }
 
 /* Ops structure to mimic raw sockets with tun */
