@@ -1,9 +1,10 @@
 Version: 1
-Previous: 77015c0bd0b330e5f9fddde28574fee0169f291d
-Head: 335e664a0127307411d93d98c0c17672126f4fb1
+Previous: c8792136694d6abc6640cf33200bc913c0eeafea
+Head: 033bbee1d6c13c0a192460202e25828033fd8d7b
 Applied:
   vhost-introduce-o-1-vq: eaada13fae8abec82e46bdf7f150d8e19375f619
   xdp-introduce-xdp-free-func: 335e664a0127307411d93d98c0c17672126f4fb1
+  refresh-temp: 033bbee1d6c13c0a192460202e25828033fd8d7b
 Unapplied:
   xdp-introduce-xdp_hold: 749d30045193dbdd7a643343891732cd659039ad
   macvtap-xdp-fast-rx-support: d0fe056b83b8f26bae013fb57610307c02e07466
