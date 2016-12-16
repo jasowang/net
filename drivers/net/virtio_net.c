@@ -379,6 +379,7 @@ static virtnet_xdp_buff_free(const void *r, const void *data)
 	struct receive_queue *rq = r;
 	struct page *page = data;
 
+	printk("free!\n");
 	give_pages(rq, page);
 }
 
