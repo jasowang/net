@@ -374,6 +374,14 @@ static void virtnet_xdp_xmit(struct virtnet_info *vi,
 	virtqueue_kick(sq->vq);
 }
 
+static virtnet_xdp_buff_free(const void *r, const void *data)
+{
+	struct receive_queue *rq = r;
+	struct page *page = data;
+
+	give_pages(rq, page);
+}
+
 static u32 do_xdp_prog(struct virtnet_info *vi,
 		       struct receive_queue *rq,
 		       struct bpf_prog *xdp_prog,
@@ -394,6 +402,10 @@ static u32 do_xdp_prog(struct virtnet_info *vi,
 
 	xdp.data = buf + hdr_padded_len;
 	xdp.data_end = xdp.data + (len - vi->hdr_len);
+	xdp.ring = rq;
+	xdp.private = page;
+	xdp.free = virtnet_xdp_buff_free;
+	xdp.netdev = vi->dev;
 
 	act = bpf_prog_run_xdp(xdp_prog, &xdp);
 	switch (act) {
@@ -406,6 +418,8 @@ static u32 do_xdp_prog(struct virtnet_info *vi,
 		xdp.data = buf + (vi->mergeable_rx_bufs ? 0 : 4);
 		virtnet_xdp_xmit(vi, rq, &vi->sq[qp], &xdp);
 		return XDP_TX;
+	case XDP_HOLD:
+		return XDP_HOLD;
 	default:
 		bpf_warn_invalid_xdp_action(act);
 	case XDP_ABORTED:
@@ -450,6 +464,9 @@ static struct sk_buff *receive_big(struct net_device *dev,
 			rcu_read_unlock();
 			goto xdp_xmit;
 		case XDP_DROP:
+		case XDP_HOLD:
+			rcu_read_unlock();
+			return NULL;
 		default:
 			goto err_xdp;
 		}
