@@ -437,7 +437,7 @@ struct xdp_buff {
 	void *data_end;
 	void *ring;
 	void *private;
-	struct net_device *netdev;
+	struct net_device *dev;
 	void (*free) (const void *ring, const void *private);
 };
 

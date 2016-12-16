@@ -16,6 +16,7 @@
 #include <linux/idr.h>
 #include <linux/fs.h>
 #include <linux/uio.h>
+#include <linux/filter.h>
 
 #include <net/net_namespace.h>
 #include <net/rtnetlink.h>
@@ -45,6 +46,7 @@ struct macvtap_queue {
 	bool enabled;
 	struct list_head next;
 	struct skb_array skb_array;
+	struct ptr_ring xdp_array;
 };
 
 #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
@@ -352,6 +354,34 @@ static void macvtap_del_queues(struct net_device *dev)
 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
 }
 
+static macvtap_xdp_rx(const struct sk_buff *skb, const struct bpf_insn *filter)
+{
+	struct xdp_buff *buff;
+	struct net_device *dev = ((struct xdp_buff *)skb)->dev;
+	struct macvlan_dev *vlan;
+	struct macvtap_queue *q;
+
+	vlan = macvtap_get_vlan_rcu(dev);
+	if (!vlan)
+		return XDP_PASS;
+
+	buff = kmemdup(skb, sizeof(*buff), GFP_ATOMIC);
+	if (!buff)
+		return XDP_DROP;
+
+	q = rcu_dereference(vlan->taps[0]);
+	if (!ptr_ring_produce(&q->xdp_array, buff))
+		goto drop;
+
+	wake_up_interruptible_poll(sk_sleep(&q->sk), POLLIN |
+				   POLLRDNORM | POLLRDBAND);
+
+	return XDP_HOLD;
+drop:
+	kfree(buff);
+	return XDP_DROP;
+}
+
 static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
 {
 	struct sk_buff *skb = *pskb;
@@ -536,6 +566,11 @@ static void macvtap_sock_destruct(struct sock *sk)
 	skb_array_cleanup(&q->skb_array);
 }
 
+static void macvtap_xdp_free(void *ptr)
+{
+	kfree(ptr);
+}
+
 static int macvtap_open(struct inode *inode, struct file *file)
 {
 	struct net *net = current->nsproxy->net_ns;
@@ -580,6 +615,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
 		goto err_array;
 
+	if (ptr_ring_init(&q->xdp_array, dev->tx_queue_len, GFP_KERNEL))
+		goto err_xdp;
+
 	err = macvtap_set_queue(dev, file, q);
 	if (err)
 		goto err_queue;
@@ -590,6 +628,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
 	return err;
 
 err_queue:
+	ptr_ring_cleanup(&q->xdp_array, macvtap_xdp_free);
+err_xdp:
 	skb_array_cleanup(&q->skb_array);
 err_array:
 	sock_put(&q->sk);
