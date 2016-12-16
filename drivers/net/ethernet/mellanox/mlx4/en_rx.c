@@ -910,6 +910,7 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 			xdp.data = ring;
 			xdp.private = private;
 			xdp.free = mlx4_en_xdp_buff_free;
+			xdp.netdev = dev;
 
 			act = bpf_prog_run_xdp(xdp_prog, &xdp);
 			switch (act) {
