@@ -1,5 +1,5 @@
 Bottom: 5457ff3d97cd834b2c10a828bc3ea68455bbff96
-Top:    f1461e27a310bcba5bc27c10f61f02e952bdffd2
+Top:    5443b430419fc07b750ee98358ff646fef9e996a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:27:59 +0800
 
@@ -41,19 +41,24 @@ index 6562f78..9fea7e4 100644
  			act = bpf_prog_run_xdp(xdp_prog, &xdp);
  			switch (act) {
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 1f09c52..13fdcd6 100644
+index 1f09c52..6c50b5a 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
-@@ -435,8 +435,24 @@ struct bpf_skb_data_end {
+@@ -435,8 +435,29 @@ struct bpf_skb_data_end {
  struct xdp_buff {
  	void *data;
  	void *data_end;
 +	void *ring;
 +	void *private;
 +	struct net_device *netdev;
-+	void (*free) (const void *ring, const void *private);
++	int (*free) (const void *ring, const void *private);
  };
  
++static inline int xdp_buff_free(struct xdp_buff *xdp_buff)
++{
++	return xdp_buff->free(xdp_buff->ring, xdp_buff->private);
++}
++
 +static inline void xdp_buff_init(struct xdp_buff *xdp_buff,
 +                                 void *data, void *data_end,
 +                                 void *ring, void *private,
