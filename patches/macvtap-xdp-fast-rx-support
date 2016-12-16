@@ -1,5 +1,5 @@
 Bottom: 434d1f79bbb4588b345db38c99d911a6ede96936
-Top:    6ab7a1e5722e73ab9c284af69ca64c3a25b2cd33
+Top:    1a06d70a6c6b7c501a7e22e12b5caad99e75a2e3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 5da9861..e61cadc 100644
+index 5da9861..24789df 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
 @@ -16,6 +16,7 @@
@@ -30,11 +30,12 @@ index 5da9861..e61cadc 100644
  };
  
  #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
-@@ -352,6 +354,34 @@ static void macvtap_del_queues(struct net_device *dev)
+@@ -352,6 +354,35 @@ static void macvtap_del_queues(struct net_device *dev)
  	vlan->numvtaps = MAX_MACVTAP_QUEUES;
  }
  
-+static macvtap_xdp_rx(const struct sk_buff *skb, const struct bpf_insn *filter)
++static int macvtap_xdp_rx(const struct sk_buff *skb,
++			  const struct bpf_insn *filter)
 +{
 +	struct xdp_buff *buff;
 +	struct net_device *dev = ((struct xdp_buff *)skb)->dev;
@@ -65,7 +66,7 @@ index 5da9861..e61cadc 100644
  static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
  {
  	struct sk_buff *skb = *pskb;
-@@ -536,6 +566,11 @@ static void macvtap_sock_destruct(struct sock *sk)
+@@ -536,6 +567,11 @@ static void macvtap_sock_destruct(struct sock *sk)
  	skb_array_cleanup(&q->skb_array);
  }
  
@@ -77,7 +78,7 @@ index 5da9861..e61cadc 100644
  static int macvtap_open(struct inode *inode, struct file *file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -580,6 +615,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -580,6 +616,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
  		goto err_array;
  
@@ -87,7 +88,7 @@ index 5da9861..e61cadc 100644
  	err = macvtap_set_queue(dev, file, q);
  	if (err)
  		goto err_queue;
-@@ -590,6 +628,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -590,6 +629,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	return err;
  
  err_queue:
@@ -96,7 +97,7 @@ index 5da9861..e61cadc 100644
  	skb_array_cleanup(&q->skb_array);
  err_array:
  	sock_put(&q->sk);
-@@ -805,6 +845,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -805,6 +846,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
  }
  
@@ -137,6 +138,69 @@ index 5da9861..e61cadc 100644
  /* Put packet to the user space buffer */
  static ssize_t macvtap_put_user(struct macvtap_queue *q,
  				const struct sk_buff *skb,
+@@ -905,6 +980,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
+ 	return ret;
+ }
+ 
++static ssize_t macvtap_do_read_xdp(struct macvtap_queue *q,
++				   struct iov_iter *to,
++				   int noblock)
++{
++	DEFINE_WAIT(wait);
++	struct xdp_buff *xdp;
++	ssize_t ret = 0;
++
++	if (!iov_iter_count(to))
++		return 0;
++
++	while (1) {
++		if (!noblock)
++			prepare_to_wait(sk_sleep(&q->sk), &wait,
++					TASK_INTERRUPTIBLE);
++
++		/* Read frames from the queue */
++		xdp = ptr_ring_consume(&q->xdp_array);
++		if (xdp)
++			break;
++		if (noblock) {
++			ret = -EAGAIN;
++			break;
++		}
++		if (signal_pending(current)) {
++			ret = -ERESTARTSYS;
++			break;
++		}
++		/* Nothing to read, let's sleep */
++		schedule();
++	}
++	if (!noblock)
++		finish_wait(sk_sleep(&q->sk), &wait);
++
++	if (xdp) {
++		ret = macvtap_put_user_xdp(q, xdp, to);
++		xdp_buff_free(xdp);
++		kfree(xdp);
++	}
++	return ret;
++}
++
+ static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ {
+ 	struct file *file = iocb->ki_filp;
+@@ -1194,7 +1311,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+ 	int ret;
+ 	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
+ 		return -EINVAL;
+-	ret = macvtap_do_read(q, &m->msg_iter, flags & MSG_DONTWAIT);
++	if (true)
++		ret = macvtap_do_read_xdp(q, &m->msg_iter,
++					  flags & MSG_DONTWAIT);
++	else
++		ret = macvtap_do_read(q, &m->msg_iter,
++				      flags & MSG_DONTWAIT);
+ 	if (ret > total_len) {
+ 		m->msg_flags |= MSG_TRUNC;
+ 		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/include/linux/filter.h b/include/linux/filter.h
 index 6c50b5a..9737eb5 100644
 --- a/include/linux/filter.h
