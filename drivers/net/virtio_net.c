@@ -379,6 +379,7 @@ static virtnet_xdp_buff_free(const void *r, const void *data)
 	struct receive_queue *rq = r;
 	struct page *page = data;
 
+	printk("free!\n");
 	give_pages(rq, page);
 }
 
@@ -463,10 +464,10 @@ static struct sk_buff *receive_big(struct net_device *dev,
 		case XDP_TX:
 			rcu_read_unlock();
 			goto xdp_xmit;
-		case XDP_DROP:
 		case XDP_HOLD:
 			rcu_read_unlock();
 			return NULL;
+		case XDP_DROP:
 		default:
 			goto err_xdp;
 		}
