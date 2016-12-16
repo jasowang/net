@@ -5,6 +5,8 @@ Date:   2016-12-16 15:38:21 +0800
 
 macvtap: XDP fast rx support
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
