@@ -439,7 +439,28 @@ struct xdp_buff {
 	void *data;
 	void *data_end;
 	void *data_hard_start;
+	void *ring;
+	void *private;
+	struct net_device *netdev;
+	int (*free) (const void *ring, const void *private);
 };
+
+static inline int xdp_buff_free(struct xdp_buff *xdp_buff)
+{
+	return xdp_buff->free(xdp_buff->ring, xdp_buff->private);
+}
+
+static inline void xdp_buff_init(struct xdp_buff *xdp_buff,
+                                 void *data, void *data_end,
+                                 void *ring, void *private,
+                                 void *free)
+{
+	xdp_buff->data = data;
+	xdp_buff->data_end = data_end;
+	xdp_buff->ring = ring;
+	xdp_buff->private = private;
+	xdp_buff->free = free;
+}
 
 /* compute the linear packet data range [data, data_end) which
  * will be accessed by cls_bpf, act_bpf and lwt programs
