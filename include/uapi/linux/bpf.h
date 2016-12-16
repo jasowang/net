@@ -595,6 +595,7 @@ enum xdp_action {
 	XDP_DROP,
 	XDP_PASS,
 	XDP_TX,
+	XDP_HOLD,
 };
 
 /* user accessible metadata for XDP packet hook
