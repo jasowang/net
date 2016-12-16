@@ -90,6 +90,17 @@ static struct macvlan_port *macvlan_port_get_rtnl(const struct net_device *dev)
 	return rtnl_dereference(dev->rx_handler_data);
 }
 
+struct macvlan_dev *macvlan_get_dev(const struct net_device *lowerdev)
+{
+	struct macvlan_port *port = macvlan_port_get_rcu(lowerdev);
+	struct macvlan_dev *dev;
+
+	dev =  list_first_or_null_rcu(&port->vlans,
+				struct macvlan_dev, list);
+	return dev;
+}
+EXPORT_SYMBOL_GPL(macvlan_get_dev);
+
 #define macvlan_port_exists(dev) (dev->priv_flags & IFF_MACVLAN_PORT)
 
 static struct macvlan_dev *macvlan_hash_lookup(const struct macvlan_port *port,
@@ -1134,6 +1145,8 @@ static int macvlan_port_create(struct net_device *dev)
 		kfree(port);
 	else
 		dev->priv_flags |= IFF_MACVLAN_PORT;
+
+	printk("port %p lowerdev %p\n", port, dev);
 	return err;
 }
 
@@ -1365,6 +1378,7 @@ int macvlan_common_newlink(struct net *src_net, struct net_device *dev,
 	if (err)
 		goto unregister_netdev;
 
+	printk("vlan %p add to port %p\n", vlan, port);
 	list_add_tail_rcu(&vlan->list, &port->vlans);
 	netif_stacked_transfer_operstate(lowerdev, dev);
 	linkwatch_fire_event(dev);
