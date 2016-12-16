@@ -354,7 +354,8 @@ static void macvtap_del_queues(struct net_device *dev)
 	vlan->numvtaps = MAX_MACVTAP_QUEUES;
 }
 
-static macvtap_xdp_rx(const struct sk_buff *skb, const struct bpf_insn *filter)
+static int macvtap_xdp_rx(const struct sk_buff *skb,
+			  const struct bpf_insn *filter)
 {
 	struct xdp_buff *buff;
 	struct net_device *dev = ((struct xdp_buff *)skb)->dev;
@@ -979,6 +980,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
 	return ret;
 }
 
+static ssize_t macvtap_do_read_xdp(struct macvtap_queue *q,
+				   struct iov_iter *to,
+				   int noblock)
+{
+	DEFINE_WAIT(wait);
+	struct xdp_buff *xdp;
+	ssize_t ret = 0;
+
+	if (!iov_iter_count(to))
+		return 0;
+
+	while (1) {
+		if (!noblock)
+			prepare_to_wait(sk_sleep(&q->sk), &wait,
+					TASK_INTERRUPTIBLE);
+
+		/* Read frames from the queue */
+		xdp = ptr_ring_consume(&q->xdp_array);
+		if (xdp)
+			break;
+		if (noblock) {
+			ret = -EAGAIN;
+			break;
+		}
+		if (signal_pending(current)) {
+			ret = -ERESTARTSYS;
+			break;
+		}
+		/* Nothing to read, let's sleep */
+		schedule();
+	}
+	if (!noblock)
+		finish_wait(sk_sleep(&q->sk), &wait);
+
+	if (xdp) {
+		ret = macvtap_put_user_xdp(q, xdp, to);
+		xdp_buff_free(xdp);
+		kfree(xdp);
+	}
+	return ret;
+}
+
 static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
 	struct file *file = iocb->ki_filp;
@@ -1268,7 +1311,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	int ret;
 	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
 		return -EINVAL;
-	ret = macvtap_do_read(q, &m->msg_iter, flags & MSG_DONTWAIT);
+	if (true)
+		ret = macvtap_do_read_xdp(q, &m->msg_iter,
+					  flags & MSG_DONTWAIT);
+	else
+		ret = macvtap_do_read(q, &m->msg_iter,
+				      flags & MSG_DONTWAIT);
 	if (ret > total_len) {
 		m->msg_flags |= MSG_TRUNC;
 		ret = flags & MSG_TRUNC ? ret : total_len;
