@@ -438,8 +438,13 @@ struct xdp_buff {
 	void *ring;
 	void *private;
 	struct net_device *netdev;
-	void (*free) (const void *ring, const void *private);
+	int (*free) (const void *ring, const void *private);
 };
+
+static inline int xdp_buff_free(struct xdp_buff *xdp_buff)
+{
+	return xdp_buff->free(xdp_buff->ring, xdp_buff->private);
+}
 
 static inline void xdp_buff_init(struct xdp_buff *xdp_buff,
                                  void *data, void *data_end,
