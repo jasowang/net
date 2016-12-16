@@ -783,6 +783,14 @@ static int check_csum(struct mlx4_cqe *cqe, struct sk_buff *skb, void *va,
 	return 0;
 }
 
+int mlx4_en_xdp_buff_free(const void *r, const void *data)
+{
+	struct mlx4_en_rx_ring *ring = r;
+	struct mlx4_en_rx_alloc *frags = data;
+
+	return mlx4_en_rx_recycle(ring, frags);
+}
+
 int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int budget)
 {
 	struct mlx4_en_priv *priv = netdev_priv(dev);
@@ -902,6 +910,10 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 			xdp.data = xdp.data_hard_start + frags[0].page_offset;
 			xdp.data_end = xdp.data + length;
 			orig_data = xdp.data;
+			xdp.data = ring;
+			xdp.private = private;
+			xdp.free = mlx4_en_xdp_buff_free;
+			xdp.netdev = dev;
 
 			act = bpf_prog_run_xdp(xdp_prog, &xdp);
 
