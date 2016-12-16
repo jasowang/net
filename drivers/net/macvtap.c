@@ -1324,11 +1324,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
 	return ret;
 }
 
+static int macvtap_xdp_peek_len(void *data)
+{
+	struct xdp_buff *buff = data;
+
+	return buff->data_end - buff->data;
+}
+
 static int macvtap_peek_len(struct socket *sock)
 {
 	struct macvtap_queue *q = container_of(sock, struct macvtap_queue,
 					       sock);
-	return skb_array_peek_len(&q->skb_array);
+//	return skb_array_peek_len(&q->skb_array);
+	return PTR_RING_PEEK_CALL(&q->xdp_array, macvtap_xdp_peek_len);
 }
 
 /* Ops structure to mimic raw sockets with tun */
