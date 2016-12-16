@@ -1,5 +1,5 @@
 Bottom: 434d1f79bbb4588b345db38c99d911a6ede96936
-Top:    b12b20bfc6b0a7ec8cec4cc6cf3a9083fb2f282e
+Top:    a3c7148a6ab0cda467cdfaa82c317ac332eca828
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 5da9861..e85abad 100644
+index 5da9861..8856c1a 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
-@@ -16,6 +16,7 @@
+@@ -16,12 +16,15 @@
  #include <linux/idr.h>
  #include <linux/fs.h>
  #include <linux/uio.h>
@@ -22,7 +22,15 @@ index 5da9861..e85abad 100644
  
  #include <net/net_namespace.h>
  #include <net/rtnetlink.h>
-@@ -45,6 +46,7 @@ struct macvtap_queue {
+ #include <net/sock.h>
+ #include <linux/virtio_net.h>
+ #include <linux/skb_array.h>
++#include <linux/netdevice.h>
++#include <linux/bpf.h>
+ 
+ /*
+  * A macvtap queue is the central object of this driver, it connects
+@@ -45,6 +48,7 @@ struct macvtap_queue {
  	bool enabled;
  	struct list_head next;
  	struct skb_array skb_array;
@@ -30,12 +38,12 @@ index 5da9861..e85abad 100644
  };
  
  #define MACVTAP_FEATURES (IFF_VNET_HDR | IFF_MULTI_QUEUE)
-@@ -352,6 +354,35 @@ static void macvtap_del_queues(struct net_device *dev)
+@@ -352,6 +356,35 @@ static void macvtap_del_queues(struct net_device *dev)
  	vlan->numvtaps = MAX_MACVTAP_QUEUES;
  }
  
-+static int macvtap_xdp_rx(const struct sk_buff *skb,
-+			  const struct bpf_insn *filter)
++static unsigned int macvtap_xdp_rx(const struct sk_buff *skb,
++				   const struct bpf_insn *filter)
 +{
 +	struct xdp_buff *buff;
 +	struct net_device *dev = ((struct xdp_buff *)skb)->dev;
@@ -66,7 +74,50 @@ index 5da9861..e85abad 100644
  static rx_handler_result_t macvtap_handle_frame(struct sk_buff **pskb)
  {
  	struct sk_buff *skb = *pskb;
-@@ -536,6 +567,11 @@ static void macvtap_sock_destruct(struct sock *sk)
+@@ -475,6 +508,10 @@ static int macvtap_newlink(struct net *src_net,
+ 			   struct nlattr *data[])
+ {
+ 	struct macvlan_dev *vlan = netdev_priv(dev);
++	struct net_device *lowerdev = vlan->lowerdev;
++	const struct net_device_ops *ops = lowerdev->netdev_ops;
++	struct netdev_xdp xdp = {};
++	struct bpf_prog *prog;
+ 	int err;
+ 
+ 	INIT_LIST_HEAD(&vlan->queue_list);
+@@ -484,9 +521,30 @@ static int macvtap_newlink(struct net *src_net,
+ 	 */
+ 	vlan->tap_features = TUN_OFFLOADS;
+ 
++	if (!ops->ndo_xdp)
++		return -EOPNOTSUPP;
++
++	prog = bpf_prog_alloc(0, GFP_KERNEL);
++	if (!prog)
++		return -ENOMEM;
++
++#if 0
+ 	err = netdev_rx_handler_register(dev, macvtap_handle_frame, vlan);
+-	if (err)
++	if (err) {
+ 		return err;
++	}
++#endif
++
++	atomic_set(&prog->aux->refcnt, 1);
++	prog->bpf_func = macvtap_xdp_rx;
++
++	xdp.command = XDP_SETUP_PROG;
++	xdp.prog = prog;
++	err = ops->ndo_xdp(lowerdev, &xdp);
++	if (err < 0) {
++		bpf_prog_put(prog);
++		return -EFAULT;
++	}
+ 
+ 	/* Don't put anything that may fail after macvlan_common_newlink
+ 	 * because we can't undo what it does.
+@@ -536,6 +594,11 @@ static void macvtap_sock_destruct(struct sock *sk)
  	skb_array_cleanup(&q->skb_array);
  }
  
@@ -78,7 +129,7 @@ index 5da9861..e85abad 100644
  static int macvtap_open(struct inode *inode, struct file *file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -580,6 +616,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -580,6 +643,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
  		goto err_array;
  
@@ -88,7 +139,7 @@ index 5da9861..e85abad 100644
  	err = macvtap_set_queue(dev, file, q);
  	if (err)
  		goto err_queue;
-@@ -590,6 +629,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -590,6 +656,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	return err;
  
  err_queue:
@@ -97,7 +148,7 @@ index 5da9861..e85abad 100644
  	skb_array_cleanup(&q->skb_array);
  err_array:
  	sock_put(&q->sk);
-@@ -805,6 +846,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -805,6 +873,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
  }
  
@@ -138,7 +189,7 @@ index 5da9861..e85abad 100644
  /* Put packet to the user space buffer */
  static ssize_t macvtap_put_user(struct macvtap_queue *q,
  				const struct sk_buff *skb,
-@@ -905,6 +980,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
+@@ -905,6 +1007,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
  	return ret;
  }
  
@@ -187,7 +238,7 @@ index 5da9861..e85abad 100644
  static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
  {
  	struct file *file = iocb->ki_filp;
-@@ -1194,7 +1311,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1194,7 +1338,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	int ret;
  	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
  		return -EINVAL;
@@ -201,7 +252,7 @@ index 5da9861..e85abad 100644
  	if (ret > total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -1202,11 +1324,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1202,11 +1351,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	return ret;
  }
  
