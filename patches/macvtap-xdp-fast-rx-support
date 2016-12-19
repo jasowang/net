@@ -1,4 +1,4 @@
-Bottom: d47469e8b4e9a84bfd0d82d63e7660165b1281d2
+Bottom: 53f305b828468a3b49029a319a2e6597f577333e
 Top:    edbc0d1a4d3138188412b67d6a01e749554bfa0c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
@@ -351,7 +351,7 @@ index 5c26653..90e3e3e 100644
  
  /* Ops structure to mimic raw sockets with tun */
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 5142e9c..9807da7 100644
+index 5ca64bb..9807da7 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -379,6 +379,7 @@ static virtnet_xdp_buff_free(const void *r, const void *data)
@@ -362,18 +362,6 @@ index 5142e9c..9807da7 100644
  	give_pages(rq, page);
  }
  
-@@ -463,10 +464,10 @@ static struct sk_buff *receive_big(struct net_device *dev,
- 		case XDP_TX:
- 			rcu_read_unlock();
- 			goto xdp_xmit;
--		case XDP_DROP:
- 		case XDP_HOLD:
- 			rcu_read_unlock();
- 			return NULL;
-+		case XDP_DROP:
- 		default:
- 			goto err_xdp;
- 		}
 diff --git a/include/linux/if_macvlan.h b/include/linux/if_macvlan.h
 index a4ccc31..7ad884f 100644
 --- a/include/linux/if_macvlan.h
