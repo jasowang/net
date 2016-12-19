@@ -1,0 +1,44 @@
+Bottom: 2e66db91fcdcb77536a5051ca1f5d12078e8dd0d
+Top:    46dee114e64a93696b08658683246528d2258894
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-19 16:43:01 +0800
+
+Refresh of macvtap-xdp-fast-rx-support
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index 1c9a72b..9277d7c 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -508,8 +508,8 @@ static int macvtap_newlink(struct net *src_net,
+ 			   struct nlattr *data[])
+ {
+ 	struct macvlan_dev *vlan = netdev_priv(dev);
+-	struct net_device *lowerdev = vlan->lowerdev;
+-	const struct net_device_ops *ops = lowerdev->netdev_ops;
++	struct net_device *lowerdev;
++	const struct net_device_ops *ops;
+ 	struct netdev_xdp xdp = {};
+ 	struct bpf_prog *prog;
+ 	int err;
+@@ -521,10 +521,19 @@ static int macvtap_newlink(struct net *src_net,
+ 	 */
+ 	vlan->tap_features = TUN_OFFLOADS;
+ 
++	if (!tb[IFLA_LINK])
++		return -EINVAL;
++
++	lowerdev = __dev_get_by_index(src_net, nla_get_u32(tb[IFLA_LINK]));
++	if (lowerdev == NULL)
++		return -ENODEV;
++
++	ops = lowerdev->netdev_ops;
++
+ 	if (!ops->ndo_xdp)
+ 		return -EOPNOTSUPP;
+ 
+-	prog = bpf_prog_alloc(0, GFP_KERNEL);
++	prog = bpf_prog_alloc(PAGE_SIZE, GFP_KERNEL);
+ 	if (!prog)
+ 		return -ENOMEM;
