@@ -405,7 +405,7 @@ static u32 do_xdp_prog(struct virtnet_info *vi,
 	xdp.ring = rq;
 	xdp.private = page;
 	xdp.free = virtnet_xdp_buff_free;
-	xdp.netdev = vi->dev;
+	xdp.dev = vi->dev;
 
 	act = bpf_prog_run_xdp(xdp_prog, &xdp);
 	switch (act) {
