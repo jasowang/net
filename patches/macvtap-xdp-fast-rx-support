@@ -1,5 +1,5 @@
 Bottom: d47469e8b4e9a84bfd0d82d63e7660165b1281d2
-Top:    2d54396df390d54ac78fea02e3e36e47c758ce03
+Top:    edbc0d1a4d3138188412b67d6a01e749554bfa0c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -52,7 +52,7 @@ index 20b3fdf2..f34c99f 100644
  	netif_stacked_transfer_operstate(lowerdev, dev);
  	linkwatch_fire_event(dev);
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 5c26653..fd46005 100644
+index 5c26653..90e3e3e 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
 @@ -16,12 +16,15 @@
@@ -96,6 +96,7 @@ index 5c26653..fd46005 100644
 +				   const struct bpf_insn *filter)
 +{
 +	struct xdp_buff *buff = ctx;
++	struct xdp_buff *macvtap_buff;
 +	struct net_device *dev = buff->dev;
 +	struct macvlan_dev *vlan;
 +	struct macvtap_queue *q;
@@ -106,8 +107,8 @@ index 5c26653..fd46005 100644
 +		return XDP_PASS;
 +
 +	printk("vlan %p\n", vlan);
-+	buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
-+	if (!buff)
++	macvtap_buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
++	if (!macvtap_buff)
 +		return XDP_DROP;
 +
 +	q = rcu_dereference(vlan->taps[0]);
@@ -116,8 +117,7 @@ index 5c26653..fd46005 100644
 +		return XDP_DROP;
 +	}
 +	printk("q %p XDP array %p\n", q, &q->xdp_array);
-+	if (ptr_ring_produce(&q->xdp_array, buff)) {
-+		kfree(buff);
++	if (ptr_ring_produce(&q->xdp_array, macvtap_buff)) {
 +		printk("full!\n");
 +		goto drop;
 +	}
@@ -127,7 +127,7 @@ index 5c26653..fd46005 100644
 +
 +	return XDP_HOLD;
 +drop:
-+	kfree(buff);
++	kfree(macvtap_buff);
 +	return XDP_DROP;
 +}
 +
@@ -351,7 +351,7 @@ index 5c26653..fd46005 100644
  
  /* Ops structure to mimic raw sockets with tun */
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 5142e9c..d03b9e8 100644
+index 5142e9c..9807da7 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -379,6 +379,7 @@ static virtnet_xdp_buff_free(const void *r, const void *data)
@@ -362,6 +362,18 @@ index 5142e9c..d03b9e8 100644
  	give_pages(rq, page);
  }
  
+@@ -463,10 +464,10 @@ static struct sk_buff *receive_big(struct net_device *dev,
+ 		case XDP_TX:
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+-		case XDP_DROP:
+ 		case XDP_HOLD:
+ 			rcu_read_unlock();
+ 			return NULL;
++		case XDP_DROP:
+ 		default:
+ 			goto err_xdp;
+ 		}
 diff --git a/include/linux/if_macvlan.h b/include/linux/if_macvlan.h
 index a4ccc31..7ad884f 100644
 --- a/include/linux/if_macvlan.h
