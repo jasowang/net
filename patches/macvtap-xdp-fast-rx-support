@@ -1,5 +1,5 @@
-Bottom: de1ef0f754e989dd512841e836fa2b04d5a63514
-Top:    c0a9029fe163f458ca5209f0b69413ae7a7516f3
+Bottom: 3b60697161dd418fcc2f168023909e87d64b9dc9
+Top:    2e66db91fcdcb77536a5051ca1f5d12078e8dd0d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 52a9d81..9a5ed73 100644
+index 5c26653..1c9a72b 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
 @@ -16,12 +16,15 @@
@@ -148,7 +148,7 @@ index 52a9d81..9a5ed73 100644
  	skb_array_cleanup(&q->skb_array);
  err_array:
  	sock_put(&q->sk);
-@@ -810,6 +878,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -808,6 +876,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
  }
  
@@ -189,7 +189,7 @@ index 52a9d81..9a5ed73 100644
  /* Put packet to the user space buffer */
  static ssize_t macvtap_put_user(struct macvtap_queue *q,
  				const struct sk_buff *skb,
-@@ -910,6 +1012,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
+@@ -908,6 +1010,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
  	return ret;
  }
  
@@ -238,7 +238,7 @@ index 52a9d81..9a5ed73 100644
  static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
  {
  	struct file *file = iocb->ki_filp;
-@@ -1199,7 +1343,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1197,7 +1341,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	int ret;
  	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
  		return -EINVAL;
@@ -252,7 +252,7 @@ index 52a9d81..9a5ed73 100644
  	if (ret > total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -1207,11 +1356,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1205,11 +1354,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	return ret;
  }
  
@@ -274,10 +274,10 @@ index 52a9d81..9a5ed73 100644
  
  /* Ops structure to mimic raw sockets with tun */
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 573d35d..d9d5c0f 100644
+index 3ac76dd..74e504a 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
-@@ -444,7 +444,7 @@ struct xdp_buff {
+@@ -441,7 +441,7 @@ struct xdp_buff {
  	void *data_hard_start;
  	void *ring;
  	void *private;
