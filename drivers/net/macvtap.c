@@ -212,6 +212,8 @@ static int macvtap_set_queue(struct net_device *dev, struct file *file,
 	rcu_assign_pointer(vlan->taps[vlan->numvtaps], q);
 	sock_hold(&q->sk);
 
+	printk("vlan %p queue %d p %p\n", vlan, vlan->numvtaps, q);
+
 	q->file = file;
 	q->queue_index = vlan->numvtaps;
 	q->enabled = true;
@@ -359,22 +361,32 @@ static void macvtap_del_queues(struct net_device *dev)
 static unsigned int macvtap_xdp_rx(const void *ctx,
 				   const struct bpf_insn *filter)
 {
-	struct xdp_buff *buff;
-	struct net_device *dev = ((struct xdp_buff *)ctx)->dev;
+	struct xdp_buff *buff = ctx;
+	struct net_device *dev = buff->dev;
 	struct macvlan_dev *vlan;
 	struct macvtap_queue *q;
 
-	vlan = macvtap_get_vlan_rcu(dev);
+	printk("ctx %p dev %p\n", ctx, dev);
+	vlan = macvlan_get_dev(dev);
 	if (!vlan)
 		return XDP_PASS;
 
+	printk("vlan %p\n", vlan);
 	buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
 	if (!buff)
 		return XDP_DROP;
 
 	q = rcu_dereference(vlan->taps[0]);
-	if (!ptr_ring_produce(&q->xdp_array, buff))
+	if (!q) {
+		printk("noqueue! vlan %p\n", vlan);
+		return XDP_DROP;
+	}
+	printk("q %p XDP array %p\n", q, &q->xdp_array);
+	if (ptr_ring_produce(&q->xdp_array, buff)) {
+		kfree(buff);
+		printk("full!\n");
 		goto drop;
+	}
 
 	wake_up_interruptible_poll(sk_sleep(&q->sk), POLLIN |
 				   POLLRDNORM | POLLRDBAND);
@@ -1067,7 +1079,7 @@ static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
 	struct macvtap_queue *q = file->private_data;
 	ssize_t len = iov_iter_count(to), ret;
 
-	ret = macvtap_do_read(q, to, file->f_flags & O_NONBLOCK);
+	ret = macvtap_do_read_xdp(q, to, file->f_flags & O_NONBLOCK);
 	ret = min_t(ssize_t, ret, len);
 	if (ret > 0)
 		iocb->ki_pos = ret;
