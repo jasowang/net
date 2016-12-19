@@ -1,10 +1,11 @@
 Version: 1
-Previous: c548f31684ff2bb268ccab649eaaed3313c85c41
-Head: af7d71ff0606b0779c0383d5fcff9e326b90c81d
+Previous: 71a50ec37dffde9b4b98ea35b4a9c86f52a3c89e
+Head: c16fc62eddf396f9e269d824349872cdb590d0e1
 Applied:
   xdp-introduce-xdp-free-func: 151dd3a5b3b105fc372055b466d20c4f5bfd65ac
   xdp-introduce-xdp_hold: 3f7ec8816ec8acf1422e1f851f3a5b571da947f0
   macvtap-xdp-fast-rx-support: af7d71ff0606b0779c0383d5fcff9e326b90c81d
+  refresh-temp: c16fc62eddf396f9e269d824349872cdb590d0e1
 Unapplied:
   vhost-better-detection-of-0: 6f32f02976969917500c1e2ab1713874f079c600
   vhost_net-tx-batching-0: 54281f092384fed275ae4c644345596becc36b7a

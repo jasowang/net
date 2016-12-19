@@ -1,0 +1,67 @@
+Bottom: 2d54396df390d54ac78fea02e3e36e47c758ce03
+Top:    edbc0d1a4d3138188412b67d6a01e749554bfa0c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-19 21:04:44 +0800
+
+Refresh of macvtap-xdp-fast-rx-support
+
+---
+
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index fd46005..90e3e3e 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -362,6 +362,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
+ 				   const struct bpf_insn *filter)
+ {
+ 	struct xdp_buff *buff = ctx;
++	struct xdp_buff *macvtap_buff;
+ 	struct net_device *dev = buff->dev;
+ 	struct macvlan_dev *vlan;
+ 	struct macvtap_queue *q;
+@@ -372,8 +373,8 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
+ 		return XDP_PASS;
+ 
+ 	printk("vlan %p\n", vlan);
+-	buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
+-	if (!buff)
++	macvtap_buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
++	if (!macvtap_buff)
+ 		return XDP_DROP;
+ 
+ 	q = rcu_dereference(vlan->taps[0]);
+@@ -382,8 +383,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
+ 		return XDP_DROP;
+ 	}
+ 	printk("q %p XDP array %p\n", q, &q->xdp_array);
+-	if (ptr_ring_produce(&q->xdp_array, buff)) {
+-		kfree(buff);
++	if (ptr_ring_produce(&q->xdp_array, macvtap_buff)) {
+ 		printk("full!\n");
+ 		goto drop;
+ 	}
+@@ -393,7 +393,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
+ 
+ 	return XDP_HOLD;
+ drop:
+-	kfree(buff);
++	kfree(macvtap_buff);
+ 	return XDP_DROP;
+ }
+ 
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index d03b9e8..9807da7 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -464,10 +464,10 @@ static struct sk_buff *receive_big(struct net_device *dev,
+ 		case XDP_TX:
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+-		case XDP_DROP:
+ 		case XDP_HOLD:
+ 			rcu_read_unlock();
+ 			return NULL;
++		case XDP_DROP:
+ 		default:
+ 			goto err_xdp;
+ 		}
