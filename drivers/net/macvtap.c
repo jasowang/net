@@ -362,6 +362,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
 				   const struct bpf_insn *filter)
 {
 	struct xdp_buff *buff = ctx;
+	struct xdp_buff *macvtap_buff;
 	struct net_device *dev = buff->dev;
 	struct macvlan_dev *vlan;
 	struct macvtap_queue *q;
@@ -372,8 +373,8 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
 		return XDP_PASS;
 
 	printk("vlan %p\n", vlan);
-	buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
-	if (!buff)
+	macvtap_buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
+	if (!macvtap_buff)
 		return XDP_DROP;
 
 	q = rcu_dereference(vlan->taps[0]);
@@ -382,8 +383,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
 		return XDP_DROP;
 	}
 	printk("q %p XDP array %p\n", q, &q->xdp_array);
-	if (ptr_ring_produce(&q->xdp_array, buff)) {
-		kfree(buff);
+	if (ptr_ring_produce(&q->xdp_array, macvtap_buff)) {
 		printk("full!\n");
 		goto drop;
 	}
@@ -393,7 +393,7 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
 
 	return XDP_HOLD;
 drop:
-	kfree(buff);
+	kfree(macvtap_buff);
 	return XDP_DROP;
 }
 
