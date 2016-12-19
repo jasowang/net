@@ -1,5 +1,5 @@
 Bottom: 2597e576f584e2171b6b31f34421d2ce94fb49cc
-Top:    d47469e8b4e9a84bfd0d82d63e7660165b1281d2
+Top:    53f305b828468a3b49029a319a2e6597f577333e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:29:34 +0800
 
@@ -22,7 +22,7 @@ index 2264da0..c413871 100644
  				if (likely(!mlx4_en_xmit_frame(ring, frags, dev,
  							length, cq->ring,
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 08327e0..5142e9c 100644
+index 08327e0..5ca64bb 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -374,6 +374,14 @@ static void virtnet_xdp_xmit(struct virtnet_info *vi,
@@ -60,16 +60,16 @@ index 08327e0..5142e9c 100644
  	default:
  		bpf_warn_invalid_xdp_action(act);
  	case XDP_ABORTED:
-@@ -450,6 +464,9 @@ static struct sk_buff *receive_big(struct net_device *dev,
+@@ -449,6 +463,9 @@ static struct sk_buff *receive_big(struct net_device *dev,
+ 		case XDP_TX:
  			rcu_read_unlock();
  			goto xdp_xmit;
- 		case XDP_DROP:
 +		case XDP_HOLD:
 +			rcu_read_unlock();
 +			return NULL;
+ 		case XDP_DROP:
  		default:
  			goto err_xdp;
- 		}
 diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
 index 0eb0e87..30d5238 100644
 --- a/include/uapi/linux/bpf.h
