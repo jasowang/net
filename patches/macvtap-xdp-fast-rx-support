@@ -1,5 +1,5 @@
 Bottom: 3b60697161dd418fcc2f168023909e87d64b9dc9
-Top:    2e66db91fcdcb77536a5051ca1f5d12078e8dd0d
+Top:    46dee114e64a93696b08658683246528d2258894
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 5c26653..1c9a72b 100644
+index 5c26653..9277d7c 100644
 --- a/drivers/net/macvtap.c
 +++ b/drivers/net/macvtap.c
 @@ -16,12 +16,15 @@
@@ -78,21 +78,30 @@ index 5c26653..1c9a72b 100644
  			   struct nlattr *data[])
  {
  	struct macvlan_dev *vlan = netdev_priv(dev);
-+	struct net_device *lowerdev = vlan->lowerdev;
-+	const struct net_device_ops *ops = lowerdev->netdev_ops;
++	struct net_device *lowerdev;
++	const struct net_device_ops *ops;
 +	struct netdev_xdp xdp = {};
 +	struct bpf_prog *prog;
  	int err;
  
  	INIT_LIST_HEAD(&vlan->queue_list);
-@@ -484,9 +521,30 @@ static int macvtap_newlink(struct net *src_net,
+@@ -484,9 +521,39 @@ static int macvtap_newlink(struct net *src_net,
  	 */
  	vlan->tap_features = TUN_OFFLOADS;
  
++	if (!tb[IFLA_LINK])
++		return -EINVAL;
++
++	lowerdev = __dev_get_by_index(src_net, nla_get_u32(tb[IFLA_LINK]));
++	if (lowerdev == NULL)
++		return -ENODEV;
++
++	ops = lowerdev->netdev_ops;
++
 +	if (!ops->ndo_xdp)
 +		return -EOPNOTSUPP;
 +
-+	prog = bpf_prog_alloc(0, GFP_KERNEL);
++	prog = bpf_prog_alloc(PAGE_SIZE, GFP_KERNEL);
 +	if (!prog)
 +		return -ENOMEM;
 +
@@ -117,7 +126,7 @@ index 5c26653..1c9a72b 100644
  
  	/* Don't put anything that may fail after macvlan_common_newlink
  	 * because we can't undo what it does.
-@@ -542,6 +600,11 @@ static void macvtap_sock_destruct(struct sock *sk)
+@@ -542,6 +609,11 @@ static void macvtap_sock_destruct(struct sock *sk)
  	skb_array_cleanup(&q->skb_array);
  }
  
@@ -129,7 +138,7 @@ index 5c26653..1c9a72b 100644
  static int macvtap_open(struct inode *inode, struct file *file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -586,6 +649,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -586,6 +658,9 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	if (skb_array_init(&q->skb_array, dev->tx_queue_len, GFP_KERNEL))
  		goto err_array;
  
@@ -139,7 +148,7 @@ index 5c26653..1c9a72b 100644
  	err = macvtap_set_queue(dev, file, q);
  	if (err)
  		goto err_queue;
-@@ -596,6 +662,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
+@@ -596,6 +671,8 @@ static int macvtap_open(struct inode *inode, struct file *file)
  	return err;
  
  err_queue:
@@ -148,7 +157,7 @@ index 5c26653..1c9a72b 100644
  	skb_array_cleanup(&q->skb_array);
  err_array:
  	sock_put(&q->sk);
-@@ -808,6 +876,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -808,6 +885,40 @@ static ssize_t macvtap_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return macvtap_get_user(q, NULL, from, file->f_flags & O_NONBLOCK);
  }
  
@@ -189,7 +198,7 @@ index 5c26653..1c9a72b 100644
  /* Put packet to the user space buffer */
  static ssize_t macvtap_put_user(struct macvtap_queue *q,
  				const struct sk_buff *skb,
-@@ -908,6 +1010,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
+@@ -908,6 +1019,48 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
  	return ret;
  }
  
@@ -238,7 +247,7 @@ index 5c26653..1c9a72b 100644
  static ssize_t macvtap_read_iter(struct kiocb *iocb, struct iov_iter *to)
  {
  	struct file *file = iocb->ki_filp;
-@@ -1197,7 +1341,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1197,7 +1350,12 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	int ret;
  	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC))
  		return -EINVAL;
@@ -252,7 +261,7 @@ index 5c26653..1c9a72b 100644
  	if (ret > total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -1205,11 +1354,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
+@@ -1205,11 +1363,19 @@ static int macvtap_recvmsg(struct socket *sock, struct msghdr *m,
  	return ret;
  }
  
