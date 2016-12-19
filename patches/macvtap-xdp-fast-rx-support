@@ -1,5 +1,5 @@
-Bottom: 7a52d19d54612f5a357239f8b93a7d47bf76751e
-Top:    aae786e313ee4f7e7b02eb27b1abb8dd03863c33
+Bottom: d47469e8b4e9a84bfd0d82d63e7660165b1281d2
+Top:    6e3064ca3e35603d1c5a1a4165d4c6623b032a23
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:38:21 +0800
 
@@ -282,15 +282,3 @@ index 5c26653..9277d7c 100644
  }
  
  /* Ops structure to mimic raw sockets with tun */
-diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 3ac76dd..74e504a 100644
---- a/include/linux/filter.h
-+++ b/include/linux/filter.h
-@@ -441,7 +441,7 @@ struct xdp_buff {
- 	void *data_hard_start;
- 	void *ring;
- 	void *private;
--	struct net_device *netdev;
-+	struct net_device *dev;
- 	int (*free) (const void *ring, const void *private);
- };
