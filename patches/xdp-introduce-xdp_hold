@@ -1,0 +1,35 @@
+Bottom: 1649f7bf1653d5affa26c821335e76c1b2aa4e8d
+Top:    de1ef0f754e989dd512841e836fa2b04d5a63514
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-16 15:29:34 +0800
+
+XDP: introduce XDP_HOLD
+
+
+---
+
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+index 2264da0..c413871 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+@@ -926,6 +926,8 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
+ 			switch (act) {
+ 			case XDP_PASS:
+ 				break;
++			case XDP_HOLD:
++				goto next;
+ 			case XDP_TX:
+ 				if (likely(!mlx4_en_xmit_frame(ring, frags, dev,
+ 							length, cq->ring,
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 0eb0e87..30d5238 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -595,6 +595,7 @@ enum xdp_action {
+ 	XDP_DROP,
+ 	XDP_PASS,
+ 	XDP_TX,
++	XDP_HOLD,
+ };
+ 
+ /* user accessible metadata for XDP packet hook
