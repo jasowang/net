@@ -1,5 +1,5 @@
 Bottom: 7cbc22b9a89fe41103e6a61a52b7f9c71ef5ba43
-Top:    7ad3499de95de793768f2232b79f7e5f84c4da3d
+Top:    2597e576f584e2171b6b31f34421d2ce94fb49cc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-16 15:27:59 +0800
 
@@ -41,7 +41,7 @@ index 3c37e216b..2264da0 100644
  			act = bpf_prog_run_xdp(xdp_prog, &xdp);
  
 diff --git a/include/linux/filter.h b/include/linux/filter.h
-index 7023142..3ac76dd 100644
+index 7023142..74e504a 100644
 --- a/include/linux/filter.h
 +++ b/include/linux/filter.h
 @@ -439,8 +439,29 @@ struct xdp_buff {
@@ -50,7 +50,7 @@ index 7023142..3ac76dd 100644
  	void *data_hard_start;
 +	void *ring;
 +	void *private;
-+	struct net_device *netdev;
++	struct net_device *dev;
 +	int (*free) (const void *ring, const void *private);
  };
  
