@@ -927,7 +927,7 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 			case XDP_PASS:
 				break;
 			case XDP_HOLD:
-				goto next;
+				goto consumed;
 			case XDP_TX:
 				if (likely(!mlx4_en_xmit_frame(ring, frags, dev,
 							length, cq->ring,

@@ -1024,6 +1024,8 @@ static ssize_t macvtap_do_read(struct macvtap_queue *q,
 	return ret;
 }
 
+static int macvtap_peek_len(struct socket *sock);
+
 static ssize_t macvtap_do_read_xdp(struct macvtap_queue *q,
 				   struct iov_iter *to,
 				   int noblock)
@@ -1035,6 +1037,7 @@ static ssize_t macvtap_do_read_xdp(struct macvtap_queue *q,
 	if (!iov_iter_count(to))
 		return 0;
 
+	printk("peek for macvtap %d\n", macvtap_peek_len(&q->sock));
 	while (1) {
 		if (!noblock)
 			prepare_to_wait(sk_sleep(&q->sk), &wait,
@@ -1372,7 +1375,10 @@ static int macvtap_xdp_peek_len(void *data)
 {
 	struct xdp_buff *buff = data;
 
-	return buff->data_end - buff->data;
+	if (likely(buff))
+		return buff->data_end - buff->data;
+	else
+		return 0;
 }
 
 static int macvtap_peek_len(struct socket *sock)
