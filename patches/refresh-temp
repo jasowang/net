@@ -1,0 +1,59 @@
+Bottom: edbc0d1a4d3138188412b67d6a01e749554bfa0c
+Top:    0f35fd9915f947d303d9fdd1e0181d3b3f9d6699
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-20 12:04:08 +0800
+
+Refresh of macvtap-xdp-fast-rx-support
+
+---
+
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index f34c99f..411220a 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -97,8 +97,6 @@ struct macvlan_dev *macvlan_get_dev(const struct net_device *lowerdev)
+ 
+ 	dev =  list_first_or_null_rcu(&port->vlans,
+ 				struct macvlan_dev, list);
+-	printk("get port %p lowerdev %p macvlan_dev %p\n", port,
+-	       lowerdev, dev);
+ 	return dev;
+ }
+ EXPORT_SYMBOL_GPL(macvlan_get_dev);
+diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
+index 90e3e3e..03327bb 100644
+--- a/drivers/net/macvtap.c
++++ b/drivers/net/macvtap.c
+@@ -212,8 +212,6 @@ static int macvtap_set_queue(struct net_device *dev, struct file *file,
+ 	rcu_assign_pointer(vlan->taps[vlan->numvtaps], q);
+ 	sock_hold(&q->sk);
+ 
+-	printk("vlan %p queue %d p %p\n", vlan, vlan->numvtaps, q);
+-
+ 	q->file = file;
+ 	q->queue_index = vlan->numvtaps;
+ 	q->enabled = true;
+@@ -367,24 +365,19 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
+ 	struct macvlan_dev *vlan;
+ 	struct macvtap_queue *q;
+ 
+-	printk("ctx %p dev %p\n", ctx, dev);
+ 	vlan = macvlan_get_dev(dev);
+ 	if (!vlan)
+ 		return XDP_PASS;
+ 
+-	printk("vlan %p\n", vlan);
+ 	macvtap_buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
+ 	if (!macvtap_buff)
+ 		return XDP_DROP;
+ 
+ 	q = rcu_dereference(vlan->taps[0]);
+ 	if (!q) {
+-		printk("noqueue! vlan %p\n", vlan);
+ 		return XDP_DROP;
+ 	}
+-	printk("q %p XDP array %p\n", q, &q->xdp_array);
+ 	if (ptr_ring_produce(&q->xdp_array, macvtap_buff)) {
+-		printk("full!\n");
+ 		goto drop;
+ 	}
