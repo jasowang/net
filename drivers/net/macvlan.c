@@ -97,8 +97,6 @@ struct macvlan_dev *macvlan_get_dev(const struct net_device *lowerdev)
 
 	dev =  list_first_or_null_rcu(&port->vlans,
 				struct macvlan_dev, list);
-	printk("get port %p lowerdev %p macvlan_dev %p\n", port,
-	       lowerdev, dev);
 	return dev;
 }
 EXPORT_SYMBOL_GPL(macvlan_get_dev);

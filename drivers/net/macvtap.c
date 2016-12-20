@@ -212,8 +212,6 @@ static int macvtap_set_queue(struct net_device *dev, struct file *file,
 	rcu_assign_pointer(vlan->taps[vlan->numvtaps], q);
 	sock_hold(&q->sk);
 
-	printk("vlan %p queue %d p %p\n", vlan, vlan->numvtaps, q);
-
 	q->file = file;
 	q->queue_index = vlan->numvtaps;
 	q->enabled = true;
@@ -367,24 +365,19 @@ static unsigned int macvtap_xdp_rx(const void *ctx,
 	struct macvlan_dev *vlan;
 	struct macvtap_queue *q;
 
-	printk("ctx %p dev %p\n", ctx, dev);
 	vlan = macvlan_get_dev(dev);
 	if (!vlan)
 		return XDP_PASS;
 
-	printk("vlan %p\n", vlan);
 	macvtap_buff = kmemdup(ctx, sizeof(*buff), GFP_ATOMIC);
 	if (!macvtap_buff)
 		return XDP_DROP;
 
 	q = rcu_dereference(vlan->taps[0]);
 	if (!q) {
-		printk("noqueue! vlan %p\n", vlan);
 		return XDP_DROP;
 	}
-	printk("q %p XDP array %p\n", q, &q->xdp_array);
 	if (ptr_ring_produce(&q->xdp_array, macvtap_buff)) {
-		printk("full!\n");
 		goto drop;
 	}
 
