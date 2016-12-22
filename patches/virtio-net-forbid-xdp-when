@@ -10,6 +10,8 @@ UDP packet which exceeds the size of single page which could not be
 proceed correctly by XDP. So this patch forbid set XDP when GUEST_UFO
 is supported.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

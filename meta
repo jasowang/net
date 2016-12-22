@@ -1,8 +1,8 @@
 Version: 1
-Previous: 520c6452230e7170c1e384155a3542d31a7de216
-Head: c610a66ba4c1326115b11f0f656fc27b825faec3
+Previous: 2349446ef3afd27b0f0bc28ffe8fe3dd51a3186a
+Head: 9795d2f9c129e0107b49d1caec8efef890eee223
 Applied:
-  virtio-net-forbid-xdp-when: c610a66ba4c1326115b11f0f656fc27b825faec3
+  virtio-net-forbid-xdp-when: 9795d2f9c129e0107b49d1caec8efef890eee223
 Unapplied:
   xdp-introduce-xdp-free-func: 151dd3a5b3b105fc372055b466d20c4f5bfd65ac
   xdp-introduce-xdp_hold: 173c1e310e71fdb900cc4c933a14163fed422aaa
