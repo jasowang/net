@@ -1,0 +1,23 @@
+Bottom: 7cbc22b9a89fe41103e6a61a52b7f9c71ef5ba43
+Top:    949635f7c24027618e63c2aeb0dfbb87ef2cc520
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-22 17:37:11 +0800
+
+Refresh of virtio-net-forbid-xdp-when
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 08327e0..c316525 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1678,7 +1678,8 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
+ 	int i, err;
+ 
+ 	if (virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO4) ||
+-	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO6)) {
++	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO6) ||
++	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_UFO))) {
+ 		netdev_warn(dev, "can't set XDP while host is implementing LRO, disable LRO first\n");
+ 		return -EOPNOTSUPP;
+ 	}
