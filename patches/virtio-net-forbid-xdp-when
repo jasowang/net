@@ -1,0 +1,16 @@
+Bottom: 7cbc22b9a89fe41103e6a61a52b7f9c71ef5ba43
+Top:    7cbc22b9a89fe41103e6a61a52b7f9c71ef5ba43
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2016-12-22 17:37:08 +0800
+
+virtio-net: forbid XDP when GUEST_UFO is support
+
+When VIRTIO_NET_F_GUEST_UFO is negotiated, host could still send large
+UDP packet which exceeds the size of single page which could not be
+proceed correctly by XDP. So this patch forbid set XDP when GUEST_UFO
+is supported.
+
+
+---
+
+
