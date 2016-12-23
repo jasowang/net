@@ -1,10 +1,10 @@
 Version: 1
-Previous: 55e952518f33975399cbe7e906c90d12da7722b4
-Head: 07d6d4d6b4162275528243ea924fc44ba77ad060
+Previous: 6e642b482c59568aa141847ef4b670531a062df8
+Head: 52f40e9d657cc126b766304a5dd58ad73b02ff46
 Applied:
+Unapplied:
   virtio-net-forbid-xdp-when: 0d6f84e1b475d52180f3051a476c59076590eb98
   virtio-net-remove-the-big: 07d6d4d6b4162275528243ea924fc44ba77ad060
-Unapplied:
   xdp-introduce-xdp-free-func: bd055c32791c090cc92151c5b64d45ab4ded6067
   xdp-introduce-xdp_hold: 173c1e310e71fdb900cc4c933a14163fed422aaa
   macvtap-xdp-fast-rx-support: f921b37321a219689a4d2ca5a1106f9b9d8f1156
