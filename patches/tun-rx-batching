@@ -1,5 +1,5 @@
 Bottom: 893726d1967a2a7ed5f5ba89307f7bd88882e7dd
-Top:    3d29ffacfb74b5d90fa9d14fbde5aac100ff3c54
+Top:    fc97a6d53d8049162bb0a946bf49915bf58b01b1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -32,14 +32,14 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index cd8e02c..030286c 100644
+index cd8e02c..6ea5d6d 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,10 @@
  
  #include <linux/uaccess.h>
  
-+static int rx_batched = 0;
++static int rx_batched;
 +module_param(rx_batched, int, 0444);
 +MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
 +
@@ -100,7 +100,7 @@ index cd8e02c..030286c 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1283,18 +1322,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1283,18 +1322,27 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -113,8 +113,9 @@ index cd8e02c..030286c 100644
 +		local_bh_disable();
 +		netif_receive_skb(skb);
 +		local_bh_enable();
-+	} else
++	} else {
 +		err = tun_rx_batched(tfile, skb, more);
++	}
  #else
  	netif_rx_ni(skb);
  #endif
@@ -132,7 +133,7 @@ index cd8e02c..030286c 100644
  	u64_stats_update_end(&stats->syncp);
  	put_cpu_ptr(stats);
  
-@@ -1312,7 +1359,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1312,7 +1360,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -142,7 +143,7 @@ index cd8e02c..030286c 100644
  
  	tun_put(tun);
  	return result;
-@@ -1570,7 +1618,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1570,7 +1619,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
