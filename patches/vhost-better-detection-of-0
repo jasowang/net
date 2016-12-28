@@ -5,12 +5,11 @@ Date:   2016-10-27 16:04:38 +0800
 
 vhost: better detection of available buffers
 
-This patch tries to do serveral tweaks on vhost_vq_avail_empty() for a
+This patch tries to do several tweaks on vhost_vq_avail_empty() for a
 better performance:
 
-- first check cached avail index to avoid a possible userspace memory
-  access.
-- using unlikely for the failure of userspace access
+- check cached avail index first which could avoid userspace memory access.
+- using unlikely() for the failure of userspace access
 - check vq->last_avail_idx instead of cached avail index as the last
   step.
 
