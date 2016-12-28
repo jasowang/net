@@ -1,9 +1,8 @@
 Version: 1
-Previous: 0cf447d8a530dff67aa6e2b434889796dbe5fbf6
+Previous: 52c8fedc54913a9ba39fb028c7c50d01e95fea48
 Head: 52f40e9d657cc126b766304a5dd58ad73b02ff46
 Applied:
 Unapplied:
-  macvtap-xdp-fast-rx-support: f921b37321a219689a4d2ca5a1106f9b9d8f1156
   vhost-better-detection-of-0: 6f32f02976969917500c1e2ab1713874f079c600
   vhost_net-tx-batching-0: 54281f092384fed275ae4c644345596becc36b7a
   tun-rx-batching: c937a78398661f36b4263ac2bba4801ec26cc707
