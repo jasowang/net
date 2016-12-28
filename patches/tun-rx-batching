@@ -1,5 +1,5 @@
-Bottom: 5c92249968dfa1dceee63be504c122a690166aa1
-Top:    d7c6a34e98a879ddfa4c1e258fc5294e1f11c143
+Bottom: 893726d1967a2a7ed5f5ba89307f7bd88882e7dd
+Top:    ac5ec6cd86337283abb0addb31065cd751834f9b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -32,12 +32,12 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a569e61b..718cbd6 100644
+index cd8e02c..c2af7a3 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,10 @@
  
- #include <asm/uaccess.h>
+ #include <linux/uaccess.h>
  
 +static int rx_batched = 0;
 +module_param(rx_batched, int, 0444);
@@ -100,7 +100,7 @@ index a569e61b..718cbd6 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1286,18 +1325,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1283,18 +1322,26 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -133,7 +133,7 @@ index a569e61b..718cbd6 100644
  	u64_stats_update_end(&stats->syncp);
  	put_cpu_ptr(stats);
  
-@@ -1315,7 +1362,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1312,7 +1359,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -143,7 +143,7 @@ index a569e61b..718cbd6 100644
  
  	tun_put(tun);
  	return result;
-@@ -1573,7 +1621,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1570,7 +1618,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
