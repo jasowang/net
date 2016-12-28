@@ -75,7 +75,7 @@
 
 #include <linux/uaccess.h>
 
-static int rx_batched = 0;
+static int rx_batched;
 module_param(rx_batched, int, 0444);
 MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
 
@@ -1328,8 +1328,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		local_bh_disable();
 		netif_receive_skb(skb);
 		local_bh_enable();
-	} else
+	} else {
 		err = tun_rx_batched(tfile, skb, more);
+	}
 #else
 	netif_rx_ni(skb);
 #endif
