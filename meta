@@ -1,9 +1,9 @@
 Version: 1
-Previous: 01e996419f23ffbfaa5960b0d06852875d08bb6f
-Head: 8f18e4d03ed8fa5e4a300c94550533bd8ce4ff9a
+Previous: ef0d25f8177f1e1e8e5b3bb38b11c01676a43b8f
+Head: b13ea6214749bab507011dd260b782ffcc930373
 Applied:
+  vhost-better-detection-of-0: b13ea6214749bab507011dd260b782ffcc930373
 Unapplied:
-  vhost-better-detection-of-0: 6f32f02976969917500c1e2ab1713874f079c600
   vhost_net-tx-batching-0: 54281f092384fed275ae4c644345596becc36b7a
   tun-rx-batching: c937a78398661f36b4263ac2bba4801ec26cc707
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
