@@ -1,5 +1,5 @@
 Bottom: 893726d1967a2a7ed5f5ba89307f7bd88882e7dd
-Top:    ac5ec6cd86337283abb0addb31065cd751834f9b
+Top:    3d29ffacfb74b5d90fa9d14fbde5aac100ff3c54
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -32,7 +32,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index cd8e02c..c2af7a3 100644
+index cd8e02c..030286c 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,10 @@
@@ -116,8 +116,7 @@ index cd8e02c..c2af7a3 100644
 +	} else
 +		err = tun_rx_batched(tfile, skb, more);
  #else
--	netif_rx_ni(skb);
-+		netif_rx_ni(skb);
+ 	netif_rx_ni(skb);
  #endif
  
  	stats = get_cpu_ptr(tun->pcpu_stats);
