@@ -1331,7 +1331,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	} else
 		err = tun_rx_batched(tfile, skb, more);
 #else
-		netif_rx_ni(skb);
+	netif_rx_ni(skb);
 #endif
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
