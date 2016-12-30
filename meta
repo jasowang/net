@@ -1,11 +1,11 @@
 Version: 1
-Previous: f0bd52c3aa32299dc0f5795605cbc4a5ec9d1676
-Head: 01ad30ca88267b7687f40f83072f6e9fde832d65
+Previous: 5cbdcdf543bfe4d339a425a1a6514a19d7ec891b
+Head: 8f18e4d03ed8fa5e4a300c94550533bd8ce4ff9a
 Applied:
+Unapplied:
   vhost-better-detection-of-0: 8a77e1a62c9ebc2a02bfc1deeb7936fa9adf1d04
   vhost_net-tx-batching-0: 9e69e468d130afb91ce39ab7f404ee3d23583078
   tun-rx-batching: 01ad30ca88267b7687f40f83072f6e9fde832d65
-Unapplied:
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
