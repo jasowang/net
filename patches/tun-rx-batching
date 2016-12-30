@@ -1,5 +1,5 @@
 Bottom: 893726d1967a2a7ed5f5ba89307f7bd88882e7dd
-Top:    fc97a6d53d8049162bb0a946bf49915bf58b01b1
+Top:    5316a178b0c77869e5bb051439f57146008acd3f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -32,7 +32,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index cd8e02c..6ea5d6d 100644
+index cd8e02c..a268ed9 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,10 @@
@@ -54,12 +54,12 @@ index cd8e02c..6ea5d6d 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -1140,10 +1145,44 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1140,10 +1145,36 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
-+static int tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
-+			  int more)
++static void tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
++			   int more)
 +{
 +	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
 +	struct sk_buff_head process_queue;
@@ -68,10 +68,8 @@ index cd8e02c..6ea5d6d 100644
 +
 +	spin_lock(&queue->lock);
 +	qlen = skb_queue_len(queue);
-+	if (qlen > rx_batched)
-+		goto drop;
 +	__skb_queue_tail(queue, skb);
-+	if (!more || qlen + 1 > rx_batched) {
++	if (!more || qlen == rx_batched) {
 +		__skb_queue_head_init(&process_queue);
 +		skb_queue_splice_tail_init(queue, &process_queue);
 +		rcv = true;
@@ -84,12 +82,6 @@ index cd8e02c..6ea5d6d 100644
 +			netif_receive_skb(skb);
 +		local_bh_enable();
 +	}
-+
-+	return 0;
-+drop:
-+	spin_unlock(&queue->lock);
-+	kfree_skb(skb);
-+	return -EFAULT;
 +}
 +
  /* Get packet from user space buffer */
@@ -100,7 +92,7 @@ index cd8e02c..6ea5d6d 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1283,18 +1322,27 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1283,10 +1314,15 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -114,26 +106,12 @@ index cd8e02c..6ea5d6d 100644
 +		netif_receive_skb(skb);
 +		local_bh_enable();
 +	} else {
-+		err = tun_rx_batched(tfile, skb, more);
++		tun_rx_batched(tfile, skb, more);
 +	}
  #else
  	netif_rx_ni(skb);
  #endif
- 
- 	stats = get_cpu_ptr(tun->pcpu_stats);
- 	u64_stats_update_begin(&stats->syncp);
--	stats->rx_packets++;
--	stats->rx_bytes += len;
-+	if (err) {
-+		stats->rx_dropped++;
-+	} else {
-+		stats->rx_packets++;
-+		stats->rx_bytes += len;
-+	}
- 	u64_stats_update_end(&stats->syncp);
- 	put_cpu_ptr(stats);
- 
-@@ -1312,7 +1360,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1312,7 +1348,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -143,7 +121,7 @@ index cd8e02c..6ea5d6d 100644
  
  	tun_put(tun);
  	return result;
-@@ -1570,7 +1619,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1570,7 +1607,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
