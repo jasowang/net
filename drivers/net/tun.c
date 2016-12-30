@@ -1145,8 +1145,8 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 	return skb;
 }
 
-static int tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
-			  int more)
+static void tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
+			   int more)
 {
 	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
 	struct sk_buff_head process_queue;
@@ -1155,10 +1155,8 @@ static int tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
 
 	spin_lock(&queue->lock);
 	qlen = skb_queue_len(queue);
-	if (qlen > rx_batched)
-		goto drop;
 	__skb_queue_tail(queue, skb);
-	if (!more || qlen + 1 > rx_batched) {
+	if (!more || qlen == rx_batched) {
 		__skb_queue_head_init(&process_queue);
 		skb_queue_splice_tail_init(queue, &process_queue);
 		rcv = true;
@@ -1171,12 +1169,6 @@ static int tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
 			netif_receive_skb(skb);
 		local_bh_enable();
 	}
-
-	return 0;
-drop:
-	spin_unlock(&queue->lock);
-	kfree_skb(skb);
-	return -EFAULT;
 }
 
 /* Get packet from user space buffer */
@@ -1329,7 +1321,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		netif_receive_skb(skb);
 		local_bh_enable();
 	} else {
-		err = tun_rx_batched(tfile, skb, more);
+		tun_rx_batched(tfile, skb, more);
 	}
 #else
 	netif_rx_ni(skb);
@@ -1337,12 +1329,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
 	u64_stats_update_begin(&stats->syncp);
-	if (err) {
-		stats->rx_dropped++;
-	} else {
-		stats->rx_packets++;
-		stats->rx_bytes += len;
-	}
+	stats->rx_packets++;
+	stats->rx_bytes += len;
 	u64_stats_update_end(&stats->syncp);
 	put_cpu_ptr(stats);
 
