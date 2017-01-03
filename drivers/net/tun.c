@@ -1153,20 +1153,30 @@ static void tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
 	int qlen;
 	bool rcv = false;
 
+	if (!rx_batched || (!more && skb_queue_empty(queue))) {
+		local_bh_disable();
+		netif_receive_skb(skb);
+		local_bh_enable();
+		return;
+	}
+
 	spin_lock(&queue->lock);
 	qlen = skb_queue_len(queue);
-	__skb_queue_tail(queue, skb);
 	if (!more || qlen == rx_batched) {
 		__skb_queue_head_init(&process_queue);
 		skb_queue_splice_tail_init(queue, &process_queue);
 		rcv = true;
+	} else {
+		__skb_queue_tail(queue, skb);
 	}
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
+		struct sk_buff *nskb;
 		local_bh_disable();
-		while ((skb = __skb_dequeue(&process_queue)))
+		while ((nskb = __skb_dequeue(&process_queue)))
 			netif_receive_skb(skb);
+		netif_receive_skb(skb);
 		local_bh_enable();
 	}
 }
@@ -1316,13 +1326,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	rxhash = skb_get_hash(skb);
 
 #ifndef CONFIG_4KSTACKS
-	if (!rx_batched) {
-		local_bh_disable();
-		netif_receive_skb(skb);
-		local_bh_enable();
-	} else {
-		tun_rx_batched(tfile, skb, more);
-	}
+	tun_rx_batched(tfile, skb, more);
 #else
 	netif_rx_ni(skb);
 #endif
