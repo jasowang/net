@@ -1,11 +1,10 @@
 Version: 1
-Previous: a4be09b0508751c94fcb5679f895419febb10dd4
-Head: 48391ed2d2105b2f410ddf71a8d0274384d00190
+Previous: fc29508b6dbcebf63bd5e903b498352e6a58d6d0
+Head: 57b145d2a86352c6b1af26f2ccb99d9fa14cca0d
 Applied:
   vhost-better-detection-of-0: 8a77e1a62c9ebc2a02bfc1deeb7936fa9adf1d04
   vhost_net-tx-batching-0: 9e69e468d130afb91ce39ab7f404ee3d23583078
   tun-rx-batching: 57b145d2a86352c6b1af26f2ccb99d9fa14cca0d
-  refresh-temp: 48391ed2d2105b2f410ddf71a8d0274384d00190
 Unapplied:
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
