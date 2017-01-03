@@ -1,5 +1,5 @@
 Bottom: 893726d1967a2a7ed5f5ba89307f7bd88882e7dd
-Top:    5316a178b0c77869e5bb051439f57146008acd3f
+Top:    7d0ec3a296f52c24affb8b330f3c2a43e1529e48
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -32,7 +32,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index cd8e02c..a268ed9 100644
+index cd8e02c..82d3cb3 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,10 @@
@@ -54,7 +54,7 @@ index cd8e02c..a268ed9 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -1140,10 +1145,36 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1140,10 +1145,46 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
@@ -66,20 +66,30 @@ index cd8e02c..a268ed9 100644
 +	int qlen;
 +	bool rcv = false;
 +
++	if (!rx_batched || (!more && skb_queue_empty(queue))) {
++		local_bh_disable();
++		netif_receive_skb(skb);
++		local_bh_enable();
++		return;
++	}
++
 +	spin_lock(&queue->lock);
 +	qlen = skb_queue_len(queue);
-+	__skb_queue_tail(queue, skb);
 +	if (!more || qlen == rx_batched) {
 +		__skb_queue_head_init(&process_queue);
 +		skb_queue_splice_tail_init(queue, &process_queue);
 +		rcv = true;
++	} else {
++		__skb_queue_tail(queue, skb);
 +	}
 +	spin_unlock(&queue->lock);
 +
 +	if (rcv) {
++		struct sk_buff *nskb;
 +		local_bh_disable();
-+		while ((skb = __skb_dequeue(&process_queue)))
++		while ((nskb = __skb_dequeue(&process_queue)))
 +			netif_receive_skb(skb);
++		netif_receive_skb(skb);
 +		local_bh_enable();
 +	}
 +}
@@ -92,7 +102,7 @@ index cd8e02c..a268ed9 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1283,10 +1314,15 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1283,10 +1324,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_probe_transport_header(skb, 0);
  
  	rxhash = skb_get_hash(skb);
@@ -101,17 +111,11 @@ index cd8e02c..a268ed9 100644
 -	local_bh_disable();
 -	netif_receive_skb(skb);
 -	local_bh_enable();
-+	if (!rx_batched) {
-+		local_bh_disable();
-+		netif_receive_skb(skb);
-+		local_bh_enable();
-+	} else {
-+		tun_rx_batched(tfile, skb, more);
-+	}
++	tun_rx_batched(tfile, skb, more);
  #else
  	netif_rx_ni(skb);
  #endif
-@@ -1312,7 +1348,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1312,7 +1352,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -121,7 +125,7 @@ index cd8e02c..a268ed9 100644
  
  	tun_put(tun);
  	return result;
-@@ -1570,7 +1607,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1570,7 +1611,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
