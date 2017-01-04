@@ -1,0 +1,106 @@
+Bottom: 7d0ec3a296f52c24affb8b330f3c2a43e1529e48
+Top:    3b09e16cd2e62e261357a1577fa9c6fc9cfe8dd9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-04 16:17:52 +0800
+
+Refresh of tun-rx-batching
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 82d3cb3..5231602 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -75,10 +75,6 @@
+ 
+ #include <linux/uaccess.h>
+ 
+-static int rx_batched;
+-module_param(rx_batched, int, 0444);
+-MODULE_PARM_DESC(rx_batched, "Number of packets batched in rx");
+-
+ /* Uncomment to enable debugging */
+ /* #define TUN_DEBUG 1 */
+ 
+@@ -222,6 +218,7 @@ struct tun_struct {
+ 	struct list_head disabled;
+ 	void *security;
+ 	u32 flow_count;
++	u32 rx_batched;
+ 	struct tun_pcpu_stats __percpu *pcpu_stats;
+ };
+ 
+@@ -1145,13 +1142,14 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+ 	return skb;
+ }
+ 
+-static void tun_rx_batched(struct tun_file *tfile, struct sk_buff *skb,
+-			   int more)
++static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
++			   struct sk_buff *skb, int more)
+ {
+ 	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
+ 	struct sk_buff_head process_queue;
+-	int qlen;
++	u32 rx_batched = tun->rx_batched;
+ 	bool rcv = false;
++	int qlen;
+ 
+ 	if (!rx_batched || (!more && skb_queue_empty(queue))) {
+ 		local_bh_disable();
+@@ -1326,7 +1324,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	rxhash = skb_get_hash(skb);
+ 
+ #ifndef CONFIG_4KSTACKS
+-	tun_rx_batched(tfile, skb, more);
++	tun_rx_batched(tun, tfile, skb, more);
+ #else
+ 	netif_rx_ni(skb);
+ #endif
+@@ -1813,6 +1811,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+ 		tun->align = NET_SKB_PAD;
+ 		tun->filter_attached = false;
+ 		tun->sndbuf = tfile->socket.sk->sk_sndbuf;
++		tun->rx_batched = 0;
+ 
+ 		tun->pcpu_stats = netdev_alloc_pcpu_stats(struct tun_pcpu_stats);
+ 		if (!tun->pcpu_stats) {
+@@ -2481,6 +2480,29 @@ static void tun_set_msglevel(struct net_device *dev, u32 value)
+ #endif
+ }
+ 
++static int tun_get_coalesce(struct net_device *dev,
++			    struct ethtool_coalesce *ec)
++{
++	struct tun_struct *tun = netdev_priv(dev);
++
++	ec->rx_max_coalesced_frames = tun->rx_batched;
++
++	return 0;
++}
++
++static int tun_set_coalesce(struct net_device *dev,
++			    struct ethtool_coalesce *ec)
++{
++	struct tun_struct *tun = netdev_priv(dev);
++
++	if (ec->rx_max_coalesced_frames > NAPI_POLL_WEIGHT)
++		return -EINVAL;
++
++	tun->rx_batched = ec->rx_max_coalesced_frames;
++
++	return 0;
++}
++
+ static const struct ethtool_ops tun_ethtool_ops = {
+ 	.get_settings	= tun_get_settings,
+ 	.get_drvinfo	= tun_get_drvinfo,
+@@ -2488,6 +2510,8 @@ static const struct ethtool_ops tun_ethtool_ops = {
+ 	.set_msglevel	= tun_set_msglevel,
+ 	.get_link	= ethtool_op_get_link,
+ 	.get_ts_info	= ethtool_op_get_ts_info,
++	.get_coalesce   = tun_get_coalesce,
++	.set_coalesce   = tun_set_coalesce,
+ };
+ 
+ static int tun_queue_resize(struct tun_struct *tun)
