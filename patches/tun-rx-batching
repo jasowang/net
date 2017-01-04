@@ -23,8 +23,8 @@ Tests were done by pktgen (burst=128) in guest over mlx4(noqueue) on host:
     rx_batched=48 1.09  +21.1%
     rx_batched=64 1.02  +13.3%
 
-The maximum number of batched packets were specified through a module
-parameter.
+User were allowed to change per device batched packets through
+ethtool.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
