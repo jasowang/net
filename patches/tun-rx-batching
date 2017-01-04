@@ -24,7 +24,8 @@ Tests were done by pktgen (burst=128) in guest over mlx4(noqueue) on host:
     rx_batched=64 1.02  +13.3%
 
 User were allowed to change per device batched packets through
-ethtool.
+ethtool. NAPI_POLL_WEIGHT were used as upper limitation to prevent bh
+from being disabled too long.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
