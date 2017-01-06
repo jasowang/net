@@ -10,6 +10,7 @@ virtqueue during transmission, if there's more available buffers in
 the virtqueue, set MSG_MORE flag for a hint for backend (e.g tuntap)
 to batch the packets.
 
+Reviewed-by: Stefan Hajnoczi <stefanha@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
