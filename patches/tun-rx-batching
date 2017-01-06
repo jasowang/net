@@ -28,7 +28,6 @@ User were allowed to change per device batched packets through
 ethtool -C rx-frames. NAPI_POLL_WEIGHT were used as upper limitation
 to prevent bh from being disabled too long.
 
-Reviewed-by: Stefan Hajnoczi <stefanha@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
