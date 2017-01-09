@@ -5,6 +5,8 @@ Date:   2017-01-09 18:13:29 +0800
 
 vhost_net: batch tx descriptor read
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
