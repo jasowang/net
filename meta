@@ -1,9 +1,10 @@
 Version: 1
-Previous: 9e6f23bf36e00d9cd6dde92f407296a1eb091f80
-Head: e0b742f7f78ad2dce73421736b11057bfe2b2dbc
+Previous: 5e2238ff8f75c83daa66f3f1a7d4846f2efc8df3
+Head: 3276627ee2e93b4c20852c7062d663e344ebaddb
 Applied:
   polling: 03b8367b752bd5e571a42724507df330afa52e7d
   vhost_net-batch-tx-descriptor: e0b742f7f78ad2dce73421736b11057bfe2b2dbc
+  refresh-temp: 3276627ee2e93b4c20852c7062d663e344ebaddb
 Unapplied:
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
   vhost-better-detection-of-0: 87b2ab74d45567a6e5931ad52a1b2fe080089cec
