@@ -76,6 +76,16 @@ struct vhost_umem {
 	int numem;
 };
 
+struct vhost_desc {
+	int head;
+	int offset;
+	unsigned int out_num;
+	unsigned int in_num;
+	unsigned int log_num;
+};
+
+#define VHOST_MAX_TX_BATCHED 8
+
 /* The virtqueue structure describes a queue attached to a device. */
 struct vhost_virtqueue {
 	struct vhost_dev *dev;
@@ -123,7 +133,10 @@ struct vhost_virtqueue {
 	bool log_used;
 	u64 log_addr;
 
-	struct iovec iov[UIO_MAXIOV];
+	struct iovec iov[2 * UIO_MAXIOV];
+	struct vhost_desc descs[VHOST_MAX_TX_BATCHED];
+	int current_desc;
+	int max_desc;
 	struct iovec iotlb_iov[64];
 	struct iovec *indirect;
 	struct vring_used_elem *heads;
