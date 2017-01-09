@@ -1,5 +1,5 @@
 Bottom: 3797e5176c4f13f270831a7e6a9682b1fbd4adc3
-Top:    6e795d1e2de134360b9bdd7a4eacd13dc50a0ba7
+Top:    d11ea71e8062f0175eb7434d26852e95c9b3b305
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-09 18:13:29 +0800
 
@@ -11,65 +11,59 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index d643260..7de0add 100644
+index d643260..d41147b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -312,6 +312,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+@@ -312,6 +312,10 @@ static void vhost_vq_reset(struct vhost_dev *dev,
  	vq->busyloop_timeout = 0;
  	vq->umem = NULL;
  	vq->iotlb = NULL;
 +	vq->current_desc = 0;
-+	memset(vq->descs,
-+	       0, sizeof(struct vhost_translated_desc) * VHOST_MAX_TX_BATCHED);
++	memset(vq->descs, 0, sizeof(struct vhost_desc) * VHOST_MAX_TX_BATCHED);
 +	vq->current_desc = 0;
 +	vq->max_desc = 0;
  }
  
  static int vhost_worker(void *data)
-@@ -2054,6 +2059,49 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2054,6 +2058,44 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
-+int vhost_get_vq_desc_batched(struct vhost_virtqueue *vq, struct iovec **iov,
-+			      unsigned int *out_num, unsigned int *in_num,
-+			      struct vhost_log *log, unsigned int *log_num)
++struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
++					     struct vhost_log *log)
 +{
++	struct vhost_desc *ret;
 +	int offset, r;
 +
 +again:
 +	if (vq->max_desc) {
-+		struct vhost_translated_desc *desc =
-+		       &vq->descs[vq->current_desc];
-+		*iov = vq->iov + desc->offset;
-+		*out_num = desc->out_num;
-+		*in_num = desc->in_num;
-+		*log_num = desc->log_num;
++		ret = &vq->descs[vq->current_desc];
 +
 +		if (vq->current_desc == vq->max_desc)
 +			vq->current_desc = vq->max_desc = 0;
 +		else
 +			vq->current_desc++;
 +
-+		return 0;
++		return ret;
 +	}
 +
 +	offset = 0;
 +	while (vq->max_desc < VHOST_MAX_TX_BATCHED) {
-+		struct vhost_translated_desc *desc =
-+		       &vq->descs[vq->max_desc];
++		struct vhost_desc *desc = &vq->descs[vq->max_desc];
 +
 +		r = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
-+				     &desc->out_num, &desc->in_num,
-+				     log, &desc->log_num);
++				      &desc->out_num, &desc->in_num,
++				      log, &desc->log_num);
 +		if (r || r == vq->num)
 +			break;
++
 +		++vq->max_desc;
 +	}
 +
 +	if (vq->max_desc)
 +		goto again;
 +
-+	return r;
++	return NULL;
 +}
 +EXPORT_SYMBOL_GPL(vhost_get_vq_desc_batched);
 +
@@ -77,14 +71,15 @@ index d643260..7de0add 100644
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index a9cbbb1..0a7800c 100644
+index a9cbbb1..61ff7bd 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -76,6 +76,15 @@ struct vhost_umem {
+@@ -76,6 +76,16 @@ struct vhost_umem {
  	int numem;
  };
  
-+struct vhost_translated_desc {
++struct vhost_desc {
++	int head;
 +	int offset;
 +	unsigned int out_num;
 +	unsigned int in_num;
@@ -96,13 +91,13 @@ index a9cbbb1..0a7800c 100644
  /* The virtqueue structure describes a queue attached to a device. */
  struct vhost_virtqueue {
  	struct vhost_dev *dev;
-@@ -123,7 +132,10 @@ struct vhost_virtqueue {
+@@ -123,7 +133,10 @@ struct vhost_virtqueue {
  	bool log_used;
  	u64 log_addr;
  
 -	struct iovec iov[UIO_MAXIOV];
 +	struct iovec iov[2 * UIO_MAXIOV];
-+	struct vhost_translated_desc descs[VHOST_MAX_TX_BATCHED];
++	struct vhost_desc descs[VHOST_MAX_TX_BATCHED];
 +	int current_desc;
 +	int max_desc;
  	struct iovec iotlb_iov[64];
