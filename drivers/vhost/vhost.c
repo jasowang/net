@@ -312,6 +312,11 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->busyloop_timeout = 0;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
+	vq->current_desc = 0;
+	memset(vq->descs,
+	       0, sizeof(struct vhost_translated_desc) * VHOST_MAX_TX_BATCHED);
+	vq->current_desc = 0;
+	vq->max_desc = 0;
 }
 
 static int vhost_worker(void *data)
@@ -2053,6 +2058,49 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 	return head;
 }
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+
+int vhost_get_vq_desc_batched(struct vhost_virtqueue *vq, struct iovec **iov,
+			      unsigned int *out_num, unsigned int *in_num,
+			      struct vhost_log *log, unsigned int *log_num)
+{
+	int offset, r;
+
+again:
+	if (vq->max_desc) {
+		struct vhost_translated_desc *desc =
+		       &vq->descs[vq->current_desc];
+		*iov = vq->iov + desc->offset;
+		*out_num = desc->out_num;
+		*in_num = desc->in_num;
+		*log_num = desc->log_num;
+
+		if (vq->current_desc == vq->max_desc)
+			vq->current_desc = vq->max_desc = 0;
+		else
+			vq->current_desc++;
+
+		return 0;
+	}
+
+	offset = 0;
+	while (vq->max_desc < VHOST_MAX_TX_BATCHED) {
+		struct vhost_translated_desc *desc =
+		       &vq->descs[vq->max_desc];
+
+		r = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
+				     &desc->out_num, &desc->in_num,
+				     log, &desc->log_num);
+		if (r || r == vq->num)
+			break;
+		++vq->max_desc;
+	}
+
+	if (vq->max_desc)
+		goto again;
+
+	return r;
+}
+EXPORT_SYMBOL_GPL(vhost_get_vq_desc_batched);
 
 /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
 void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
