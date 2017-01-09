@@ -1,5 +1,5 @@
 Bottom: 04dab5c2650cddd666620ca3972d8e8b9634e78e
-Top:    04dab5c2650cddd666620ca3972d8e8b9634e78e
+Top:    3797e5176c4f13f270831a7e6a9682b1fbd4adc3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-09 12:35:17 +0800
 
@@ -10,4 +10,49 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index cd8e02c..0986413 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1282,7 +1282,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_reset_network_header(skb);
+ 	skb_probe_transport_header(skb, 0);
+ 
+-	rxhash = skb_get_hash(skb);
++//	rxhash = skb_get_hash(skb);
+ #ifndef CONFIG_4KSTACKS
+ 	local_bh_disable();
+ 	netif_receive_skb(skb);
+@@ -1298,7 +1298,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	u64_stats_update_end(&stats->syncp);
+ 	put_cpu_ptr(stats);
+ 
+-	tun_flow_update(tun, rxhash, tfile);
++//	tun_flow_update(tun, rxhash, tfile);
+ 	return total_len;
+ }
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5dc3465..6d004c6 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -689,14 +689,19 @@ static void handle_rx(struct vhost_net *net)
+ 		}
+ 		/* OK, now we need to know about added descriptors. */
+ 		if (!headcount) {
++			if (unlikely(!vhost_vq_avail_empty(&net->dev, vq)))
++				continue;
++#if 0
+ 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+ 				/* They have slipped one in as we were
+ 				 * doing that: check again. */
+ 				vhost_disable_notify(&net->dev, vq);
+ 				continue;
+ 			}
++#endif
+ 			/* Nothing new?  Wait for eventfd to tell us
+ 			 * they refilled. */
++			vhost_poll_queue(&vq->poll);
+ 			goto out;
+ 		}
+ 		/* We don't need to be notified again. */
