@@ -72,6 +72,7 @@
 #include <linux/seq_file.h>
 #include <linux/uio.h>
 #include <linux/skb_array.h>
+#include <linux/prefetch.h>
 
 #include <linux/uaccess.h>
 
@@ -1279,6 +1280,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		uarg->callback(uarg, false);
 	}
 
+	prefetchw(skb->data);
 	skb_reset_network_header(skb);
 	skb_probe_transport_header(skb, 0);
 
