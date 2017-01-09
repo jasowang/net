@@ -76,7 +76,8 @@ struct vhost_umem {
 	int numem;
 };
 
-struct vhost_translated_desc {
+struct vhost_desc {
+	int head;
 	int offset;
 	unsigned int out_num;
 	unsigned int in_num;
@@ -133,7 +134,7 @@ struct vhost_virtqueue {
 	u64 log_addr;
 
 	struct iovec iov[2 * UIO_MAXIOV];
-	struct vhost_translated_desc descs[VHOST_MAX_TX_BATCHED];
+	struct vhost_desc descs[VHOST_MAX_TX_BATCHED];
 	int current_desc;
 	int max_desc;
 	struct iovec iotlb_iov[64];
