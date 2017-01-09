@@ -1,5 +1,5 @@
 Bottom: 3797e5176c4f13f270831a7e6a9682b1fbd4adc3
-Top:    3797e5176c4f13f270831a7e6a9682b1fbd4adc3
+Top:    b68f6bade7c2421ee33ccc51a56b0334e6b2dd10
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-09 18:13:29 +0800
 
@@ -10,4 +10,16 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index a9cbbb1..59c3567 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -123,7 +123,7 @@ struct vhost_virtqueue {
+ 	bool log_used;
+ 	u64 log_addr;
+ 
+-	struct iovec iov[UIO_MAXIOV];
++	struct iovec iov[2 * UIO_MAXIOV];
+ 	struct iovec iotlb_iov[64];
+ 	struct iovec *indirect;
+ 	struct vring_used_elem *heads;
