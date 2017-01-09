@@ -1,7 +1,8 @@
 Version: 1
-Previous: e4fd772b1eae6da344237ce5cfb8bc4ef0f33365
-Head: c1878f7a89efbbe1ac0082d09b2928782a6ceba1
+Previous: e94827a6166215c2ba3925456e966b47e51b3c89
+Head: 601289a94dea06fdb1b7bc0c4a358e3bfe1d0dfd
 Applied:
+  polling: 601289a94dea06fdb1b7bc0c4a358e3bfe1d0dfd
 Unapplied:
   vhost-better-detection-of-0: 87b2ab74d45567a6e5931ad52a1b2fe080089cec
   vhost_net-tx-batching: 9369343f0f4b150e076d35a28b3b6a25ff2149e4
