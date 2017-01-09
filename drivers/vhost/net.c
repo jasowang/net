@@ -689,14 +689,19 @@ static void handle_rx(struct vhost_net *net)
 		}
 		/* OK, now we need to know about added descriptors. */
 		if (!headcount) {
+			if (unlikely(!vhost_vq_avail_empty(&net->dev, vq)))
+				continue;
+#if 0
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				/* They have slipped one in as we were
 				 * doing that: check again. */
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
+#endif
 			/* Nothing new?  Wait for eventfd to tell us
 			 * they refilled. */
+			vhost_poll_queue(&vq->poll);
 			goto out;
 		}
 		/* We don't need to be notified again. */
