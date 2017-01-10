@@ -2059,6 +2059,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 	/* Assume notifications from guest are disabled at this point,
 	 * if they aren't we would need to update avail_event index. */
 	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
+//	printk("vq %p head %d\n", vq, head);
 	return head;
 }
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
@@ -2067,13 +2068,12 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
 					     struct vhost_log *log)
 {
 	struct vhost_desc *ret;
-	int offset, r;
+	int offset;
 
 again:
 	if (vq->max_desc) {
 		ret = &vq->descs[vq->current_desc];
-
-		if (vq->current_desc == vq->max_desc)
+		if (vq->current_desc + 1 == vq->max_desc)
 			vq->current_desc = vq->max_desc = 0;
 		else
 			vq->current_desc++;
@@ -2085,13 +2085,18 @@ again:
 	while (vq->max_desc < VHOST_MAX_TX_BATCHED) {
 		struct vhost_desc *desc = &vq->descs[vq->max_desc];
 
-		r = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
-				      &desc->out_num, &desc->in_num,
-				      log, &desc->log_num);
-		if (r || r == vq->num)
+		desc->head = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
+					       &desc->out_num, &desc->in_num,
+					       log, &desc->log_num);
+		++vq->max_desc;
+		if (desc->head >= 0 && desc->head != vq->num) {
+			desc->offset = offset;
+			offset += desc->out_num + desc->in_num;
+		} else
 			break;
 
-		++vq->max_desc;
+		if (offset > UIO_MAXIOV)
+			break;
 	}
 
 	if (vq->max_desc)
