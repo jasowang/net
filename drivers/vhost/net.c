@@ -328,27 +328,32 @@ static int vhost_net_enable_vq(struct vhost_net *n,
 	return vhost_poll_start(poll, sock->file);
 }
 
-static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
-				    struct vhost_virtqueue *vq,
-				    struct iovec iov[], unsigned int iov_size,
-				    unsigned int *out_num, unsigned int *in_num)
+static struct vhost_desc *vhost_net_tx_get_vq_desc(struct vhost_net *net,
+						   struct vhost_virtqueue *vq,
+						   unsigned int *out_num,
+						   unsigned int *in_num)
 {
+	struct vhost_desc *desc = vhost_get_vq_desc_batched(vq, NULL);
 	unsigned long uninitialized_var(endtime);
-	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-				  out_num, in_num, NULL, NULL);
 
-	if (r == vq->num && vq->busyloop_timeout) {
+	if (desc == NULL && vq->busyloop_timeout) {
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
 		       vhost_vq_avail_empty(vq->dev, vq))
 			cpu_relax();
 		preempt_enable();
-		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-				      out_num, in_num, NULL, NULL);
+		desc = vhost_get_vq_desc_batched(vq, NULL);
 	}
 
-	return r;
+	if (desc && desc->head >= 0 && desc->head != vq->num) {
+		*out_num = desc->out_num;
+		*in_num = desc->in_num;
+	} else {
+		*out_num = *in_num = 0;
+	}
+
+	return desc;
 }
 
 static bool vhost_exceeds_maxpend(struct vhost_net *net)
@@ -380,6 +385,8 @@ static void handle_tx(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+	struct iovec *iov;
+	struct vhost_desc *desc;
 	bool zcopy, zcopy_used;
 
 	mutex_lock(&vq->mutex);
@@ -406,9 +413,13 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
-						ARRAY_SIZE(vq->iov),
-						&out, &in);
+		desc = vhost_net_tx_get_vq_desc(net, vq, &out, &in);
+		/* TODO: for safe! */
+		if (desc == NULL) {
+			printk("NULL!\n");
+			break;
+		}
+		head = desc->head;
 		/* On error, stop handling until the next kick. */
 		if (unlikely(head < 0))
 			break;
@@ -425,9 +436,10 @@ static void handle_tx(struct vhost_net *net)
 			       "out %d, int %d\n", out, in);
 			break;
 		}
+		iov = vq->iov + desc->offset;
 		/* Skip header. TODO: support TSO. */
-		len = iov_length(vq->iov, out);
-		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+		len = iov_length(iov, out);
+		iov_iter_init(&msg.msg_iter, WRITE, iov, out, len);
 		iov_iter_advance(&msg.msg_iter, hdr_size);
 		/* Sanity check */
 		if (!msg_data_left(&msg)) {
