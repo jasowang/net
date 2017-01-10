@@ -1,0 +1,11 @@
+Bottom: d11ea71e8062f0175eb7434d26852e95c9b3b305
+Top:    d11ea71e8062f0175eb7434d26852e95c9b3b305
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-10 15:52:50 +0800
+
+vhost_net: batch tx descriptor reading
+
+
+---
+
+
