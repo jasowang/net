@@ -1149,7 +1149,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	struct sk_buff *skb;
 	size_t total_len = iov_iter_count(from);
 	size_t len = total_len, align = tun->align, linear;
-	struct virtio_net_hdr gso = { 0 };
+	struct virtio_net_hdr_mrg_rxbuf hdr = { 0 };
+	struct virtio_net_hdr *gso = &hdr.hdr;
 	struct tun_pcpu_stats *stats;
 	int good_linear;
 	int copylen;
@@ -1174,22 +1175,29 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			return -EINVAL;
 		len -= tun->vnet_hdr_sz;
 
-		if (!copy_from_iter_full(&gso, sizeof(gso), from))
+		if (!copy_from_iter_full(&hdr, sizeof(hdr), from))
 			return -EFAULT;
 
-		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
-		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
-			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+		if ((gso->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+		    tun16_to_cpu(tun, gso->csum_start) +
+		    tun16_to_cpu(tun, gso->csum_offset) + 2 >
+		    tun16_to_cpu(tun, gso->hdr_len))
+			gso->hdr_len = cpu_to_tun16(tun,
+		    tun16_to_cpu(tun, gso->csum_start) +
+		    tun16_to_cpu(tun, gso->csum_offset) + 2);
 
-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
+		if (tun16_to_cpu(tun, gso->hdr_len) > len)
 			return -EINVAL;
-		iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(gso));
+		if (tun->vnet_hdr_sz != sizeof(hdr)) {
+			printk("adv!\n");
+			iov_iter_advance(from, tun->vnet_hdr_sz - sizeof(hdr));
+		}
 	}
 
 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+			     (gso->hdr_len && tun16_to_cpu(tun, gso->hdr_len) < ETH_HLEN)))
 			return -EINVAL;
 	}
 
@@ -1202,10 +1210,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		 * enough room for skb expand head in case it is used.
 		 * The rest of the buffer is mapped from userspace.
 		 */
-		copylen = gso.hdr_len ? tun16_to_cpu(tun, gso.hdr_len) : GOODCOPY_LEN;
+		copylen = gso->hdr_len ? tun16_to_cpu(tun, gso->hdr_len) : GOODCOPY_LEN;
 		if (copylen > good_linear)
 			copylen = good_linear;
 		linear = copylen;
+		printk("adv2!\n");
 		iov_iter_advance(&i, copylen);
 		if (iov_iter_npages(&i, INT_MAX) <= MAX_SKB_FRAGS)
 			zerocopy = true;
@@ -1213,10 +1222,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 
 	if (!zerocopy) {
 		copylen = len;
-		if (tun16_to_cpu(tun, gso.hdr_len) > good_linear)
+		if (tun16_to_cpu(tun, gso->hdr_len) > good_linear)
 			linear = good_linear;
 		else
-			linear = tun16_to_cpu(tun, gso.hdr_len);
+			linear = tun16_to_cpu(tun, gso->hdr_len);
 	}
 
 	skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
@@ -1237,7 +1246,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		return -EFAULT;
 	}
 
-	if (virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun))) {
+	if (virtio_net_hdr_to_skb(skb, gso, tun_is_little_endian(tun))) {
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
 		return -EINVAL;
