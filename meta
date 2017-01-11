@@ -1,7 +1,8 @@
 Version: 1
-Previous: 3e91ca0be709464b5fd18c5421474649eace42fe
-Head: c1878f7a89efbbe1ac0082d09b2928782a6ceba1
+Previous: 328c5cdaf3022a42b273259341ea307a9cb74d55
+Head: 96ec11325e87d543fb88861ee975f4ddb3d0ef62
 Applied:
+  tun-bypass-unnecessary-hash: 96ec11325e87d543fb88861ee975f4ddb3d0ef62
 Unapplied:
   vhost_net-batch-tx-descriptor: 54505b96d8c4e8edbfc73ca2c7eb98dca7a22ccd
   vhost_net-batch-tx-descriptor-0: f5b11c1ac513e2d4860dbf90fca61b68dad3d1ef
