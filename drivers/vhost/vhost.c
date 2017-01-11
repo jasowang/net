@@ -2068,7 +2068,7 @@ again:
 	if (vq->max_desc) {
 		ret = &vq->descs[vq->current_desc];
 
-		if (vq->current_desc == vq->max_desc)
+		if (vq->current_desc + 1 == vq->max_desc)
 			vq->current_desc = vq->max_desc = 0;
 		else
 			vq->current_desc++;
@@ -2088,10 +2088,8 @@ again:
 		if (desc->head || desc->head != vq->num) {
 			desc->offset = offset;
 			offset += desc->out_num + desc->in_num;
-		} else {
-			desc->out_num = desc->in_num = 0;
+		} else
 			break;
-		}
 
 		if (offset > UIO_MAXIOV)
 			break;
