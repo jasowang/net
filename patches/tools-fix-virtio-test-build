@@ -5,6 +5,8 @@ Date:   2017-01-11 14:12:26 +0800
 
 tools: fix virtio test build failure
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
