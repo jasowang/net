@@ -1,10 +1,10 @@
 Version: 1
-Previous: 64bc40610ec350b529bb398254234608f85044e6
-Head: f5b11c1ac513e2d4860dbf90fca61b68dad3d1ef
+Previous: 3e91ca0be709464b5fd18c5421474649eace42fe
+Head: c1878f7a89efbbe1ac0082d09b2928782a6ceba1
 Applied:
+Unapplied:
   vhost_net-batch-tx-descriptor: 54505b96d8c4e8edbfc73ca2c7eb98dca7a22ccd
   vhost_net-batch-tx-descriptor-0: f5b11c1ac513e2d4860dbf90fca61b68dad3d1ef
-Unapplied:
   tools-fix-virtio-test-build: 07088736acf40939ce8a45a6223b58d8bef023d5
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
   polling: 03b8367b752bd5e571a42724507df330afa52e7d
