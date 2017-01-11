@@ -1,0 +1,11 @@
+Bottom: 9a4a62432469edb86ba0fef4e959893f7b116e38
+Top:    9a4a62432469edb86ba0fef4e959893f7b116e38
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-11 14:12:26 +0800
+
+tools: fix virtio test build failure
+
+
+---
+
+
