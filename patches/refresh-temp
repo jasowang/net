@@ -1,0 +1,60 @@
+Bottom: a80ae90dba564cc8830deaad13be4898fc62c103
+Top:    7ed9de3239a659682192fa2c1a0ed2dcf4c7044d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-11 16:28:07 +0800
+
+Refresh of vhost-try-avoding-avail-index
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 9f11838..9e95225 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1932,25 +1932,30 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 
+ 	/* Check it isn't doing very strange things with descriptor numbers. */
+ 	last_avail_idx = vq->last_avail_idx;
+-	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
+-		vq_err(vq, "Failed to access avail idx at %p\n",
+-		       &vq->avail->idx);
+-		return -EFAULT;
+-	}
+-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 
+-	if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
+-		vq_err(vq, "Guest moved used index from %u to %u",
+-		       last_avail_idx, vq->avail_idx);
+-		return -EFAULT;
+-	}
++	if (vq->avail_idx == vq->last_avail_idx) {
++		if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
++			vq_err(vq, "Failed to access avail idx at %p\n",
++				&vq->avail->idx);
++			return -EFAULT;
++		}
++		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 
+-	/* If there's nothing new since last we looked, return invalid. */
+-	if (vq->avail_idx == last_avail_idx)
+-		return vq->num;
++		if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
++			vq_err(vq, "Guest moved used index from %u to %u",
++				last_avail_idx, vq->avail_idx);
++			return -EFAULT;
++		}
+ 
+-	/* Only get avail ring entries after they have been exposed by guest. */
+-	smp_rmb();
++		/* If there's nothing new since last we looked, return
++		 * invalid. */
++		if (vq->avail_idx == last_avail_idx)
++			return vq->num;
++
++		/* Only get avail ring entries after they have been
++		 * exposed by guest. */
++		smp_rmb();
++	}
+ 
+ 	/* Grab the next descriptor number they're advertising, and increment
+ 	 * the index we've seen. */
