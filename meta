@@ -1,10 +1,11 @@
 Version: 1
-Previous: ba87de54a1eff451ee3ea439e78c32929b0e7090
-Head: fbec1bc463ff59030c5802bc306b035962ff1fa0
+Previous: c7784e45c09539d33a663a4d3947a061f7e8c549
+Head: 2d55750637e6dc88e51676609f77558c3ba96392
 Applied:
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   vhost-better-detection-of-0: 65fee4cc1bc5ee6e634caceede9e0082279be070
   vhost-try-avoding-avail-index: fbec1bc463ff59030c5802bc306b035962ff1fa0
+  tuntap-avoid-unnecessary: 2d55750637e6dc88e51676609f77558c3ba96392
 Unapplied:
   vhost_net-batch-tx-descriptor: 15f146e29944bc89981785a1ce304ae9c92c548f
   vhost_net-batch-tx-descriptor-0: 9047c6792bfd08b5950f4fb7fe29d0d5ed1502f5
