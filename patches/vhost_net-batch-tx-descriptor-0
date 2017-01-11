@@ -1,5 +1,5 @@
-Bottom: d11ea71e8062f0175eb7434d26852e95c9b3b305
-Top:    2487ad601b2fb80e11f4fb82027e728b917623c0
+Bottom: 2a787f3f87eac29273fddb1134be33467041e3c2
+Top:    4e219015cf88dd1203aef9841323948c017a9022
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-10 15:52:50 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 6d004c6..f78d063 100644
+index 5dc3465..074628d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -328,27 +328,30 @@ static int vhost_net_enable_vq(struct vhost_net *n,
