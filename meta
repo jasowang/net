@@ -1,11 +1,12 @@
 Version: 1
-Previous: dcb41d02f889294b5027e1c751dfae473a0c5640
-Head: 9d3cf3e0c018162d1fd227c93cad2914dda27016
+Previous: fef5153e2846e5b9ffb9b58e472ac38ba8cc7e7f
+Head: 99d3c5d3355dae88699537feb885580c8b6d583e
 Applied:
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   vhost-better-detection-of-0: 65fee4cc1bc5ee6e634caceede9e0082279be070
   vhost-try-avoding-avail-index: fbec1bc463ff59030c5802bc306b035962ff1fa0
   tuntap-avoid-unnecessary: 9d3cf3e0c018162d1fd227c93cad2914dda27016
+  vhost_net-tx-batching: 99d3c5d3355dae88699537feb885580c8b6d583e
 Unapplied:
   vhost_net-batch-tx-descriptor: 28bfb4a17ae0a3e4639b57abd98857a32574c6cc
   vhost_net-batch-tx-descriptor-0: 2efbd81b33bd31549a7ee2edaa7b3c8233a5e282
@@ -13,7 +14,6 @@ Unapplied:
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
   polling: 03b8367b752bd5e571a42724507df330afa52e7d
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
-  vhost_net-tx-batching: 9369343f0f4b150e076d35a28b3b6a25ff2149e4
   tun-rx-batching: 03ab9b7ef7e5348300b0c1374dbdd53e49ba7028
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
