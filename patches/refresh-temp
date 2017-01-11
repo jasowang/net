@@ -1,0 +1,30 @@
+Bottom: 04dab5c2650cddd666620ca3972d8e8b9634e78e
+Top:    ba696ae695f1cc26ee22d1d82ddb3882e5ee5502
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-11 15:33:08 +0800
+
+Refresh of tun-bypass-unnecessary-hash
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index cd8e02c..0986413 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1282,7 +1282,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_reset_network_header(skb);
+ 	skb_probe_transport_header(skb, 0);
+ 
+-	rxhash = skb_get_hash(skb);
++//	rxhash = skb_get_hash(skb);
+ #ifndef CONFIG_4KSTACKS
+ 	local_bh_disable();
+ 	netif_receive_skb(skb);
+@@ -1298,7 +1298,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	u64_stats_update_end(&stats->syncp);
+ 	put_cpu_ptr(stats);
+ 
+-	tun_flow_update(tun, rxhash, tfile);
++//	tun_flow_update(tun, rxhash, tfile);
+ 	return total_len;
+ }
