@@ -1,10 +1,10 @@
 Version: 1
-Previous: 2a87f56d321e7774aeb13bb98eb1f7aa997df060
-Head: 15f146e29944bc89981785a1ce304ae9c92c548f
+Previous: 185e03fbc35d9de9d9e5020492a16d0f51eb47a8
+Head: 12ac053d18baead49b2d23eef7b917c806197b9e
 Applied:
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
-  vhost_net-batch-tx-descriptor: 15f146e29944bc89981785a1ce304ae9c92c548f
 Unapplied:
+  vhost_net-batch-tx-descriptor: 15f146e29944bc89981785a1ce304ae9c92c548f
   vhost_net-batch-tx-descriptor-0: 9047c6792bfd08b5950f4fb7fe29d0d5ed1502f5
   tools-fix-virtio-test-build: 07088736acf40939ce8a45a6223b58d8bef023d5
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
