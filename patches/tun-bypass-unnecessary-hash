@@ -5,6 +5,8 @@ Date:   2017-01-11 15:33:05 +0800
 
 tun: bypass unnecessary hash
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
