@@ -346,7 +346,7 @@ static struct vhost_desc *vhost_net_tx_get_vq_desc(struct vhost_net *net,
 		desc = vhost_get_vq_desc_batched(vq, NULL);
 	}
 
-	if (desc && desc->head && desc->head != vq->num) {
+	if (desc && desc->head >= 0 && desc->head != vq->num) {
 		*out_num = desc->out_num;
 		*in_num = desc->in_num;
 	} else {
@@ -407,8 +407,10 @@ static void handle_tx(struct vhost_net *net)
 
 		desc = vhost_net_tx_get_vq_desc(net, vq, &out, &in);
 		/* TODO: for safe! */
-		if (desc == NULL)
+		if (desc == NULL) {
+			printk("NULL!\n");
 			break;
+		}
 		head = desc->head;
 		/* On error, stop handling until the next kick. */
 		if (unlikely(head < 0))
