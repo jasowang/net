@@ -2068,12 +2068,6 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
 again:
 	if (vq->max_desc) {
 		ret = &vq->descs[vq->current_desc];
-#if 0
-		printk("vq %p curr %d max %d\n", vq,
-			vq->current_desc, vq->max_desc);
-		printk("head %d in %d out %d offset %d\n",
-			ret->head, ret->in_num, ret->out_num, ret->offset);
-#endif
 		if (vq->current_desc + 1 == vq->max_desc)
 			vq->current_desc = vq->max_desc = 0;
 		else
@@ -2089,10 +2083,6 @@ again:
 		desc->head = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
 					       &desc->out_num, &desc->in_num,
 					       log, &desc->log_num);
-#if 0
-		printk("vq %p desc->head %d max %d\n", vq, desc->head,
-			vq->max_desc);
-#endif
 		++vq->max_desc;
 		if (desc->head >= 0 && desc->head != vq->num) {
 			desc->offset = offset;
