@@ -28,6 +28,7 @@
 #include <linux/module.h>
 #include <linux/sort.h>
 #include <linux/interval_tree_generic.h>
+#include <linux/prefetch.h>
 
 #include "vhost.h"
 
@@ -1812,6 +1813,8 @@ static unsigned next_desc(struct vhost_virtqueue *vq, struct vring_desc *desc)
 	/* We will use the result as an index in an array, so most
 	 * architectures only need a compiler barrier here. */
 	read_barrier_depends();
+
+	prefetchw(vq->desc + next);
 
 	return next;
 }
