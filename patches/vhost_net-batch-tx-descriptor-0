@@ -1,5 +1,5 @@
-Bottom: dd17378eed1ec7b5d4416cc1d44022d3c06804a3
-Top:    1b42d937fb22771f98661973a2cf1b9efe2fd06a
+Bottom: 591dadc55ff6e77d8dc192f54e18abf2a8367f61
+Top:    1e9ee38c9b029fba7d69759c52406cc13481faca
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-10 15:52:50 +0800
 
@@ -97,10 +97,10 @@ index 5dc3465..b516445 100644
  		/* Sanity check */
  		if (!msg_data_left(&msg)) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index d41147b..5e1373f 100644
+index 91d0500..c3b7a71 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2054,6 +2054,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2059,6 +2059,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* Assume notifications from guest are disabled at this point,
  	 * if they aren't we would need to update avail_event index. */
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
@@ -108,7 +108,7 @@ index d41147b..5e1373f 100644
  	return head;
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
-@@ -2062,13 +2063,12 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
+@@ -2067,13 +2068,12 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
  					     struct vhost_log *log)
  {
  	struct vhost_desc *ret;
@@ -124,7 +124,7 @@ index d41147b..5e1373f 100644
  			vq->current_desc = vq->max_desc = 0;
  		else
  			vq->current_desc++;
-@@ -2080,13 +2080,18 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
+@@ -2085,13 +2085,18 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
  	while (vq->max_desc < VHOST_MAX_TX_BATCHED) {
  		struct vhost_desc *desc = &vq->descs[vq->max_desc];
  
