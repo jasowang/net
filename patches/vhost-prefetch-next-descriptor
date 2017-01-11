@@ -5,6 +5,8 @@ Date:   2017-01-11 14:11:35 +0800
 
 vhost: prefetch next descriptor
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
