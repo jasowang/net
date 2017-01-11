@@ -1,5 +1,5 @@
 Bottom: 2a787f3f87eac29273fddb1134be33467041e3c2
-Top:    29211ad99c44ccf88d4377779d0731dc37597dfc
+Top:    370d2e9d02288bf5f125beaf02726dc246efc1c4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-10 15:52:50 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 5dc3465..b7913c9 100644
+index 5dc3465..b516445 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -328,27 +328,32 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -46,7 +46,7 @@ index 5dc3465..b7913c9 100644
  	}
  
 -	return r;
-+	if (desc && desc->head && desc->head != vq->num) {
++	if (desc && desc->head >= 0 && desc->head != vq->num) {
 +		*out_num = desc->out_num;
 +		*in_num = desc->in_num;
 +	} else {
@@ -66,7 +66,7 @@ index 5dc3465..b7913c9 100644
  	bool zcopy, zcopy_used;
  
  	mutex_lock(&vq->mutex);
-@@ -398,9 +405,11 @@ static void handle_tx(struct vhost_net *net)
+@@ -398,9 +405,13 @@ static void handle_tx(struct vhost_net *net)
  			      % UIO_MAXIOV == nvq->done_idx))
  			break;
  
@@ -75,13 +75,15 @@ index 5dc3465..b7913c9 100644
 -						&out, &in);
 +		desc = vhost_net_tx_get_vq_desc(net, vq, &out, &in);
 +		/* TODO: for safe! */
-+		if (desc == NULL)
++		if (desc == NULL) {
++			printk("NULL!\n");
 +			break;
++		}
 +		head = desc->head;
  		/* On error, stop handling until the next kick. */
  		if (unlikely(head < 0))
  			break;
-@@ -417,9 +426,10 @@ static void handle_tx(struct vhost_net *net)
+@@ -417,9 +428,10 @@ static void handle_tx(struct vhost_net *net)
  			       "out %d, int %d\n", out, in);
  			break;
  		}
@@ -95,10 +97,18 @@ index 5dc3465..b7913c9 100644
  		/* Sanity check */
  		if (!msg_data_left(&msg)) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index d41147b..15e804b 100644
+index d41147b..5849b37 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2062,13 +2062,13 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
+@@ -2054,6 +2054,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 	/* Assume notifications from guest are disabled at this point,
+ 	 * if they aren't we would need to update avail_event index. */
+ 	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
++//	printk("vq %p head %d\n", vq, head);
+ 	return head;
+ }
+ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+@@ -2062,13 +2063,18 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
  					     struct vhost_log *log)
  {
  	struct vhost_desc *ret;
@@ -108,13 +118,19 @@ index d41147b..15e804b 100644
  again:
  	if (vq->max_desc) {
  		ret = &vq->descs[vq->current_desc];
- 
+-
 -		if (vq->current_desc == vq->max_desc)
++#if 0
++		printk("vq %p curr %d max %d\n", vq,
++			vq->current_desc, vq->max_desc);
++		printk("head %d in %d out %d offset %d\n",
++			ret->head, ret->in_num, ret->out_num, ret->offset);
++#endif
 +		if (vq->current_desc + 1 == vq->max_desc)
  			vq->current_desc = vq->max_desc = 0;
  		else
  			vq->current_desc++;
-@@ -2080,13 +2080,19 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
+@@ -2080,13 +2086,22 @@ struct vhost_desc *vhost_get_vq_desc_batched(struct vhost_virtqueue *vq,
  	while (vq->max_desc < VHOST_MAX_TX_BATCHED) {
  		struct vhost_desc *desc = &vq->descs[vq->max_desc];
  
@@ -122,18 +138,21 @@ index d41147b..15e804b 100644
 -				      &desc->out_num, &desc->in_num,
 -				      log, &desc->log_num);
 -		if (r || r == vq->num)
--			break;
 +		desc->head = vhost_get_vq_desc(vq, vq->iov + offset, UIO_MAXIOV,
 +					       &desc->out_num, &desc->in_num,
 +					       log, &desc->log_num);
- 
- 		++vq->max_desc;
-+		if (desc->head || desc->head != vq->num) {
++#if 0
++		printk("vq %p desc->head %d max %d\n", vq, desc->head,
++			vq->max_desc);
++#endif
++		++vq->max_desc;
++		if (desc->head >= 0 && desc->head != vq->num) {
 +			desc->offset = offset;
 +			offset += desc->out_num + desc->in_num;
 +		} else
-+			break;
-+
+ 			break;
+ 
+-		++vq->max_desc;
 +		if (offset > UIO_MAXIOV)
 +			break;
  	}
