@@ -5,6 +5,8 @@ Date:   2017-01-11 17:01:39 +0800
 
 tuntap: avoid unnecessary iov_iter_advance
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
