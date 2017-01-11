@@ -1282,7 +1282,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	skb_reset_network_header(skb);
 	skb_probe_transport_header(skb, 0);
 
-	rxhash = skb_get_hash(skb);
+//	rxhash = skb_get_hash(skb);
 #ifndef CONFIG_4KSTACKS
 	local_bh_disable();
 	netif_receive_skb(skb);
@@ -1298,7 +1298,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	u64_stats_update_end(&stats->syncp);
 	put_cpu_ptr(stats);
 
-	tun_flow_update(tun, rxhash, tfile);
+//	tun_flow_update(tun, rxhash, tfile);
 	return total_len;
 }
 
