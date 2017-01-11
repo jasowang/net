@@ -1,0 +1,21 @@
+Bottom: 9a4a62432469edb86ba0fef4e959893f7b116e38
+Top:    ce7d562a748fcd2e48fc28ad986a01df7b1a0922
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-11 14:12:30 +0800
+
+Refresh of tools-fix-virtio-test-build
+
+---
+
+diff --git a/tools/include/xen/xen.h b/tools/include/xen/xen.h
+new file mode 100644
+index 0000000..44f993c
+--- /dev/null
++++ b/tools/include/xen/xen.h
+@@ -0,0 +1,6 @@
++#ifndef _XEN_XEN_H
++#define _XEN_XEN_H
++
++#define xen_domain()		(0)
++
++#endif	/* _XEN_XEN_H */
