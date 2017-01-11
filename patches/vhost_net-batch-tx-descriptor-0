@@ -1,5 +1,5 @@
-Bottom: 591dadc55ff6e77d8dc192f54e18abf2a8367f61
-Top:    1e9ee38c9b029fba7d69759c52406cc13481faca
+Bottom: 4468777d441eac7843a46eedfd0e0353d514f9e5
+Top:    689fd65293aa3459980140d922bc4160480f06d6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-10 15:52:50 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 5dc3465..b516445 100644
+index c42e9c3..7736e0d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -328,27 +328,32 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -56,8 +56,8 @@ index 5dc3465..b516445 100644
 +	return desc;
  }
  
- /* Expects to be always run from workqueue - which acts as
-@@ -371,6 +376,8 @@ static void handle_tx(struct vhost_net *net)
+ static bool vhost_exceeds_maxpend(struct vhost_net *net)
+@@ -380,6 +385,8 @@ static void handle_tx(struct vhost_net *net)
  	size_t hdr_size;
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
@@ -66,8 +66,8 @@ index 5dc3465..b516445 100644
  	bool zcopy, zcopy_used;
  
  	mutex_lock(&vq->mutex);
-@@ -398,9 +405,13 @@ static void handle_tx(struct vhost_net *net)
- 			      % UIO_MAXIOV == nvq->done_idx))
+@@ -406,9 +413,13 @@ static void handle_tx(struct vhost_net *net)
+ 		if (unlikely(vhost_exceeds_maxpend(net)))
  			break;
  
 -		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
@@ -83,7 +83,7 @@ index 5dc3465..b516445 100644
  		/* On error, stop handling until the next kick. */
  		if (unlikely(head < 0))
  			break;
-@@ -417,9 +428,10 @@ static void handle_tx(struct vhost_net *net)
+@@ -425,9 +436,10 @@ static void handle_tx(struct vhost_net *net)
  			       "out %d, int %d\n", out, in);
  			break;
  		}
