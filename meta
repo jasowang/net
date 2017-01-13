@@ -1,7 +1,8 @@
 Version: 1
-Previous: 46d61d1c112074278900d5c503a1508d9ab97638
-Head: c1878f7a89efbbe1ac0082d09b2928782a6ceba1
+Previous: 125db5eedc19adef79d2ca11f26c08a1173a9463
+Head: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
 Applied:
+  tools-fix-virtio-test-build: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
 Unapplied:
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   vhost-better-detection-of-0: 65fee4cc1bc5ee6e634caceede9e0082279be070
@@ -12,7 +13,6 @@ Unapplied:
   tun-rx-batching: dd8c7baa699bc1adf609efff4c712cc8faa1f223
   vhost_net-batch-tx-descriptor: 4fc573dc0c90893f5e9cbdf6627043e20f84c16e
   vhost_net-batch-tx-descriptor-0: 7584d26682c15c743f62c8e5f99092b5b96d920e
-  tools-fix-virtio-test-build: 07088736acf40939ce8a45a6223b58d8bef023d5
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
   vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
