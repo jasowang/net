@@ -1,6 +1,6 @@
 Version: 1
-Previous: bdbdb44d6cae6012604c61df8b9a74e2cf5d4042
-Head: c1878f7a89efbbe1ac0082d09b2928782a6ceba1
+Previous: fb3e66682685e5dc2ff0b8928dad3fdb0a587433
+Head: b8128c42313e688bb23ef2b88f752beb28b281fc
 Applied:
 Unapplied:
   tools-fix-virtio-test-build: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
