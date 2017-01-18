@@ -1,5 +1,5 @@
-Bottom: fb9451757a9e5e44013e549aac7827d0ca014a4e
-Top:    408db372d2f9675189e863fb14ed6632d1d400cb
+Bottom: 4960d539d3863c61696afd316b403c6dc18cec17
+Top:    47306cc9a8685a0ee49ade19dd3f615172687732
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -34,7 +34,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5dc379f..2c880db 100644
+index 8c1d3bd..8fc90c1 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -218,6 +218,7 @@ struct tun_struct {
@@ -53,7 +53,7 @@ index 5dc379f..2c880db 100644
  	skb_queue_purge(&tfile->sk.sk_error_queue);
  }
  
-@@ -1140,10 +1142,45 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
+@@ -1139,10 +1141,45 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
  	return skb;
  }
  
@@ -100,9 +100,9 @@ index 5dc379f..2c880db 100644
  {
  	struct tun_pi pi = { 0, cpu_to_be16(ETH_P_IP) };
  	struct sk_buff *skb;
-@@ -1293,9 +1330,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1283,9 +1320,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  
- //	rxhash = skb_get_hash(skb);
+ 	rxhash = skb_get_hash(skb);
  #ifndef CONFIG_4KSTACKS
 -	local_bh_disable();
 -	netif_receive_skb(skb);
@@ -111,7 +111,7 @@ index 5dc379f..2c880db 100644
  #else
  	netif_rx_ni(skb);
  #endif
-@@ -1321,7 +1356,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1311,7 +1346,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	if (!tun)
  		return -EBADFD;
  
@@ -121,7 +121,7 @@ index 5dc379f..2c880db 100644
  
  	tun_put(tun);
  	return result;
-@@ -1579,7 +1615,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+@@ -1569,7 +1605,8 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  		return -EBADFD;
  
  	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
@@ -131,7 +131,7 @@ index 5dc379f..2c880db 100644
  	tun_put(tun);
  	return ret;
  }
-@@ -1780,6 +1817,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
+@@ -1770,6 +1807,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
  		tun->align = NET_SKB_PAD;
  		tun->filter_attached = false;
  		tun->sndbuf = tfile->socket.sk->sk_sndbuf;
@@ -139,7 +139,7 @@ index 5dc379f..2c880db 100644
  
  		tun->pcpu_stats = netdev_alloc_pcpu_stats(struct tun_pcpu_stats);
  		if (!tun->pcpu_stats) {
-@@ -2448,6 +2486,29 @@ static void tun_set_msglevel(struct net_device *dev, u32 value)
+@@ -2438,6 +2476,29 @@ static void tun_set_msglevel(struct net_device *dev, u32 value)
  #endif
  }
  
@@ -169,7 +169,7 @@ index 5dc379f..2c880db 100644
  static const struct ethtool_ops tun_ethtool_ops = {
  	.get_settings	= tun_get_settings,
  	.get_drvinfo	= tun_get_drvinfo,
-@@ -2455,6 +2516,8 @@ static const struct ethtool_ops tun_ethtool_ops = {
+@@ -2445,6 +2506,8 @@ static const struct ethtool_ops tun_ethtool_ops = {
  	.set_msglevel	= tun_set_msglevel,
  	.get_link	= ethtool_op_get_link,
  	.get_ts_info	= ethtool_op_get_ts_info,
