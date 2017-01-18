@@ -1168,8 +1168,8 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 
 	if (rcv) {
 		struct sk_buff *nskb;
-		local_bh_disable();
 
+		local_bh_disable();
 		while ((nskb = __skb_dequeue(&process_queue)))
 			netif_receive_skb(nskb);
 		netif_receive_skb(skb);
