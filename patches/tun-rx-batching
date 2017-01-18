@@ -1,5 +1,5 @@
 Bottom: 4960d539d3863c61696afd316b403c6dc18cec17
-Top:    7be6abbf36c52cd866cef3e4615e3f104b925765
+Top:    a4477b197505787d89a8a1d5f63d4e1e20fbb1ec
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-12-12 14:06:25 +0800
 
@@ -34,7 +34,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8c1d3bd..1e4f56d 100644
+index 8c1d3bd..13890ac 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -218,6 +218,7 @@ struct tun_struct {
@@ -84,8 +84,8 @@ index 8c1d3bd..1e4f56d 100644
 +
 +	if (rcv) {
 +		struct sk_buff *nskb;
-+		local_bh_disable();
 +
++		local_bh_disable();
 +		while ((nskb = __skb_dequeue(&process_queue)))
 +			netif_receive_skb(nskb);
 +		netif_receive_skb(skb);

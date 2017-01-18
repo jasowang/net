@@ -1,11 +1,10 @@
 Version: 1
-Previous: e8759c72552d940c6418ce51a446a0bebc542174
-Head: a2c0a9939ec8dea3a3de2e1e83585505b37d4fdc
+Previous: f7c53c5c46241ec84556240d824afe0d4f92cccc
+Head: df1ffd4866a7d1ef2a8e12101b12214bd1657df8
 Applied:
   vhost-better-detection-of-0: 6d287dfdc86f1d5101bfba72d7ecd3c720bb3a98
   vhost_net-tx-batching: d22757e54a3fcafeecc6e538a071a295d02094e7
-  tun-rx-batching: 2659beac91ddf5700e4e17a07cbc25425d7d0158
-  refresh-temp: a2c0a9939ec8dea3a3de2e1e83585505b37d4fdc
+  tun-rx-batching: df1ffd4866a7d1ef2a8e12101b12214bd1657df8
 Unapplied:
   tools-fix-virtio-test-build: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
