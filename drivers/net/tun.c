@@ -2492,9 +2492,9 @@ static int tun_set_coalesce(struct net_device *dev,
 	struct tun_struct *tun = netdev_priv(dev);
 
 	if (ec->rx_max_coalesced_frames > NAPI_POLL_WEIGHT)
-		return -EINVAL;
-
-	tun->rx_batched = ec->rx_max_coalesced_frames;
+		tun->rx_batched = NAPI_POLL_WEIGHT;
+	else
+		tun->rx_batched = ec->rx_max_coalesced_frames;
 
 	return 0;
 }
