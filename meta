@@ -1,5 +1,5 @@
 Version: 1
-Previous: add59c0b2140d37d9bfc7547122438d829f0f34a
+Previous: 73da6bb15b52beb507014aac9f097ac0e385e3a8
 Head: 0e40f4c9593ba2c7c30150ed669da97bd581c0cd
 Applied:
 Unapplied:
@@ -15,7 +15,6 @@ Unapplied:
   vhost_net-batch-tx-descriptor-0: 7584d26682c15c743f62c8e5f99092b5b96d920e
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
-  vhost-optmize-vhost_signal: fe14217436e0e6ee80d676971128d4bbe9063677
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
   macvtap-tx-batching-0: cafc0db41c192355a6adddf0b6f3ed36d7e10b93
