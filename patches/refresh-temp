@@ -1,0 +1,23 @@
+Bottom: 7be6abbf36c52cd866cef3e4615e3f104b925765
+Top:    a4477b197505787d89a8a1d5f63d4e1e20fbb1ec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-01-18 14:57:30 +0800
+
+Refresh of tun-rx-batching
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 1e4f56d..13890ac 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1168,8 +1168,8 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 
+ 	if (rcv) {
+ 		struct sk_buff *nskb;
+-		local_bh_disable();
+ 
++		local_bh_disable();
+ 		while ((nskb = __skb_dequeue(&process_queue)))
+ 			netif_receive_skb(nskb);
+ 		netif_receive_skb(skb);
