@@ -1,0 +1,94 @@
+Bottom: cf664383c30c28ab33759a03a2dfc4a81f1b38bb
+Top:    877921ee3925e91e83b546545842a1746c03e3ff
+Author: Christoph Hellwig <hch@lst.de>
+Date:   2017-01-27 09:16:31 +0100
+
+virtio_pci: don't duplicate the msix_enable flag in struct pci_dev
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+
+
+---
+
+diff --git a/drivers/virtio/virtio_pci_common.c b/drivers/virtio/virtio_pci_common.c
+index 5880e86..9c4ad7d3f 100644
+--- a/drivers/virtio/virtio_pci_common.c
++++ b/drivers/virtio/virtio_pci_common.c
+@@ -125,7 +125,7 @@ void vp_del_vqs(struct virtio_device *vdev)
+ 
+ 	vp_remove_vqs(vdev);
+ 
+-	if (vp_dev->msix_enabled) {
++	if (vp_dev->pci_dev->msix_enabled) {
+ 		for (i = 0; i < vp_dev->msix_vectors; i++)
+ 			free_cpumask_var(vp_dev->msix_affinity_masks[i]);
+ 
+@@ -245,7 +245,6 @@ static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
+ 			allocated_vectors++;
+ 	}
+ 
+-	vp_dev->msix_enabled = 1;
+ 	return 0;
+ 
+ out_remove_vqs:
+@@ -341,7 +340,7 @@ int vp_set_vq_affinity(struct virtqueue *vq, int cpu)
+ 	if (!vq->callback)
+ 		return -EINVAL;
+ 
+-	if (vp_dev->msix_enabled) {
++	if (vp_dev->pci_dev->msix_enabled) {
+ 		int vec = vp_dev->msix_vector_map[vq->index];
+ 		struct cpumask *mask = vp_dev->msix_affinity_masks[vec];
+ 		unsigned int irq = pci_irq_vector(vp_dev->pci_dev, vec);
+diff --git a/drivers/virtio/virtio_pci_common.h b/drivers/virtio/virtio_pci_common.h
+index 8559386..217ca87 100644
+--- a/drivers/virtio/virtio_pci_common.h
++++ b/drivers/virtio/virtio_pci_common.h
+@@ -64,8 +64,6 @@ struct virtio_pci_device {
+ 	/* the IO mapping for the PCI config space */
+ 	void __iomem *ioaddr;
+ 
+-	/* MSI-X support */
+-	int msix_enabled;
+ 	cpumask_var_t *msix_affinity_masks;
+ 	/* Name strings for interrupts. This size should be enough,
+ 	 * and I'm too lazy to allocate each name separately. */
+diff --git a/drivers/virtio/virtio_pci_legacy.c b/drivers/virtio/virtio_pci_legacy.c
+index 47292da..2ab6aee 100644
+--- a/drivers/virtio/virtio_pci_legacy.c
++++ b/drivers/virtio/virtio_pci_legacy.c
+@@ -165,7 +165,7 @@ static void del_vq(struct virtqueue *vq)
+ 
+ 	iowrite16(vq->index, vp_dev->ioaddr + VIRTIO_PCI_QUEUE_SEL);
+ 
+-	if (vp_dev->msix_enabled) {
++	if (vp_dev->pci_dev->msix_enabled) {
+ 		iowrite16(VIRTIO_MSI_NO_VECTOR,
+ 			  vp_dev->ioaddr + VIRTIO_MSI_QUEUE_VECTOR);
+ 		/* Flush the write out to device */
+diff --git a/drivers/virtio/virtio_pci_modern.c b/drivers/virtio/virtio_pci_modern.c
+index 00e6fc1..e5ce310 100644
+--- a/drivers/virtio/virtio_pci_modern.c
++++ b/drivers/virtio/virtio_pci_modern.c
+@@ -412,7 +412,7 @@ static void del_vq(struct virtqueue *vq)
+ 
+ 	vp_iowrite16(vq->index, &vp_dev->common->queue_select);
+ 
+-	if (vp_dev->msix_enabled) {
++	if (vp_dev->pci_dev->msix_enabled) {
+ 		vp_iowrite16(VIRTIO_MSI_NO_VECTOR,
+ 			     &vp_dev->common->queue_msix_vector);
+ 		/* Flush the write out to device */
+diff --git a/include/uapi/linux/virtio_pci.h b/include/uapi/linux/virtio_pci.h
+index 90007a1..15b4385 100644
+--- a/include/uapi/linux/virtio_pci.h
++++ b/include/uapi/linux/virtio_pci.h
+@@ -79,7 +79,7 @@
+  * configuration space */
+ #define VIRTIO_PCI_CONFIG_OFF(msix_enabled)	((msix_enabled) ? 24 : 20)
+ /* Deprecated: please use VIRTIO_PCI_CONFIG_OFF instead */
+-#define VIRTIO_PCI_CONFIG(dev)	VIRTIO_PCI_CONFIG_OFF((dev)->msix_enabled)
++#define VIRTIO_PCI_CONFIG(dev)	VIRTIO_PCI_CONFIG_OFF((dev)->pci_dev->msix_enabled)
+ 
+ /* Virtio ABI version, this must match exactly */
+ #define VIRTIO_PCI_ABI_VERSION		0
