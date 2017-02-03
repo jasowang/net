@@ -1,9 +1,10 @@
 Version: 1
-Previous: 1de3b1c395e35d3a051125fa103f1c5f190b4169
-Head: 706316b62e6378eef29bca1ada8073fbfe0df0df
+Previous: 3403036f80662837ff92e23865f9a9dba418536c
+Head: 6f98f36537c87d6d319baf5e45a819737f06631d
 Applied:
   virtio_pci-remove-struct: 67aa78b81555b1facae77cc33c1a7b20170af07b
   virtio_pci-use-shared: 6f98f36537c87d6d319baf5e45a819737f06631d
+Unapplied:
   virtio_pci-don-t-duplicate-the: 15831bc1a2b9b9678a11b0883132873e5739aa46
   virtio_pci-simplify-msi-x: eba8534b3699eca873cac2f080d8323a6871b791
   virtio-allow-drivers-to: 9ff975e5b2721b0023deca0adb11694a67717669
@@ -11,7 +12,6 @@ Applied:
   blk-mq-provide-a-default-queue: e593da5c792979e537a657d775d12fe49392af2e
   virtio_blk-use-virtio-irq: 12ae93bdf5f875c4f34aee5fe7f44a03ac3125ce
   virtio_scsi-use-virtio-irq: 706316b62e6378eef29bca1ada8073fbfe0df0df
-Unapplied:
   vhost-better-detection-of-0: 6d287dfdc86f1d5101bfba72d7ecd3c720bb3a98
   vhost_net-tx-batching: d22757e54a3fcafeecc6e538a071a295d02094e7
   tun-rx-batching: df1ffd4866a7d1ef2a8e12101b12214bd1657df8
