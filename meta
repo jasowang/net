@@ -1,7 +1,8 @@
 Version: 1
-Previous: edbc6c4d011d4226c21c7e3d4b239c479777d47e
-Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
+Previous: d8ef285a0c48efe610399b6ff5abafa7e15e6f9b
+Head: 31d59f2badd8941c212de5a4cad706908057ed4c
 Applied:
+  virtio-net-minor-tweak: 31d59f2badd8941c212de5a4cad706908057ed4c
 Unapplied:
   virtio_pci-remove-struct: 67aa78b81555b1facae77cc33c1a7b20170af07b
   virtio_pci-use-shared: 6f98f36537c87d6d319baf5e45a819737f06631d

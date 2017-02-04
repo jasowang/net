@@ -1,0 +1,11 @@
+Bottom: 2a43fef8ad98fd58ad669dd84f30895e874d2df3
+Top:    2a43fef8ad98fd58ad669dd84f30895e874d2df3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-04 14:25:31 +0800
+
+virtio-net: minor tweak
+
+
+---
+
+
