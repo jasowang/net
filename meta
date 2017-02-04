@@ -1,5 +1,5 @@
 Version: 1
-Previous: 42129270ec1c66ab58e506f41ed43d3c9dbfd1a0
+Previous: 7e67d261f623b3457e6455330b2a98c216a3e13f
 Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
 Unapplied:
@@ -19,7 +19,6 @@ Unapplied:
   macvtap-tx-batching: fb5a4b8249e2dfd46fe18492228e82e0596dbc89
   macvtap-submit-skb-list-for: 785f8e1cc1e90180a575b99e19e4edb0c106fead
   vhost_net-avoid-peeking-socket: bc0b2e4e767ec64a98ef7a73dbb1e3a83a1eef8e
-  had: f52bebc038aba20078482e94a4ebcde51ef49649
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
   vhost_net-conditionally-start: b5aef17c558057f6ccb0e31f3c3c523bab93d271
   introduce-lockless-socket: 89cd6230862d4f42822727f1df862dcad8815d63
