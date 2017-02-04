@@ -1,8 +1,9 @@
 Version: 1
-Previous: 170d0660470f5eb4ea6c6e1fb210b36ec52c64f5
-Head: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
+Previous: ac282f47409860bdfc125ddf9f989a680e02acd6
+Head: 1eb788852544156325eb408e9a837da03a6d18a2
 Applied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
+  macvtap-tx-batching-0: 1eb788852544156325eb408e9a837da03a6d18a2
 Unapplied:
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
   vhost_net-batch-tx-descriptor-0: 2f7692b278d97553ef0020a24f31f02b865801ee
@@ -14,7 +15,6 @@ Unapplied:
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
   net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
-  macvtap-tx-batching-0: cafc0db41c192355a6adddf0b6f3ed36d7e10b93
   macvtap-submit-skb-list-for-0: c153b673efaddba4f094f25122d293be496b59f2
   macvtap-tx-batching: fb5a4b8249e2dfd46fe18492228e82e0596dbc89
   macvtap-submit-skb-list-for: 785f8e1cc1e90180a575b99e19e4edb0c106fead
