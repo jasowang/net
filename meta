@@ -1,5 +1,5 @@
 Version: 1
-Previous: 7e67d261f623b3457e6455330b2a98c216a3e13f
+Previous: 897c09c54d433006720917d4804d5224e383e396
 Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
 Unapplied:
@@ -27,5 +27,4 @@ Unapplied:
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
   tun-ex: 2ab229a1b50d3ca6b399591ca7b3865f8e30b05b
-  skb_array-array-based-fifo-for: 86df372d974005a8bcb9b7bae2a91528cf3920e0
 Hidden:
