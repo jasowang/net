@@ -3,9 +3,13 @@ Top:    555676672e33e7e1522b23eeaa3b8513dd6fe28d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-11 16:28:04 +0800
 
-vhost: try avoding avail index access when necessary
+vhost: try avoiding avail index access when getting descriptor
 
-pktgen test show about 3% improvement on rx pps.
+If last avail idx is not equal to cached avail idx, we're sure there's
+still available buffers in the virtqueue so there's no need to re-read
+avail idx. So let's skip this to avoid unnecessary userspace memory
+access and memory barrier. Pktgen test show about 3% improvement on rx
+pps.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 

@@ -1,8 +1,8 @@
 Version: 1
-Previous: e5c6dfe42f5774fa9361d240db334c57eae27a28
-Head: 639ac11d56030515c66d650ef010fed33472b313
+Previous: e973a25cd05df37d88881968f3b8fe8d84a13216
+Head: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
 Applied:
-  vhost-try-avoding-avail-index: 639ac11d56030515c66d650ef010fed33472b313
+  vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
 Unapplied:
   tools-fix-virtio-test-build: ec599ae425f672e12a33862135a4441a3cc43239
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
