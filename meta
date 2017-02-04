@@ -1,18 +1,8 @@
 Version: 1
-Previous: 34abefe1a33f9178546b9d8b5f8c69e9985f19a7
+Previous: 0252af65a34fcd26f99009e2820e3f397fc8f39c
 Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
 Unapplied:
-  virtio-net-minor-tweak: 32a8c0c96ba2a92472eceba34cd7435f4c9a93fa
-  virtio_pci-remove-struct: 67aa78b81555b1facae77cc33c1a7b20170af07b
-  virtio_pci-use-shared: 6f98f36537c87d6d319baf5e45a819737f06631d
-  virtio_pci-don-t-duplicate-the: 15831bc1a2b9b9678a11b0883132873e5739aa46
-  virtio_pci-simplify-msi-x: eba8534b3699eca873cac2f080d8323a6871b791
-  virtio-allow-drivers-to: 9ff975e5b2721b0023deca0adb11694a67717669
-  virtio-provide-a-method-to-get: 31dbedf6bd0866b60cca7e48c1efbb1af24161a5
-  blk-mq-provide-a-default-queue: e593da5c792979e537a657d775d12fe49392af2e
-  virtio_blk-use-virtio-irq: 12ae93bdf5f875c4f34aee5fe7f44a03ac3125ce
-  virtio_scsi-use-virtio-irq: 706316b62e6378eef29bca1ada8073fbfe0df0df
   tools-fix-virtio-test-build: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   vhost-try-avoding-avail-index: fbec1bc463ff59030c5802bc306b035962ff1fa0
