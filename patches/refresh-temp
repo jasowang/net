@@ -1,0 +1,30 @@
+Bottom: 2a43fef8ad98fd58ad669dd84f30895e874d2df3
+Top:    201807632d51b2dd205d9cc01e6feacc5e30a5ef
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-04 14:25:35 +0800
+
+Refresh of virtio-net-minor-tweak
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 0382827..3c9331a 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1012,11 +1012,12 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+ 	/* Out of packets? */
+ 	if (received < budget) {
+ 		r = virtqueue_enable_cb_prepare(rq->vq);
+-		napi_complete_done(napi, received);
+-		if (unlikely(virtqueue_poll(rq->vq, r)) &&
+-		    napi_schedule_prep(napi)) {
+-			virtqueue_disable_cb(rq->vq);
+-			__napi_schedule(napi);
++		if (napi_complete_done(napi, received)) {
++			if (unlikely(virtqueue_poll(rq->vq, r)) &&
++				napi_schedule_prep(napi)) {
++				virtqueue_disable_cb(rq->vq);
++				__napi_schedule(napi);
++			}
+ 		}
+ 	}
