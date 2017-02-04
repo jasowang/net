@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9f9ba5f8c7ec25f9933625eae1233161c4221ad4
-Head: 6f98f36537c87d6d319baf5e45a819737f06631d
+Previous: e93c92d69a189ed914d2b4796a810aa7ded43c67
+Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
   virtio_pci-remove-struct: 67aa78b81555b1facae77cc33c1a7b20170af07b
   virtio_pci-use-shared: 6f98f36537c87d6d319baf5e45a819737f06631d
