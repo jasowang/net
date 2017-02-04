@@ -1,11 +1,11 @@
 Version: 1
-Previous: a26b9ddb4e5d421334ec7580768d4ccccd4f9266
-Head: 2f7692b278d97553ef0020a24f31f02b865801ee
+Previous: 170d0660470f5eb4ea6c6e1fb210b36ec52c64f5
+Head: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
 Applied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
+Unapplied:
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
   vhost_net-batch-tx-descriptor-0: 2f7692b278d97553ef0020a24f31f02b865801ee
-Unapplied:
   tools-fix-virtio-test-build: ec599ae425f672e12a33862135a4441a3cc43239
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   tuntap-avoid-unnecessary: 9d3cf3e0c018162d1fd227c93cad2914dda27016
