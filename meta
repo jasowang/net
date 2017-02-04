@@ -1,5 +1,5 @@
 Version: 1
-Previous: 897c09c54d433006720917d4804d5224e383e396
+Previous: 7a5d6325901619867b8d4c157a6ea4ad0159cd35
 Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
 Unapplied:
@@ -22,7 +22,6 @@ Unapplied:
   net-introduce-netif_rx_queued: 74d3e46435a03c601b9c0073a12abf03a2f12161
   vhost_net-conditionally-start: b5aef17c558057f6ccb0e31f3c3c523bab93d271
   introduce-lockless-socket: 89cd6230862d4f42822727f1df862dcad8815d63
-  patch: d961cd107246197b3988a18b7fe5ab26c5c9a856
   debug-guest: b34df8f14cbd65ea3060b0e947eb6002a94628ce
   debug: 9e64dd637d7f2992c2c9a5d490443f74db1af49d
   tun-avoid-compute-hashing-on: 838ac4a2d40c996172e93326eaedc28c38b5d41d
