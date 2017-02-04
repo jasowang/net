@@ -5,6 +5,8 @@ Date:   2017-01-11 16:28:04 +0800
 
 vhost: try avoding avail index access when necessary
 
+pktgen test show about 3% improvement on rx pps.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
