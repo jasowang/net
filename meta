@@ -1,9 +1,9 @@
 Version: 1
-Previous: 7a5d6325901619867b8d4c157a6ea4ad0159cd35
-Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
+Previous: 69b8c2ad50545249ffeff08b43cdc7176c913977
+Head: ec599ae425f672e12a33862135a4441a3cc43239
 Applied:
+  tools-fix-virtio-test-build: ec599ae425f672e12a33862135a4441a3cc43239
 Unapplied:
-  tools-fix-virtio-test-build: b5b2e7418dff6cef1b10a31ac61df7149f8a30aa
   tun-bypass-unnecessary-hash: 12ac053d18baead49b2d23eef7b917c806197b9e
   vhost-try-avoding-avail-index: fbec1bc463ff59030c5802bc306b035962ff1fa0
   tuntap-avoid-unnecessary: 9d3cf3e0c018162d1fd227c93cad2914dda27016
