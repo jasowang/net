@@ -1,10 +1,10 @@
 Version: 1
-Previous: ff5c7fd914ad4e52a5665e48f041537cad8609ba
-Head: 325729d00c90589bc33becaa0cbd061db5d1c6f0
+Previous: 57783afc07e90637acde051295a939878f5b7ad8
+Head: 98adcb96379352d81401104d646a044334034d53
 Applied:
   virtio_net-wrap-rtnl_lock-in: 325729d00c90589bc33becaa0cbd061db5d1c6f0
-Unapplied:
   virtio_net-factor-out-xdp: 98adcb96379352d81401104d646a044334034d53
+Unapplied:
   virtio_net-remove-duplicate: a991298b36282792ada88e0fda5d49a784da9a4a
   virtio_net-refactor-freeze: cbfe86a959ff7aeaaf5320c74c86d9caa5e39ff7
   virtio_net-xdp-support-for: c317f1c8f545a0e50113afd6deb94e2f7f400b28
