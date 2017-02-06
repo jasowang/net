@@ -1,10 +1,10 @@
 Version: 1
-Previous: 25ab831447947677d1aded0258558a0d1cdeb5be
-Head: 77bc03e497e1214bd9bb2177063943c189ed19f5
+Previous: 24350fcdcce4a84b97bc5034daa2858b64c35303
+Head: 6e7bc478c9a006c701c14476ec9d389a484b4864
 Applied:
+Unapplied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
-Unapplied:
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
   vhost_net-batch-tx-descriptor-0: 2f7692b278d97553ef0020a24f31f02b865801ee
   tools-fix-virtio-test-build: ec599ae425f672e12a33862135a4441a3cc43239
