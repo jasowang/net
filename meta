@@ -1,13 +1,13 @@
 Version: 1
-Previous: 5265886fea2ace5b0850d45d4cc926b272d601cb
-Head: c317f1c8f545a0e50113afd6deb94e2f7f400b28
+Previous: e60158c82e113311be82f61420a78fa36bb8cba8
+Head: bd092ad1463ca0990581fa992e12a9b0ed295d25
 Applied:
+Unapplied:
   virtio_net-wrap-rtnl_lock-in: 325729d00c90589bc33becaa0cbd061db5d1c6f0
   virtio_net-factor-out-xdp: 98adcb96379352d81401104d646a044334034d53
   virtio_net-remove-duplicate: a991298b36282792ada88e0fda5d49a784da9a4a
   virtio_net-refactor-freeze: cbfe86a959ff7aeaaf5320c74c86d9caa5e39ff7
   virtio_net-xdp-support-for: c317f1c8f545a0e50113afd6deb94e2f7f400b28
-Unapplied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
