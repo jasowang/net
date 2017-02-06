@@ -1,9 +1,10 @@
 Version: 1
-Previous: ac282f47409860bdfc125ddf9f989a680e02acd6
-Head: 1eb788852544156325eb408e9a837da03a6d18a2
+Previous: 6cd3edd38ec943ff685b1d1a733b46e445c2f76d
+Head: e4819aff6345c5597ca112b0e613b5a0bd4fdfc1
 Applied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
   macvtap-tx-batching-0: 1eb788852544156325eb408e9a837da03a6d18a2
+  refresh-temp: e4819aff6345c5597ca112b0e613b5a0bd4fdfc1
 Unapplied:
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
   vhost_net-batch-tx-descriptor-0: 2f7692b278d97553ef0020a24f31f02b865801ee
