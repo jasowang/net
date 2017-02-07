@@ -1,5 +1,5 @@
 Bottom: 393a469e499e95a0fbc8eb22d6f1707bbb7053cb
-Top:    dbd8e318587e31a5831f31e6f566e5bb4978107f
+Top:    87aae579db1fff50ff77664a2541d33e12d09cac
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-01-11 16:28:04 +0800
 
@@ -17,10 +17,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 9f11838..9e95225 100644
+index 9f11838..bffbeeb 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1932,25 +1932,30 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1932,25 +1932,32 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  
  	/* Check it isn't doing very strange things with descriptor numbers. */
  	last_avail_idx = vq->last_avail_idx;
@@ -52,16 +52,18 @@ index 9f11838..9e95225 100644
 +				last_avail_idx, vq->avail_idx);
 +			return -EFAULT;
 +		}
++
++		/* If there's nothing new since last we looked, return
++		 * invalid.
++		 */
++		if (vq->avail_idx == last_avail_idx)
++			return vq->num;
  
 -	/* Only get avail ring entries after they have been exposed by guest. */
 -	smp_rmb();
-+		/* If there's nothing new since last we looked, return
-+		 * invalid. */
-+		if (vq->avail_idx == last_avail_idx)
-+			return vq->num;
-+
 +		/* Only get avail ring entries after they have been
-+		 * exposed by guest. */
++		 * exposed by guest.
++		 */
 +		smp_rmb();
 +	}
  
