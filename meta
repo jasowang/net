@@ -1,7 +1,9 @@
 Version: 1
-Previous: 966432320d48e893bbbf8646954cbc280076e9a0
+Previous: 7d66c907512f5a717b547f844200f02d952c0abf
 Head: 6624dd4ee06d36acc5313c267a104aefce12938a
 Applied:
+  virtio_pci-remove-struct: 8d25a4988b883aeb937805689d3fe931d7de3b3a
+  virtio_pci-use-shared: 6624dd4ee06d36acc5313c267a104aefce12938a
 Unapplied:
   vhost-try-avoding-avail-index: 13ce0f7cbfde9f075fb2833181aa88981748e4fe
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
