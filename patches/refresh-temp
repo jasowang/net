@@ -1,0 +1,29 @@
+Bottom: dbd8e318587e31a5831f31e6f566e5bb4978107f
+Top:    87aae579db1fff50ff77664a2541d33e12d09cac
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-07 15:48:39 +0800
+
+Refresh of vhost-try-avoding-avail-index
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 9e95225..bffbeeb 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1948,12 +1948,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 		}
+ 
+ 		/* If there's nothing new since last we looked, return
+-		 * invalid. */
++		 * invalid.
++		 */
+ 		if (vq->avail_idx == last_avail_idx)
+ 			return vq->num;
+ 
+ 		/* Only get avail ring entries after they have been
+-		 * exposed by guest. */
++		 * exposed by guest.
++		 */
+ 		smp_rmb();
+ 	}
