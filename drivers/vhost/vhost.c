@@ -1948,12 +1948,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		}
 
 		/* If there's nothing new since last we looked, return
-		 * invalid. */
+		 * invalid.
+		 */
 		if (vq->avail_idx == last_avail_idx)
 			return vq->num;
 
 		/* Only get avail ring entries after they have been
-		 * exposed by guest. */
+		 * exposed by guest.
+		 */
 		smp_rmb();
 	}
 
