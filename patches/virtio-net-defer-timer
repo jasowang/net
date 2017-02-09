@@ -5,6 +5,7 @@ Date:   2017-02-09 10:50:20 +0800
 
 virtio-net: defer timer
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
