@@ -156,6 +156,8 @@ struct virtnet_info {
 	struct hlist_node node;
 	struct hlist_node node_dead;
 
+	struct timer_list xmit_free_timer;
+
 	/* Control VQ buffers: protected by the rtnl lock */
 	struct virtio_net_ctrl_hdr ctrl_hdr;
 	virtio_net_ctrl_ack ctrl_status;
@@ -1059,6 +1061,22 @@ static void free_old_xmit_skbs(struct send_queue *sq)
 	}
 }
 
+static void xmit_free(unsigned long data)
+{
+       struct send_queue *sq = (void *)data;
+       struct virtnet_info *vi = sq->vq->vdev->priv;
+       /* TODO: get txq matching sq */
+       struct netdev_queue *txq = netdev_get_tx_queue(vi->dev, 0);
+
+       __netif_tx_lock(txq, smp_processor_id());
+       free_old_xmit_skbs(sq);
+       if (sq->vq->num_free >= 2+MAX_SKB_FRAGS) {
+               netif_start_subqueue(vi->dev, 0);
+               virtqueue_disable_cb(sq->vq);
+       }
+       __netif_tx_unlock(txq);
+}
+
 static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 {
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
@@ -1112,6 +1130,9 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Free up any pending old buffers before queueing new ones. */
 	free_old_xmit_skbs(sq);
 
+	/* Defer timer */
+	mod_timer(&vi->xmit_free_timer, jiffies + 1);
+
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
 
@@ -1128,10 +1149,6 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
-
-	/* Don't wait up for transmitted skbs to be freed. */
-	skb_orphan(skb);
-	nf_reset(skb);
 
 	/* If running out of space, stop queue to avoid getting packets that we
 	 * are then unable to transmit.
@@ -2307,6 +2324,9 @@ static int virtnet_probe(struct virtio_device *vdev)
 		netif_carrier_on(dev);
 	}
 
+	setup_timer(&vi->xmit_free_timer, xmit_free,
+		    (unsigned long)&vi->sq[0]);
+
 	pr_debug("virtnet: registered device %s with %d RX and TX vq's\n",
 		 dev->name, max_queue_pairs);
 
@@ -2349,6 +2369,8 @@ static void virtnet_remove(struct virtio_device *vdev)
 
 	/* Make sure no work handler is accessing the device. */
 	flush_work(&vi->config_work);
+
+	del_timer_sync(&vi->xmit_free_timer);
 
 	unregister_netdev(vi->dev);
 
