@@ -1,7 +1,8 @@
 Version: 1
-Previous: b2d030865596baeb5edcb2f58fbc9b17ab321c18
-Head: bd092ad1463ca0990581fa992e12a9b0ed295d25
+Previous: d622c74b54239ec65e5633cc2154bb7409261d40
+Head: 09b05fe60be43d8bd1baadb6e75b94536f927a6c
 Applied:
+  virtio-net-defer-timer: 09b05fe60be43d8bd1baadb6e75b94536f927a6c
 Unapplied:
   vhost-try-avoding-avail-index: 564f1dab53adc1ebcf1944283b6e65b7fc478a17
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
