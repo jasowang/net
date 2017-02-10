@@ -11,9 +11,7 @@ Use them to reduce the number of u64_stats_update_begin/end().
 Take care not to bother with stats update when called
 speculatively.
 
-Based on a patch by Jason Wang.
-
-Cc: Rusty Russell <rusty@rustcorp.com.au>
+Cc: Willem de Bruijn <willemb@google.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
 
