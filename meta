@@ -1,10 +1,10 @@
 Version: 1
-Previous: 9b9c3c840ff3252c6480174cd55e84515fa9e7f0
-Head: ca3e4dc5e9d1a17675d74661538d39e5f7a3e09d
+Previous: 643c275fd825c180b815bb052e025a7d3583f74f
+Head: b72ae05c00815258fabefce936bebe6be8113d40
 Applied:
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
-  virtio-net-optimize: ca3e4dc5e9d1a17675d74661538d39e5f7a3e09d
 Unapplied:
+  virtio-net-optimize: ca3e4dc5e9d1a17675d74661538d39e5f7a3e09d
   virtio-net-defer-timer: 700044b6e597be7cf00873bb4eb8878a590de589
   vhost-try-avoding-avail-index: 564f1dab53adc1ebcf1944283b6e65b7fc478a17
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
