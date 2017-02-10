@@ -1,10 +1,9 @@
 Version: 1
-Previous: 78b8e6f7fadf21f69b6e5c48c12d9a8955ee3b2b
-Head: f6b0af35c89f03f238cdd85103089dd74809160c
+Previous: 922dfb3ada514984fae4b2d1d2c21a05da878ad2
+Head: fcddd71d094f93232ef78a3ac9bc212ff4113aae
 Applied:
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
-  virtio-net-optimize: 4764c0cac0ad0112f59f833f33b8d61535f192d7
-  refresh-temp: f6b0af35c89f03f238cdd85103089dd74809160c
+  virtio-net-optimize: fcddd71d094f93232ef78a3ac9bc212ff4113aae
 Unapplied:
   virtio-net-defer-timer: 700044b6e597be7cf00873bb4eb8878a590de589
   vhost-try-avoding-avail-index: 564f1dab53adc1ebcf1944283b6e65b7fc478a17

@@ -1,5 +1,5 @@
 Bottom: 1019ead928d36a3ae89b6c68f66aeace486eed6e
-Top:    cc4a925d8bac82b75d086c3b115e9ed120dd25a1
+Top:    3e736ab0ff3efc5f80bd1b1aea3118177f6c6d10
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-10-20 09:52:41 +0300
 
@@ -21,27 +21,17 @@ Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 29982c7..7280c2b 100644
+index 29982c7..ae7b46d 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -1040,23 +1040,42 @@ static int virtnet_open(struct net_device *dev)
- 	return 0;
- }
- 
--static void free_old_xmit_skbs(struct send_queue *sq)
-+static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
-+				       struct send_queue *sq, int budget)
- {
- 	struct sk_buff *skb;
+@@ -1046,17 +1046,27 @@ static void free_old_xmit_skbs(struct send_queue *sq)
  	unsigned int len;
  	struct virtnet_info *vi = sq->vq->vdev->priv;
  	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
 +	unsigned int packets = 0;
 +	unsigned int bytes = 0;
  
--	while ((skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
-+	while (packets < budget &&
-+	       (skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+ 	while ((skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
  		pr_debug("Sent skb %p\n", skb);
  
 -		u64_stats_update_begin(&stats->tx_syncp);
@@ -63,13 +53,6 @@ index 29982c7..7280c2b 100644
 +	stats->tx_bytes += bytes;
 +	stats->tx_packets += packets;
 +	u64_stats_update_end(&stats->tx_syncp);
-+
-+	netdev_tx_completed_queue(txq, packets, bytes);
-+
-+	if (sq->vq->num_free >= 2+MAX_SKB_FRAGS)
-+		netif_tx_start_queue(txq);
-+
-+	return packets;
  }
  
  static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
