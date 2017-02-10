@@ -19,7 +19,7 @@ Dmitry Vyukov report a deadlock below:
     lock(&(&r->producer_lock)->rlock);
 
 This happens when CPU0's consuming were interrupted with producing
-which CPU1 is doing resize. The problem is the different order of two
+while CPU1 is doing resize. The problem is the different order of two
 locks in two CPUs. To fixed this, using skb_array_consume_bh() to
 avoid trying to hold producer_lock after held consumer_lock.
 
