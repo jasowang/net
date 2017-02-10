@@ -3,8 +3,27 @@ Top:    1019ead928d36a3ae89b6c68f66aeace486eed6e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-09 17:57:14 +0800
 
-tun: prevent deadlock
+tun: fixes deadlock during resizing
 
+Dmitry Vyukov report a deadlock below:
+
+ Possible interrupt unsafe locking scenario:
+
+       CPU0                    CPU1
+       ----                    ----
+  lock(&(&r->consumer_lock)->rlock);
+                               local_irq_disable();
+                               lock(&(&r->producer_lock)->rlock);
+                               lock(&(&r->consumer_lock)->rlock);
+  <Interrupt>
+    lock(&(&r->producer_lock)->rlock);
+
+This happens when CPU0's consuming were interrupted with producing
+which CPU1 is doing resize. The problem is the different order of two
+locks in two CPUs. To fixed this, using skb_array_consume_bh() to
+avoid trying to hold producer_lock after held consumer_lock.
+
+Reported-by: Dmitry Vyukov <dvyukov@google.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
