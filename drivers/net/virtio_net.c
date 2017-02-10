@@ -1040,8 +1040,7 @@ static int virtnet_open(struct net_device *dev)
 	return 0;
 }
 
-static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
-				       struct send_queue *sq, int budget)
+static void free_old_xmit_skbs(struct send_queue *sq)
 {
 	struct sk_buff *skb;
 	unsigned int len;
@@ -1050,8 +1049,7 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
 	unsigned int packets = 0;
 	unsigned int bytes = 0;
 
-	while (packets < budget &&
-	       (skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+	while ((skb = virtqueue_get_buf(sq->vq, &len)) != NULL) {
 		pr_debug("Sent skb %p\n", skb);
 
 		bytes += skb->len;
@@ -1069,13 +1067,6 @@ static unsigned int free_old_xmit_skbs(struct netdev_queue *txq,
 	stats->tx_bytes += bytes;
 	stats->tx_packets += packets;
 	u64_stats_update_end(&stats->tx_syncp);
-
-	netdev_tx_completed_queue(txq, packets, bytes);
-
-	if (sq->vq->num_free >= 2+MAX_SKB_FRAGS)
-		netif_tx_start_queue(txq);
-
-	return packets;
 }
 
 static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
