@@ -1,5 +1,5 @@
-Bottom: 1019ead928d36a3ae89b6c68f66aeace486eed6e
-Top:    3e736ab0ff3efc5f80bd1b1aea3118177f6c6d10
+Bottom: 9e1c28e1e55e5c6c493dd52068d79f8c18d16668
+Top:    41236090cac37182e8671bc14445dd44cd8012cc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2014-10-20 09:52:41 +0300
 
@@ -19,10 +19,10 @@ Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 29982c7..ae7b46d 100644
+index 11e2853..3eacc43 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -1046,17 +1046,27 @@ static void free_old_xmit_skbs(struct send_queue *sq)
+@@ -1056,17 +1056,27 @@ static void free_old_xmit_skbs(struct send_queue *sq)
  	unsigned int len;
  	struct virtnet_info *vi = sq->vq->vdev->priv;
  	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
