@@ -1,9 +1,8 @@
 Version: 1
-Previous: 10ffabc142f813b1e41051c2ac99e2e4b2f3f1a9
-Head: 8be09ead79cd10bb7be8183de66462170ec6cbd5
+Previous: 34032fedf0b86dc58847d1056011126e1bd3aaaf
+Head: e01bac876ca68870390c79c8500c21c9de45eb7b
 Applied:
-  virtio-net-optimize-0: 72df9978e4d34d140c41a3a8fd240f822a180397
-  virtio-net-optimize: 8be09ead79cd10bb7be8183de66462170ec6cbd5
+  virtio-net-batch-stats: e01bac876ca68870390c79c8500c21c9de45eb7b
 Unapplied:
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
   virtio-net-defer-timer: 700044b6e597be7cf00873bb4eb8878a590de589
