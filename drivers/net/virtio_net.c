@@ -1813,12 +1813,6 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
 			return PTR_ERR(prog);
 	}
 
-	err = _virtnet_set_queues(vi, curr_qp + xdp_qp);
-	if (err) {
-		dev_warn(&dev->dev, "XDP Device queue allocation failure.\n");
-		goto virtio_queue_err;
-	}
-
 	/* Changing the headroom in buffers is a disruptive operation because
 	 * existing buffers must be flushed and reallocated. This will happen
 	 * when a xdp program is initially added or xdp is disabled by removing
@@ -1826,9 +1820,17 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
 	 */
 	if (vi->xdp_queue_pairs != xdp_qp) {
 		err = virtnet_reset(vi);
-		if (err)
+		if (err) {
+			dev_warn(&dev->dev, "XDP reset failure.\n");
 			goto virtio_reset_err;
+		}
 		vi->xdp_queue_pairs = xdp_qp;
+	}
+
+	err = _virtnet_set_queues(vi, curr_qp + xdp_qp);
+	if (err) {
+		dev_warn(&dev->dev, "XDP Device queue allocation failure.\n");
+		goto virtio_queue_err;
 	}
 
 	netif_set_real_num_rx_queues(dev, curr_qp + xdp_qp);
@@ -1842,15 +1844,18 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
 
 	return 0;
 
+virtio_queue_err:
+	/* Should not happen, after reset, all queue pairs were
+	 * enabled by defualt.
+	 */
+	vi->xdp_queue_pairs = 0;
+	vi->curr_queue_pairs = vi->max_queue_pairs;
+	netif_set_real_num_tx_queues(dev, vi->curr_queue_pairs);
+	netif_set_real_num_rx_queues(dev, vi->curr_queue_pairs);
 virtio_reset_err:
 	/* On reset error do our best to unwind XDP changes inflight and return
 	 * error up to user space for resolution. The underlying reset hung on
 	 * us so not much we can do here.
-	 */
-	dev_warn(&dev->dev, "XDP reset failure and queues unstable\n");
-virtio_queue_err:
-	/* On queue set error we can unwind bpf ref count and user space can
-	 * retry this is most likely an allocation failure.
 	 */
 	if (prog)
 		bpf_prog_sub(prog, vi->max_queue_pairs - 1);
