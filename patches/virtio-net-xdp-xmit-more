@@ -5,6 +5,8 @@ Date:   2017-02-15 13:45:16 +0800
 
 virtio-net: xdp xmit more
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
