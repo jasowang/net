@@ -1,7 +1,8 @@
 Version: 1
-Previous: cd4b47144c099a72cbe97de1e5af44c89a8e8d1b
-Head: d5bc1613d02f1c3f1226e2f7d555f0384d973482
+Previous: fd3dc1af0fef461231465212d3c33981e7928284
+Head: d5fbdc2b3645aafe1a7bfcef058f20f881134a38
 Applied:
+  virtio-net-xdp-xmit-more: d5fbdc2b3645aafe1a7bfcef058f20f881134a38
 Unapplied:
   virtio-net-batch-stats: b7c8e6311206983629e11ea63f27dd5acd75ffcd
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
