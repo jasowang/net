@@ -86,6 +86,8 @@ struct send_queue {
 
 	/* Name of the send queue: output.$index */
 	char name[40];
+
+	bool xdp_xmit_more;
 };
 
 #define SKB_FRAG_PAGE_ORDER     get_order(32768)
@@ -398,7 +400,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 		return false;
 	}
 
-	virtqueue_kick(sq->vq);
+	if (sq->vq->num_free < 2)
+		virtqueue_kick(sq->vq);
+	else
+		sq->xdp_xmit_more = true;
+
 	return true;
 }
 
@@ -1070,7 +1076,9 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
 {
 	struct receive_queue *rq =
 		container_of(napi, struct receive_queue, napi);
-	unsigned int r, received;
+	struct virtnet_info *vi = rq->vq->vdev->priv;
+	struct send_queue *sq;
+	unsigned int r, received, qp;
 
 	received = virtnet_receive(rq, budget);
 
@@ -1083,6 +1091,16 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
 				virtqueue_disable_cb(rq->vq);
 				__napi_schedule(napi);
 			}
+		}
+	}
+
+	if (rq->xdp_prog) {
+		qp = vi->curr_queue_pairs - vi->xdp_queue_pairs +
+		     smp_processor_id();
+		sq = &vi->sq[qp];
+		if (sq->xdp_xmit_more) {
+			sq->xdp_xmit_more = false;
+			virtqueue_kick(sq->vq);
 		}
 	}
 
