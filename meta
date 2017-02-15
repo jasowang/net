@@ -1,8 +1,8 @@
 Version: 1
-Previous: 83d5bb72a0891a422a84d85d643717d9d846162a
-Head: 2b3295c9fafce0d46c6a1ee69c29a83755a87c33
+Previous: 5bb6e0fdefd49a69ed54582e9477ba562774655a
+Head: a647345dc92dee4709a484ea64c4d8071f18e488
 Applied:
-  virito-net-keep-old: 2b3295c9fafce0d46c6a1ee69c29a83755a87c33
+  virito-net-keep-old: a647345dc92dee4709a484ea64c4d8071f18e488
 Unapplied:
   virtio-net-xdp-xmit-more: c234dec8674ca290b27641fb39ec0cdb932c11c6
   virtio-net-batch-stats: b7c8e6311206983629e11ea63f27dd5acd75ffcd

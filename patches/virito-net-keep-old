@@ -3,7 +3,17 @@ Top:    2135394d07ba2919cdce6c8340af54ffdc5a5ee6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-15 15:32:29 +0800
 
-virito-net: keep old xdp_queue_paris during reset
+virito-net: set queues after reset during xdp_set
+
+We set queues before reset which will cause a crash[1]. This is
+because is_xdp_raw_buffer_queue() depends on the old xdp queue pairs
+number to do the correct detection. So fix this by:
+
+- set queues after reset[1], to keep the old vi->curr_queue_pairs.
+- change xdp_queue_pairs only after virtnet_reset() is succeed
+
+[1]
+
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
