@@ -5,6 +5,8 @@ Date:   2017-02-15 15:32:29 +0800
 
 virito-net: keep old xdp_queue_paris during reset
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
