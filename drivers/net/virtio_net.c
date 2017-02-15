@@ -1848,7 +1848,6 @@ virtio_queue_err:
 	/* Should not happen, after reset, all queue pairs were
 	 * enabled by defualt.
 	 */
-	vi->xdp_queue_pairs = 0;
 	vi->curr_queue_pairs = vi->max_queue_pairs;
 	netif_set_real_num_tx_queues(dev, vi->curr_queue_pairs);
 	netif_set_real_num_rx_queues(dev, vi->curr_queue_pairs);
