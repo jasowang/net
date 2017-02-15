@@ -9,8 +9,10 @@ We set queues before reset which will cause a crash[1]. This is
 because is_xdp_raw_buffer_queue() depends on the old xdp queue pairs
 number to do the correct detection. So fix this by:
 
-- set queues after reset, to keep the old vi->curr_queue_pairs.
-- change xdp_queue_pairs only after virtnet_reset() is succeed
+- set queues after reset, to keep the old vi->curr_queue_pairs. (in
+  fact setting queues before reset does not works since after feature
+  set, all queue pairs were enabled by default during reset).
+- change xdp_queue_pairs only after virtnet_reset() is succeed.
 
 [1]
 
@@ -72,7 +74,7 @@ number to do the correct detection. So fix this by:
 [   74.351008] RIP: skb_release_head_state+0x28/0x80 RSP: ffffc9000438b8d0
 [   74.351625] ---[ end trace fe6e19fd11cfc80b ]---
 
-Cc:
+Cc: John Fastabend <john.fastabend@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
