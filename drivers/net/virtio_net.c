@@ -1846,7 +1846,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
 
 virtio_queue_err:
 	/* Should not happen, after reset, all queue pairs were
-	 * enabled by defualt.
+	 * enabled by default.
 	 */
 	vi->curr_queue_pairs = vi->max_queue_pairs;
 	netif_set_real_num_tx_queues(dev, vi->curr_queue_pairs);
