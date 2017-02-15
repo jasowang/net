@@ -1,0 +1,11 @@
+Bottom: 30551361df1d9dc94d177073ae1c40a17c4767ad
+Top:    30551361df1d9dc94d177073ae1c40a17c4767ad
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-15 15:32:29 +0800
+
+virito-net: keep old xdp_queue_paris during reset
+
+
+---
+
+
