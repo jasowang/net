@@ -461,7 +461,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	rcu_read_unlock();
 
 	skb = build_skb(buf + vi->hdr_len, GOOD_PACKET_LEN);
-	skb_trim(skb, len);
+	skb_put(skb, len);
 	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 
 	return skb;
@@ -812,10 +812,8 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 		return -ENOMEM;
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-	sg_init_table(rq->sg, 1);
-	sg_set_buf(rq->sg + 1, buf + NET_IP_ALIGN + xdp_headroom,
-		   GOOD_PACKET_LEN);
-
+	buf += NET_IP_ALIGN + xdp_headroom;
+	sg_init_one(rq->sg, buf, GOOD_PACKET_LEN);
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
 	if (err < 0)
 		put_page(virt_to_head_page(buf));
