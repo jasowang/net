@@ -5,6 +5,8 @@ Date:   2017-02-16 16:51:30 +0800
 
 virtio-net: optimize small buffer receiving
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
