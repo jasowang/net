@@ -803,7 +803,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 	struct page_frag *alloc_frag = &rq->alloc_frag;
 	char *buf;
 	unsigned int xdp_headroom = virtnet_get_headroom(vi);
-	int len = hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headeroom;
+	int len = hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
 	int err;
 
 	len = SKB_DATA_ALIGN(len) +
@@ -813,7 +813,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 	sg_init_table(rq->sg, 1);
-	sg_set_buf(rq->sg + 1, buf + NET_IP_ALIGN + xdp_headeroom,
+	sg_set_buf(rq->sg + 1, buf + NET_IP_ALIGN + xdp_headroom,
 		   GOOD_PACKET_LEN);
 
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
