@@ -408,16 +408,25 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 	return true;
 }
 
+static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+{
+	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
+}
+
 static struct sk_buff *receive_small(struct net_device *dev,
 				     struct virtnet_info *vi,
 				     struct receive_queue *rq,
 				     void *buf, unsigned int len)
 {
-	struct sk_buff * skb = buf;
+	struct sk_buff *skb;
 	struct bpf_prog *xdp_prog;
+	unsigned int headroom = vi->hdr_len + NET_IP_ALIGN +
+		                virtnet_get_headroom(vi);
+	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
+		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 
 	len -= vi->hdr_len;
-
+#if 0
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(rq->xdp_prog);
 	if (xdp_prog) {
@@ -453,11 +462,19 @@ static struct sk_buff *receive_small(struct net_device *dev,
 		}
 	}
 	rcu_read_unlock();
+#endif
 
-	skb = build_skb(buf + vi->hdr_len, GOOD_PACKET_LEN);
+	skb = build_skb(buf, buflen);
+	if (!skb) {
+		put_page(virt_to_head_page(buf));
+		goto err;
+	}
+	skb_reserve(skb, headroom);
 	skb_put(skb, len);
+	buf += NET_IP_ALIGN + virtnet_get_headroom(vi);
 	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 
+err:
 	return skb;
 
 err_xdp:
@@ -785,19 +802,13 @@ frame_err:
 	dev_kfree_skb(skb);
 }
 
-static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
-{
-	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
-}
-
 static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 			     gfp_t gfp)
 {
-	const size_t hdr_len = sizeof(struct virtio_net_hdr);
 	struct page_frag *alloc_frag = &rq->alloc_frag;
 	char *buf;
 	unsigned int xdp_headroom = virtnet_get_headroom(vi);
-	int len = hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
+	int len = vi->hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
 	int err;
 
 	len = SKB_DATA_ALIGN(len) +
@@ -806,9 +817,9 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 		return -ENOMEM;
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-	buf += NET_IP_ALIGN + xdp_headroom;
 	get_page(alloc_frag->page);
-	sg_init_one(rq->sg, buf, GOOD_PACKET_LEN);
+	sg_init_one(rq->sg, buf + NET_IP_ALIGN + xdp_headroom,
+		    vi->hdr_len + GOOD_PACKET_LEN);
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
 	if (err < 0)
 		put_page(virt_to_head_page(buf));
