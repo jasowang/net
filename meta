@@ -1,11 +1,10 @@
 Version: 1
-Previous: 6dccdfb68e10a1003bfe5b99e03087972ae24f35
-Head: 342e95b82df3234f88927125da489a60dcfeda37
+Previous: fda0ab23ac5ff01b75eb5ada30c6e1fcd33beb00
+Head: 756b362c87f7c2df64a6b8f2493623b83aa1075a
 Applied:
   virito-net-keep-old: 4016d8078d5deffef9b733416bb3f42ec49067d5
   virtio-net-xdp-xmit-more: 8878a4d178da4d550bd1ef030262d807a1751256
-  virtio-net-optimize-small: 9ec6b72f87b26d8473d810846e739db2cfc280d8
-  refresh-temp: 342e95b82df3234f88927125da489a60dcfeda37
+  virtio-net-optimize-small: 756b362c87f7c2df64a6b8f2493623b83aa1075a
 Unapplied:
   virtio-net-batch-stats: b7c8e6311206983629e11ea63f27dd5acd75ffcd
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
