@@ -1,5 +1,5 @@
 Bottom: 30551361df1d9dc94d177073ae1c40a17c4767ad
-Top:    636b0a763d4f6b69aaa747a412cc9dfc7fe4346d
+Top:    535b08aeadb514fce4c25b68d1a15dfccb55d2d1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-14 13:09:53 +0800
 
@@ -19,7 +19,7 @@ Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 11e2853..65d0373 100644
+index 11e2853..05a83db 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -719,13 +719,13 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
@@ -107,7 +107,7 @@ index 11e2853..65d0373 100644
  	return received;
  }
  
-@@ -1056,17 +1060,27 @@ static void free_old_xmit_skbs(struct send_queue *sq)
+@@ -1056,17 +1060,28 @@ static void free_old_xmit_skbs(struct send_queue *sq)
  	unsigned int len;
  	struct virtnet_info *vi = sq->vq->vdev->priv;
  	struct virtnet_stats *stats = this_cpu_ptr(vi->stats);
@@ -128,7 +128,8 @@ index 11e2853..65d0373 100644
  	}
 +
 +	/* Avoid overhead when no packets have been processed
-+	 * happens when called speculatively from start_xmit. */
++	 * happens when called speculatively from start_xmit.
++	 */
 +	if (!packets)
 +		return;
 +
