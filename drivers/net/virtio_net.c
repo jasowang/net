@@ -345,8 +345,7 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
 
 static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 			     struct receive_queue *rq,
-			     struct xdp_buff *xdp,
-			     void *data)
+			     struct xdp_buff *xdp)
 {
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
 	unsigned int len;
@@ -371,7 +370,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 
 	sg_init_one(sq->sg, xdp->data, xdp->data_end - xdp->data);
 
-	err = virtqueue_add_outbuf(sq->vq, sq->sg, 1, data, GFP_ATOMIC);
+	err = virtqueue_add_outbuf(sq->vq, sq->sg, 1, xdp->data, GFP_ATOMIC);
 	if (unlikely(err)) {
 		struct page *page = virt_to_head_page(xdp->data);
 
@@ -425,7 +424,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 			delta = orig_data - xdp.data;
 			break;
 		case XDP_TX:
-			if (unlikely(!virtnet_xdp_xmit(vi, rq, &xdp, buf)))
+			if (unlikely(!virtnet_xdp_xmit(vi, rq, &xdp)))
 				trace_xdp_exception(vi->dev, xdp_prog, act);
 			rcu_read_unlock();
 			goto xdp_xmit;
@@ -449,7 +448,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	if (!delta) {
 		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
 		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
-	} /* keep zeored vnet hdr since packet were changed by bpf */
+	} /* keep zeored vnet hdr since packet was changed by bpf */
 
 err:
 	return skb;
@@ -618,7 +617,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			}
 			break;
 		case XDP_TX:
-			if (unlikely(!virtnet_xdp_xmit(vi, rq, &xdp, data)))
+			if (unlikely(!virtnet_xdp_xmit(vi, rq, &xdp)))
 				trace_xdp_exception(vi->dev, xdp_prog, act);
 			ewma_pkt_len_add(&rq->mrg_avg_pkt_len, len);
 			if (unlikely(xdp_page != page))
