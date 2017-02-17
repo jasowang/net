@@ -1,5 +1,5 @@
-Bottom: 8bc322efb74a890c1ba4b878907f6bb4f503eef1
-Top:    3989ec719ae4324b4eae078a3e05d1816001a2d8
+Bottom: af75fe2613f817464868f5a007205baf7941f6a0
+Top:    d9c397bbaebf677dc1babf06221f3e81ba0f7c8f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 19:13:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 18b10bb..62f738d 100644
+index 1cbeac1..7e834b3 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -345,11 +345,10 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
@@ -177,7 +177,7 @@ index 18b10bb..62f738d 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			ewma_pkt_len_add(&rq->mrg_avg_pkt_len, len);
  			if (unlikely(xdp_page != page))
-@@ -2008,10 +1982,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
+@@ -2007,10 +1981,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
  
  static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
  {
