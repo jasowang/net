@@ -399,7 +399,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	unsigned int headroom = vi->hdr_len + VIRTNET_RX_PAD + xdp_headroom;
 	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
 		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-	unsinged int delta = 0;
+	unsigned int delta = 0;
 	len -= vi->hdr_len;
 
 	rcu_read_lock();
@@ -457,7 +457,7 @@ err:
 err_xdp:
 	rcu_read_unlock();
 	dev->stats.rx_dropped++;
-	kfree_skb(skb);
+	put_page(virt_to_head_page(buf));
 xdp_xmit:
 	return NULL;
 }
