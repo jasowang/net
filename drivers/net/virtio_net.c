@@ -378,7 +378,8 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 		return false;
 	}
 
-	virtqueue_kick(sq->vq);
+	if (virtqueue_kick_prepare(sq->vq))
+		virtqueue_notify(sq->vq);
 	return true;
 }
 
