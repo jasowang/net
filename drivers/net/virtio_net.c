@@ -448,7 +448,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	if (!delta) {
 		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
 		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
-	} /* keep zeored vnet hdr since packet was changed by bpf */
+	} /* keep zeroed vnet hdr since packet was changed by bpf */
 
 err:
 	return skb;
