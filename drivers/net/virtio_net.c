@@ -418,7 +418,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 				     struct receive_queue *rq,
 				     void *buf, unsigned int len)
 {
-	struct sk_buff *skb = buf;
+	struct sk_buff *skb;
 	struct bpf_prog *xdp_prog;
 	unsigned int headroom = vi->hdr_len + NET_IP_ALIGN +
 		                virtnet_get_headroom(vi);
@@ -426,7 +426,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 
 	len -= vi->hdr_len;
-
+#if 0
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(rq->xdp_prog);
 	if (xdp_prog) {
@@ -462,6 +462,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 		}
 	}
 	rcu_read_unlock();
+#endif
 
 	skb = build_skb(buf, buflen);
 	if (!skb) {
