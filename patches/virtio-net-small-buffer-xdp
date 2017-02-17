@@ -1,5 +1,5 @@
 Bottom: af75fe2613f817464868f5a007205baf7941f6a0
-Top:    d9c397bbaebf677dc1babf06221f3e81ba0f7c8f
+Top:    b2d529be1a7b43c622d3c288dc0de67df0bfb421
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 19:13:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 1cbeac1..7e834b3 100644
+index 1cbeac1..765b65e 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -345,11 +345,10 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
@@ -188,3 +188,14 @@ index 1cbeac1..7e834b3 100644
  	if (q < (vi->curr_queue_pairs - vi->xdp_queue_pairs))
  		return false;
  	else if (q < vi->curr_queue_pairs)
+@@ -2027,10 +1997,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
+ 	for (i = 0; i < vi->max_queue_pairs; i++) {
+ 		struct virtqueue *vq = vi->sq[i].vq;
+ 		while ((buf = virtqueue_detach_unused_buf(vq)) != NULL) {
+-			if (!is_xdp_raw_buffer_queue(vi, i))
+-				dev_kfree_skb(buf);
+-			else
+-				put_page(virt_to_head_page(buf));
++			put_page(virt_to_head_page(buf));
+ 		}
+ 	}
