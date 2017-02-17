@@ -418,7 +418,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 				     struct receive_queue *rq,
 				     void *buf, unsigned int len)
 {
-	struct sk_buff * skb = buf;
+	struct sk_buff *skb = buf;
 	struct bpf_prog *xdp_prog;
 	unsigned int headroom = vi->hdr_len + NET_IP_ALIGN +
 		                virtnet_get_headroom(vi);
@@ -799,11 +799,10 @@ frame_err:
 static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 			     gfp_t gfp)
 {
-	const size_t hdr_len = sizeof(struct virtio_net_hdr);
 	struct page_frag *alloc_frag = &rq->alloc_frag;
 	char *buf;
 	unsigned int xdp_headroom = virtnet_get_headroom(vi);
-	int len = hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
+	int len = vi->hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
 	int err;
 
 	len = SKB_DATA_ALIGN(len) +
@@ -814,7 +813,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 	get_page(alloc_frag->page);
 	sg_init_one(rq->sg, buf + NET_IP_ALIGN + xdp_headroom,
-		    hdr_len + GOOD_PACKET_LEN);
+		    vi->hdr_len + GOOD_PACKET_LEN);
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
 	if (err < 0)
 		put_page(virt_to_head_page(buf));
