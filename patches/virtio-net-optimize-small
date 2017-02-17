@@ -1,5 +1,5 @@
 Bottom: 30551361df1d9dc94d177073ae1c40a17c4767ad
-Top:    983a145a01c949fba7379a35e1841c79f3703fd9
+Top:    b18b35a8cf3df6b6dd478d7fa28f660b0d817fe7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
@@ -25,7 +25,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 11e2853..42cbf9f 100644
+index 11e2853..6b8d8af 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -41,6 +41,8 @@ module_param(gso, bool, 0444);
@@ -183,7 +183,7 @@ index 11e2853..42cbf9f 100644
 +	if (!delta) {
 +		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
 +		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
-+	} /* keep zeored vnet hdr since packet was changed by bpf */
++	} /* keep zeroed vnet hdr since packet was changed by bpf */
 +
 +err:
  	return skb;
