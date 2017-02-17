@@ -5,6 +5,8 @@ Date:   2017-02-17 19:13:03 +0800
 
 virtio-net: small buffer XDP optimization
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
