@@ -3,9 +3,15 @@ Top:    983a145a01c949fba7379a35e1841c79f3703fd9
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
-virtio-net: optimize small buffer receiving
+virtio-net: refine small buffer receiving
+
+                             Before | After   | Mergeable
+RX(pktgen from host):        12Mpps   16.8Mpps
+XDP_TX receive:              6.9Mpps  15.5Mpps
+XDP_TX xmit   :              6.6Mpps  7.8Mpps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
