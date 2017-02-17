@@ -1,5 +1,5 @@
-Bottom: 047dd99889de634ca308a8f7c5e9053dbc0a343b
-Top:    684f57ed391827a478d2c848140dfc2c75cb88c4
+Bottom: 983a145a01c949fba7379a35e1841c79f3703fd9
+Top:    c2e27822411312b615c5f7737fdfc2b41248a84c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-15 13:45:16 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9ff959c..5866271 100644
+index 42cbf9f..9876adb 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -84,6 +84,8 @@ struct send_queue {
+@@ -86,6 +86,8 @@ struct send_queue {
  
  	/* Name of the send queue: output.$index */
  	char name[40];
@@ -23,7 +23,7 @@ index 9ff959c..5866271 100644
  };
  
  /* Internal representation of a receive virtqueue */
-@@ -404,7 +406,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -378,7 +380,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  		return false;
  	}
  
@@ -36,7 +36,7 @@ index 9ff959c..5866271 100644
  	return true;
  }
  
-@@ -1015,7 +1021,9 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+@@ -1005,7 +1011,9 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
  {
  	struct receive_queue *rq =
  		container_of(napi, struct receive_queue, napi);
@@ -47,7 +47,7 @@ index 9ff959c..5866271 100644
  
  	received = virtnet_receive(rq, budget);
  
-@@ -1031,6 +1039,16 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+@@ -1021,6 +1029,16 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
  		}
  	}
  
