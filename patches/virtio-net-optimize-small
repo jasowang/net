@@ -1,43 +1,86 @@
 Bottom: 30551361df1d9dc94d177073ae1c40a17c4767ad
-Top:    4b1d65eea05501dcb2f34f44190bdfe12e33538d
+Top:    fc04b994e87daa4398be0943c6a4cd1bed35a71d
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-02-16 16:51:30 +0800
+Date:   2017-02-17 17:51:34 +0800
 
 virtio-net: optimize small buffer receiving
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 11e2853..85ddee1 100644
+index 11e2853..b8e5c2d 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -454,7 +454,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -408,16 +408,25 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+ 	return true;
+ }
+ 
++static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
++{
++	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
++}
++
+ static struct sk_buff *receive_small(struct net_device *dev,
+ 				     struct virtnet_info *vi,
+ 				     struct receive_queue *rq,
+ 				     void *buf, unsigned int len)
+ {
+-	struct sk_buff * skb = buf;
++	struct sk_buff *skb;
+ 	struct bpf_prog *xdp_prog;
++	unsigned int headroom = vi->hdr_len + NET_IP_ALIGN +
++		                virtnet_get_headroom(vi);
++	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
++		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+ 
+ 	len -= vi->hdr_len;
+-
++#if 0
+ 	rcu_read_lock();
+ 	xdp_prog = rcu_dereference(rq->xdp_prog);
+ 	if (xdp_prog) {
+@@ -453,8 +462,19 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 		}
  	}
  	rcu_read_unlock();
++#endif
  
 -	skb_trim(skb, len);
-+	skb = build_skb(buf + vi->hdr_len, GOOD_PACKET_LEN);
++	skb = build_skb(buf, buflen);
++	if (!skb) {
++		put_page(virt_to_head_page(buf));
++		goto err;
++	}
++	skb_reserve(skb, headroom);
 +	skb_put(skb, len);
++	buf += NET_IP_ALIGN + virtnet_get_headroom(vi);
 +	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 +
++err:
  	return skb;
  
  err_xdp:
-@@ -790,26 +793,25 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+@@ -782,34 +802,28 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+ 	dev_kfree_skb(skb);
+ }
+ 
+-static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+-{
+-	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
+-}
+-
  static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  			     gfp_t gfp)
  {
 -	int headroom = GOOD_PACKET_LEN + virtnet_get_headroom(vi);
-+	const size_t hdr_len = sizeof(struct virtio_net_hdr);
 +	struct page_frag *alloc_frag = &rq->alloc_frag;
 +	char *buf;
  	unsigned int xdp_headroom = virtnet_get_headroom(vi);
 -	struct sk_buff *skb;
 -	struct virtio_net_hdr_mrg_rxbuf *hdr;
-+	int len = hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
++	int len = vi->hdr_len + NET_IP_ALIGN + GOOD_PACKET_LEN + xdp_headroom;
  	int err;
  
 -	skb = __netdev_alloc_skb_ip_align(vi->dev, headroom, gfp);
@@ -56,9 +99,10 @@ index 11e2853..85ddee1 100644
 -
 -	err = virtqueue_add_inbuf(rq->vq, rq->sg, 2, skb, gfp);
 +	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-+	buf += NET_IP_ALIGN + xdp_headroom;
 +	get_page(alloc_frag->page);
-+	sg_init_one(rq->sg, buf, GOOD_PACKET_LEN);
++	alloc_frag->offset += len;
++	sg_init_one(rq->sg, buf + NET_IP_ALIGN + xdp_headroom,
++		    vi->hdr_len + GOOD_PACKET_LEN);
 +	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
  	if (err < 0)
 -		dev_kfree_skb(skb);
