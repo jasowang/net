@@ -464,11 +464,16 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	rcu_read_unlock();
 
 	skb = build_skb(buf, buflen);
+	if (!skb) {
+		put_page(virt_to_head_page(buf));
+		goto err;
+	}
 	skb_reserve(skb, headroom);
 	skb_put(skb, len);
 	buf += NET_IP_ALIGN + virtnet_get_headroom(vi);
 	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 
+err:
 	return skb;
 
 err_xdp:
