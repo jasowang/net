@@ -818,6 +818,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 	get_page(alloc_frag->page);
+	alloc_frag->offset += len;
 	sg_init_one(rq->sg, buf + NET_IP_ALIGN + xdp_headroom,
 		    vi->hdr_len + GOOD_PACKET_LEN);
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
