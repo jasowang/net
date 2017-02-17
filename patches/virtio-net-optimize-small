@@ -1,5 +1,5 @@
-Bottom: 684f57ed391827a478d2c848140dfc2c75cb88c4
-Top:    320ae0db90b98660cc443980e88fcb576f39d8b7
+Bottom: 30551361df1d9dc94d177073ae1c40a17c4767ad
+Top:    4b1d65eea05501dcb2f34f44190bdfe12e33538d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-16 16:51:30 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 5866271..32c1e84 100644
+index 11e2853..85ddee1 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -460,7 +460,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -454,7 +454,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -26,7 +26,7 @@ index 5866271..32c1e84 100644
  	return skb;
  
  err_xdp:
-@@ -796,26 +799,25 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+@@ -790,26 +793,25 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
  static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  			     gfp_t gfp)
  {
