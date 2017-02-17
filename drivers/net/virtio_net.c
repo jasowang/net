@@ -1073,7 +1073,8 @@ static void free_old_xmit_skbs(struct send_queue *sq)
 	}
 
 	/* Avoid overhead when no packets have been processed
-	 * happens when called speculatively from start_xmit. */
+	 * happens when called speculatively from start_xmit.
+	 */
 	if (!packets)
 		return;
 
