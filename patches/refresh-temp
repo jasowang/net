@@ -1,0 +1,22 @@
+Bottom: 636b0a763d4f6b69aaa747a412cc9dfc7fe4346d
+Top:    535b08aeadb514fce4c25b68d1a15dfccb55d2d1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-17 11:31:42 +0800
+
+Refresh of virtio-net-batch-stats
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 65d0373..05a83db 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1073,7 +1073,8 @@ static void free_old_xmit_skbs(struct send_queue *sq)
+ 	}
+ 
+ 	/* Avoid overhead when no packets have been processed
+-	 * happens when called speculatively from start_xmit. */
++	 * happens when called speculatively from start_xmit.
++	 */
+ 	if (!packets)
+ 		return;
