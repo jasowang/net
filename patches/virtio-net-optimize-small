@@ -8,7 +8,7 @@ virtio-net: refine small buffer receiving
                              Before | After    | Mergeable
 RX(pktgen from host):        12Mpps   16.8Mpps   15.3Mpps
 XDP_TX receive:              6.9Mpps  15.5Mpps   12.5Mpps
-XDP_TX xmit   :              6.6Mpps  7.8Mpps    8.2 Mpps
+XDP_TX xmit   :              6.6Mpps  8.4Mpps    8.2 Mpps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
