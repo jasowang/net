@@ -687,6 +687,7 @@ static void handle_rx(struct vhost_net *net)
 	vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+	printk("RX!\n");
 
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		sock_len += sock_hlen;
@@ -713,6 +714,7 @@ static void handle_rx(struct vhost_net *net)
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
+			printk("wait for refill!\n");
 			/* Nothing new?  Wait for eventfd to tell us
 			 * they refilled. */
 			goto out;
