@@ -1,5 +1,5 @@
 Bottom: af75fe2613f817464868f5a007205baf7941f6a0
-Top:    be7517860ae66e6bdbc1ba38f69ed1821a6c6820
+Top:    80e65477b7f05bc122b8b66c68b035935e4379b4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 19:13:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 1cbeac1..6d1b1ab 100644
+index 1cbeac1..d12e254 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -349,7 +349,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
@@ -94,7 +94,7 @@ index 1cbeac1..6d1b1ab 100644
  	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
  		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 -
-+	unsinged int delta = 0;
++	unsigned int delta = 0;
  	len -= vi->hdr_len;
 -#if 0
 +
@@ -154,6 +154,15 @@ index 1cbeac1..6d1b1ab 100644
  
  err:
  	return skb;
+@@ -482,7 +457,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ err_xdp:
+ 	rcu_read_unlock();
+ 	dev->stats.rx_dropped++;
+-	kfree_skb(skb);
++	put_page(virt_to_head_page(buf));
+ xdp_xmit:
+ 	return NULL;
+ }
 @@ -2007,10 +1982,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
  
  static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
