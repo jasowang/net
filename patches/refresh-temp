@@ -1,0 +1,51 @@
+Bottom: df87cc5c7173bc15b1aad2a8d84e5528bf412636
+Top:    983a145a01c949fba7379a35e1841c79f3703fd9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-17 19:57:32 +0800
+
+Refresh of virtio-net-small-buffer-xdp
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 5fd6319..42cbf9f 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1979,6 +1979,16 @@ static void free_receive_page_frags(struct virtnet_info *vi)
+ 			put_page(vi->rq[i].alloc_frag.page);
+ }
+ 
++static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
++{
++	if (q < (vi->curr_queue_pairs - vi->xdp_queue_pairs))
++		return false;
++	else if (q < vi->curr_queue_pairs)
++		return true;
++	else
++		return false;
++}
++
+ static void free_unused_bufs(struct virtnet_info *vi)
+ {
+ 	void *buf;
+@@ -1987,7 +1997,10 @@ static void free_unused_bufs(struct virtnet_info *vi)
+ 	for (i = 0; i < vi->max_queue_pairs; i++) {
+ 		struct virtqueue *vq = vi->sq[i].vq;
+ 		while ((buf = virtqueue_detach_unused_buf(vq)) != NULL) {
+-			put_page(virt_to_head_page(buf));
++			if (!is_xdp_raw_buffer_queue(vi, i))
++				dev_kfree_skb(buf);
++			else
++				put_page(virt_to_head_page(buf));
+ 		}
+ 	}
+ 
+@@ -2002,7 +2015,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
+ 			} else if (vi->big_packets) {
+ 				give_pages(&vi->rq[i], buf);
+ 			} else {
+-				dev_kfree_skb(buf);
++				put_page(virt_to_head_page(buf));
+ 			}
+ 		}
+ 	}
