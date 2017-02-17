@@ -1,0 +1,30 @@
+Bottom: 1c607f3580d83f4e11e9ddb20e43aebcf38d6aea
+Top:    3cd70ab65f64093bd5d63f327933c2d0c1265253
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-17 15:33:58 +0800
+
+Refresh of fixup
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index db4d909..d11f6af 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -464,11 +464,16 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	rcu_read_unlock();
+ 
+ 	skb = build_skb(buf, buflen);
++	if (!skb) {
++		put_page(virt_to_head_page(buf));
++		goto err;
++	}
+ 	skb_reserve(skb, headroom);
+ 	skb_put(skb, len);
+ 	buf += NET_IP_ALIGN + virtnet_get_headroom(vi);
+ 	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
+ 
++err:
+ 	return skb;
+ 
+ err_xdp:
