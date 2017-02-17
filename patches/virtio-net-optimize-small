@@ -5,11 +5,16 @@ Date:   2017-02-17 21:34:19 +0800
 
 virtio-net: refine small buffer receiving
 
+We used to alloc skb during refill, this cause
+
                              Before | After    | Mergeable
-RX(pktgen from host):        12Mpps   16.8Mpps   15.3Mpps
 xdp1 drop     :
 xdp2 tap TX   :              6.9Mpps  15.5Mpps   12.5Mpps
 xdp2 tap RX   :              6.6Mpps  8.4Mpps    8.2 Mpps
+
+To test:
+
+XDP_PASS, Tunnelling, xdp1 drop
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
