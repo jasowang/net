@@ -1,9 +1,10 @@
 Version: 1
-Previous: 4c15c903425c864167f5f2fce7603839eaf5470f
-Head: 4c8f5483c6f4b0206c75d0ec82d1feb747af37e8
+Previous: 393921d225cc6fe9d230e2710f4a22dfed7029cb
+Head: 234bde995ab64c44cf0ebf4e0282bb5a84754bc8
 Applied:
   virtio-net-optimize-small: 515aae2474c2cecea17a6f949a6bd2a4038ac221
   virtio-net-small-buffer-xdp: 4c8f5483c6f4b0206c75d0ec82d1feb747af37e8
+  refresh-temp: 234bde995ab64c44cf0ebf4e0282bb5a84754bc8
 Unapplied:
   virito-net-keep-old: 4016d8078d5deffef9b733416bb3f42ec49067d5
   virtio-net-batch-stats: b3a2905bfb0081e986a2b534cff0397b3eb3a430
