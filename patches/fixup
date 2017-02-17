@@ -1,5 +1,5 @@
-Bottom: 320ae0db90b98660cc443980e88fcb576f39d8b7
-Top:    92ad9ea050c5e7fb7acd8def6629c38ee99faa0c
+Bottom: 4b1d65eea05501dcb2f34f44190bdfe12e33538d
+Top:    af8225c629e4b76b0fac62ec18d33e36d90f3130
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-16 20:28:07 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 32c1e84..0e478f3 100644
+index 85ddee1..0bd1101 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -414,6 +414,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -408,6 +408,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  	return true;
  }
  
@@ -26,7 +26,7 @@ index 32c1e84..0e478f3 100644
  static struct sk_buff *receive_small(struct net_device *dev,
  				     struct virtnet_info *vi,
  				     struct receive_queue *rq,
-@@ -421,6 +426,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -415,6 +420,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
  {
  	struct sk_buff * skb = buf;
  	struct bpf_prog *xdp_prog;
@@ -37,7 +37,7 @@ index 32c1e84..0e478f3 100644
  
  	len -= vi->hdr_len;
  
-@@ -460,8 +469,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -454,8 +463,10 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -49,7 +49,7 @@ index 32c1e84..0e478f3 100644
  	memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
  
  	return skb;
-@@ -791,11 +802,6 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -785,11 +796,6 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  	dev_kfree_skb(skb);
  }
  
@@ -61,7 +61,7 @@ index 32c1e84..0e478f3 100644
  static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  			     gfp_t gfp)
  {
-@@ -812,9 +818,8 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -806,9 +812,8 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  		return -ENOMEM;
  
  	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
