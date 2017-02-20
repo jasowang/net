@@ -1,5 +1,5 @@
 Bottom: 06d2ef6cbd4875ecdd0eea94269d963e1d73c124
-Top:    27c3f8f8bfcb029109dfffdc2b681a4bc7ba0c0d
+Top:    0da612e7db00d5a0d5de8140d348a69e115ff92a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
@@ -25,7 +25,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index d12e5d6..7df78a53 100644
+index d12e5d6..1c97877 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -41,6 +41,8 @@ module_param(gso, bool, 0444);
@@ -111,7 +111,7 @@ index d12e5d6..7df78a53 100644
  		return false;
  	}
  
-@@ -408,14 +382,23 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -408,39 +382,50 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  	return true;
  }
  
@@ -130,16 +130,18 @@ index d12e5d6..7df78a53 100644
  	struct bpf_prog *xdp_prog;
 -
 +	unsigned int xdp_headroom = virtnet_get_headroom(vi);
-+	unsigned int headroom = vi->hdr_len + VIRTNET_RX_PAD + xdp_headroom;
++	unsigned int header_offset = VIRTNET_RX_PAD + xdp_headroom;
++	unsigned int headroom = vi->hdr_len + header_offset;
 +	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
 +		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 +	unsigned int delta = 0;
  	len -= vi->hdr_len;
  
  	rcu_read_lock();
-@@ -423,24 +406,25 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	xdp_prog = rcu_dereference(rq->xdp_prog);
  	if (xdp_prog) {
- 		struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
+-		struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
++		struct virtio_net_hdr_mrg_rxbuf *hdr = buf + header_offset;
  		struct xdp_buff xdp;
 +		void *orig_data;
  		u32 act;
@@ -168,7 +170,7 @@ index d12e5d6..7df78a53 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			rcu_read_unlock();
  			goto xdp_xmit;
-@@ -454,13 +438,25 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -454,13 +439,25 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -181,7 +183,7 @@ index d12e5d6..7df78a53 100644
 +	skb_reserve(skb, headroom - delta);
 +	skb_put(skb, len + delta);
 +	if (!delta) {
-+		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
++		buf += header_offset;
 +		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 +	} /* keep zeroed vnet hdr since packet was changed by bpf */
 +
@@ -196,7 +198,7 @@ index d12e5d6..7df78a53 100644
  xdp_xmit:
  	return NULL;
  }
-@@ -621,7 +617,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -621,7 +618,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  			}
  			break;
  		case XDP_TX:
@@ -205,7 +207,7 @@ index d12e5d6..7df78a53 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			ewma_pkt_len_add(&rq->mrg_avg_pkt_len, len);
  			if (unlikely(xdp_page != page))
-@@ -782,34 +778,28 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -782,34 +779,28 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  	dev_kfree_skb(skb);
  }
  
@@ -253,7 +255,7 @@ index d12e5d6..7df78a53 100644
  
  	return err;
  }
-@@ -1979,10 +1969,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
+@@ -1979,10 +1970,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
  
  static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
  {
@@ -264,7 +266,7 @@ index d12e5d6..7df78a53 100644
  	if (q < (vi->curr_queue_pairs - vi->xdp_queue_pairs))
  		return false;
  	else if (q < vi->curr_queue_pairs)
-@@ -2017,7 +2003,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
+@@ -2017,7 +2004,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
  			} else if (vi->big_packets) {
  				give_pages(&vi->rq[i], buf);
  			} else {
@@ -273,3 +275,23 @@ index d12e5d6..7df78a53 100644
  			}
  		}
  	}
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 2fe3535..54085ff 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -687,6 +687,7 @@ static void handle_rx(struct vhost_net *net)
+ 	vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
++	printk("RX!\n");
+ 
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		sock_len += sock_hlen;
+@@ -713,6 +714,7 @@ static void handle_rx(struct vhost_net *net)
+ 				vhost_disable_notify(&net->dev, vq);
+ 				continue;
+ 			}
++			printk("wait for refill!\n");
+ 			/* Nothing new?  Wait for eventfd to tell us
+ 			 * they refilled. */
+ 			goto out;
