@@ -734,7 +734,7 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 		} else if (vi->big_packets) {
 			give_pages(rq, buf);
 		} else {
-			dev_kfree_skb(buf);
+			put_page(virt_to_head_page(buf));
 		}
 		return;
 	}
