@@ -1,0 +1,69 @@
+Bottom: 047dd99889de634ca308a8f7c5e9053dbc0a343b
+Top:    06d2ef6cbd4875ecdd0eea94269d963e1d73c124
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-20 10:30:48 +0800
+
+Refresh of virito-net-keep-old
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 9ff959c..d12e5d6 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1737,7 +1737,7 @@ static int virtnet_restore_up(struct virtio_device *vdev)
+ 	return err;
+ }
+ 
+-static int virtnet_reset(struct virtnet_info *vi)
++static int virtnet_reset(struct virtnet_info *vi, int curr_qp, int xdp_qp)
+ {
+ 	struct virtio_device *dev = vi->vdev;
+ 	int ret;
+@@ -1755,10 +1755,11 @@ static int virtnet_reset(struct virtnet_info *vi)
+ 	if (ret)
+ 		goto err;
+ 
++	vi->xdp_queue_pairs = xdp_qp;
+ 	ret = virtnet_restore_up(dev);
+ 	if (ret)
+ 		goto err;
+-	ret = _virtnet_set_queues(vi, vi->curr_queue_pairs);
++	ret = _virtnet_set_queues(vi, curr_qp);
+ 	if (ret)
+ 		goto err;
+ 
+@@ -1819,18 +1820,11 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
+ 	 * the xdp program resulting in number of XDP queues changing.
+ 	 */
+ 	if (vi->xdp_queue_pairs != xdp_qp) {
+-		err = virtnet_reset(vi);
++		err = virtnet_reset(vi, curr_qp + xdp_qp, xdp_qp);
+ 		if (err) {
+ 			dev_warn(&dev->dev, "XDP reset failure.\n");
+ 			goto virtio_reset_err;
+ 		}
+-		vi->xdp_queue_pairs = xdp_qp;
+-	}
+-
+-	err = _virtnet_set_queues(vi, curr_qp + xdp_qp);
+-	if (err) {
+-		dev_warn(&dev->dev, "XDP Device queue allocation failure.\n");
+-		goto virtio_queue_err;
+ 	}
+ 
+ 	netif_set_real_num_rx_queues(dev, curr_qp + xdp_qp);
+@@ -1844,13 +1838,6 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
+ 
+ 	return 0;
+ 
+-virtio_queue_err:
+-	/* Should not happen, after reset, all queue pairs were
+-	 * enabled by default.
+-	 */
+-	vi->curr_queue_pairs = vi->max_queue_pairs;
+-	netif_set_real_num_tx_queues(dev, vi->curr_queue_pairs);
+-	netif_set_real_num_rx_queues(dev, vi->curr_queue_pairs);
+ virtio_reset_err:
+ 	/* On reset error do our best to unwind XDP changes inflight and return
+ 	 * error up to user space for resolution. The underlying reset hung on

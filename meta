@@ -1,8 +1,9 @@
 Version: 1
-Previous: 3b441783e77fe7392f0c3f57ea3cdc26159eff27
-Head: 4016d8078d5deffef9b733416bb3f42ec49067d5
+Previous: 00265f9820d4c6100b0b35efcafbc971b69b78d5
+Head: 3dfc09156b9729948d300239ce89058dad393f5b
 Applied:
   virito-net-keep-old: 4016d8078d5deffef9b733416bb3f42ec49067d5
+  refresh-temp: 3dfc09156b9729948d300239ce89058dad393f5b
 Unapplied:
   virtio-net-optimize-small: 7513a04451dd1b962e200cb34cc2cf0113a3080d
   virtio-net-xdp-xmit-more: 062d9c55cd096a7bfa185ba3aed7539db62bb2a0
