@@ -1,0 +1,61 @@
+Bottom: 27c3f8f8bfcb029109dfffdc2b681a4bc7ba0c0d
+Top:    0da612e7db00d5a0d5de8140d348a69e115ff92a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-20 19:42:19 +0800
+
+Refresh of virtio-net-optimize-small
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 7df78a53..1c97877 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -395,7 +395,8 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	struct sk_buff *skb;
+ 	struct bpf_prog *xdp_prog;
+ 	unsigned int xdp_headroom = virtnet_get_headroom(vi);
+-	unsigned int headroom = vi->hdr_len + VIRTNET_RX_PAD + xdp_headroom;
++	unsigned int header_offset = VIRTNET_RX_PAD + xdp_headroom;
++	unsigned int headroom = vi->hdr_len + header_offset;
+ 	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
+ 		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+ 	unsigned int delta = 0;
+@@ -404,7 +405,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	rcu_read_lock();
+ 	xdp_prog = rcu_dereference(rq->xdp_prog);
+ 	if (xdp_prog) {
+-		struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
++		struct virtio_net_hdr_mrg_rxbuf *hdr = buf + header_offset;
+ 		struct xdp_buff xdp;
+ 		void *orig_data;
+ 		u32 act;
+@@ -446,7 +447,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	skb_reserve(skb, headroom - delta);
+ 	skb_put(skb, len + delta);
+ 	if (!delta) {
+-		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
++		buf += header_offset;
+ 		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
+ 	} /* keep zeroed vnet hdr since packet was changed by bpf */
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 2fe3535..54085ff 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -687,6 +687,7 @@ static void handle_rx(struct vhost_net *net)
+ 	vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
++	printk("RX!\n");
+ 
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		sock_len += sock_hlen;
+@@ -713,6 +714,7 @@ static void handle_rx(struct vhost_net *net)
+ 				vhost_disable_notify(&net->dev, vq);
+ 				continue;
+ 			}
++			printk("wait for refill!\n");
+ 			/* Nothing new?  Wait for eventfd to tell us
+ 			 * they refilled. */
+ 			goto out;
