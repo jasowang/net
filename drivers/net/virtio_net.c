@@ -395,7 +395,8 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	struct sk_buff *skb;
 	struct bpf_prog *xdp_prog;
 	unsigned int xdp_headroom = virtnet_get_headroom(vi);
-	unsigned int headroom = vi->hdr_len + VIRTNET_RX_PAD + xdp_headroom;
+	unsigned int header_offset = VIRTNET_RX_PAD + xdp_headroom;
+	unsigned int headroom = vi->hdr_len + header_offset;
 	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
 		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
@@ -404,7 +405,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(rq->xdp_prog);
 	if (xdp_prog) {
-		struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
+		struct virtio_net_hdr_mrg_rxbuf *hdr = buf + header_offset;
 		struct xdp_buff xdp;
 		void *orig_data;
 		u32 act;
@@ -446,7 +447,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	skb_reserve(skb, headroom - delta);
 	skb_put(skb, len + delta);
 	if (!delta) {
-		buf += VIRTNET_RX_PAD + virtnet_get_headroom(vi);
+		buf += header_offset;
 		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 	} /* keep zeroed vnet hdr since packet was changed by bpf */
 
