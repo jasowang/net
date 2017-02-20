@@ -1,5 +1,5 @@
-Bottom: 983a145a01c949fba7379a35e1841c79f3703fd9
-Top:    a84343b421eb8516c5a5571b7bfa4d6399b87b15
+Bottom: 27c3f8f8bfcb029109dfffdc2b681a4bc7ba0c0d
+Top:    1a047d60534cab2efb0af8f927d0efcf1783c881
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:23:46 +0800
 
@@ -8,7 +8,7 @@ Date:   2017-02-17 21:23:46 +0800
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 42cbf9f..7975f01 100644
+index 7df78a53..e90c5fe 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -378,7 +378,8 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
