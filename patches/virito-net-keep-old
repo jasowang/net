@@ -7,12 +7,13 @@ virito-net: set queues after reset during xdp_set
 
 We set queues before reset which will cause a crash[1]. This is
 because is_xdp_raw_buffer_queue() depends on the old xdp queue pairs
-number to do the correct detection. So fix this by:
+number to do the correct detection. So fix this by
 
-- set queues after reset, to keep the old vi->curr_queue_pairs. (in
-  fact setting queues before reset does not works since after feature
-  set, all queue pairs were enabled by default during reset).
-- change xdp_queue_pairs only after virtnet_reset() is succeed.
+- passing xdp queue pairs and current queue pairs to virtnet_reset()
+- change vi->xdp_qp after reset but before refill, to make sure both
+  free_unused_bufs() and refill can make correct detection of XDP.
+- remove the duplicated queue pairs setting before virtnet_reset()
+  since we will do it inside virtnet_reset()
 
 [1]
 
@@ -77,6 +78,10 @@ number to do the correct detection. So fix this by:
 Fixes: 2de2f7f40ef9 ("virtio_net: XDP support for adjust_head")
 Cc: John Fastabend <john.fastabend@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+Changes from V1:
+- passing xdp_qp and curr_qp to virtnet_reset() to refill correctly
+- remove the duplicated queue pair setting after virtnet_reset()
 
 
 ---
