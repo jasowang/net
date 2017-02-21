@@ -1,5 +1,5 @@
-Bottom: 06d2ef6cbd4875ecdd0eea94269d963e1d73c124
-Top:    775ae69335e53734a2445d133f498759cc3c047c
+Bottom: 01b16cbff104ffc043dc57cc1ce9a9bfc7f1c21b
+Top:    7af864c41d576a7c3b80ae4b062181c832dcc382
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
@@ -21,7 +21,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index d12e5d6..b07c4b0 100644
+index ca489e0..cdff93c 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -41,6 +41,8 @@ module_param(gso, bool, 0444);
@@ -203,17 +203,17 @@ index d12e5d6..b07c4b0 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			ewma_pkt_len_add(&rq->mrg_avg_pkt_len, len);
  			if (unlikely(xdp_page != page))
-@@ -737,7 +734,7 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -737,7 +734,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  		} else if (vi->big_packets) {
  			give_pages(rq, buf);
  		} else {
 -			dev_kfree_skb(buf);
 +			put_page(virt_to_head_page(buf));
  		}
- 		return;
+ 		return 0;
  	}
-@@ -782,34 +779,28 @@ static void receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
- 	dev_kfree_skb(skb);
+@@ -780,34 +777,28 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+ 	return 0;
  }
  
 -static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
@@ -260,7 +260,7 @@ index d12e5d6..b07c4b0 100644
  
  	return err;
  }
-@@ -1979,10 +1970,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
+@@ -1994,10 +1985,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
  
  static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
  {
@@ -271,7 +271,7 @@ index d12e5d6..b07c4b0 100644
  	if (q < (vi->curr_queue_pairs - vi->xdp_queue_pairs))
  		return false;
  	else if (q < vi->curr_queue_pairs)
-@@ -2017,7 +2004,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
+@@ -2032,7 +2019,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
  			} else if (vi->big_packets) {
  				give_pages(&vi->rq[i], buf);
  			} else {
