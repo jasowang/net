@@ -12,7 +12,8 @@ mergeable and small buffer use page frag during refill now.
 
                    Before | After
 XDP_DROP(xdp1)  :
-XDP_TX(xdp2)    :  6.9Mpps  15.5Mpps
+
+Tested with xdp1/xdp2/xdp_ip_tx_tunnel and netperf.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
