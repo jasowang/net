@@ -78,7 +78,7 @@ static __always_inline int handle_ipv4(struct xdp_md *xdp)
 {
 	void *data_end = (void *)(long)xdp->data_end;
 	void *data = (void *)(long)xdp->data;
-	struct iptnl_info *tnl;
+	struct iptnl_info tnl;
 	struct ethhdr *new_eth;
 	struct ethhdr *old_eth;
 	struct iphdr *iph = data + sizeof(struct ethhdr);
@@ -102,10 +102,16 @@ static __always_inline int handle_ipv4(struct xdp_md *xdp)
 	vip.dport = dport;
 	payload_len = ntohs(iph->tot_len);
 
+
+	tnl.daddr.v4 = iph->daddr;
+	tnl.saddr.v4 = iph->saddr;
+	tnl.dmac = old_eth->h_dest;
+	#if 0
 	tnl = bpf_map_lookup_elem(&vip2tnl, &vip);
 	/* It only does v4-in-v4 */
 	if (!tnl || tnl->family != AF_INET)
 		return XDP_PASS;
+	#endif
 
 	/* The vip key is found.  Add an IP header and send it out */
 
