@@ -399,7 +399,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	unsigned int header_offset = VIRTNET_RX_PAD + xdp_headroom;
 	unsigned int headroom = vi->hdr_len + header_offset;
 	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
-		              SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
 	len -= vi->hdr_len;
 
