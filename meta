@@ -1,9 +1,8 @@
 Version: 1
-Previous: acec225ac920a1950e82f414e2184c3276a0a66f
-Head: a91cc5a71181e4ce6aee0bf756afdaa2f5f44fa2
+Previous: c4a610550acf7dc85cf6f920026e6eaeb423a748
+Head: 2094138562026c79a158ec5e90ca52cf63d07ba4
 Applied:
-  virtio-net-optimize-small: 7a40566fd1743ad274316e62349a6f955c4b9143
-  refresh-temp: a91cc5a71181e4ce6aee0bf756afdaa2f5f44fa2
+  virtio-net-optimize-small: 2094138562026c79a158ec5e90ca52cf63d07ba4
 Unapplied:
   virito-net-keep-old: fc9c48e81b33a64df599d6dfcdb6ba77df3498bd
   retry: 318276d9404b6bc1b45171447a8cd906b30460df

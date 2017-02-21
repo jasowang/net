@@ -1,5 +1,5 @@
 Bottom: 01b16cbff104ffc043dc57cc1ce9a9bfc7f1c21b
-Top:    7af864c41d576a7c3b80ae4b062181c832dcc382
+Top:    9769845225f90673c1d4d72869950a5e27cc374d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
@@ -21,7 +21,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ca489e0..cdff93c 100644
+index ca489e0..eccde74 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -41,6 +41,8 @@ module_param(gso, bool, 0444);
@@ -47,20 +47,20 @@ index ca489e0..cdff93c 100644
  	struct send_queue *sq;
  	unsigned int qp;
  	void *xdp_sent;
-@@ -358,49 +359,22 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -358,49 +359,23 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  
  	/* Free up any pending old buffers before queueing new ones. */
  	while ((xdp_sent = virtqueue_get_buf(sq->vq, &len)) != NULL) {
 -		if (vi->mergeable_rx_bufs) {
 -			struct page *sent_page = virt_to_head_page(xdp_sent);
--
++		struct page *sent_page = virt_to_head_page(xdp_sent);
+ 
 -			put_page(sent_page);
 -		} else { /* small buffer */
 -			struct sk_buff *skb = xdp_sent;
 -
 -			kfree_skb(skb);
 -		}
-+		struct page *sent_page = virt_to_head_page(xdp_sent);
 +		put_page(sent_page);
  	}
  
@@ -107,7 +107,7 @@ index ca489e0..cdff93c 100644
  		return false;
  	}
  
-@@ -408,39 +382,50 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -408,39 +383,50 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  	return true;
  }
  
@@ -166,7 +166,7 @@ index ca489e0..cdff93c 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			rcu_read_unlock();
  			goto xdp_xmit;
-@@ -454,13 +439,25 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -454,13 +440,25 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -194,7 +194,7 @@ index ca489e0..cdff93c 100644
  xdp_xmit:
  	return NULL;
  }
-@@ -621,7 +618,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -621,7 +619,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  			}
  			break;
  		case XDP_TX:
@@ -203,7 +203,7 @@ index ca489e0..cdff93c 100644
  				trace_xdp_exception(vi->dev, xdp_prog, act);
  			ewma_pkt_len_add(&rq->mrg_avg_pkt_len, len);
  			if (unlikely(xdp_page != page))
-@@ -737,7 +734,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -737,7 +735,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  		} else if (vi->big_packets) {
  			give_pages(rq, buf);
  		} else {
@@ -212,7 +212,7 @@ index ca489e0..cdff93c 100644
  		}
  		return 0;
  	}
-@@ -780,34 +777,28 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -780,34 +778,28 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  	return 0;
  }
  
@@ -260,7 +260,7 @@ index ca489e0..cdff93c 100644
  
  	return err;
  }
-@@ -1994,10 +1985,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
+@@ -1994,10 +1986,6 @@ static void free_receive_page_frags(struct virtnet_info *vi)
  
  static bool is_xdp_raw_buffer_queue(struct virtnet_info *vi, int q)
  {
@@ -271,7 +271,7 @@ index ca489e0..cdff93c 100644
  	if (q < (vi->curr_queue_pairs - vi->xdp_queue_pairs))
  		return false;
  	else if (q < vi->curr_queue_pairs)
-@@ -2032,7 +2019,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
+@@ -2032,7 +2020,7 @@ static void free_unused_bufs(struct virtnet_info *vi)
  			} else if (vi->big_packets) {
  				give_pages(&vi->rq[i], buf);
  			} else {
