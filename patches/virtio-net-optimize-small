@@ -10,8 +10,8 @@ better performance for both TCP and XDP (since we can work at page
 before skb creation). It also remove lots of XDP codes since both
 mergeable and small buffer use page frag during refill now.
 
-                       Before | After
-XDP_DROP(xdp1) 64B  :         | 14.4Mpps
+                       Before   | After
+XDP_DROP(xdp1) 64B  :  11.1Mpps | 14.4Mpps
 
 Tested with xdp1/xdp2/xdp_ip_tx_tunnel and netperf.
 
