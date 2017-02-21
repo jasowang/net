@@ -1,5 +1,5 @@
 Bottom: 63d3bf9e2dfd8125193799f1932cfb1a832edae3
-Top:    3e94644bc5fa43a6e5255afdf819f644ce1cf37f
+Top:    892b4738b431528660995746c659a826b221d861
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-21 13:36:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/samples/bpf/xdp_tx_iptunnel_kern.c b/samples/bpf/xdp_tx_iptunnel_kern.c
-index 0f4f6e8..cd2d2bc 100644
+index 0f4f6e8..89b24cb 100644
 --- a/samples/bpf/xdp_tx_iptunnel_kern.c
 +++ b/samples/bpf/xdp_tx_iptunnel_kern.c
 @@ -78,7 +78,7 @@ static __always_inline int handle_ipv4(struct xdp_md *xdp)
@@ -19,7 +19,7 @@ index 0f4f6e8..cd2d2bc 100644
  	void *data_end = (void *)(long)xdp->data_end;
  	void *data = (void *)(long)xdp->data;
 -	struct iptnl_info *tnl;
-+	struct iptnl_info tnl;
++	struct iptnl_info tnl = {0};
  	struct ethhdr *new_eth;
  	struct ethhdr *old_eth;
  	struct iphdr *iph = data + sizeof(struct ethhdr);
@@ -28,9 +28,9 @@ index 0f4f6e8..cd2d2bc 100644
  	payload_len = ntohs(iph->tot_len);
  
 +
-+	tnl.daddr.v4 = iph->daddr;
-+	tnl.saddr.v4 = iph->saddr;
-+	tnl.dmac = old_eth->h_dest;
++//	tnl.daddr.v4 = iph->daddr;
++//	tnl.saddr.v4 = iph->saddr;
++//	tnl.dmac = old_eth->h_dest;
 +	#if 0
  	tnl = bpf_map_lookup_elem(&vip2tnl, &vip);
  	/* It only does v4-in-v4 */
@@ -39,3 +39,24 @@ index 0f4f6e8..cd2d2bc 100644
 +	#endif
  
  	/* The vip key is found.  Add an IP header and send it out */
+ 
+@@ -124,7 +130,7 @@ static __always_inline int handle_ipv4(struct xdp_md *xdp)
+ 	    iph + 1 > data_end)
+ 		return XDP_DROP;
+ 
+-	set_ethhdr(new_eth, old_eth, tnl, htons(ETH_P_IP));
++	set_ethhdr(new_eth, old_eth, &tnl, htons(ETH_P_IP));
+ 
+ 	iph->version = 4;
+ 	iph->ihl = sizeof(*iph) >> 2;
+@@ -133,8 +139,8 @@ static __always_inline int handle_ipv4(struct xdp_md *xdp)
+ 	iph->check = 0;
+ 	iph->tos = 0;
+ 	iph->tot_len = htons(payload_len + sizeof(*iph));
+-	iph->daddr = tnl->daddr.v4;
+-	iph->saddr = tnl->saddr.v4;
++	iph->daddr = tnl.daddr.v4;
++	iph->saddr = tnl.saddr.v4;
+ 	iph->ttl = 8;
+ 
+ 	next_iph_u16 = (u16 *)iph;
