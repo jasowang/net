@@ -1,5 +1,5 @@
 Bottom: 06d2ef6cbd4875ecdd0eea94269d963e1d73c124
-Top:    63d3bf9e2dfd8125193799f1932cfb1a832edae3
+Top:    775ae69335e53734a2445d133f498759cc3c047c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-17 21:34:19 +0800
 
@@ -284,23 +284,3 @@ index d12e5d6..b07c4b0 100644
  			}
  		}
  	}
-diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 2fe3535..54085ff 100644
---- a/drivers/vhost/net.c
-+++ b/drivers/vhost/net.c
-@@ -687,6 +687,7 @@ static void handle_rx(struct vhost_net *net)
- 	vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
- 		vq->log : NULL;
- 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
-+	printk("RX!\n");
- 
- 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
- 		sock_len += sock_hlen;
-@@ -713,6 +714,7 @@ static void handle_rx(struct vhost_net *net)
- 				vhost_disable_notify(&net->dev, vq);
- 				continue;
- 			}
-+			printk("wait for refill!\n");
- 			/* Nothing new?  Wait for eventfd to tell us
- 			 * they refilled. */
- 			goto out;
