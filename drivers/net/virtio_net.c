@@ -360,6 +360,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
 	/* Free up any pending old buffers before queueing new ones. */
 	while ((xdp_sent = virtqueue_get_buf(sq->vq, &len)) != NULL) {
 		struct page *sent_page = virt_to_head_page(xdp_sent);
+
 		put_page(sent_page);
 	}
 
