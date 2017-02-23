@@ -1,0 +1,88 @@
+Bottom: 6e68b9ef14eee3e2dcb12890a1b3307e0fef6e96
+Top:    a7727f9f6c33f4e2ca5d66d99c4c3c3bd1034d6d
+Author: Eric Dumazet <edumazet@google.com>
+Date:   2017-02-13 11:58:50 -0800
+
+mlx4: reduce rx ring page_cache size
+
+We only need to store the page and dma address.
+
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+
+
+---
+
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+index bb33032..453313d 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+@@ -250,7 +250,10 @@ static int mlx4_en_prepare_rx_desc(struct mlx4_en_priv *priv,
+ 					(index << priv->log_rx_info);
+ 
+ 	if (ring->page_cache.index > 0) {
+-		frags[0] = ring->page_cache.buf[--ring->page_cache.index];
++		ring->page_cache.index--;
++		frags[0].page = ring->page_cache.buf[ring->page_cache.index].page;
++		frags[0].dma  = ring->page_cache.buf[ring->page_cache.index].dma;
++		frags[0].page_offset = XDP_PACKET_HEADROOM;
+ 		rx_desc->data[0].addr = cpu_to_be64(frags[0].dma +
+ 						    frags[0].page_offset);
+ 		return 0;
+@@ -537,7 +540,9 @@ bool mlx4_en_rx_recycle(struct mlx4_en_rx_ring *ring,
+ 	if (cache->index >= MLX4_EN_CACHE_SIZE)
+ 		return false;
+ 
+-	cache->buf[cache->index++] = *frame;
++	cache->buf[cache->index].page = frame->page;
++	cache->buf[cache->index].dma = frame->dma;
++	cache->index++;
+ 	return true;
+ }
+ 
+@@ -567,11 +572,9 @@ void mlx4_en_deactivate_rx_ring(struct mlx4_en_priv *priv,
+ 	int i;
+ 
+ 	for (i = 0; i < ring->page_cache.index; i++) {
+-		struct mlx4_en_rx_alloc *frame = &ring->page_cache.buf[i];
+-
+-		dma_unmap_page(priv->ddev, frame->dma, frame->page_size,
+-			       priv->dma_dir);
+-		put_page(frame->page);
++		dma_unmap_page(priv->ddev, ring->page_cache.buf[i].dma,
++			       PAGE_SIZE, priv->dma_dir);
++		put_page(ring->page_cache.buf[i].page);
+ 	}
+ 	ring->page_cache.index = 0;
+ 	mlx4_en_free_rx_buf(priv, ring);
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_tx.c b/drivers/net/ethernet/mellanox/mlx4/en_tx.c
+index 98bc67a..e0c5ffb 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_tx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_tx.c
+@@ -354,8 +354,6 @@ u32 mlx4_en_recycle_tx_desc(struct mlx4_en_priv *priv,
+ 	struct mlx4_en_rx_alloc frame = {
+ 		.page = tx_info->page,
+ 		.dma = tx_info->map0_dma,
+-		.page_offset = XDP_PACKET_HEADROOM,
+-		.page_size = PAGE_SIZE,
+ 	};
+ 
+ 	if (!mlx4_en_rx_recycle(ring->recycle_ring, &frame)) {
+diff --git a/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h b/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
+index 81d9edf..f90636b 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
++++ b/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
+@@ -267,9 +267,13 @@ struct mlx4_en_rx_alloc {
+ };
+ 
+ #define MLX4_EN_CACHE_SIZE (2 * NAPI_POLL_WEIGHT)
++
+ struct mlx4_en_page_cache {
+ 	u32 index;
+-	struct mlx4_en_rx_alloc buf[MLX4_EN_CACHE_SIZE];
++	struct {
++		struct page	*page;
++		dma_addr_t	dma;
++	} buf[MLX4_EN_CACHE_SIZE];
+ };
+ 
+ struct mlx4_en_priv;

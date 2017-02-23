@@ -1,0 +1,82 @@
+Bottom: a7727f9f6c33f4e2ca5d66d99c4c3c3bd1034d6d
+Top:    303d36a53218cc777017c3b73d2b2c3f988d03f8
+Author: Eric Dumazet <edumazet@google.com>
+Date:   2017-02-13 11:58:51 -0800
+
+mlx4: removal of frag_sizes[]
+
+We will soon use order-0 pages, and frag truesize will more precisely
+match real sizes.
+
+In the new model, we prefer to use <= 2048 bytes fragments, so that
+we can use page-recycle technique on PAGE_SIZE=4096 arches.
+
+We will still pack as much frames as possible on arches with big
+pages, like PowerPC.
+
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+
+
+---
+
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+index 453313d..0c61c12 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+@@ -1181,13 +1181,6 @@ int mlx4_en_poll_rx_cq(struct napi_struct *napi, int budget)
+ 	return done;
+ }
+ 
+-static const int frag_sizes[] = {
+-	FRAG_SZ0,
+-	FRAG_SZ1,
+-	FRAG_SZ2,
+-	FRAG_SZ3
+-};
+-
+ void mlx4_en_calc_rx_buf(struct net_device *dev)
+ {
+ 	struct mlx4_en_priv *priv = netdev_priv(dev);
+@@ -1211,13 +1204,16 @@ void mlx4_en_calc_rx_buf(struct net_device *dev)
+ 		int buf_size = 0;
+ 
+ 		while (buf_size < eff_mtu) {
+-			priv->frag_info[i].frag_size =
+-				(eff_mtu > buf_size + frag_sizes[i]) ?
+-					frag_sizes[i] : eff_mtu - buf_size;
+-			priv->frag_info[i].frag_stride =
+-				ALIGN(priv->frag_info[i].frag_size,
+-				      SMP_CACHE_BYTES);
+-			buf_size += priv->frag_info[i].frag_size;
++			int frag_size = eff_mtu - buf_size;
++
++			if (i < MLX4_EN_MAX_RX_FRAGS - 1)
++				frag_size = min(frag_size, 2048);
++
++			priv->frag_info[i].frag_size = frag_size;
++
++			priv->frag_info[i].frag_stride = ALIGN(frag_size,
++							       SMP_CACHE_BYTES);
++			buf_size += frag_size;
+ 			i++;
+ 		}
+ 		priv->rx_page_order = MLX4_EN_ALLOC_PREFER_ORDER;
+diff --git a/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h b/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
+index f90636b..fb83b80 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
++++ b/drivers/net/ethernet/mellanox/mlx4/mlx4_en.h
+@@ -104,14 +104,6 @@
+ 
+ #define MLX4_EN_ALLOC_PREFER_ORDER	PAGE_ALLOC_COSTLY_ORDER
+ 
+-/* Receive fragment sizes; we use at most 3 fragments (for 9600 byte MTU
+- * and 4K allocations) */
+-enum {
+-	FRAG_SZ0 = 1536 - NET_IP_ALIGN,
+-	FRAG_SZ1 = 4096,
+-	FRAG_SZ2 = 4096,
+-	FRAG_SZ3 = MLX4_EN_ALLOC_SIZE
+-};
+ #define MLX4_EN_MAX_RX_FRAGS	4
+ 
+ /* Maximum ring sizes */

@@ -1,7 +1,16 @@
 Version: 1
-Previous: 3651c6c39f69f47f62f5770e688ee545d9c4a372
+Previous: 5e518d38442fef8e6260f5b93f9888fab50dd215
 Head: 60cf0af33e4f0cb43293fdcaf256ffaa80ae8904
 Applied:
+  mlx4-use-__skb_fill_page_desc: 78158d7847a32993a55298c7ee325bf4395e966b
+  mlx4-dma_dir-is-a-mlx4_en_priv: 048b8556d0aa61aa4ea04131a355289067f8688a
+  mlx4-remove-order-field-from: 1c654bd70ae301ff1f4f070dc4fc9764aa360273
+  mlx4-get-rid-of: 5003803fa62be6d46ba06f050c6ffc2986c0d903
+  mlx4-rx_headroom-is-a-per-port: 09863793e58b0d4b3d38a51f461debba45fdca67
+  mlx4-reduce-rx-ring-page_cache: 0f7a961572b8102e3b69b7a271cda9e9f968ec53
+  mlx4-removal-of-frag_sizes: cffedfdf4a74258aa88eb2463420f4eb4007a504
+  mlx4-use-order-0-pages-for-rx: 2776dff6a74186fd3864e32397d63701ce04cd79
+  mlx4-add-page-recycling-in: 60cf0af33e4f0cb43293fdcaf256ffaa80ae8904
 Unapplied:
   virtio-net-optimize-small: 02fdaee13a06767adc579f3cb4491785e7eeecc2
   virito-net-keep-old: fc9c48e81b33a64df599d6dfcdb6ba77df3498bd
