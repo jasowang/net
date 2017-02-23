@@ -88,6 +88,12 @@ struct send_queue {
 	char name[40];
 };
 
+#define VIRTNET_CACHE_SIZE (2 * NAPI_POLL_WEIGHT)
+struct virtnet_page_cache {
+	u32 index;
+	struct page *pages[VIRTNET_CACHE_SIZE];
+};
+
 /* Internal representation of a receive virtqueue */
 struct receive_queue {
 	/* Virtqueue associated with this receive_queue */
@@ -96,6 +102,8 @@ struct receive_queue {
 	struct napi_struct napi;
 
 	struct bpf_prog __rcu *xdp_prog;
+
+	struct virtnet_page_cache page_cache;
 
 	/* Chain pages by the private ptr. */
 	struct page *pages;
@@ -341,6 +349,16 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
 		give_pages(rq, page);
 
 	return skb;
+}
+
+static void virtnet_rx_recycle(struct receive *rq, struct page *page)
+{
+	struct virtnet_page_cache *cache = rq->page_cache;
+
+	if (page_ref_count(page) == 1 && cache->index < VIRTNET_CACHE_SIZE)
+		cache->pages[cache->index++] = page;
+	else
+		put_page(page);
 }
 
 static bool virtnet_xdp_xmit(struct virtnet_info *vi,
