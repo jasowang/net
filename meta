@@ -1,6 +1,6 @@
 Version: 1
-Previous: dd4280fe0d9a785e07d71fb0ac5785938a71efac
-Head: 017b29c38c0dc8aece778b44fad32adf8862c188
+Previous: 3651c6c39f69f47f62f5770e688ee545d9c4a372
+Head: 60cf0af33e4f0cb43293fdcaf256ffaa80ae8904
 Applied:
 Unapplied:
   virtio-net-optimize-small: 02fdaee13a06767adc579f3cb4491785e7eeecc2
