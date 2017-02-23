@@ -1,0 +1,52 @@
+Bottom: 8e5db7a3adbe3bcd3b08e6983a6e0f6becb0aaa0
+Top:    5d8d26c5363adf304846905dee4e28522e5ac0f5
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-02-23 18:58:57 +0800
+
+Refresh of virtio-net
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index bf95016..c80c728 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -88,6 +88,12 @@ struct send_queue {
+ 	char name[40];
+ };
+ 
++#define VIRTNET_CACHE_SIZE (2 * NAPI_POLL_WEIGHT)
++struct virtnet_page_cache {
++	u32 index;
++	struct page *pages[VIRTNET_CACHE_SIZE];
++};
++
+ /* Internal representation of a receive virtqueue */
+ struct receive_queue {
+ 	/* Virtqueue associated with this receive_queue */
+@@ -97,6 +103,8 @@ struct receive_queue {
+ 
+ 	struct bpf_prog __rcu *xdp_prog;
+ 
++	struct virtnet_page_cache page_cache;
++
+ 	/* Chain pages by the private ptr. */
+ 	struct page *pages;
+ 
+@@ -343,6 +351,16 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
+ 	return skb;
+ }
+ 
++static void virtnet_rx_recycle(struct receive *rq, struct page *page)
++{
++	struct virtnet_page_cache *cache = rq->page_cache;
++
++	if (page_ref_count(page) == 1 && cache->index < VIRTNET_CACHE_SIZE)
++		cache->pages[cache->index++] = page;
++	else
++		put_page(page);
++}
++
+ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+ 			     struct receive_queue *rq,
+ 			     struct xdp_buff *xdp)
