@@ -1,5 +1,5 @@
 Version: 1
-Previous: 9dbd51ec5845fe8e7f1e07a5be600023f7d29b66
+Previous: addc6928b21e6a4ca2d4c9ac4be24173d68d5090
 Head: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
 Applied:
   virtio-net: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
@@ -7,7 +7,6 @@ Unapplied:
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
   work: ce8c5e36771ee33c1aaf757a09c42f73a33444e4
   virtio-net-xdp-xmit-more: b65b9c79433912393c0854afb35b1c9b4a51639f
-  virtio-net-batch-stats: b3a2905bfb0081e986a2b534cff0397b3eb3a430
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
   virtio-net-defer-timer: 700044b6e597be7cf00873bb4eb8878a590de589
   vhost-try-avoding-avail-index: 564f1dab53adc1ebcf1944283b6e65b7fc478a17
