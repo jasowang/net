@@ -1,8 +1,8 @@
 Version: 1
-Previous: 7c10cbb4dd7c99b79c475a9823e9b465ed4b1c1b
-Head: de12299354c61ed193f8b236b267a0d316d8ce93
+Previous: 3ea0f82664a3f998af1c4ddcf4b6feab6989aa61
+Head: c548ad1b0286f1470bd0ae7d290e70e2123aa658
 Applied:
-  virtio-net: de12299354c61ed193f8b236b267a0d316d8ce93
+  virtio-net: c548ad1b0286f1470bd0ae7d290e70e2123aa658
 Unapplied:
   mlx4-use-__skb_fill_page_desc: 78158d7847a32993a55298c7ee325bf4395e966b
   mlx4-dma_dir-is-a-mlx4_en_priv: 048b8556d0aa61aa4ea04131a355289067f8688a
