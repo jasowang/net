@@ -1,8 +1,9 @@
 Version: 1
-Previous: d7ad7e74ec2e2ac3bbea8812ed8a94f1f534d17a
-Head: acb2848361940ae23a95552ccddc6f5c4a2fe0f8
+Previous: 215c0a12901e886e647a62c23d56843cdc63aced
+Head: c77181738d08a6c8a32b37ff9e457287fa828838
 Applied:
   virtio-net: acb2848361940ae23a95552ccddc6f5c4a2fe0f8
+  refresh-temp: c77181738d08a6c8a32b37ff9e457287fa828838
 Unapplied:
   mlx4-use-__skb_fill_page_desc: 78158d7847a32993a55298c7ee325bf4395e966b
   mlx4-dma_dir-is-a-mlx4_en_priv: 048b8556d0aa61aa4ea04131a355289067f8688a
