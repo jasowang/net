@@ -1,10 +1,10 @@
 Version: 1
-Previous: 9e3c45a7f2d5b6934c4fbc77bc6900dd786ddf7f
-Head: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
+Previous: 882171b6632714fc6697b941058b1ffb8c1ff2c9
+Head: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
 Applied:
   virtio-net: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
-  virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
 Unapplied:
+  virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
   work: ce8c5e36771ee33c1aaf757a09c42f73a33444e4
   tun-prevent-deadlock: b72ae05c00815258fabefce936bebe6be8113d40
