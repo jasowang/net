@@ -1,5 +1,5 @@
 Version: 1
-Previous: b6a8f5cbdc08c97cbc5326a8bd5863d64d0ee1ba
+Previous: 099abe46c02e5918ce1f21c7644532faeee4c892
 Head: ca78d3173cff3503bcd15723b049757f75762d15
 Applied:
 Unapplied:
@@ -8,7 +8,6 @@ Unapplied:
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
   work: ce8c5e36771ee33c1aaf757a09c42f73a33444e4
   virtio-net-defer-timer: 700044b6e597be7cf00873bb4eb8878a590de589
-  vhost-try-avoding-avail-index: 564f1dab53adc1ebcf1944283b6e65b7fc478a17
   macvtap-tx-batching-0: 77bc03e497e1214bd9bb2177063943c189ed19f5
   vhost_net-batch-tx-descriptor: af8a52de2c7cd4d08eb966822a27ca1094e6ac28
   vhost_net-batch-tx-descriptor-0: 2f7692b278d97553ef0020a24f31f02b865801ee
