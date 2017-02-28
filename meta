@@ -1,9 +1,9 @@
 Version: 1
-Previous: 882171b6632714fc6697b941058b1ffb8c1ff2c9
-Head: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
+Previous: e78124c3d02b5b71994cab27f5750b18ea8fe012
+Head: ca78d3173cff3503bcd15723b049757f75762d15
 Applied:
-  virtio-net: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
 Unapplied:
+  virtio-net: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
   virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
   work: ce8c5e36771ee33c1aaf757a09c42f73a33444e4
