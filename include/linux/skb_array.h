@@ -131,6 +131,11 @@ static inline int skb_array_peek_len(struct skb_array *a)
 	return PTR_RING_PEEK_CALL(&a->ring, __skb_array_len_with_tag);
 }
 
+static inline int skb_array_peek_queue_len(struct skb_array *a)
+{
+	return __ptr_ring_peek_queue_len(&a->ring);
+}
+
 static inline int skb_array_peek_len_irq(struct skb_array *a)
 {
 	return PTR_RING_PEEK_CALL_IRQ(&a->ring, __skb_array_len_with_tag);
