@@ -26,6 +26,7 @@
 #include <linux/if_macvlan.h>
 #include <linux/if_tap.h>
 #include <linux/if_vlan.h>
+#include <linux/skb_array.h>
 
 #include <net/sock.h>
 
@@ -533,6 +534,17 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
+static bool sk_rx_array_has_data(struct sock *sk)
+{
+	struct socket *sock = sk->sk_socket;
+	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+
+	if (skb_array)
+		return !__skb_array_empty(skb_array);
+	else
+		return sk_has_rx_data(sk);
+}
+
 static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 				      struct sock *sk)
 {
@@ -540,7 +552,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
-	int len = mergeable ? peek_head_len(sk) : sk_has_rx_data(sk);
+	int len = mergeable ? peek_head_len(sk) : sk_rx_array_has_data(sk);
 
 	if (!len && vq->busyloop_timeout) {
 		/* Both tx vq and rx socket were polled here */
@@ -561,7 +573,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 			vhost_poll_queue(&vq->poll);
 		mutex_unlock(&vq->mutex);
 
-		len = peek_head_len(sk);
+		len = mergeable ? peek_head_len(sk) : sk_rx_array_has_data(sk);
 	}
 
 	return len;
@@ -703,7 +715,6 @@ static void handle_rx(struct vhost_net *net)
 			if (headcount > 0) {
 				vhost_len = vq->heads[0].len;
 				sock_len = vhost_len - vhost_hlen;
-
 			}
 		}
 
