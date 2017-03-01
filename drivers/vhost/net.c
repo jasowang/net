@@ -545,6 +545,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
 		return sk_has_rx_data(sk);
 }
 
+static int sk_rx_array_length(struct sock *sk)
+{
+	struct socket *sock = sk->sk_socket;
+	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+
+	if (skb_array)
+		return skb_array_peek_queue_len(skb_array);
+	else
+		return 0;
+}
+
 static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 				      struct sock *sk)
 {
@@ -684,6 +695,8 @@ static void handle_rx(struct vhost_net *net)
 	struct socket *sock;
 	struct iov_iter fixup;
 	__virtio16 num_buffers;
+	__virtio16 indices[64];
+	int npkts, ndescs;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -703,6 +716,21 @@ static void handle_rx(struct vhost_net *net)
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
 
+	npkts = sk_rx_array_length(sock->sk);
+again:
+	ndescs = vhost_prefetch_desc_indices(vq, indices, MIN(npkts, 64));
+	if (!ndescs) {
+		if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+			/* They have slipped one in as we were
+			 * doing that: check again. */
+			vhost_disable_notify(&net->dev, vq);
+			goto again;
+		}
+		/* Nothing new?  Wait for eventfd to tell us
+		 * they refilled. */
+		goto out;
+	}
+
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		if (mergeable) {
 			sock_len += sock_hlen;
@@ -710,6 +738,16 @@ static void handle_rx(struct vhost_net *net)
 			headcount = get_rx_bufs(vq, vq->heads, vhost_len,
 						&in, vq_log, &log, UIO_MAXIOV);
 		} else {
+
+			if (!ndescs) {
+				npkts = sk_rx_array_length(sock->sk);
+				ndescs =
+					vhost_prefetch_desc_indices(vq,
+								indices,
+								MIN(npkts, 64));
+			}
+
+			
 			headcount = get_rx_bufs(vq, vq->heads, 1,
 						&in, vq_log, &log, 1);
 			if (headcount > 0) {
