@@ -1,5 +1,5 @@
-Bottom: 99fc7e28fa3e3fac89982cb1cf9a1f717f030cf4
-Top:    7bf1470032ab4359044cd42eec6388bed530ec97
+Bottom: 8e5db7a3adbe3bcd3b08e6983a6e0f6becb0aaa0
+Top:    76e16f6a38440ca020ba2701f8a1166c744856b8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-07-28 14:28:13 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 5dc128a..70953df 100644
+index 2fe3535..62ebe93 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -515,12 +515,14 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -533,12 +533,14 @@ static int sk_has_rx_data(struct sock *sk)
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
@@ -31,7 +31,7 @@ index 5dc128a..70953df 100644
  
  	if (!len && vq->busyloop_timeout) {
  		/* Both tx vq and rx socket were polled here */
-@@ -608,7 +610,8 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+@@ -626,7 +628,8 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
  		++headcount;
  		seg += in;
  	}
@@ -41,7 +41,7 @@ index 5dc128a..70953df 100644
  	*iovcount = seg;
  	if (unlikely(log))
  		*log_num = nlogs;
-@@ -671,11 +674,21 @@ static void handle_rx(struct vhost_net *net)
+@@ -689,11 +692,21 @@ static void handle_rx(struct vhost_net *net)
  	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
  
  	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
@@ -68,7 +68,7 @@ index 5dc128a..70953df 100644
  		/* On error, stop handling until the next kick. */
  		if (unlikely(headcount < 0))
  			goto out;
-@@ -713,7 +726,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -731,7 +744,7 @@ static void handle_rx(struct vhost_net *net)
  		/* Userspace might have consumed the packet meanwhile:
  		 * it's not supposed to do this usually, but might be hard
  		 * to prevent. Discard data we got (if any) and keep going. */
