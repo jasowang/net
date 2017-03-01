@@ -547,6 +547,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
 		return sk_has_rx_data(sk);
 }
 
+static int sk_rx_array_length(struct sock *sk)
+{
+	struct socket *sock = sk->sk_socket;
+	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+
+	if (skb_array)
+		return skb_array_peek_queue_len(skb_array);
+	else
+		return 0;
+}
+
 static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 				      struct sock *sk)
 {
@@ -686,6 +697,8 @@ static void handle_rx(struct vhost_net *net)
 	struct socket *sock;
 	struct iov_iter fixup;
 	__virtio16 num_buffers;
+	__virtio16 indices[64];
+	int npkts, ndescs = 0, cur = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -713,9 +726,28 @@ static void handle_rx(struct vhost_net *net)
 						&in, vq_log, &log, UIO_MAXIOV);
 		} else {
 			unsigned int out;
-			headcount = vhost_get_vq_desc(vq, vq->iov,
+			if (cur == ndescs) {
+				npkts = sk_rx_array_length(sock->sk);
+				if (!npkts)
+					break;
+				ndescs = vhost_prefetch_desc_indices(vq,
+								indices,
+								min(npkts, 64));
+				cur = 0;
+				if (!ndescs) {
+					headcount = 0;
+					goto enable_notify;
+				}
+				if (ndescs < 0) {
+					ndescs = 0;
+					goto out;
+				}
+			}
+
+			headcount = vhost_get_vq_desc2(vq, vq->iov,
 						ARRAY_SIZE(vq->iov),
-						&out, &in, vq_log, &log);
+						&out, &in, vq_log,
+						&log, indices[cur]);
 			if (headcount == vq->num)
 				headcount = 0;
 			else if (headcount >= 0) {
@@ -725,6 +757,7 @@ static void handle_rx(struct vhost_net *net)
 						iov_length(vq->iov, in));
 				sock_len = vhost_len - vhost_hlen;
 				headcount = 1;
+				cur++;
 			}
 		}
 
@@ -739,6 +772,7 @@ static void handle_rx(struct vhost_net *net)
 			pr_debug("Discarded rx packet: len %zd\n", sock_len);
 			continue;
 		}
+enable_notify:
 		/* OK, now we need to know about added descriptors. */
 		if (!headcount) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
