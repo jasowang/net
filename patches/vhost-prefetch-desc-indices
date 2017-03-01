@@ -5,6 +5,8 @@ Date:   2017-03-01 21:46:42 +0800
 
 vhost: prefetch desc indices
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
