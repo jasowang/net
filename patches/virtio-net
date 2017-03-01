@@ -6,14 +6,14 @@ Date:   2017-02-23 18:58:54 +0800
 virtio-net: rx buffer recycling
 
 Order 0
-      before     | after
-xdp1  15.1M      | 15.6M
-xdp2  9.0M/6.3M  | 10.2M/8.0M
+      before           | after
+xdp1  1.51Mpps         | 1.56Mpps
+xdp2  0.9Mpps/0.6Mpps  | 1.02M/0.8M
 
 Order 3
-      before    | after
-xdp1  15.1M     | 16.4M
-xdp2  10.M/7.0M | 10M/8.0M
+      before          | after
+xdp1  1.51Mpps        | 1.64Mpps
+xdp2  1.0Mpps/0.7Mpps | 1.0Mpps/0.8Mpps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
