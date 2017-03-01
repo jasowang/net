@@ -1908,6 +1908,37 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
+			        int num)
+{
+	u16 last_avail_idx, total;
+	__virtio16 avail_idx;
+
+	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+
+	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+	while (total) {
+		left = MIN(total, vq->num - last_avail_idx);
+
+		ret = vhost_copy_from_user(vq, indices,
+					   &vq->avail->ring[last_avail_idx],
+					   sizeof(avail_idx) * left);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+
+		total -= left;
+	}
+
+	return total;
+}
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two
