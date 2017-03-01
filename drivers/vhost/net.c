@@ -980,6 +980,32 @@ static struct socket *get_tap_socket(int fd)
 	return sock;
 }
 
+static struct socket *get_tap_skb_array(int fd)
+{
+	struct file *file = fget(fd);
+	struct skb_array *array;
+
+	if (!file)
+		return ERR_PTR(-EBADF);
+	array = tap_get_skb_array(file);
+	if (IS_ERR(array))
+		fput(file);
+	return array;
+}
+
+static struct socket *get_skb_array(int fd)
+{
+	struct skb_array *array;
+
+	/* special case to disable backend */
+	if (fd == -1)
+		return NULL;
+	array = get_tap_skb_array(fd)
+	if (!IS_ERR(array))
+		return array;
+	return ERR_PTR(-ENOTSOCK);
+}
+
 static struct socket *get_socket(int fd)
 {
 	struct socket *sock;
