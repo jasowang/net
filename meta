@@ -1,10 +1,10 @@
 Version: 1
-Previous: b9e7651d0d972ac58c15d8b03350ed39d99d1ca1
-Head: 4087cc87324cb5b4b56ed71b4ae273751b6bb199
+Previous: 981a594d996cefd713cbd1b35edb6ec8f62f3617
+Head: 75c2f2e843037be7a4d3643a94cf8e7ffc5e1e6e
 Applied:
   vhost_net-avoid-peeking-socket: 75c2f2e843037be7a4d3643a94cf8e7ffc5e1e6e
-  bypass: 4087cc87324cb5b4b56ed71b4ae273751b6bb199
 Unapplied:
+  bypass: 4087cc87324cb5b4b56ed71b4ae273751b6bb199
   virtio-net: 52f2cd2ff9fdc037a0c9241d40b32eb7b9bc2efb
   virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
