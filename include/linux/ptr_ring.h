@@ -183,6 +183,16 @@ static inline bool __ptr_ring_empty(struct ptr_ring *r)
 	return !__ptr_ring_peek(r);
 }
 
+static inline int __ptr_ring_peek_queue_len(struct ptr_ring *r)
+{
+	if (__ptr_ring_empty(r))
+		return 0;
+	else if (r->producer > r->consumer)
+		return r->producer - r->consumer;
+	else
+		return r->producer + r->size - r->consumer;
+}
+
 static inline bool ptr_ring_empty(struct ptr_ring *r)
 {
 	bool ret;
