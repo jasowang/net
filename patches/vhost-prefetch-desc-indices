@@ -1,0 +1,11 @@
+Bottom: 62d96e34296c2de74a2f25a11012b364f38f9313
+Top:    62d96e34296c2de74a2f25a11012b364f38f9313
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-01 21:46:42 +0800
+
+vhost: prefetch desc indices
+
+
+---
+
+
