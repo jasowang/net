@@ -1922,7 +1922,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		return -EFAULT;
 	}
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = min(num, vq->avail_idx - vq->last_avail_idx);
+	ret = total = min(num, vq->avail_idx - vq->last_avail_idx);
 
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
@@ -1944,7 +1944,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
 
-	return total;
+	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);
 

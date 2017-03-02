@@ -726,14 +726,18 @@ static void handle_rx(struct vhost_net *net)
 			unsigned int out;
 			if (cur == ndescs) {
 				npkts = sk_rx_array_length(sock->sk);
+				printk("npkts %d\n", npkts);
 				if (!npkts)
 					break;
 				ndescs = vhost_prefetch_desc_indices(vq,
 								indices,
 								min(npkts, 64));
+				printk("ndescs %d\n", ndescs);
 				cur = 0;
-				if (!ndescs)
+				if (!ndescs) {
+					headcount = 0;
 					goto enable_notify;
+				}
 				if (ndescs < 0) {
 					ndescs = 0;
 					goto out;
