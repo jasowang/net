@@ -1,5 +1,5 @@
 Bottom: becb42a7b520e4bc05fffb8f9dece5e304ccc2f8
-Top:    975b74b863ea5a5a210ecda6ac78e5492fbb66cc
+Top:    831c46c0bdeedb57b9226291067f12776aba149b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -10,16 +10,87 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 15d689b..895fd9e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -545,6 +545,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
+ 		return sk_has_rx_data(sk);
+ }
+ 
++static int sk_rx_array_length(struct sock *sk)
++{
++	struct socket *sock = sk->sk_socket;
++	struct skb_array *skb_array = tap_get_skb_array(sock->file);
++
++	if (skb_array)
++		return skb_array_peek_queue_len(skb_array);
++	else
++		return 0;
++}
++
+ static int vhost_net_rx_peek_head_len(struct vhost_net *net,
+ 				      struct sock *sk)
+ {
+@@ -684,6 +695,8 @@ static void handle_rx(struct vhost_net *net)
+ 	struct socket *sock;
+ 	struct iov_iter fixup;
+ 	__virtio16 num_buffers;
++	__virtio16 indices[64];
++	int npkts, ndescs;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
+@@ -703,6 +716,21 @@ static void handle_rx(struct vhost_net *net)
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+ 
++	npkts = sk_rx_array_length(sock->sk);
++again:
++	ndescs = vhost_prefetch_desc_indices(vq, indices, MIN(npkts, 64));
++	if (!ndescs) {
++		if (unlikely(vhost_enable_notify(&net->dev, vq))) {
++			/* They have slipped one in as we were
++			 * doing that: check again. */
++			vhost_disable_notify(&net->dev, vq);
++			goto again;
++		}
++		/* Nothing new?  Wait for eventfd to tell us
++		 * they refilled. */
++		goto out;
++	}
++
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		if (mergeable) {
+ 			sock_len += sock_hlen;
+@@ -710,6 +738,16 @@ static void handle_rx(struct vhost_net *net)
+ 			headcount = get_rx_bufs(vq, vq->heads, vhost_len,
+ 						&in, vq_log, &log, UIO_MAXIOV);
+ 		} else {
++
++			if (!ndescs) {
++				npkts = sk_rx_array_length(sock->sk);
++				ndescs =
++					vhost_prefetch_desc_indices(vq,
++								indices,
++								MIN(npkts, 64));
++			}
++
++			
+ 			headcount = get_rx_bufs(vq, vq->heads, 1,
+ 						&in, vq_log, &log, 1);
+ 			if (headcount > 0) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..7f96886 100644
+index 4269e62..06f3122 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1908,6 +1908,37 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1908,6 +1908,43 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
-+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
-+			        int num)
++/* Prefetch descriptor indices */
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, int num)
 +{
 +	u16 last_avail_idx, total;
 +	__virtio16 avail_idx;
@@ -30,7 +101,7 @@ index 4269e62..7f96886 100644
 +		return -EFAULT;
 +	}
 +	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-+	total = vq->avail_idx - vq->last_avail_idx;
++	total = MIN(num, vq->avail_idx - vq->last_avail_idx);
 +
 +	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 +	while (total) {
@@ -45,14 +116,19 @@ index 4269e62..7f96886 100644
 +		}
 +
 +		total -= left;
++		last_avail_idx = 0;
 +	}
++
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
 +
 +	return total;
 +}
++
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2052,6 +2083,110 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2052,6 +2089,110 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
@@ -163,3 +239,38 @@ index 4269e62..7f96886 100644
  /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 6c70444..4be401a 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -174,6 +174,14 @@ static inline void *__ptr_ring_peek(struct ptr_ring *r)
+ 	return NULL;
+ }
+ 
++static inline int __ptr_ring_peek_queue_len(struct ptr_ring *r)
++{
++	if (r->producer >= r->consumer)
++		return r->producer - r->consumer;
++	else
++		return r->producer + r->size - r->consumerr;
++}
++
+ /* Note: callers invoking this in a loop must use a compiler barrier,
+  * for example cpu_relax(). Callers must take consumer_lock
+  * if the ring is ever resized - see e.g. ptr_ring_empty.
+diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
+index f4dfade..92aa0de 100644
+--- a/include/linux/skb_array.h
++++ b/include/linux/skb_array.h
+@@ -131,6 +131,11 @@ static inline int skb_array_peek_len(struct skb_array *a)
+ 	return PTR_RING_PEEK_CALL(&a->ring, __skb_array_len_with_tag);
+ }
+ 
++static inline int skb_array_peek_queue_len(struct skb_array *a)
++{
++	return __ptr_ring_peek_queue_len(&a->ring);
++}
++
+ static inline int skb_array_peek_len_irq(struct skb_array *a)
+ {
+ 	return PTR_RING_PEEK_CALL_IRQ(&a->ring, __skb_array_len_with_tag);
