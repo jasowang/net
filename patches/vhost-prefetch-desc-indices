@@ -1,5 +1,5 @@
 Bottom: bacecbccffd0e6c0a72011fccb8a4f17c2261f83
-Top:    8e8fe4ff2dfc3d40ecbcaa31e6db320fc4ba7db1
+Top:    d858d79d9de88971ee1cd58de0e3a17a4989f416
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c609d5a..87a0141 100644
+index c609d5a..dfc63dc 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -545,6 +545,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
@@ -52,7 +52,7 @@ index c609d5a..87a0141 100644
 +					break;
 +				ndescs = vhost_prefetch_desc_indices(vq,
 +								indices,
-+								MIN(npkts, 64));
++								min(npkts, 64));
 +				cur = 0;
 +				if (!ndescs)
 +					goto enable_notify;
@@ -87,10 +87,10 @@ index c609d5a..87a0141 100644
  		if (!headcount) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..06f3122 100644
+index 4269e62..7fb69c0 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1908,6 +1908,43 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1908,6 +1908,46 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -98,7 +98,8 @@ index 4269e62..06f3122 100644
 +int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 +				__virtio16 *indices, int num)
 +{
-+	u16 last_avail_idx, total;
++	int ret;
++	u16 last_avail_idx, total, left;
 +	__virtio16 avail_idx;
 +
 +	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
@@ -107,11 +108,12 @@ index 4269e62..06f3122 100644
 +		return -EFAULT;
 +	}
 +	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-+	total = MIN(num, vq->avail_idx - vq->last_avail_idx);
++	total = min(num, vq->avail_idx - vq->last_avail_idx);
 +
 +	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 +	while (total) {
-+		left = MIN(total, vq->num - last_avail_idx);
++		left = vq->num - last_avail_idx;
++		left = min(total, left);
 +
 +		ret = vhost_copy_from_user(vq, indices,
 +					   &vq->avail->ring[last_avail_idx],
@@ -130,11 +132,12 @@ index 4269e62..06f3122 100644
 +
 +	return total;
 +}
++EXPORT_SYMBOL(vhost_prefetch_desc_indices);
 +
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2052,6 +2089,110 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2052,6 +2092,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
@@ -146,8 +149,6 @@ index 4269e62..06f3122 100644
 +{
 +	struct vring_desc desc;
 +	unsigned int i, head, found = 0;
-+	u16 last_avail_idx;
-+	__virtio16 avail_idx;
 +	int ret, access;
 +
 +	head = vhost16_to_cpu(vq, ring_head);
@@ -245,8 +246,28 @@ index 4269e62..06f3122 100644
  /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index a9cbbb1..c8a40af 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -186,8 +186,15 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num);
++int vhost_get_vq_desc2(struct vhost_virtqueue *,
++		       struct iovec iov[], unsigned int iov_count,
++		       unsigned int *out_num, unsigned int *in_num,
++		       struct vhost_log *log, unsigned int *log_num,
++		       __virtio16 ring_head);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, int num);
+ int vhost_vq_init_access(struct vhost_virtqueue *);
+ int vhost_add_used(struct vhost_virtqueue *, unsigned int head, int len);
+ int vhost_add_used_n(struct vhost_virtqueue *, struct vring_used_elem *heads,
 diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
-index 6c70444..4be401a 100644
+index 6c70444..73cbe89 100644
 --- a/include/linux/ptr_ring.h
 +++ b/include/linux/ptr_ring.h
 @@ -174,6 +174,14 @@ static inline void *__ptr_ring_peek(struct ptr_ring *r)
@@ -258,7 +279,7 @@ index 6c70444..4be401a 100644
 +	if (r->producer >= r->consumer)
 +		return r->producer - r->consumer;
 +	else
-+		return r->producer + r->size - r->consumerr;
++		return r->producer + r->size - r->consumer;
 +}
 +
  /* Note: callers invoking this in a loop must use a compiler barrier,
