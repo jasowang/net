@@ -1910,11 +1910,12 @@ static int get_indirect(struct vhost_virtqueue *vq,
 
 /* Prefetch descriptor indices */
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				__virtio16 *indices, int num)
+				__virtio16 *indices, u16 num)
 {
 	int ret;
-	u16 last_avail_idx, total, left;
+	u16 last_avail_idx, total, copied;
 	__virtio16 avail_idx;
+	__virtio16 *orig = indices;
 
 	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -1922,25 +1923,33 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		return -EFAULT;
 	}
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	printk("num %d avail %d\n", num, vq->avail_idx - vq->last_avail_idx);
-	ret = total = min(num, vq->avail_idx - vq->last_avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	printk("num %d avail %u\n", num, total);
+	ret = total = min(num, total);
 
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
 		int ret2;
 
-		left = vq->num - last_avail_idx;
-		left = min(total, left);
+		copied = vq->num - last_avail_idx;
+		copied = min(total, copied);
 
+		if (indices + copied - orig > 64) {
+			printk("copied %d, before %d after %d\n",
+				copied, indices - orig,
+				indices + copied - orig);
+			return 0;
+		}
 		ret2 = vhost_copy_from_user(vq, indices,
 					    &vq->avail->ring[last_avail_idx],
-					    sizeof(avail_idx) * left);
+					    sizeof(avail_idx) * copied);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 
-		total -= left;
+		indices += copied;
+		total -= copied;
 		last_avail_idx = 0;
 	}
 
