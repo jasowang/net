@@ -724,6 +724,7 @@ static void handle_rx(struct vhost_net *net)
 						&in, vq_log, &log, UIO_MAXIOV);
 		} else {
 			unsigned int out;
+			printk("cur %d ndescs %d\n", cur, ndescs);
 			if (cur == ndescs) {
 				npkts = sk_rx_array_length(sock->sk);
 				printk("npkts %d\n", npkts);

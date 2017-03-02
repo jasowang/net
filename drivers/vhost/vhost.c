@@ -1922,17 +1922,20 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		return -EFAULT;
 	}
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	printk("num %d avail %d\n", num, vq->avail_idx - vq->last_avail_idx);
 	ret = total = min(num, vq->avail_idx - vq->last_avail_idx);
 
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
+		int ret2;
+
 		left = vq->num - last_avail_idx;
 		left = min(total, left);
 
-		ret = vhost_copy_from_user(vq, indices,
-					   &vq->avail->ring[last_avail_idx],
-					   sizeof(avail_idx) * left);
-		if (unlikely(ret)) {
+		ret2 = vhost_copy_from_user(vq, indices,
+					    &vq->avail->ring[last_avail_idx],
+					    sizeof(avail_idx) * left);
+		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
@@ -1944,6 +1947,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
 
+	printk("ret is %d\n", ret);
 	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);
