@@ -1,5 +1,5 @@
 Bottom: becb42a7b520e4bc05fffb8f9dece5e304ccc2f8
-Top:    9c34f04abbb60db8a33ca6fdcc7b6c4b4b6c92b3
+Top:    d651ce30e97658f91a43837de56ecfdc5d5ceb32
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..74148fd 100644
+index 4269e62..34d38c2 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1908,6 +1908,37 @@ static int get_indirect(struct vhost_virtqueue *vq,
@@ -19,7 +19,7 @@ index 4269e62..74148fd 100644
  }
  
 +int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
-+				int num)
++			        int num)
 +{
 +	u16 last_avail_idx, total;
 +	__virtio16 avail_idx;
