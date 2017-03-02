@@ -1,0 +1,54 @@
+Bottom: d858d79d9de88971ee1cd58de0e3a17a4989f416
+Top:    3d40ea727c14552c309467ff195d63263bc6ec94
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-02 13:53:28 +0800
+
+Refresh of vhost-prefetch-desc-indices
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index dfc63dc..b8260e2 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -726,14 +726,18 @@ static void handle_rx(struct vhost_net *net)
+ 			unsigned int out;
+ 			if (cur == ndescs) {
+ 				npkts = sk_rx_array_length(sock->sk);
++				printk("npkts %d\n", npkts);
+ 				if (!npkts)
+ 					break;
+ 				ndescs = vhost_prefetch_desc_indices(vq,
+ 								indices,
+ 								min(npkts, 64));
++				printk("ndescs %d\n", ndescs);
+ 				cur = 0;
+-				if (!ndescs)
++				if (!ndescs) {
++					headcount = 0;
+ 					goto enable_notify;
++				}
+ 				if (ndescs < 0) {
+ 					ndescs = 0;
+ 					goto out;
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 7fb69c0..38a9801 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1922,7 +1922,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		return -EFAULT;
+ 	}
+ 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+-	total = min(num, vq->avail_idx - vq->last_avail_idx);
++	ret = total = min(num, vq->avail_idx - vq->last_avail_idx);
+ 
+ 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+ 	while (total) {
+@@ -1944,7 +1944,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	/* Only get avail ring entries after they have been exposed by guest. */
+ 	smp_rmb();
+ 
+-	return total;
++	return ret;
+ }
+ EXPORT_SYMBOL(vhost_prefetch_desc_indices);
