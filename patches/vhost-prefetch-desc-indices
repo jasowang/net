@@ -5,6 +5,9 @@ Date:   2017-03-01 21:46:42 +0800
 
 vhost: prefetch desc indices
 
+Rx before: 1.69Mpps
+Rx after : 1.74Mpps
+
 TODO:
 
 1) batch dequeue the skbs from ptr_ring
