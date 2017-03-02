@@ -5,6 +5,12 @@ Date:   2017-03-01 21:46:42 +0800
 
 vhost: prefetch desc indices
 
+TODO:
+
+1) batch dequeue the skbs from ptr_ring
+2) then we can update used ring in a batch with correct len
+3) and pass skb as msg_control to recvmsg()
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
