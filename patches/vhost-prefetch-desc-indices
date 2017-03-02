@@ -1,5 +1,5 @@
 Bottom: bacecbccffd0e6c0a72011fccb8a4f17c2261f83
-Top:    362b9773c155c4eae92102eb184e462167809f06
+Top:    8f1cb4cc02401b6df11cdcc7ed72d59196fe15d1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c609d5a..28f50ec 100644
+index c609d5a..b04fa38 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -545,6 +545,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
@@ -41,21 +41,18 @@ index c609d5a..28f50ec 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -711,9 +724,31 @@ static void handle_rx(struct vhost_net *net)
+@@ -711,9 +724,28 @@ static void handle_rx(struct vhost_net *net)
  						&in, vq_log, &log, UIO_MAXIOV);
  		} else {
  			unsigned int out;
 -			headcount = vhost_get_vq_desc(vq, vq->iov,
-+			printk("cur %d ndescs %d\n", cur, ndescs);
 +			if (cur == ndescs) {
 +				npkts = sk_rx_array_length(sock->sk);
-+				printk("npkts %d\n", npkts);
 +				if (!npkts)
 +					break;
 +				ndescs = vhost_prefetch_desc_indices(vq,
 +								indices,
 +								min(npkts, 64));
-+				printk("ndescs %d\n", ndescs);
 +				cur = 0;
 +				if (!ndescs) {
 +					headcount = 0;
@@ -75,7 +72,7 @@ index c609d5a..28f50ec 100644
  			if (headcount == vq->num)
  				headcount = 0;
  			else if (headcount >= 0) {
-@@ -723,6 +758,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -723,6 +755,7 @@ static void handle_rx(struct vhost_net *net)
  						iov_length(vq->iov, in));
  				sock_len = vhost_len - vhost_hlen;
  				headcount = 1;
@@ -83,7 +80,7 @@ index c609d5a..28f50ec 100644
  			}
  		}
  
-@@ -737,6 +773,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -737,6 +770,7 @@ static void handle_rx(struct vhost_net *net)
  			pr_debug("Discarded rx packet: len %zd\n", sock_len);
  			continue;
  		}
@@ -92,10 +89,10 @@ index c609d5a..28f50ec 100644
  		if (!headcount) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..cbe7f67 100644
+index 4269e62..1bfb6fa 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1908,6 +1908,59 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1908,6 +1908,50 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -106,7 +103,6 @@ index 4269e62..cbe7f67 100644
 +	int ret;
 +	u16 last_avail_idx, total, copied;
 +	__virtio16 avail_idx;
-+	__virtio16 *orig = indices;
 +
 +	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
 +		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -115,7 +111,6 @@ index 4269e62..cbe7f67 100644
 +	}
 +	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
 +	total = vq->avail_idx - vq->last_avail_idx;
-+	printk("num %d avail %u\n", num, total);
 +	ret = total = min(num, total);
 +
 +	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
@@ -125,12 +120,6 @@ index 4269e62..cbe7f67 100644
 +		copied = vq->num - last_avail_idx;
 +		copied = min(total, copied);
 +
-+		if (indices + copied - orig > 64) {
-+			printk("copied %d, before %d after %d\n",
-+				copied, indices - orig,
-+				indices + copied - orig);
-+			return 0;
-+		}
 +		ret2 = vhost_copy_from_user(vq, indices,
 +					    &vq->avail->ring[last_avail_idx],
 +					    sizeof(avail_idx) * copied);
@@ -147,7 +136,6 @@ index 4269e62..cbe7f67 100644
 +	/* Only get avail ring entries after they have been exposed by guest. */
 +	smp_rmb();
 +
-+	printk("ret is %d\n", ret);
 +	return ret;
 +}
 +EXPORT_SYMBOL(vhost_prefetch_desc_indices);
@@ -155,7 +143,7 @@ index 4269e62..cbe7f67 100644
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2052,6 +2105,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2052,6 +2096,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
