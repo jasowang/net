@@ -1,11 +1,11 @@
 Version: 1
-Previous: fed4b91b1c96ea5b352829949c3708f632dd6d97
-Head: 3bd8a077e275fd13e944d2de5d08828cf47348e2
+Previous: 39ea925226ee294f90c3596b2fd6a7011e899a4e
+Head: 55bd42091cace8010883d9fe9c6d1035020f9d97
 Applied:
   vhost_net-avoid-peeking-socket: 126c6ffa7eeeedf6ef145b9bc7b39995f5d6f818
   vhost-partially-open-code: c234dcb47018a3bcf7f90dd2013adc254f48e88c
   vhost-prefetch-desc-indices: ef5891937e9b573699d2e95709e9bec94c14f558
-  ptr_ring-don-t-peek-producer: 3bd8a077e275fd13e944d2de5d08828cf47348e2
+  ptr_ring-don-t-peek-producer: 55bd42091cace8010883d9fe9c6d1035020f9d97
 Unapplied:
   virtio-net: afea15003f563604c8bb3ca9f7db1da557304d2e
   bypass: 4087cc87324cb5b4b56ed71b4ae273751b6bb199
