@@ -185,12 +185,14 @@ static inline bool __ptr_ring_empty(struct ptr_ring *r)
 
 static inline int __ptr_ring_peek_queue_len(struct ptr_ring *r)
 {
-	if (__ptr_ring_empty(r))
-		return 0;
-	else if (r->producer > r->consumer)
-		return r->producer - r->consumer;
+	int i = r->consumer + 64;
+	if (i > r->size)
+		i -= r->size;
+
+	if (r->queue[i])
+		return 64;
 	else
-		return r->producer + r->size - r->consumer;
+		return !__ptr_ring_empty(r);
 }
 
 static inline bool ptr_ring_empty(struct ptr_ring *r)
