@@ -1909,7 +1909,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 }
 
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
-				int num)
+			        int num)
 {
 	u16 last_avail_idx, total;
 	__virtio16 avail_idx;
