@@ -1908,8 +1908,9 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
-			        int num)
+/* Prefetch descriptor indices */
+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+				__virtio16 *indices, int num)
 {
 	u16 last_avail_idx, total;
 	__virtio16 avail_idx;
@@ -1920,7 +1921,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
 		return -EFAULT;
 	}
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = vq->avail_idx - vq->last_avail_idx;
+	total = MIN(num, vq->avail_idx - vq->last_avail_idx);
 
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
@@ -1935,10 +1936,15 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq, __virtio16 *indices,
 		}
 
 		total -= left;
+		last_avail_idx = 0;
 	}
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
 
 	return total;
 }
+
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two

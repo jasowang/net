@@ -174,6 +174,14 @@ static inline void *__ptr_ring_peek(struct ptr_ring *r)
 	return NULL;
 }
 
+static inline int __ptr_ring_peek_queue_len(struct ptr_ring *r)
+{
+	if (r->producer >= r->consumer)
+		return r->producer - r->consumer;
+	else
+		return r->producer + r->size - r->consumerr;
+}
+
 /* Note: callers invoking this in a loop must use a compiler barrier,
  * for example cpu_relax(). Callers must take consumer_lock
  * if the ring is ever resized - see e.g. ptr_ring_empty.
