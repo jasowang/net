@@ -1,0 +1,13 @@
+Bottom: becb42a7b520e4bc05fffb8f9dece5e304ccc2f8
+Top:    becb42a7b520e4bc05fffb8f9dece5e304ccc2f8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-02 12:10:10 +0800
+
+vhost: partially open code get_rx_bufs()
+
+To simplify the batching experiments.
+
+
+---
+
+
