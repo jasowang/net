@@ -7,6 +7,8 @@ vhost: partially open code get_rx_bufs()
 
 To simplify the batching experiments.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
