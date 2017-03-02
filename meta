@@ -1,10 +1,9 @@
 Version: 1
-Previous: f168565799417592d2415782bc6253d87bcfa501
-Head: db0f5e944d40d6f2e2a70663188409d4b585513b
+Previous: 553b4e3cf1ac63e37c44b3fae09916b113337418
+Head: c234dcb47018a3bcf7f90dd2013adc254f48e88c
 Applied:
   vhost_net-avoid-peeking-socket: 126c6ffa7eeeedf6ef145b9bc7b39995f5d6f818
-  vhost-partially-open-code: 5cb89d3023bf666bfd9424a208311956bd4b54d8
-  refresh-temp: db0f5e944d40d6f2e2a70663188409d4b585513b
+  vhost-partially-open-code: c234dcb47018a3bcf7f90dd2013adc254f48e88c
 Unapplied:
   vhost-prefetch-desc-indices: 1fdb1028cba72d566afef966d9f63ad3b9d604c7
   virtio-net: afea15003f563604c8bb3ca9f7db1da557304d2e
