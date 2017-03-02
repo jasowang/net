@@ -179,7 +179,7 @@ static inline int __ptr_ring_peek_queue_len(struct ptr_ring *r)
 	if (r->producer >= r->consumer)
 		return r->producer - r->consumer;
 	else
-		return r->producer + r->size - r->consumerr;
+		return r->producer + r->size - r->consumer;
 }
 
 /* Note: callers invoking this in a loop must use a compiler barrier,

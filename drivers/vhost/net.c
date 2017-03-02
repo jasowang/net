@@ -730,7 +730,7 @@ static void handle_rx(struct vhost_net *net)
 					break;
 				ndescs = vhost_prefetch_desc_indices(vq,
 								indices,
-								MIN(npkts, 64));
+								min(npkts, 64));
 				cur = 0;
 				if (!ndescs)
 					goto enable_notify;

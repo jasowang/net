@@ -1912,7 +1912,8 @@ static int get_indirect(struct vhost_virtqueue *vq,
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				__virtio16 *indices, int num)
 {
-	u16 last_avail_idx, total;
+	int ret;
+	u16 last_avail_idx, total, left;
 	__virtio16 avail_idx;
 
 	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
@@ -1921,11 +1922,12 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		return -EFAULT;
 	}
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = MIN(num, vq->avail_idx - vq->last_avail_idx);
+	total = min(num, vq->avail_idx - vq->last_avail_idx);
 
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
-		left = MIN(total, vq->num - last_avail_idx);
+		left = vq->num - last_avail_idx;
+		left = min(total, left);
 
 		ret = vhost_copy_from_user(vq, indices,
 					   &vq->avail->ring[last_avail_idx],
@@ -1944,6 +1946,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 
 	return total;
 }
+EXPORT_SYMBOL(vhost_prefetch_desc_indices);
 
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
@@ -2097,8 +2100,6 @@ int vhost_get_vq_desc2(struct vhost_virtqueue *vq,
 {
 	struct vring_desc desc;
 	unsigned int i, head, found = 0;
-	u16 last_avail_idx;
-	__virtio16 avail_idx;
 	int ret, access;
 
 	head = vhost16_to_cpu(vq, ring_head);
