@@ -712,11 +712,19 @@ static void handle_rx(struct vhost_net *net)
 			headcount = get_rx_bufs(vq, vq->heads, vhost_len,
 						&in, vq_log, &log, UIO_MAXIOV);
 		} else {
-			headcount = get_rx_bufs(vq, vq->heads, 1,
-						&in, vq_log, &log, 1);
-			if (headcount > 0) {
-				vhost_len = vq->heads[0].len;
+			unsigned int out;
+			headcount = vhost_get_vq_desc(vq, vq->iov,
+						ARRAY_SIZE(vq->iov),
+						&out, &in, vq_log, &log);
+			if (headcount == vq->num)
+				headcount = 0;
+			else if (headcount >= 0) {
+				vq->heads[0].id = cpu_to_vhost32(vq, headcount);
+				vhost_len = vq->heads[0].len =
+					cpu_to_vhost32(vq,
+						iov_length(vq->iov, in));
 				sock_len = vhost_len - vhost_hlen;
+				headcount = 1;
 			}
 		}
 
