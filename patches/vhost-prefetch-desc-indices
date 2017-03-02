@@ -1,5 +1,5 @@
 Bottom: bacecbccffd0e6c0a72011fccb8a4f17c2261f83
-Top:    c5c269fa930d6b370358741973d3285f8eea309a
+Top:    362b9773c155c4eae92102eb184e462167809f06
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -92,20 +92,21 @@ index c609d5a..28f50ec 100644
  		if (!headcount) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..33003c7 100644
+index 4269e62..cbe7f67 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1908,6 +1908,50 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1908,6 +1908,59 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
 +/* Prefetch descriptor indices */
 +int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-+				__virtio16 *indices, int num)
++				__virtio16 *indices, u16 num)
 +{
 +	int ret;
-+	u16 last_avail_idx, total, left;
++	u16 last_avail_idx, total, copied;
 +	__virtio16 avail_idx;
++	__virtio16 *orig = indices;
 +
 +	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
 +		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -113,25 +114,33 @@ index 4269e62..33003c7 100644
 +		return -EFAULT;
 +	}
 +	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-+	printk("num %d avail %d\n", num, vq->avail_idx - vq->last_avail_idx);
-+	ret = total = min(num, vq->avail_idx - vq->last_avail_idx);
++	total = vq->avail_idx - vq->last_avail_idx;
++	printk("num %d avail %u\n", num, total);
++	ret = total = min(num, total);
 +
 +	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 +	while (total) {
 +		int ret2;
 +
-+		left = vq->num - last_avail_idx;
-+		left = min(total, left);
++		copied = vq->num - last_avail_idx;
++		copied = min(total, copied);
 +
++		if (indices + copied - orig > 64) {
++			printk("copied %d, before %d after %d\n",
++				copied, indices - orig,
++				indices + copied - orig);
++			return 0;
++		}
 +		ret2 = vhost_copy_from_user(vq, indices,
 +					    &vq->avail->ring[last_avail_idx],
-+					    sizeof(avail_idx) * left);
++					    sizeof(avail_idx) * copied);
 +		if (unlikely(ret2)) {
 +			vq_err(vq, "Failed to get descriptors\n");
 +			return -EFAULT;
 +		}
 +
-+		total -= left;
++		indices += copied;
++		total -= copied;
 +		last_avail_idx = 0;
 +	}
 +
@@ -146,7 +155,7 @@ index 4269e62..33003c7 100644
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2052,6 +2096,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2052,6 +2105,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
@@ -256,7 +265,7 @@ index 4269e62..33003c7 100644
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index a9cbbb1..c8a40af 100644
+index a9cbbb1..c38acca 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -186,8 +186,15 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
@@ -271,7 +280,7 @@ index a9cbbb1..c8a40af 100644
  void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
  
 +int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-+				__virtio16 *indices, int num);
++				__virtio16 *indices, u16 num);
  int vhost_vq_init_access(struct vhost_virtqueue *);
  int vhost_add_used(struct vhost_virtqueue *, unsigned int head, int len);
  int vhost_add_used_n(struct vhost_virtqueue *, struct vring_used_elem *heads,
