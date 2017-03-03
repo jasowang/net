@@ -1,5 +1,5 @@
 Version: 1
-Previous: fdc349b592ab198c39bf677c0332bbe1a7b9537f
+Previous: 47b7fdc16a33900f46cbd66b4311a32fbb69e013
 Head: 64a52e214716807201c61353ff8b69c86a51b558
 Applied:
   vhost_net-avoid-peeking-socket: 126c6ffa7eeeedf6ef145b9bc7b39995f5d6f818
@@ -8,7 +8,6 @@ Applied:
 Unapplied:
   ptr_ring-don-t-peek-producer: 55bd42091cace8010883d9fe9c6d1035020f9d97
   virtio-net: afea15003f563604c8bb3ca9f7db1da557304d2e
-  bypass: 4087cc87324cb5b4b56ed71b4ae273751b6bb199
   virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
   retry: 318276d9404b6bc1b45171447a8cd906b30460df
   work: ce8c5e36771ee33c1aaf757a09c42f73a33444e4
