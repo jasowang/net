@@ -356,9 +356,11 @@ static void virtnet_rx_recycle(struct receive_queue *rq, struct page *page)
 {
 	struct virtnet_page_cache *cache = &rq->page_cache;
 
-	if (page_ref_count(page) == 2 && cache->index < VIRTNET_CACHE_SIZE)
-		cache->pages[cache->index++] = page;
-	put_page(page);
+	if (page_ref_count(page) == 1 && cache->index < VIRTNET_CACHE_SIZE) {
+		if (rq->alloc_frag.page != page)
+			cache->pages[cache->index++] = page;
+	} else
+		put_page(page);
 }
 
 static bool virtnet_xdp_xmit(struct virtnet_info *vi,
