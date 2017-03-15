@@ -1,0 +1,22 @@
+Bottom: 3b224e41d6e6e30c20844e29b98ff6d64dcc7dbe
+Top:    4b35be938af67d5c82484ea12b235ad6d5ce85b6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-15 11:13:55 +0800
+
+Refresh of vhost-prefetch-desc-indices
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index a021401..ba262ef 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2002,7 +2002,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	u16 last_avail_idx, total, copied;
+ 	__virtio16 avail_idx;
+ 
+-	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+ 		vq_err(vq, "Failed to access avail idx at %p\n",
+ 		       &vq->avail->idx);
+ 		return -EFAULT;
