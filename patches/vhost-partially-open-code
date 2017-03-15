@@ -1,5 +1,5 @@
-Bottom: becb42a7b520e4bc05fffb8f9dece5e304ccc2f8
-Top:    bacecbccffd0e6c0a72011fccb8a4f17c2261f83
+Bottom: d298941b82e05a585d7654f7f298a890f51dca4a
+Top:    44620925c2998898f4b830d003e9f958d89195b2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-02 12:10:10 +0800
 
@@ -13,10 +13,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 15d689b..c609d5a 100644
+index ed8669c..2d29519 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -710,11 +710,19 @@ static void handle_rx(struct vhost_net *net)
+@@ -712,11 +712,19 @@ static void handle_rx(struct vhost_net *net)
  			headcount = get_rx_bufs(vq, vq->heads, vhost_len,
  						&in, vq_log, &log, UIO_MAXIOV);
  		} else {
