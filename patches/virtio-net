@@ -1,5 +1,5 @@
 Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    869637c8d50d60612883f939db61fbef86733ac0
+Top:    ad711dcbfa681503c16b448c5dc94d9ee4d24ff2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-23 18:58:54 +0800
 
@@ -21,7 +21,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ea9890d..2f762f2 100644
+index ea9890d..7509cd4 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -88,6 +88,13 @@ struct send_queue {
@@ -47,7 +47,7 @@ index ea9890d..2f762f2 100644
  	/* Chain pages by the private ptr. */
  	struct page *pages;
  
-@@ -343,6 +352,15 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
+@@ -343,6 +352,17 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
  	return skb;
  }
  
@@ -55,15 +55,17 @@ index ea9890d..2f762f2 100644
 +{
 +	struct virtnet_page_cache *cache = &rq->page_cache;
 +
-+	if (page_ref_count(page) == 2 && cache->index < VIRTNET_CACHE_SIZE)
-+		cache->pages[cache->index++] = page;
-+	put_page(page);
++	if (page_ref_count(page) == 1 && cache->index < VIRTNET_CACHE_SIZE) {
++		if (rq->alloc_frag.page != page)
++			cache->pages[cache->index++] = page;
++	} else
++		put_page(page);
 +}
 +
  static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  			     struct receive_queue *rq,
  			     struct xdp_buff *xdp)
-@@ -361,7 +379,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -361,7 +381,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  	while ((xdp_sent = virtqueue_get_buf(sq->vq, &len)) != NULL) {
  		struct page *sent_page = virt_to_head_page(xdp_sent);
  
@@ -72,7 +74,7 @@ index ea9890d..2f762f2 100644
  	}
  
  	xdp->data -= vi->hdr_len;
-@@ -375,7 +393,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+@@ -375,7 +395,7 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
  	if (unlikely(err)) {
  		struct page *page = virt_to_head_page(xdp->data);
  
@@ -81,7 +83,7 @@ index ea9890d..2f762f2 100644
  		return false;
  	}
  
-@@ -458,7 +476,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -458,7 +478,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  err_xdp:
  	rcu_read_unlock();
  	dev->stats.rx_dropped++;
@@ -90,7 +92,7 @@ index ea9890d..2f762f2 100644
  xdp_xmit:
  	return NULL;
  }
-@@ -696,6 +714,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -696,6 +716,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  	return head_skb;
  
  err_xdp:
@@ -98,7 +100,7 @@ index ea9890d..2f762f2 100644
  	rcu_read_unlock();
  err_skb:
  	put_page(page);
-@@ -731,11 +750,11 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -731,11 +752,11 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  		if (vi->mergeable_rx_bufs) {
  			unsigned long ctx = (unsigned long)buf;
  			void *base = mergeable_ctx_to_buf_address(ctx);
@@ -112,7 +114,7 @@ index ea9890d..2f762f2 100644
  		}
  		return 0;
  	}
-@@ -778,6 +797,45 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -778,6 +799,45 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
  	return 0;
  }
  
@@ -158,7 +160,7 @@ index ea9890d..2f762f2 100644
  static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  			     gfp_t gfp)
  {
-@@ -789,7 +847,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -789,7 +849,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  
  	len = SKB_DATA_ALIGN(len) +
  	      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
@@ -167,7 +169,7 @@ index ea9890d..2f762f2 100644
  		return -ENOMEM;
  
  	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-@@ -799,7 +857,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -799,7 +859,7 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
  		    vi->hdr_len + GOOD_PACKET_LEN);
  	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, buf, gfp);
  	if (err < 0)
@@ -176,7 +178,7 @@ index ea9890d..2f762f2 100644
  
  	return err;
  }
-@@ -874,7 +932,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
+@@ -874,7 +934,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
  	unsigned int len, hole;
  
  	len = get_mergeable_buf_len(&rq->mrg_avg_pkt_len);
@@ -185,7 +187,7 @@ index ea9890d..2f762f2 100644
  		return -ENOMEM;
  
  	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-@@ -896,7 +954,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
+@@ -896,7 +956,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
  	sg_init_one(rq->sg, buf, len);
  	err = virtqueue_add_inbuf(rq->vq, rq->sg, 1, (void *)ctx, gfp);
  	if (err < 0)
@@ -194,7 +196,7 @@ index ea9890d..2f762f2 100644
  
  	return err;
  }
-@@ -1979,9 +2037,11 @@ static void free_receive_bufs(struct virtnet_info *vi)
+@@ -1979,9 +2039,11 @@ static void free_receive_bufs(struct virtnet_info *vi)
  static void free_receive_page_frags(struct virtnet_info *vi)
  {
  	int i;
