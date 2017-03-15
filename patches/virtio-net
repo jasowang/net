@@ -1,5 +1,5 @@
 Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    ad711dcbfa681503c16b448c5dc94d9ee4d24ff2
+Top:    855f32668e9d36a4cc6211b954c60df0b0bd7f51
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-02-23 18:58:54 +0800
 
@@ -21,7 +21,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ea9890d..7509cd4 100644
+index ea9890d..02329bf 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -88,6 +88,13 @@ struct send_queue {
@@ -132,7 +132,7 @@ index ea9890d..7509cd4 100644
 +	}
 +
 +	pfrag->offset = 0;
-+	if (gfp == GFP_ATOMIC && rq->page_cache.index > 0) {
++	if ((gfp & GFP_ATOMIC) && rq->page_cache.index > 0) {
 +		pfrag->page = rq->page_cache.pages[--rq->page_cache.index];
 +		pfrag->size = PAGE_SIZE << compound_order(pfrag->page);
 +		return true;
