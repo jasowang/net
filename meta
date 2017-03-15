@@ -1,9 +1,8 @@
 Version: 1
-Previous: 79b75711e3753ba4ae4d7a3943cc3d97cdf98831
-Head: f3b9b8016dd4f2fcaea378d2299a2993f666377d
+Previous: 1822d09e298272c1cffaf3dc7f09f9985ea0e355
+Head: 37224b7830f944bdeee0750b82f1cf66fc81a794
 Applied:
-  virtio-net: dc2f8f8c290cd0b5b6bf76bc67e02becf50a5444
-  refresh-temp: f3b9b8016dd4f2fcaea378d2299a2993f666377d
+  virtio-net: 37224b7830f944bdeee0750b82f1cf66fc81a794
 Unapplied:
   vhost_net-avoid-peeking-socket: a513cd68e75eeb30fe63315df20a9edd1059f293
   vhost-partially-open-code: 96ebcf798131176b74474e3404f9f0d68a0a07bf
