@@ -810,9 +810,8 @@ bool virtnet_frag_refill(struct receive_queue *rq, unsigned int sz,
 		put_page(pfrag->page);
 	}
 
-	/* FIXME: check GFP_ATOMIC and bypass the cache */
 	pfrag->offset = 0;
-	if (rq->page_cache.index > 0) {
+	if (gfp == GFP_ATOMIC && rq->page_cache.index > 0) {
 		pfrag->page = rq->page_cache.pages[--rq->page_cache.index];
 		pfrag->size = PAGE_SIZE << compound_order(pfrag->page);
 		return true;
