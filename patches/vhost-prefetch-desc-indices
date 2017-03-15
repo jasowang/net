@@ -1,5 +1,5 @@
 Bottom: 44620925c2998898f4b830d003e9f958d89195b2
-Top:    3b224e41d6e6e30c20844e29b98ff6d64dcc7dbe
+Top:    4b35be938af67d5c82484ea12b235ad6d5ce85b6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -98,7 +98,7 @@ index 2d29519..37e9015 100644
  		if (!headcount) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f0ba362..a021401 100644
+index f0ba362..ba262ef 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1994,6 +1994,50 @@ static int get_indirect(struct vhost_virtqueue *vq,
@@ -113,7 +113,7 @@ index f0ba362..a021401 100644
 +	u16 last_avail_idx, total, copied;
 +	__virtio16 avail_idx;
 +
-+	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 +		vq_err(vq, "Failed to access avail idx at %p\n",
 +		       &vq->avail->idx);
 +		return -EFAULT;
