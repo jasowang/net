@@ -2002,7 +2002,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	u16 last_avail_idx, total, copied;
 	__virtio16 avail_idx;
 
-	if (unlikely(vhost_get_user(vq, avail_idx, &vq->avail->idx))) {
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
 		       &vq->avail->idx);
 		return -EFAULT;
