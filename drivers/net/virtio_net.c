@@ -476,7 +476,7 @@ err:
 err_xdp:
 	rcu_read_unlock();
 	dev->stats.rx_dropped++;
-	put_page(virt_to_head_page(buf));
+	virtnet_rx_recycle(rq, virt_to_head_page(buf));
 xdp_xmit:
 	return NULL;
 }
@@ -714,6 +714,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	return head_skb;
 
 err_xdp:
+	/* FIXME drop */
 	rcu_read_unlock();
 err_skb:
 	put_page(page);
