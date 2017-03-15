@@ -1,5 +1,5 @@
-Bottom: bacecbccffd0e6c0a72011fccb8a4f17c2261f83
-Top:    8f1cb4cc02401b6df11cdcc7ed72d59196fe15d1
+Bottom: 44620925c2998898f4b830d003e9f958d89195b2
+Top:    3b224e41d6e6e30c20844e29b98ff6d64dcc7dbe
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-01 21:46:42 +0800
 
@@ -20,10 +20,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c609d5a..b04fa38 100644
+index 2d29519..37e9015 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -545,6 +545,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
+@@ -547,6 +547,17 @@ static bool sk_rx_array_has_data(struct sock *sk)
  		return sk_has_rx_data(sk);
  }
  
@@ -41,7 +41,7 @@ index c609d5a..b04fa38 100644
  static int vhost_net_rx_peek_head_len(struct vhost_net *net,
  				      struct sock *sk)
  {
-@@ -684,6 +695,8 @@ static void handle_rx(struct vhost_net *net)
+@@ -686,6 +697,8 @@ static void handle_rx(struct vhost_net *net)
  	struct socket *sock;
  	struct iov_iter fixup;
  	__virtio16 num_buffers;
@@ -50,7 +50,7 @@ index c609d5a..b04fa38 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -711,9 +724,28 @@ static void handle_rx(struct vhost_net *net)
+@@ -713,9 +726,28 @@ static void handle_rx(struct vhost_net *net)
  						&in, vq_log, &log, UIO_MAXIOV);
  		} else {
  			unsigned int out;
@@ -81,7 +81,7 @@ index c609d5a..b04fa38 100644
  			if (headcount == vq->num)
  				headcount = 0;
  			else if (headcount >= 0) {
-@@ -723,6 +755,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -725,6 +757,7 @@ static void handle_rx(struct vhost_net *net)
  						iov_length(vq->iov, in));
  				sock_len = vhost_len - vhost_hlen;
  				headcount = 1;
@@ -89,7 +89,7 @@ index c609d5a..b04fa38 100644
  			}
  		}
  
-@@ -737,6 +770,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -739,6 +772,7 @@ static void handle_rx(struct vhost_net *net)
  			pr_debug("Discarded rx packet: len %zd\n", sock_len);
  			continue;
  		}
@@ -98,10 +98,10 @@ index c609d5a..b04fa38 100644
  		if (!headcount) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4269e62..1bfb6fa 100644
+index f0ba362..a021401 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1908,6 +1908,50 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1994,6 +1994,50 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -152,7 +152,7 @@ index 4269e62..1bfb6fa 100644
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2052,6 +2096,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2145,6 +2189,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
@@ -262,10 +262,10 @@ index 4269e62..1bfb6fa 100644
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index a9cbbb1..c38acca 100644
+index f55671d..5d53fd0 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -186,8 +186,15 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+@@ -194,8 +194,15 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
  		      struct iovec iov[], unsigned int iov_count,
  		      unsigned int *out_num, unsigned int *in_num,
  		      struct vhost_log *log, unsigned int *log_num);
