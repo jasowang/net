@@ -3,7 +3,7 @@ Top:    ae0ed45e74862845e37d11f5992229fd8357365f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 18:29:43 +0800
 
-tun: introduce tun_get_skb_array()
+tun: introduce tap_get_skb_array()
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
