@@ -1,5 +1,5 @@
 Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    c4afce8d065c19f682f4294f54864d53864b61b5
+Top:    5a00c1741bb761fe519983d3699ac6775fe7ea4f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 17:50:49 +0800
 
@@ -8,4 +8,31 @@ ptr_ring: introduce batch dequeuing
 
 ---
 
-
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 6c70444..9cf78fb 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -247,6 +247,23 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
+ 	return ptr;
+ }
+ 
++static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
++					     void **ptr_array,
++                                             int n)
++{
++	void *ptr;
++	int i = 0;
++
++	while (i < n) {
++		ptr = __ptr_ring_consume(r);
++		if (!ptr)
++			break;
++		ptr_array[i++] = ptr;
++	}
++
++	return i;
++}
++
+ /*
+  * Note: resize (below) nests producer lock within consumer lock, so if you
+  * call this in interrupt or BH context, you must disable interrupts/BH when
