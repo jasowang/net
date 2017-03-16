@@ -1,0 +1,11 @@
+Bottom: c78e8d322194619f6928c14e259d705800c332c7
+Top:    c78e8d322194619f6928c14e259d705800c332c7
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 13:28:26 +0800
+
+vhost_net: rx batching
+
+
+---
+
+
