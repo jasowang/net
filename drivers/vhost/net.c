@@ -741,8 +741,8 @@ static void handle_rx(struct vhost_net *net)
 			if (headcount > 0) {
 				vhost_len = vq->heads[0].len;
 				sock_len = vhost_len - vhost_hlen;
+				msg.msg_control = nvq->skbs[nvq->skb_index++];
 			}
-			msg.msg_control = nvq->skbs[nvq->skb_index++];
 		}
 
 		/* On error, stop handling until the next kick. */
