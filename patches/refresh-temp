@@ -1,0 +1,30 @@
+Bottom: c11c3449ead7488edd95fa44ab5af9964c3fc223
+Top:    55d6233715ee1c6f028067720f776721bf59eb4f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 20:47:14 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index c7f3922..d1490cc 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -989,11 +989,14 @@ static struct socket *get_raw_socket(int fd)
+ 
+ static struct skb_array *get_tap_skb_array(int fd)
+ {
++	struct skb_array *array;
+ 	struct file *file = fget(fd);
+ 
+-	if (!file)
++	if (!file) {
+ 		return NULL;
+-	return tap_get_skb_array(file);
++	array = tap_get_skb_array(file);
++	fput(fd);
++	return array;
+ }
+ 
+ static struct socket *get_tap_socket(int fd)
