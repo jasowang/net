@@ -1,5 +1,5 @@
 Bottom: 0c8570d76b1ca15b90db4a5b010d8ce0b8ca01ca
-Top:    0d3061a4b70216e4fa97849de2d386c12235be4e
+Top:    c11c3449ead7488edd95fa44ab5af9964c3fc223
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 13:28:26 +0800
 
@@ -62,7 +62,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d27b4f9..f7ab7e8 100644
+index d27b4f9..c7f3922 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -86,7 +86,7 @@ index d27b4f9..f7ab7e8 100644
  	 * Protected by vq mutex. Writers must also take device mutex. */
  	struct vhost_net_ubuf_ref *ubufs;
  	struct skb_array *rx_array;
-+	struct sk_buff *skbs[VHOST_RX_BATCH];
++	void *skbs[VHOST_RX_BATCH];
 +	int nskbs;
 +	int skb_index;
  };
