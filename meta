@@ -1,9 +1,9 @@
 Version: 1
-Previous: 6555d0c717433ebebed27b6282ef69033169f91c
-Head: 787e00615799a86729be6cb3965e8cd38fde43fb
+Previous: 07ca95efb522ade55e4ffead23c654f9e7f4d24c
+Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
 Applied:
-  ptr_ring-introduce-batch: 787e00615799a86729be6cb3965e8cd38fde43fb
 Unapplied:
+  ptr_ring-introduce-batch: 787e00615799a86729be6cb3965e8cd38fde43fb
   vhost_net-avoid-peeking-socket: b70c3e7f3dc20119aed53a6761cdfd184fc03a11
   vhost_net-rx-batching: 305f368a8b355b8230a41b126e2797236c1ef0d3
   vhost-partially-open-code: 0b8ddd5c29027754f6cfc274a923f4b7f021ea14
