@@ -1,5 +1,5 @@
 Bottom: 0c8570d76b1ca15b90db4a5b010d8ce0b8ca01ca
-Top:    0698a58271e4136fba5f29d3be7cc512ae2ea5ee
+Top:    c3787da2903563709165f0e1cf29b7e9dc0f4f32
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 13:28:26 +0800
 
@@ -62,7 +62,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d27b4f9..0e87edb 100644
+index d27b4f9..f107d29 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -101,7 +101,16 @@ index d27b4f9..0e87edb 100644
  	}
  
  }
-@@ -504,13 +512,30 @@ static void handle_tx(struct vhost_net *net)
+@@ -491,7 +499,7 @@ static void handle_tx(struct vhost_net *net)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+ 		if (!zcopy_used)
+-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
++			vhost_adxd_used_and_signal(&net->dev, vq, head, 0);
+ 		else
+ 			vhost_zerocopy_signal_used(net, vq);
+ 		vhost_net_tx_packet(net);
+@@ -504,17 +512,35 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
@@ -133,7 +142,19 @@ index d27b4f9..0e87edb 100644
  	if (sock->ops->peek_len)
  		return sock->ops->peek_len(sock);
  
-@@ -536,12 +561,14 @@ static int sk_has_rx_data(struct sock *sk)
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
++	/* FIXME: duplicated! */
+ 	head = skb_peek(&sk->sk_receive_queue);
+ 	if (likely(head)) {
+ 		len = head->len;
+@@ -530,18 +556,21 @@ static int sk_has_rx_data(struct sock *sk)
+ {
+ 	struct socket *sock = sk->sk_socket;
+ 
++	/* FIXME */
+ 	if (sock->ops->peek_len)
+ 		return sock->ops->peek_len(sock);
+ 
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
@@ -150,7 +171,7 @@ index d27b4f9..0e87edb 100644
  
  	if (!len && vq->busyloop_timeout) {
  		/* Both tx vq and rx socket were polled here */
-@@ -562,7 +589,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -562,7 +591,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  			vhost_poll_queue(&vq->poll);
  		mutex_unlock(&vq->mutex);
  
@@ -159,7 +180,7 @@ index d27b4f9..0e87edb 100644
  	}
  
  	return len;
-@@ -700,6 +727,8 @@ static void handle_rx(struct vhost_net *net)
+@@ -700,6 +729,8 @@ static void handle_rx(struct vhost_net *net)
  		/* On error, stop handling until the next kick. */
  		if (unlikely(headcount < 0))
  			goto out;
@@ -168,7 +189,7 @@ index d27b4f9..0e87edb 100644
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
  			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-@@ -842,6 +871,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -842,6 +873,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
