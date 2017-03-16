@@ -1,5 +1,5 @@
 Bottom: c78e8d322194619f6928c14e259d705800c332c7
-Top:    ed582b9f98833e49d539be2b0a7ff499a97deacb
+Top:    39dc40b52bcbd543803de9f522ba1f789785f746
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 13:28:26 +0800
 
@@ -62,7 +62,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ed8669c..4150369 100644
+index ed8669c..965ca83 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -29,6 +29,8 @@
@@ -78,7 +78,7 @@ index ed8669c..4150369 100644
  	struct vhost_virtqueue *vq;
  };
  
-+#define VHOST_RX_BATCH 16
++#define VHOST_RX_BATCH 64
  struct vhost_net_virtqueue {
  	struct vhost_virtqueue vq;
  	size_t vhost_hlen;
