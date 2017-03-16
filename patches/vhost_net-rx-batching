@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    4402622a693297c8313b94da5409e0a1c50e1c9b
+Top:    64998239839652bb9d3f74debd78390769c9b68c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -67,7 +67,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..8344c04 100644
+index 9b51989..a2b7391 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -87,18 +87,19 @@ index 9b51989..8344c04 100644
  struct vhost_net_virtqueue {
  	struct vhost_virtqueue vq;
  	size_t vhost_hlen;
-@@ -99,6 +102,10 @@ struct vhost_net_virtqueue {
+@@ -99,6 +102,11 @@ struct vhost_net_virtqueue {
  	/* Reference counting for outstanding ubufs.
  	 * Protected by vq mutex. Writers must also take device mutex. */
  	struct vhost_net_ubuf_ref *ubufs;
 +	struct skb_array *rx_array;
++	/* FIXME: rename */
 +	void *skbs[VHOST_RX_BATCH];
 +	int nskbs;
 +	int skb_index;
  };
  
  struct vhost_net {
-@@ -201,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
+@@ -201,6 +209,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
  		n->vqs[i].ubufs = NULL;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
@@ -107,7 +108,7 @@ index 9b51989..8344c04 100644
  	}
  
  }
-@@ -503,17 +512,35 @@ static void handle_tx(struct vhost_net *net)
+@@ -503,17 +513,35 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
@@ -144,7 +145,7 @@ index 9b51989..8344c04 100644
  	head = skb_peek(&sk->sk_receive_queue);
  	if (likely(head)) {
  		len = head->len;
-@@ -529,18 +556,21 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -529,18 +557,21 @@ static int sk_has_rx_data(struct sock *sk)
  {
  	struct socket *sock = sk->sk_socket;
  
@@ -168,7 +169,7 @@ index 9b51989..8344c04 100644
  
  	if (!len && vq->busyloop_timeout) {
  		/* Both tx vq and rx socket were polled here */
-@@ -561,7 +591,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -561,7 +592,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  			vhost_poll_queue(&vq->poll);
  		mutex_unlock(&vq->mutex);
  
@@ -177,7 +178,7 @@ index 9b51989..8344c04 100644
  	}
  
  	return len;
-@@ -699,6 +729,8 @@ static void handle_rx(struct vhost_net *net)
+@@ -699,6 +730,8 @@ static void handle_rx(struct vhost_net *net)
  		/* On error, stop handling until the next kick. */
  		if (unlikely(headcount < 0))
  			goto out;
@@ -186,7 +187,7 @@ index 9b51989..8344c04 100644
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
  			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-@@ -841,6 +873,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -841,6 +874,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
@@ -195,7 +196,7 @@ index 9b51989..8344c04 100644
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
  
-@@ -861,6 +895,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+@@ -861,6 +896,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
  	sock = vq->private_data;
  	vhost_net_disable_vq(n, vq);
  	vq->private_data = NULL;
@@ -203,7 +204,7 @@ index 9b51989..8344c04 100644
  	mutex_unlock(&vq->mutex);
  	return sock;
  }
-@@ -953,6 +988,18 @@ static struct socket *get_raw_socket(int fd)
+@@ -953,6 +989,18 @@ static struct socket *get_raw_socket(int fd)
  	return ERR_PTR(r);
  }
  
@@ -222,7 +223,7 @@ index 9b51989..8344c04 100644
  static struct socket *get_tap_socket(int fd)
  {
  	struct file *file = fget(fd);
-@@ -1029,6 +1076,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1029,6 +1077,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  
  		vhost_net_disable_vq(n, vq);
  		vq->private_data = sock;
