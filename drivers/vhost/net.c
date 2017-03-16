@@ -529,7 +529,6 @@ out:
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct sk_buff *head;
 	int len = 0;
 	unsigned long flags;
 
