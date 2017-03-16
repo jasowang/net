@@ -1,0 +1,22 @@
+Bottom: 6def994c399e3cdf5ed141edb10d6887b3b3b6ae
+Top:    ed582b9f98833e49d539be2b0a7ff499a97deacb
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 13:47:35 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 1e0f819..4150369 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -554,7 +554,7 @@ static bool sk_rx_array_has_data(struct vhost_net_virtqueue *rvq,
+ 	if (skb_array) {
+ 		if (rvq->skb_index != rvq->nskbs)
+ 			return true;
+-		rvq->skb_index = 0;
++		rvq->skb_index = rvq->nskbs = 0;
+ 		spin_lock_bh(&skb_array->ring.consumer_lock);
+ 		while (rvq->nskbs < VHOST_RX_BATCH) {
+ 			skb = __skb_array_consume(skb_array);
