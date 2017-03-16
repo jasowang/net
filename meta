@@ -1,6 +1,6 @@
 Version: 1
-Previous: b5e711bd81426f938f64dcf7a972f3c451f6a0a3
-Head: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
+Previous: 98ac9fd0880a56116be8d9ea27295b29076ad5c7
+Head: 68472b63aaae346418d1fa3f6108a8988ffb4722
 Applied:
   qed-add-support-for-ql41xxx: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
