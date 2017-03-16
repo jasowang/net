@@ -1,0 +1,23 @@
+Bottom: 561b0234bc0762f4a62c8b1c6fa76412931ee976
+Top:    6def994c399e3cdf5ed141edb10d6887b3b3b6ae
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 13:30:40 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f6caa72..1e0f819 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -741,8 +741,8 @@ static void handle_rx(struct vhost_net *net)
+ 			if (headcount > 0) {
+ 				vhost_len = vq->heads[0].len;
+ 				sock_len = vhost_len - vhost_hlen;
++				msg.msg_control = nvq->skbs[nvq->skb_index++];
+ 			}
+-			msg.msg_control = nvq->skbs[nvq->skb_index++];
+ 		}
+ 
+ 		/* On error, stop handling until the next kick. */
