@@ -1,5 +1,5 @@
 Bottom: c78e8d322194619f6928c14e259d705800c332c7
-Top:    561b0234bc0762f4a62c8b1c6fa76412931ee976
+Top:    6def994c399e3cdf5ed141edb10d6887b3b3b6ae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 13:28:26 +0800
 
@@ -62,7 +62,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ed8669c..f6caa72 100644
+index ed8669c..1e0f819 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -29,6 +29,8 @@
@@ -158,14 +158,14 @@ index ed8669c..f6caa72 100644
  	}
  
  	return len;
-@@ -718,6 +742,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -717,6 +741,7 @@ static void handle_rx(struct vhost_net *net)
+ 			if (headcount > 0) {
  				vhost_len = vq->heads[0].len;
  				sock_len = vhost_len - vhost_hlen;
++				msg.msg_control = nvq->skbs[nvq->skb_index++];
  			}
-+			msg.msg_control = nvq->skbs[nvq->skb_index++];
  		}
  
- 		/* On error, stop handling until the next kick. */
 @@ -865,6 +890,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;

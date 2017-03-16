@@ -1,10 +1,9 @@
 Version: 1
-Previous: 7d3ff8239948f1935f55ed847d8f4643602af1e4
-Head: d6593fa1fa3f8183ba6b5cb552443cf9370f5c47
+Previous: 3047fde92c990cfb051330a23dfa933b46b68812
+Head: 2f4275ec0d9d0e15da95ad7d20c91fd460c384f2
 Applied:
   vhost_net-avoid-peeking-socket: b70c3e7f3dc20119aed53a6761cdfd184fc03a11
-  vhost_net-rx-batching: f7e3cf9bb94708f806fbdf9e229d1bd1e5478f0f
-  refresh-temp: d6593fa1fa3f8183ba6b5cb552443cf9370f5c47
+  vhost_net-rx-batching: 2f4275ec0d9d0e15da95ad7d20c91fd460c384f2
 Unapplied:
   vhost-partially-open-code: 0b8ddd5c29027754f6cfc274a923f4b7f021ea14
   vhost-prefetch-desc-indices: 4d57719dec9366e7466dcb92f9eca4f06ef3e585
