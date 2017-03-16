@@ -992,10 +992,10 @@ static struct skb_array *get_tap_skb_array(int fd)
 	struct skb_array *array;
 	struct file *file = fget(fd);
 
-	if (!file) {
+	if (!file)
 		return NULL;
 	array = tap_get_skb_array(file);
-	fput(fd);
+	fput(file);
 	return array;
 }
 
