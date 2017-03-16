@@ -989,11 +989,14 @@ err:
 
 static struct skb_array *get_tap_skb_array(int fd)
 {
+	struct skb_array *array;
 	struct file *file = fget(fd);
 
-	if (!file)
+	if (!file) {
 		return NULL;
-	return tap_get_skb_array(file);
+	array = tap_get_skb_array(file);
+	fput(fd);
+	return array;
 }
 
 static struct socket *get_tap_socket(int fd)
