@@ -1,11 +1,14 @@
 Version: 1
-Previous: 98ac9fd0880a56116be8d9ea27295b29076ad5c7
+Previous: 4f381ea070521459e53aae8986df67f68d4c54c7
 Head: 68472b63aaae346418d1fa3f6108a8988ffb4722
 Applied:
   qed-add-support-for-ql41xxx: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
-  skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
+  tun-introduce: c9e151bc00c46a75ec210ecd71aa70ac658f7b43
+  skb_array-introduce-batch-0: d1889bc9048c2b5998c3b556ac24a89f9075e454
+  vhost-avoid-peeking-socket: 68472b63aaae346418d1fa3f6108a8988ffb4722
 Unapplied:
+  skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
   vhost_net-rx-batching: 305f368a8b355b8230a41b126e2797236c1ef0d3
   vhost-partially-open-code: 0b8ddd5c29027754f6cfc274a923f4b7f021ea14
   vhost-prefetch-desc-indices: 4d57719dec9366e7466dcb92f9eca4f06ef3e585

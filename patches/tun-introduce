@@ -1,0 +1,59 @@
+Bottom: da0c5ff5c4e3c9e4460baebe8b142e53bb181119
+Top:    69e00059d65da4fe459db0fc8e492f937428cda3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 18:29:43 +0800
+
+tun: introduce tun_get_skb_array()
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index c418f0a..f483d4b 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2613,6 +2613,19 @@ struct socket *tun_get_socket(struct file *file)
+ }
+ EXPORT_SYMBOL_GPL(tun_get_socket);
+ 
++struct skb_array *tap_get_skb_array(struct file *file)
++{
++	struct tun_file *tfile;
++
++	if (file->f_op != &tun_fops)
++		return ERR_PTR(-EINVAL);
++	tfile = file->private_data;
++	if (!tfile)
++		return ERR_PTR(-EBADFD);
++	return &tfile->tx_array;
++}
++EXPORT_SYMBOL_GPL(tap_get_skb_array);
++
+ module_init(tun_init);
+ module_exit(tun_cleanup);
+ MODULE_DESCRIPTION(DRV_DESCRIPTION);
+diff --git a/include/linux/if_tap.h b/include/linux/if_tap.h
+index 3482c3c..a99f3a1 100644
+--- a/include/linux/if_tap.h
++++ b/include/linux/if_tap.h
+@@ -3,6 +3,7 @@
+ 
+ #if IS_ENABLED(CONFIG_TAP)
+ struct socket *tap_get_socket(struct file *);
++struct skb_array *tap_get_skb_array(struct file *);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -12,6 +13,10 @@ static inline struct socket *tap_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
++static inline struct socket *tap_get_skb_array(struct file *f)
++{
++	return ERR_PTR(-EINVAL);
++}
+ #endif /* CONFIG_TAP */
+ 
+ #include <net/sock.h>
