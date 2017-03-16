@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    c11c3449ead7488edd95fa44ab5af9964c3fc223
+Top:    55d6233715ee1c6f028067720f776721bf59eb4f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -67,7 +67,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..c7f3922 100644
+index 9b51989..d1490cc 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -195,23 +195,26 @@ index 9b51989..c7f3922 100644
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
  
-@@ -953,6 +987,15 @@ static struct socket *get_raw_socket(int fd)
+@@ -953,6 +987,18 @@ static struct socket *get_raw_socket(int fd)
  	return ERR_PTR(r);
  }
  
 +static struct skb_array *get_tap_skb_array(int fd)
 +{
++	struct skb_array *array;
 +	struct file *file = fget(fd);
 +
-+	if (!file)
++	if (!file) {
 +		return NULL;
-+	return tap_get_skb_array(file);
++	array = tap_get_skb_array(file);
++	fput(fd);
++	return array;
 +}
 +
  static struct socket *get_tap_socket(int fd)
  {
  	struct file *file = fget(fd);
-@@ -1029,6 +1072,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1029,6 +1075,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  
  		vhost_net_disable_vq(n, vq);
  		vq->private_data = sock;
