@@ -1,0 +1,22 @@
+Bottom: ed582b9f98833e49d539be2b0a7ff499a97deacb
+Top:    39dc40b52bcbd543803de9f522ba1f789785f746
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 14:08:15 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 4150369..965ca83 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -88,7 +88,7 @@ struct vhost_net_ubuf_ref {
+ 	struct vhost_virtqueue *vq;
+ };
+ 
+-#define VHOST_RX_BATCH 16
++#define VHOST_RX_BATCH 64
+ struct vhost_net_virtqueue {
+ 	struct vhost_virtqueue vq;
+ 	size_t vhost_hlen;
