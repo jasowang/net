@@ -1,8 +1,7 @@
 Version: 1
-Previous: 4f381ea070521459e53aae8986df67f68d4c54c7
+Previous: 2474755238407d00816eaea0cfb74a57d430ab7e
 Head: 68472b63aaae346418d1fa3f6108a8988ffb4722
 Applied:
-  qed-add-support-for-ql41xxx: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   tun-introduce: c9e151bc00c46a75ec210ecd71aa70ac658f7b43
   skb_array-introduce-batch-0: d1889bc9048c2b5998c3b556ac24a89f9075e454
