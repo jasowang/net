@@ -5,6 +5,8 @@ Date:   2017-03-16 17:50:49 +0800
 
 ptr_ring: introduce batch dequeuing
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
