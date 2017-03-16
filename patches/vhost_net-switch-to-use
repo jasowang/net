@@ -5,6 +5,7 @@ Date:   2017-03-16 20:02:42 +0800
 
 vhost_net: switch to use __skb_array_len_with_tag()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
