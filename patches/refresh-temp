@@ -1,0 +1,20 @@
+Bottom: a0861440a20257ee2f11c38370a9f51c85c00b09
+Top:    952fe0387a7f513dd65abdee45a9578c774eb4c4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 20:06:43 +0800
+
+Refresh of vhost_net-switch-to-use
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f66527f..b5994a6 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -529,7 +529,6 @@ static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
+ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ {
+ 	struct socket *sock = sk->sk_socket;
+-	struct sk_buff *head;
+ 	int len = 0;
+ 	unsigned long flags;
