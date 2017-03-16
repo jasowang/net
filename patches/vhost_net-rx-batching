@@ -1,12 +1,11 @@
-Bottom: 0c8570d76b1ca15b90db4a5b010d8ce0b8ca01ca
+Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
 Top:    c11c3449ead7488edd95fa44ab5af9964c3fc223
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-03-16 13:28:26 +0800
+Date:   2017-03-16 20:09:27 +0800
 
 vhost_net: rx batching
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -62,7 +61,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d27b4f9..c7f3922 100644
+index 9b51989..c7f3922 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -82,17 +81,18 @@ index d27b4f9..c7f3922 100644
  struct vhost_net_virtqueue {
  	struct vhost_virtqueue vq;
  	size_t vhost_hlen;
-@@ -100,6 +103,9 @@ struct vhost_net_virtqueue {
+@@ -99,6 +102,10 @@ struct vhost_net_virtqueue {
+ 	/* Reference counting for outstanding ubufs.
  	 * Protected by vq mutex. Writers must also take device mutex. */
  	struct vhost_net_ubuf_ref *ubufs;
- 	struct skb_array *rx_array;
++	struct skb_array *rx_array;
 +	void *skbs[VHOST_RX_BATCH];
 +	int nskbs;
 +	int skb_index;
  };
  
  struct vhost_net {
-@@ -202,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
+@@ -201,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
  		n->vqs[i].ubufs = NULL;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
@@ -101,7 +101,7 @@ index d27b4f9..c7f3922 100644
  	}
  
  }
-@@ -504,17 +512,35 @@ static void handle_tx(struct vhost_net *net)
+@@ -503,17 +512,35 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
@@ -138,7 +138,7 @@ index d27b4f9..c7f3922 100644
  	head = skb_peek(&sk->sk_receive_queue);
  	if (likely(head)) {
  		len = head->len;
-@@ -530,18 +556,21 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -529,18 +556,21 @@ static int sk_has_rx_data(struct sock *sk)
  {
  	struct socket *sock = sk->sk_socket;
  
@@ -162,7 +162,7 @@ index d27b4f9..c7f3922 100644
  
  	if (!len && vq->busyloop_timeout) {
  		/* Both tx vq and rx socket were polled here */
-@@ -562,7 +591,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -561,7 +591,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  			vhost_poll_queue(&vq->poll);
  		mutex_unlock(&vq->mutex);
  
@@ -171,7 +171,7 @@ index d27b4f9..c7f3922 100644
  	}
  
  	return len;
-@@ -700,6 +729,8 @@ static void handle_rx(struct vhost_net *net)
+@@ -699,6 +729,8 @@ static void handle_rx(struct vhost_net *net)
  		/* On error, stop handling until the next kick. */
  		if (unlikely(headcount < 0))
  			goto out;
@@ -180,7 +180,7 @@ index d27b4f9..c7f3922 100644
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
  			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-@@ -842,6 +873,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -841,6 +873,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
@@ -188,3 +188,28 @@ index d27b4f9..c7f3922 100644
 +		n->vqs[i].skb_index = 0;
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
+ 
+@@ -953,6 +987,15 @@ static struct socket *get_raw_socket(int fd)
+ 	return ERR_PTR(r);
+ }
+ 
++static struct skb_array *get_tap_skb_array(int fd)
++{
++	struct file *file = fget(fd);
++
++	if (!file)
++		return NULL;
++	return tap_get_skb_array(file);
++}
++
+ static struct socket *get_tap_socket(int fd)
+ {
+ 	struct file *file = fget(fd);
+@@ -1029,6 +1072,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 
+ 		vhost_net_disable_vq(n, vq);
+ 		vq->private_data = sock;
++		nvq->rx_array = get_tap_skb_array(fd);
+ 		r = vhost_vq_init_access(vq);
+ 		if (r)
+ 			goto err_used;
