@@ -1,9 +1,8 @@
 Version: 1
-Previous: e6518997aa4223b36c92df551e48988fa6d8d82d
-Head: 6657e3619700e8b123df2a8eeb7e7d67389febb4
+Previous: 787a3f1d3be268c0228ebb31af6a3aa647b11944
+Head: 24c285bf70cfb7fb1ef9e6471ce449694300f2d8
 Applied:
-  ptr_ring-introduce-batch: 787e00615799a86729be6cb3965e8cd38fde43fb
-  refresh-temp: 6657e3619700e8b123df2a8eeb7e7d67389febb4
+  ptr_ring-introduce-batch: 24c285bf70cfb7fb1ef9e6471ce449694300f2d8
 Unapplied:
   vhost_net-avoid-peeking-socket: b70c3e7f3dc20119aed53a6761cdfd184fc03a11
   vhost_net-rx-batching: 305f368a8b355b8230a41b126e2797236c1ef0d3
