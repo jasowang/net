@@ -1,10 +1,10 @@
 Version: 1
-Previous: 08473c1148036879558001f89727312ced3aadc4
-Head: c9e151bc00c46a75ec210ecd71aa70ac658f7b43
+Previous: fe9bf45e35e7066a142a70189abd514a0d5a08b5
+Head: 00ccd72debbace8c00df12520d924604b91a2be7
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
-  tun-introduce: c9e151bc00c46a75ec210ecd71aa70ac658f7b43
 Unapplied:
+  tun-introduce: c9e151bc00c46a75ec210ecd71aa70ac658f7b43
   skb_array-introduce-batch-0: d1889bc9048c2b5998c3b556ac24a89f9075e454
   vhost-avoid-peeking-socket: 68472b63aaae346418d1fa3f6108a8988ffb4722
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
