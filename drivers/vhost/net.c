@@ -529,7 +529,6 @@ out:
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct sk_buff *head;
 	int len = 0;
 	unsigned long flags;
 
@@ -540,14 +539,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
-	/* FIXME: duplicated! */
-	head = skb_peek(&sk->sk_receive_queue);
-	if (likely(head)) {
-		len = head->len;
-		if (skb_vlan_tag_present(head))
-			len += VLAN_HLEN;
-	}
-
+	len = __skb_array_len_with_tag(skb_peek(&sk->sk_receive_queue));
 	spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
 	return len;
 }
