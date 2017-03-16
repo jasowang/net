@@ -1,0 +1,21 @@
+Bottom: 2c1c23ba06a865593147be04400e4d1827f952f3
+Top:    4402622a693297c8313b94da5409e0a1c50e1c9b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 20:55:19 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b511cfd..8344c04 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -895,6 +895,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+ 	sock = vq->private_data;
+ 	vhost_net_disable_vq(n, vq);
+ 	vq->private_data = NULL;
++	/* FIXME clean skbs */
+ 	mutex_unlock(&vq->mutex);
+ 	return sock;
+ }
