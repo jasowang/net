@@ -1,8 +1,9 @@
 Version: 1
-Previous: 0d759567e43580950f675c1a14103383069b16f0
-Head: 24c285bf70cfb7fb1ef9e6471ce449694300f2d8
+Previous: c21893f9e082f6e1c58a0df40b09d2927df0173f
+Head: ecec1e6a0450f3fcc7148bbeb271489a9d4e3597
 Applied:
   ptr_ring-introduce-batch: 24c285bf70cfb7fb1ef9e6471ce449694300f2d8
+  refresh-temp: ecec1e6a0450f3fcc7148bbeb271489a9d4e3597
 Unapplied:
   skb_array-introduce-batch: 59b85df6a2a669aabdbefde68dd13bf5f4e08e95
   vhost_net-avoid-peeking-socket: b70c3e7f3dc20119aed53a6761cdfd184fc03a11
