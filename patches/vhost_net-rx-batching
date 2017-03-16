@@ -12,8 +12,14 @@ helpers explicitly on the exported skb array and pass the skb back
 through msg_control for underlayer socket to finish the copying.
 
 Tests were done by XDP1:
-Before: 1.88Mpps
-After : 2.20Mpps (+17%)
+- small buffer:
+  Before: 1.88Mpps
+  After : 2.20Mpps (+17%)
+- mergeable buffer:
+  Before:
+  After :
+
+FIXME: test for mergeable buffer
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 

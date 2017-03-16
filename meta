@@ -1,11 +1,11 @@
 Version: 1
-Previous: f7cc76dfb6c14195b82b1b3f3bb1c319090e02a6
-Head: 03be660cef2e0fcad96db67a149787ac7e421c11
+Previous: d1383965a25f06ffdbe6db45ba1e3df5a5d27c8f
+Head: b842745a0c7febfe9bbb3bb016f2792454a15713
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
   tun-introduce: b654a76ad7193e22f320bd88360355b06fca22d2
-  vhost_net-rx-batching: 03be660cef2e0fcad96db67a149787ac7e421c11
+  vhost_net-rx-batching: b842745a0c7febfe9bbb3bb016f2792454a15713
 Unapplied:
   vhost_net-switch-to-use: b6ca8a02f6194b4493385ce5f3635d77e2792c77
   vhost-avoid-peeking-socket: 68472b63aaae346418d1fa3f6108a8988ffb4722
