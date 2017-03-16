@@ -247,6 +247,23 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
 	return ptr;
 }
 
+static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
+					     void **ptr_array,
+                                             int n)
+{
+	void *ptr;
+	int i = 0;
+
+	while (i < n) {
+		ptr = __ptr_ring_consume(r);
+		if (!ptr)
+			break;
+		ptr_array[i++] = ptr;
+	}
+
+	return i;
+}
+
 /*
  * Note: resize (below) nests producer lock within consumer lock, so if you
  * call this in interrupt or BH context, you must disable interrupts/BH when
