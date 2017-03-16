@@ -29,6 +29,8 @@
 #include <linux/if_tap.h>
 #include <linux/if_vlan.h>
 #include <linux/skb_array.h>
+#include <linux/skbuff.h>
+#include <linux/skb_array.h>
 
 #include <net/sock.h>
 
@@ -86,6 +88,7 @@ struct vhost_net_ubuf_ref {
 	struct vhost_virtqueue *vq;
 };
 
+#define VHOST_RX_BATCH 16
 struct vhost_net_virtqueue {
 	struct vhost_virtqueue vq;
 	size_t vhost_hlen;
@@ -100,6 +103,9 @@ struct vhost_net_virtqueue {
 	/* Reference counting for outstanding ubufs.
 	 * Protected by vq mutex. Writers must also take device mutex. */
 	struct vhost_net_ubuf_ref *ubufs;
+	struct sk_buff *skbs[VHOST_RX_BATCH];
+	int nskbs;
+	int skb_index;
 };
 
 struct vhost_net {
@@ -202,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].nskbs = 0;
+		n->vqs[i].skb_index = 0;
 	}
 
 }
@@ -536,25 +544,40 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static bool sk_rx_array_has_data(struct sock *sk)
+static bool sk_rx_array_has_data(struct vhost_net_virtqueue *rvq,
+				 struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+	struct sk_buff *skb;
 
-	if (skb_array)
-		return !__skb_array_empty(skb_array);
-	else
+	if (skb_array) {
+		if (rvq->skb_index != rvq->nskbs)
+			return true;
+		rvq->skb_index = 0;
+		spin_lock_bh(&skb_array->ring.consumer_lock);
+		while (rvq->nskbs < VHOST_RX_BATCH) {
+			skb = __skb_array_consume(skb_array);
+			if (!skb)
+				break;
+			rvq->skbs[rvq->nskbs++] = skb;
+		}
+		spin_unlock_bh(&skb_array->ring.consumer_lock);
+		return rvq->skb_index != rvq->nskbs;
+	} else
 		return sk_has_rx_data(sk);
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 				      struct sock *sk)
 {
+	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
-	int len = mergeable ? peek_head_len(sk) : sk_rx_array_has_data(sk);
+	int len = mergeable ? peek_head_len(sk) :
+		  sk_rx_array_has_data(rvq, sk);
 
 	if (!len && vq->busyloop_timeout) {
 		/* Both tx vq and rx socket were polled here */
@@ -575,7 +598,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 			vhost_poll_queue(&vq->poll);
 		mutex_unlock(&vq->mutex);
 
-		len = mergeable ? peek_head_len(sk) : sk_rx_array_has_data(sk);
+		len = mergeable ? peek_head_len(sk) :
+		      sk_rx_array_has_data(rvq, sk);
 	}
 
 	return len;
@@ -717,6 +741,7 @@ static void handle_rx(struct vhost_net *net)
 			if (headcount > 0) {
 				vhost_len = vq->heads[0].len;
 				sock_len = vhost_len - vhost_hlen;
+				msg.msg_control = nvq->skbs[nvq->skb_index++];
 			}
 		}
 
@@ -865,6 +890,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].nskbs = 0;
+		n->vqs[i].skb_index = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
