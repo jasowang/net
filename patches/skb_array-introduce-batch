@@ -5,6 +5,8 @@ Date:   2017-03-16 18:20:57 +0800
 
 skb_array: introduce batch dequeuing
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
