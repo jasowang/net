@@ -1,0 +1,45 @@
+Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
+Top:    0c8570d76b1ca15b90db4a5b010d8ce0b8ca01ca
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 19:20:03 +0800
+
+Refresh of vhost_net-rx-batching-0
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9b51989..d27b4f9 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -99,6 +99,7 @@ struct vhost_net_virtqueue {
+ 	/* Reference counting for outstanding ubufs.
+ 	 * Protected by vq mutex. Writers must also take device mutex. */
+ 	struct vhost_net_ubuf_ref *ubufs;
++	struct skb_array *rx_array;
+ };
+ 
+ struct vhost_net {
+@@ -953,6 +954,15 @@ static struct socket *get_raw_socket(int fd)
+ 	return ERR_PTR(r);
+ }
+ 
++static struct skb_array *get_tap_skb_array(int fd)
++{
++	struct file *file = fget(fd);
++
++	if (!file)
++		return NULL;
++	return tap_get_skb_array(file);
++}
++
+ static struct socket *get_tap_socket(int fd)
+ {
+ 	struct file *file = fget(fd);
+@@ -1029,6 +1039,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 
+ 		vhost_net_disable_vq(n, vq);
+ 		vq->private_data = sock;
++		nvq->rx_array = get_tap_skb_array(fd);
+ 		r = vhost_vq_init_access(vq);
+ 		if (r)
+ 			goto err_used;
