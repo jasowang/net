@@ -5,6 +5,8 @@ Date:   2017-03-16 13:28:26 +0800
 
 vhost_net: rx batching
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
