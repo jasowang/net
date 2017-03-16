@@ -1,5 +1,5 @@
 Bottom: c11c3449ead7488edd95fa44ab5af9964c3fc223
-Top:    c11c3449ead7488edd95fa44ab5af9964c3fc223
+Top:    a0861440a20257ee2f11c38370a9f51c85c00b09
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:02:42 +0800
 
@@ -10,4 +10,23 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index c7f3922..f66527f 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -540,14 +540,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 		return sock->ops->peek_len(sock);
+ 
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+-	/* FIXME: duplicated! */
+-	head = skb_peek(&sk->sk_receive_queue);
+-	if (likely(head)) {
+-		len = head->len;
+-		if (skb_vlan_tag_present(head))
+-			len += VLAN_HLEN;
+-	}
+-
++	len = __skb_array_len_with_tag(skb_peek(&sk->sk_receive_queue));
+ 	spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
+ 	return len;
+ }
