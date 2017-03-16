@@ -499,7 +499,7 @@ static void handle_tx(struct vhost_net *net)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
 		if (!zcopy_used)
-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
+			vhost_adxd_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
 		vhost_net_tx_packet(net);
@@ -540,6 +540,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+	/* FIXME: duplicated! */
 	head = skb_peek(&sk->sk_receive_queue);
 	if (likely(head)) {
 		len = head->len;
@@ -555,6 +556,7 @@ static int sk_has_rx_data(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 
+	/* FIXME */
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
 
