@@ -554,7 +554,7 @@ static bool sk_rx_array_has_data(struct vhost_net_virtqueue *rvq,
 	if (skb_array) {
 		if (rvq->skb_index != rvq->nskbs)
 			return true;
-		rvq->skb_index = 0;
+		rvq->skb_index = rvq->nskbs = 0;
 		spin_lock_bh(&skb_array->ring.consumer_lock);
 		while (rvq->nskbs < VHOST_RX_BATCH) {
 			skb = __skb_array_consume(skb_array);
