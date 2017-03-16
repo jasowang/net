@@ -103,7 +103,7 @@ struct vhost_net_virtqueue {
 	 * Protected by vq mutex. Writers must also take device mutex. */
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
-	struct sk_buff *skbs[VHOST_RX_BATCH];
+	void *skbs[VHOST_RX_BATCH];
 	int nskbs;
 	int skb_index;
 };
