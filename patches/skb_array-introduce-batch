@@ -1,0 +1,63 @@
+Bottom: da0c5ff5c4e3c9e4460baebe8b142e53bb181119
+Top:    1da40b4e76554279395a47fec49f8fab4b61b6ea
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 18:20:57 +0800
+
+skb_array: introduce batch dequeuing
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/skb_array.h b/include/linux/skb_array.h
+index f4dfade..90e44b9 100644
+--- a/include/linux/skb_array.h
++++ b/include/linux/skb_array.h
+@@ -97,21 +97,46 @@ static inline struct sk_buff *skb_array_consume(struct skb_array *a)
+ 	return ptr_ring_consume(&a->ring);
+ }
+ 
++static inline int skb_array_consume_batched(struct skb_array *a,
++					    void **array, int n)
++{
++	return ptr_ring_consume_batched(&a->ring, array, n);
++}
++
+ static inline struct sk_buff *skb_array_consume_irq(struct skb_array *a)
+ {
+ 	return ptr_ring_consume_irq(&a->ring);
+ }
+ 
++static inline int skb_array_consume_batched_irq(struct skb_array *a,
++						void **array, int n)
++{
++	return ptr_ring_consume_batched_irq(&a->ring, array, n);
++}
++
+ static inline struct sk_buff *skb_array_consume_any(struct skb_array *a)
+ {
+ 	return ptr_ring_consume_any(&a->ring);
+ }
+ 
++static inline int skb_array_consume_batched_any(struct skb_array *a,
++						void **array, int n)
++{
++	return ptr_ring_consume_batched_any(&a->ring, array, n);
++}
++
++
+ static inline struct sk_buff *skb_array_consume_bh(struct skb_array *a)
+ {
+ 	return ptr_ring_consume_bh(&a->ring);
+ }
+ 
++static inline int skb_array_consume_batched_bh(struct skb_array *a,
++					       void **array, int n)
++{
++	return ptr_ring_consume_batched_bh(&a->ring, array, n);
++}
++
+ static inline int __skb_array_len_with_tag(struct sk_buff *skb)
+ {
+ 	if (likely(skb)) {
