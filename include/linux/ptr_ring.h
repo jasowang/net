@@ -337,8 +337,8 @@ static inline int ptr_ring_consume_batched_irq(struct ptr_ring *r,
 	return ret;
 }
 
-static inline int ptr_ring_consume_irq_any(struct ptr_ring *r,
-                                           void **array, int n)
+static inline int ptr_ring_consume_batched_any(struct ptr_ring *r,
+					       void **array, int n)
 {
 	unsigned long flags;
 	int ret;
