@@ -1,15 +1,15 @@
 Version: 1
-Previous: 68e8b7473984e838fc301a010301b5cc5f38d79c
-Head: 7b5fc6bf89830b64cd5817bde4569b4178b19b30
+Previous: cbb0af72b9d88ecdd643a08f51a7ad6731485ba4
+Head: 12586a61d2aae702be7668563f8ea1d387143ad1
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
   tun-introduce: b654a76ad7193e22f320bd88360355b06fca22d2
   vhost_net-rx-batching-0: 7b5fc6bf89830b64cd5817bde4569b4178b19b30
+  vhost_net-rx-batching: 12586a61d2aae702be7668563f8ea1d387143ad1
 Unapplied:
   vhost-avoid-peeking-socket: 68472b63aaae346418d1fa3f6108a8988ffb4722
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
-  vhost_net-rx-batching: 305f368a8b355b8230a41b126e2797236c1ef0d3
   vhost-partially-open-code: 0b8ddd5c29027754f6cfc274a923f4b7f021ea14
   vhost-prefetch-desc-indices: 4d57719dec9366e7466dcb92f9eca4f06ef3e585
   virtio-net: 2aeeb4d642068d05304a606f077f428330a88f82
