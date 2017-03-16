@@ -895,6 +895,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
 	sock = vq->private_data;
 	vhost_net_disable_vq(n, vq);
 	vq->private_data = NULL;
+	/* FIXME clean skbs */
 	mutex_unlock(&vq->mutex);
 	return sock;
 }
