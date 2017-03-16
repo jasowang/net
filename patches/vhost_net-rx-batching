@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    55d6233715ee1c6f028067720f776721bf59eb4f
+Top:    2c1c23ba06a865593147be04400e4d1827f952f3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -67,7 +67,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..d1490cc 100644
+index 9b51989..b511cfd 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -204,10 +204,10 @@ index 9b51989..d1490cc 100644
 +	struct skb_array *array;
 +	struct file *file = fget(fd);
 +
-+	if (!file) {
++	if (!file)
 +		return NULL;
 +	array = tap_get_skb_array(file);
-+	fput(fd);
++	fput(file);
 +	return array;
 +}
 +
