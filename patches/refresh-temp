@@ -1,0 +1,88 @@
+Bottom: 5a00c1741bb761fe519983d3699ac6775fe7ea4f
+Top:    3ae05c77d04184b91e2fb1ba350eb81038d16615
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-16 18:16:49 +0800
+
+Refresh of ptr_ring-introduce-batch
+
+---
+
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 9cf78fb..4211c85 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -248,8 +248,7 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
+ }
+ 
+ static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
+-					     void **ptr_array,
+-                                             int n)
++					     void **array, int n)
+ {
+ 	void *ptr;
+ 	int i = 0;
+@@ -258,7 +257,7 @@ static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
+ 		ptr = __ptr_ring_consume(r);
+ 		if (!ptr)
+ 			break;
+-		ptr_array[i++] = ptr;
++		array[i++] = ptr;
+ 	}
+ 
+ 	return i;
+@@ -314,6 +313,55 @@ static inline void *ptr_ring_consume_bh(struct ptr_ring *r)
+ 	return ptr;
+ }
+ 
++static inline int ptr_ring_consume_batched(struct ptr_ring *r,
++                                           void **array, int n)
++{
++	int ret;
++
++	spin_lock(&r->consumer_lock);
++	ret = __ptr_ring_consume_batched(r, array, n);
++	spin_unlock(&r->consumer_lock);
++
++	return ret;
++}
++
++static inline int ptr_ring_consume_batched_irq(struct ptr_ring *r,
++                                               void **array, int n)
++{
++	int ret;
++
++	spin_lock_irq(&r->consumer_lock);
++	ret = __ptr_ring_consume_batched(r, array, n);
++	spin_unlock_irq(&r->consumer_lock);
++
++	return ret;
++}
++
++static inline int ptr_ring_consume_irq_any(struct ptr_ring *r,
++                                           void **array, int n)
++{
++	unsigned long flags;
++	int ret;
++
++	spin_lock_irqsave(&r->consumer_lock, flags);
++	ret = __ptr_ring_consume_batched(r, array, n);
++	spin_unlock_irqrestore(&r->consumer_lock, flags);
++
++	return ret;
++}
++
++static inline int ptr_ring_consume_batched_bh(struct ptr_ring *r,
++                                              void **array, int n)
++{
++	int ret;
++
++	spin_lock_bh(&r->consumer_lock);
++	ret = __ptr_ring_consume_batched(r, array, n);
++	spin_unlock_bh(&r->consumer_lock);
++
++	return ret;
++}
++
+ /* Cast to structure type and call a function without discarding from FIFO.
+  * Function must return a value.
+  * Callers must take consumer_lock.
