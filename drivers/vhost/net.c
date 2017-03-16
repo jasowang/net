@@ -499,7 +499,7 @@ static void handle_tx(struct vhost_net *net)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
 		if (!zcopy_used)
-			vhost_adxd_used_and_signal(&net->dev, vq, head, 0);
+			vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
 		vhost_net_tx_packet(net);
@@ -518,8 +518,8 @@ static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 		goto out;
 
 	rvq->skb_index = rvq->nskbs = 0;
-	rvq->nskbs = skb_array_consume_bh(rvq->rx_array, rvq->skbs,
-					  VHOST_RX_BATCH);
+	rvq->nskbs = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
+						  VHOST_RX_BATCH);
 	if (!rvq->nskbs)
 		return 0;
 out:
