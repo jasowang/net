@@ -28,6 +28,8 @@
 #include <linux/if_macvlan.h>
 #include <linux/if_tap.h>
 #include <linux/if_vlan.h>
+#include <linux/skb_array.h>
+#include <linux/skbuff.h>
 
 #include <net/sock.h>
 
@@ -85,6 +87,7 @@ struct vhost_net_ubuf_ref {
 	struct vhost_virtqueue *vq;
 };
 
+#define VHOST_RX_BATCH 64
 struct vhost_net_virtqueue {
 	struct vhost_virtqueue vq;
 	size_t vhost_hlen;
@@ -100,6 +103,9 @@ struct vhost_net_virtqueue {
 	 * Protected by vq mutex. Writers must also take device mutex. */
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
+	struct sk_buff *skbs[VHOST_RX_BATCH];
+	int nskbs;
+	int skb_index;
 };
 
 struct vhost_net {
@@ -202,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].nskbs = 0;
+		n->vqs[i].skb_index = 0;
 	}
 
 }
@@ -491,7 +499,7 @@ static void handle_tx(struct vhost_net *net)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
 		if (!zcopy_used)
-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
+			vhost_adxd_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
 		vhost_net_tx_packet(net);
@@ -504,17 +512,35 @@ out:
 	mutex_unlock(&vq->mutex);
 }
 
-static int peek_head_len(struct sock *sk)
+static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
+{
+	if (rvq->skb_index != rvq->nskbs)
+		goto out;
+
+	rvq->skb_index = rvq->nskbs = 0;
+	rvq->nskbs = skb_array_consume_bh(rvq->rx_array, rvq->skbs,
+					  VHOST_RX_BATCH);
+	if (!rvq->nskbs)
+		return 0;
+out:
+	return __skb_array_len_with_tag(rvq->skbs[rvq->skb_index]);
+}
+
+static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 	struct sk_buff *head;
 	int len = 0;
 	unsigned long flags;
 
+	if (rvq->rx_array)
+		return peek_head_len_batched(rvq);
+
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+	/* FIXME: duplicated! */
 	head = skb_peek(&sk->sk_receive_queue);
 	if (likely(head)) {
 		len = head->len;
@@ -530,18 +556,21 @@ static int sk_has_rx_data(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 
+	/* FIXME */
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+static int vhost_net_rx_peek_head_len(struct vhost_net *net,
+				      struct sock *sk)
 {
+	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
-	int len = peek_head_len(sk);
+	int len = peek_head_len(rvq, sk);
 
 	if (!len && vq->busyloop_timeout) {
 		/* Both tx vq and rx socket were polled here */
@@ -562,7 +591,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 			vhost_poll_queue(&vq->poll);
 		mutex_unlock(&vq->mutex);
 
-		len = peek_head_len(sk);
+		len = peek_head_len(rvq, sk);
 	}
 
 	return len;
@@ -700,6 +729,8 @@ static void handle_rx(struct vhost_net *net)
 		/* On error, stop handling until the next kick. */
 		if (unlikely(headcount < 0))
 			goto out;
+		if (nvq->rx_array)
+			msg.msg_control = nvq->skbs[nvq->skb_index++];
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
 			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -842,6 +873,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].nskbs = 0;
+		n->vqs[i].skb_index = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
