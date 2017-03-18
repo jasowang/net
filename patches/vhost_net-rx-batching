@@ -3,7 +3,7 @@ Top:    18580b7d72e5c6f3ed208597a1fa1d22e72b432c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
-vhost_net: rx batching
+vhost_net: try batch dequing from skb array
 
 We used to fetch one skb during recvmsg(). This could be inefficient
 because of the bad cache utilization and the spinlock touches for
