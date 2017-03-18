@@ -7,7 +7,7 @@ vhost_net: rx batching
 
 We used to fetch one skb during recvmsg(). This could be inefficient
 because of the bad cache utilization and the spinlock touches for
-every packet. This patch try to batch them by call batch dequeuing
+every packet. This patch try to batch them by calling batch dequeuing
 helpers explicitly on the exported skb array and pass the skb back
 through msg_control for underlayer socket to finish the copying.
 
