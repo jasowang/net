@@ -1077,6 +1077,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 
 		vhost_net_disable_vq(n, vq);
 		vq->private_data = sock;
+		/* FIXME: only for RX virtqueue */
 		nvq->rx_array = get_tap_skb_array(fd);
 		r = vhost_vq_init_access(vq);
 		if (r)
