@@ -1,9 +1,10 @@
 Version: 1
-Previous: 05b6288776ac144f4a9f2b6e8a25329aab922ec9
-Head: a98a8192fc838fb287b814108c2c37d55cc2e889
+Previous: c6f74f3213b56ab1b1e6ea073e877c5a6ebd7380
+Head: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
 Applied:
   vhost-avoid-peeking-socket: fda89790aed7f660fae07b1bc50d12dbbf9399c5
   vhost-partially-open-code: a98a8192fc838fb287b814108c2c37d55cc2e889
+  vhost-prefetch-desc-indices: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
 Unapplied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
@@ -11,7 +12,6 @@ Unapplied:
   vhost_net-rx-batching: 53200c7a08b212f998ef20c3e544bec95aa0ad35
   vhost_net-switch-to-use: b6ca8a02f6194b4493385ce5f3635d77e2792c77
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
-  vhost-prefetch-desc-indices: 4d57719dec9366e7466dcb92f9eca4f06ef3e585
   virtio-net: 2aeeb4d642068d05304a606f077f428330a88f82
   ptr_ring-don-t-peek-producer: 21fceaa46e364cfea53edc54cbcfbd2bab6840eb
   virtio-net-xdp-xmit-more: 6a59cbb6c3c014a9ec73599b305cdb3902ad7e39
