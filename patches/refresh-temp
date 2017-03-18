@@ -1,0 +1,21 @@
+Bottom: 64998239839652bb9d3f74debd78390769c9b68c
+Top:    18580b7d72e5c6f3ed208597a1fa1d22e72b432c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-18 22:10:07 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index a2b7391..c212ba0 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -1077,6 +1077,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 
+ 		vhost_net_disable_vq(n, vq);
+ 		vq->private_data = sock;
++		/* FIXME: only for RX virtqueue */
+ 		nvq->rx_array = get_tap_skb_array(fd);
+ 		r = vhost_vq_init_access(vq);
+ 		if (r)
