@@ -1,5 +1,5 @@
 Bottom: 0c1f5b6fbbbb5284cb8e96f08d1ba17d08cb0ac9
-Top:    eabdc8f6e59ec1e21f07cdb696f77768108cb52e
+Top:    98d2d6e0ab85fb3832f7df44d89642c25137ad15
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-19 19:50:43 +0800
 
@@ -11,7 +11,7 @@ too slow
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index ba262ef..02049d2 100644
+index ba262ef..a80346a 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1998,8 +1998,8 @@ static int get_indirect(struct vhost_virtqueue *vq,
@@ -25,7 +25,7 @@ index ba262ef..02049d2 100644
  	__virtio16 avail_idx;
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-@@ -2007,29 +2007,23 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2007,29 +2007,22 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		       &vq->avail->idx);
  		return -EFAULT;
  	}
@@ -33,7 +33,6 @@ index ba262ef..02049d2 100644
  	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
  	total = vq->avail_idx - vq->last_avail_idx;
 -	ret = total = min(num, total);
-+	total = min(num, total);
  
 -	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
  	while (total) {
