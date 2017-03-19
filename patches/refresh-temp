@@ -1,0 +1,42 @@
+Bottom: a945554d9308e84700a183d9eda032d7e67bd457
+Top:    92aa412637fc967fdce9639834d9e13b642adacf
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-19 20:15:14 +0800
+
+Refresh of drop-vhost_copy_from
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 4185168..ff2f214 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1999,7 +1999,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				__virtio16 *indices, u16 num)
+ {
+ 	int ret = 0;
+-	u16 last_avail_idx, total, copied;
++	u16 last_avail_idx, total;
+ 	__virtio16 avail_idx;
+ 
+ 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+@@ -2009,16 +2009,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	}
+ 	last_avail_idx = vq->last_avail_idx;
+ 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+-	total = min(num, vq->avail_idx - vq->last_avail_idx;
++	total = vq->avail_idx - vq->last_avail_idx;
++	total = min(num, total);
+ 
+ 	while (total) {
+-		int ret2 = vhost_get_avail(vq, &indices[ret++],
++		int ret2 = vhost_get_avail(vq, indices[ret],
+ 			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
+ 		if (unlikely(ret2)) {
+ 			vq_err(vq, "Failed to get descriptors\n");
+ 			return -EFAULT;
+ 		}
+ 		--total;
++		++ret;
+ 		++last_avail_idx;
+ 	}
