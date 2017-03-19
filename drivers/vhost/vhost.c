@@ -1999,7 +1999,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				__virtio16 *indices, u16 num)
 {
 	int ret = 0;
-	u16 last_avail_idx, total, copied;
+	u16 last_avail_idx, total;
 	__virtio16 avail_idx;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
@@ -2009,16 +2009,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	}
 	last_avail_idx = vq->last_avail_idx;
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = min(num, vq->avail_idx - vq->last_avail_idx;
+	total = vq->avail_idx - vq->last_avail_idx;
+	total = min(num, total);
 
 	while (total) {
-		int ret2 = vhost_get_avail(vq, &indices[ret++],
+		int ret2 = vhost_get_avail(vq, indices[ret],
 			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 		--total;
+		++ret;
 		++last_avail_idx;
 	}
 
