@@ -2009,8 +2009,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	}
 	last_avail_idx = vq->last_avail_idx;
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	ret = total = vq->avail_idx - vq->last_avail_idx;
-	total = min(total, num);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
 
 	while (total) {
 		int ret2 = vhost_get_avail(vq, indices[0],
