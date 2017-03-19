@@ -2023,9 +2023,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		++ret;
 		++last_avail_idx;
 	}
-
-	vq->last_avail_idx = last_avail_idx;
-
 	/* FIXME: update used ring here? together with batch dequing? */
 
 	/* Only get avail ring entries after they have been exposed by guest. */
