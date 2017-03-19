@@ -1,0 +1,21 @@
+Bottom: eabdc8f6e59ec1e21f07cdb696f77768108cb52e
+Top:    98d2d6e0ab85fb3832f7df44d89642c25137ad15
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-19 20:25:13 +0800
+
+Refresh of drop-vhost_copy_from
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 02049d2..a80346a 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2010,7 +2010,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	last_avail_idx = vq->last_avail_idx;
+ 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 	total = vq->avail_idx - vq->last_avail_idx;
+-	total = min(num, total);
+ 
+ 	while (total) {
+ 		int ret2 = vhost_get_avail(vq, indices[ret],
