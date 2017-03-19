@@ -1,10 +1,10 @@
 Version: 1
-Previous: ceeeef9aceca7097848f821960c09223b77c863c
-Head: b941314b8dfac41c0d70a2d3bce6b664102f3344
+Previous: 7cff99e771a6777f0d516b346e1a02952f9ba5bd
+Head: 5cd9745246b7a3f2748f9ffb8836dd5baccf1142
 Applied:
   tun-introduce: b941314b8dfac41c0d70a2d3bce6b664102f3344
+  vhost-avoid-peeking-socket: 5cd9745246b7a3f2748f9ffb8836dd5baccf1142
 Unapplied:
-  vhost-avoid-peeking-socket: fda89790aed7f660fae07b1bc50d12dbbf9399c5
   vhost-partially-open-code: a98a8192fc838fb287b814108c2c37d55cc2e889
   vhost-prefetch-desc-indices: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
   drop-vhost_copy_from: 5bdcd657708ef7be096edef78d1ac4248627e3da
