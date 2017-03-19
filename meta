@@ -1,11 +1,11 @@
 Version: 1
-Previous: dae950b8ff8f227fe5a370dbb48e158dcc005264
-Head: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
+Previous: 454836e6b9de22290e0bf75aa727c5108bf6d9e0
+Head: a98a8192fc838fb287b814108c2c37d55cc2e889
 Applied:
   vhost-avoid-peeking-socket: fda89790aed7f660fae07b1bc50d12dbbf9399c5
   vhost-partially-open-code: a98a8192fc838fb287b814108c2c37d55cc2e889
-  vhost-prefetch-desc-indices: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
 Unapplied:
+  vhost-prefetch-desc-indices: 305e4dbff6fb8010f5fc7bfa1757efb8f886cfaa
   drop-vhost_copy_from: 5bdcd657708ef7be096edef78d1ac4248627e3da
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
