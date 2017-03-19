@@ -2000,7 +2000,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 {
 	int ret = 0;
 	u16 last_avail_idx, total;
-	__virtio16 avail_idx, head;
+	__virtio16 avail_idx;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -2009,18 +2009,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	}
 	last_avail_idx = vq->last_avail_idx;
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = vq->avail_idx - vq->last_avail_idx;
 	total = min(total, num);
 
 	while (total) {
-		int ret2 = vhost_get_avail(vq, head,
+		int ret2 = vhost_get_avail(vq, indices[0],
 			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
-		indices[ret++] = head;
 		--total;
+		++indices;
 		++last_avail_idx;
 	}
 	/* FIXME: update used ring here? together with batch dequing? */
