@@ -1,5 +1,5 @@
 Bottom: 0c1f5b6fbbbb5284cb8e96f08d1ba17d08cb0ac9
-Top:    f775caac2ce571906b3689c39964b07b5c86f4be
+Top:    12e9a1d45ccfac6b159951c9ae690a072dbfd9d1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-19 19:50:43 +0800
 
@@ -11,7 +11,7 @@ too slow
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index ba262ef..bfca137 100644
+index ba262ef..8f6c2f2 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1998,8 +1998,8 @@ static int get_indirect(struct vhost_virtqueue *vq,
@@ -31,10 +31,9 @@ index ba262ef..bfca137 100644
  	}
 +	last_avail_idx = vq->last_avail_idx;
  	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
--	total = vq->avail_idx - vq->last_avail_idx;
+ 	total = vq->avail_idx - vq->last_avail_idx;
 -	ret = total = min(num, total);
-+	ret = total = vq->avail_idx - vq->last_avail_idx;
-+	total = min(total, num);
++	ret = total = min(total, num);
  
 -	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
  	while (total) {
