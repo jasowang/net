@@ -1998,7 +1998,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				__virtio16 *indices, u16 num)
 {
-	int ret;
+	int ret = 0;
 	u16 last_avail_idx, total, copied;
 	__virtio16 avail_idx;
 
@@ -2007,29 +2007,24 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		       &vq->avail->idx);
 		return -EFAULT;
 	}
+	last_avail_idx = vq->last_avail_idx;
 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = vq->avail_idx - vq->last_avail_idx;
-	ret = total = min(num, total);
+	total = min(num, vq->avail_idx - vq->last_avail_idx;
 
-	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
 	while (total) {
-		int ret2;
-
-		copied = vq->num - last_avail_idx;
-		copied = min(total, copied);
-
-		ret2 = vhost_copy_from_user(vq, indices,
-					    &vq->avail->ring[last_avail_idx],
-					    sizeof(avail_idx) * copied);
+		int ret2 = vhost_get_avail(vq, &indices[ret++],
+			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
-
-		indices += copied;
-		total -= copied;
-		last_avail_idx = 0;
+		--total;
+		++last_avail_idx;
 	}
+
+	vq->last_avail_idx = last_avail_idx;
+
+	/* FIXME: update used ring here? together with batch dequing? */
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
