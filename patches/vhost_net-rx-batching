@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    18580b7d72e5c6f3ed208597a1fa1d22e72b432c
+Top:    7323a6ec138a0032288a0e3ef461036a023c6926
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -79,7 +79,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..c212ba0 100644
+index 9b51989..497f897 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -106,8 +106,8 @@ index 9b51989..c212ba0 100644
 +	struct skb_array *rx_array;
 +	/* FIXME: rename */
 +	void *skbs[VHOST_RX_BATCH];
-+	int nskbs;
-+	int skb_index;
++	int rdt;
++	int rdh;
  };
  
  struct vhost_net {
@@ -115,8 +115,8 @@ index 9b51989..c212ba0 100644
  		n->vqs[i].ubufs = NULL;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
-+		n->vqs[i].nskbs = 0;
-+		n->vqs[i].skb_index = 0;
++		n->vqs[i].rdt = 0;
++		n->vqs[i].rdh = 0;
  	}
  
  }
@@ -127,16 +127,16 @@ index 9b51989..c212ba0 100644
 -static int peek_head_len(struct sock *sk)
 +static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 +{
-+	if (rvq->skb_index != rvq->nskbs)
++	if (rvq->rdh != rvq->rdt)
 +		goto out;
 +
-+	rvq->skb_index = rvq->nskbs = 0;
-+	rvq->nskbs = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
++	rvq->rdh = rvq->rdt = 0;
++	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
 +						  VHOST_RX_BATCH);
-+	if (!rvq->nskbs)
++	if (!rvq->rdt)
 +		return 0;
 +out:
-+	return __skb_array_len_with_tag(rvq->skbs[rvq->skb_index]);
++	return __skb_array_len_with_tag(rvq->skbs[rvq->rdh]);
 +}
 +
 +static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
@@ -195,7 +195,7 @@ index 9b51989..c212ba0 100644
  		if (unlikely(headcount < 0))
  			goto out;
 +		if (nvq->rx_array)
-+			msg.msg_control = nvq->skbs[nvq->skb_index++];
++			msg.msg_control = nvq->skbs[nvq->rdh++];
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
  			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -203,8 +203,8 @@ index 9b51989..c212ba0 100644
  		n->vqs[i].done_idx = 0;
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
-+		n->vqs[i].nskbs = 0;
-+		n->vqs[i].skb_index = 0;
++		n->vqs[i].rdt = 0;
++		n->vqs[i].rdh = 0;
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
  
