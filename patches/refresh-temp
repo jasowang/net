@@ -1,0 +1,67 @@
+Bottom: 80e9fa8bd261c0f56eace7b953a020aafc81ef1e
+Top:    dccfd9e887b60ef0817741d3115044a0e65b10f4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 13:59:52 +0800
+
+Refresh of tun-introduce-0
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8df315f..2abf8e7 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2624,7 +2624,7 @@ struct skb_array *tun_get_skb_array(struct file *file)
+                return ERR_PTR(-EBADFD);
+        return &tfile->tx_array;
+ }
+-EXPORT_SYMBOL_GPL(tap_get_skb_array);
++EXPORT_SYMBOL_GPL(tun_get_skb_array);
+ 
+ module_init(tun_init);
+ module_exit(tun_cleanup);
+diff --git a/include/linux/if_tap.h b/include/linux/if_tap.h
+index a99f3a1..3482c3c 100644
+--- a/include/linux/if_tap.h
++++ b/include/linux/if_tap.h
+@@ -3,7 +3,6 @@
+ 
+ #if IS_ENABLED(CONFIG_TAP)
+ struct socket *tap_get_socket(struct file *);
+-struct skb_array *tap_get_skb_array(struct file *);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -13,10 +12,6 @@ static inline struct socket *tap_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
+-static inline struct socket *tap_get_skb_array(struct file *f)
+-{
+-	return ERR_PTR(-EINVAL);
+-}
+ #endif /* CONFIG_TAP */
+ 
+ #include <net/sock.h>
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index ed6da2e..40a39d8 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -19,6 +19,7 @@
+ 
+ #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
+ struct socket *tun_get_socket(struct file *);
++struct skb_array *tap_get_skb_array(struct file *);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -28,5 +29,9 @@ static inline struct socket *tun_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
++static inline struct socket *tap_get_skb_array(struct file *f)
++{
++	return ERR_PTR(-EINVAL);
++}
+ #endif /* CONFIG_TUN */
+ #endif /* __IF_TUN_H */
