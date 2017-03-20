@@ -2624,7 +2624,7 @@ struct skb_array *tun_get_skb_array(struct file *file)
                return ERR_PTR(-EBADFD);
        return &tfile->tx_array;
 }
-EXPORT_SYMBOL_GPL(tap_get_skb_array);
+EXPORT_SYMBOL_GPL(tun_get_skb_array);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
