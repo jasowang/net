@@ -2613,7 +2613,7 @@ struct socket *tun_get_socket(struct file *file)
 }
 EXPORT_SYMBOL_GPL(tun_get_socket);
 
-struct skb_array *tap_get_skb_array(struct file *file)
+struct skb_array *tun_get_skb_array(struct file *file)
 {
        struct tun_file *tfile;
 
