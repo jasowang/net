@@ -1,0 +1,22 @@
+Bottom: 2283372d1a87396c186806d58db7a2ac1925c871
+Top:    a006d07f1862222273fb6aebf1bb8733b296597c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 14:11:05 +0800
+
+Refresh of tun-introduce-0
+
+---
+
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index 149fc0d..2e45091 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -29,7 +29,7 @@ static inline struct socket *tun_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
+-static inline struct socket *tun_get_skb_array(struct file *f)
++static inline struct skb_array *tun_get_skb_array(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
