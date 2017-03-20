@@ -104,7 +104,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
 	/* FIXME: rename */
-	void *skbs[VHOST_RX_BATCH];
+	void *rxq[VHOST_RX_BATCH];
 	int rdt;
 	int rdh;
 };
@@ -519,12 +519,12 @@ static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 		goto out;
 
 	rvq->rdh = rvq->rdt = 0;
-	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
+	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
 						  VHOST_RX_BATCH);
 	if (!rvq->rdt)
 		return 0;
 out:
-	return __skb_array_len_with_tag(rvq->skbs[rvq->rdh]);
+	return __skb_array_len_with_tag(rvq->rxq[rvq->rdh]);
 }
 
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
@@ -731,7 +731,7 @@ static void handle_rx(struct vhost_net *net)
 		if (unlikely(headcount < 0))
 			goto out;
 		if (nvq->rx_array)
-			msg.msg_control = nvq->skbs[nvq->rdh++];
+			msg.msg_control = nvq->rxq[nvq->rdh++];
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
 			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -896,7 +896,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
 	sock = vq->private_data;
 	vhost_net_disable_vq(n, vq);
 	vq->private_data = NULL;
-	/* FIXME clean skbs */
+	/* FIXME clean rxq */
 	mutex_unlock(&vq->mutex);
 	return sock;
 }
