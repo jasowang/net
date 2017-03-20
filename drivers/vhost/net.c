@@ -525,12 +525,15 @@ static int peek_head_len(struct sock *sk)
 	return len;
 }
 
-static int sk_has_rx_data(struct sock *sk)
+static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 
+	if (rvq->rx_array)
+               return !__skb_array_empty(rvq->rx_array);
+
 	if (sock->ops->peek_len)
-		return sock->ops->peek_len(sock);
+               return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
@@ -551,7 +554,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(sk) &&
+		       !sk_has_rx_data(rvq, sk) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
 
