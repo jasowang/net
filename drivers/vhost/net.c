@@ -105,8 +105,8 @@ struct vhost_net_virtqueue {
 	struct skb_array *rx_array;
 	/* FIXME: rename */
 	void *skbs[VHOST_RX_BATCH];
-	int nskbs;
-	int skb_index;
+	int rdt;
+	int rdh;
 };
 
 struct vhost_net {
@@ -209,8 +209,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
-		n->vqs[i].nskbs = 0;
-		n->vqs[i].skb_index = 0;
+		n->vqs[i].rdt = 0;
+		n->vqs[i].rdh = 0;
 	}
 
 }
@@ -515,16 +515,16 @@ out:
 
 static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 {
-	if (rvq->skb_index != rvq->nskbs)
+	if (rvq->rdh != rvq->rdt)
 		goto out;
 
-	rvq->skb_index = rvq->nskbs = 0;
-	rvq->nskbs = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
+	rvq->rdh = rvq->rdt = 0;
+	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
 						  VHOST_RX_BATCH);
-	if (!rvq->nskbs)
+	if (!rvq->rdt)
 		return 0;
 out:
-	return __skb_array_len_with_tag(rvq->skbs[rvq->skb_index]);
+	return __skb_array_len_with_tag(rvq->skbs[rvq->rdh]);
 }
 
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
@@ -731,7 +731,7 @@ static void handle_rx(struct vhost_net *net)
 		if (unlikely(headcount < 0))
 			goto out;
 		if (nvq->rx_array)
-			msg.msg_control = nvq->skbs[nvq->skb_index++];
+			msg.msg_control = nvq->skbs[nvq->rdh++];
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
 			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -874,8 +874,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
-		n->vqs[i].nskbs = 0;
-		n->vqs[i].skb_index = 0;
+		n->vqs[i].rdt = 0;
+		n->vqs[i].rdh = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
