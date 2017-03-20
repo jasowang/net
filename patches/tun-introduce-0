@@ -1,5 +1,5 @@
 Bottom: 9c7fe87b0e1a97ed35b9de5fd0aa00249d8a8551
-Top:    d782a1a2b8aa5d82ee5798ff76064d17774f908e
+Top:    db445c455057048f37af8c742ba894df330acb88
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:54:40 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index c418f0a..2abf8e7 100644
+index c418f0a..70dd9ec 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -2613,6 +2613,19 @@ struct socket *tun_get_socket(struct file *file)
@@ -23,14 +23,14 @@ index c418f0a..2abf8e7 100644
  
 +struct skb_array *tun_get_skb_array(struct file *file)
 +{
-+       struct tun_file *tfile;
++	struct tun_file *tfile;
 +
-+       if (file->f_op != &tun_fops)
-+               return ERR_PTR(-EINVAL);
-+       tfile = file->private_data;
-+       if (!tfile)
-+               return ERR_PTR(-EBADFD);
-+       return &tfile->tx_array;
++	if (file->f_op != &tun_fops)
++		return ERR_PTR(-EINVAL);
++	tfile = file->private_data;
++	if (!tfile)
++		return ERR_PTR(-EBADFD);
++	return &tfile->tx_array;
 +}
 +EXPORT_SYMBOL_GPL(tun_get_skb_array);
 +
