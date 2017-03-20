@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    7323a6ec138a0032288a0e3ef461036a023c6926
+Top:    b8ddd767b21ee6282685119124ccf1cac852e87b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -79,7 +79,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..497f897 100644
+index 9b51989..a9a4603 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -105,7 +105,7 @@ index 9b51989..497f897 100644
  	struct vhost_net_ubuf_ref *ubufs;
 +	struct skb_array *rx_array;
 +	/* FIXME: rename */
-+	void *skbs[VHOST_RX_BATCH];
++	void *rxq[VHOST_RX_BATCH];
 +	int rdt;
 +	int rdh;
  };
@@ -131,12 +131,12 @@ index 9b51989..497f897 100644
 +		goto out;
 +
 +	rvq->rdh = rvq->rdt = 0;
-+	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->skbs,
++	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
 +						  VHOST_RX_BATCH);
 +	if (!rvq->rdt)
 +		return 0;
 +out:
-+	return __skb_array_len_with_tag(rvq->skbs[rvq->rdh]);
++	return __skb_array_len_with_tag(rvq->rxq[rvq->rdh]);
 +}
 +
 +static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
@@ -195,7 +195,7 @@ index 9b51989..497f897 100644
  		if (unlikely(headcount < 0))
  			goto out;
 +		if (nvq->rx_array)
-+			msg.msg_control = nvq->skbs[nvq->rdh++];
++			msg.msg_control = nvq->rxq[nvq->rdh++];
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
  			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -212,7 +212,7 @@ index 9b51989..497f897 100644
  	sock = vq->private_data;
  	vhost_net_disable_vq(n, vq);
  	vq->private_data = NULL;
-+	/* FIXME clean skbs */
++	/* FIXME clean rxq */
  	mutex_unlock(&vq->mutex);
  	return sock;
  }
