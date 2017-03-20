@@ -1196,6 +1196,7 @@ EXPORT_SYMBOL_GPL(tap_get_socket);
 struct skb_array *tap_get_skb_array(struct file *file)
 {
 	struct tap_queue *q;
+
 	if (file->f_op != &tap_fops)
 		return ERR_PTR(-EINVAL);
 	q = file->private_data;
