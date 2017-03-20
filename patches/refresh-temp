@@ -1,0 +1,39 @@
+Bottom: 3eb217f785f0b586b61c12be8f925de7c3854834
+Top:    66dd3c6eeebc92b7a2ceae3c911fc2ed7184f410
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 20:01:47 +0800
+
+Refresh of vhost_net-use-lockless-peeking
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9b51989..2ea24fd 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -525,12 +525,15 @@ static int peek_head_len(struct sock *sk)
+ 	return len;
+ }
+ 
+-static int sk_has_rx_data(struct sock *sk)
++static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ {
+ 	struct socket *sock = sk->sk_socket;
+ 
++	if (rvq->rx_array)
++               return !__skb_array_empty(rvq->rx_array);
++
+ 	if (sock->ops->peek_len)
+-		return sock->ops->peek_len(sock);
++               return sock->ops->peek_len(sock);
+ 
+ 	return skb_queue_empty(&sk->sk_receive_queue);
+ }
+@@ -551,7 +554,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 		endtime = busy_clock() + vq->busyloop_timeout;
+ 
+ 		while (vhost_can_busy_poll(&net->dev, endtime) &&
+-		       !sk_has_rx_data(sk) &&
++		       !sk_has_rx_data(rvq, sk) &&
+ 		       vhost_vq_avail_empty(&net->dev, vq))
+ 			cpu_relax();
