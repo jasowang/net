@@ -1,0 +1,35 @@
+Bottom: d782a1a2b8aa5d82ee5798ff76064d17774f908e
+Top:    db445c455057048f37af8c742ba894df330acb88
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 19:42:38 +0800
+
+Refresh of tun-introduce-0
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 2abf8e7..70dd9ec 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2615,14 +2615,14 @@ EXPORT_SYMBOL_GPL(tun_get_socket);
+ 
+ struct skb_array *tun_get_skb_array(struct file *file)
+ {
+-       struct tun_file *tfile;
+-
+-       if (file->f_op != &tun_fops)
+-               return ERR_PTR(-EINVAL);
+-       tfile = file->private_data;
+-       if (!tfile)
+-               return ERR_PTR(-EBADFD);
+-       return &tfile->tx_array;
++	struct tun_file *tfile;
++
++	if (file->f_op != &tun_fops)
++		return ERR_PTR(-EINVAL);
++	tfile = file->private_data;
++	if (!tfile)
++		return ERR_PTR(-EBADFD);
++	return &tfile->tx_array;
+ }
+ EXPORT_SYMBOL_GPL(tun_get_skb_array);
