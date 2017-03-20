@@ -3,9 +3,10 @@ Top:    dccfd9e887b60ef0817741d3115044a0e65b10f4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:54:40 +0800
 
-tun: introduce tap_get_skb_array()
+tun: export skb_array
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
