@@ -1,6 +1,6 @@
 Version: 1
-Previous: ca549dee649ebfc081387da923b2e52da7c59c66
-Head: 1499ec0bdedfedb91ee679f4c8098c42dbc60e45
+Previous: a0cdc9ccd0f343b9fb3befd4e6c38771b6dfbeff
+Head: 12ca58301b1f662723a48b87f8fe65d65a951be6
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
