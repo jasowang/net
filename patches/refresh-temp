@@ -1,0 +1,22 @@
+Bottom: aae97b94c0c30f2167f5f89b1df93e18d42341c9
+Top:    54c4cd6aa64e23426123afb0a3473688d7448d8b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 14:01:07 +0800
+
+Refresh of vhost
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 39a2d5a..52fc4d8 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -999,7 +999,7 @@ static struct skb_array *get_tap_skb_array(int fd)
+ 
+ 	if (!file)
+ 		return NULL;
+-	array = tap_get_skb_array(file);
++	array = tun_get_skb_array(file);
+ 	fput(file);
+ 	return array;
+ }
