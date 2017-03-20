@@ -1,7 +1,11 @@
 Version: 1
-Previous: 57265429d273f6e7d1844cfa3cdd2c08ebf0ef84
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: 8aeff2e01a9a118f97eba027fd798d30397a976f
+Head: b271c2bf41501d120e121871d5d32b5195b0a444
 Applied:
+  vhost-avoid-peeking-socket: b37c9ad06687b4b1b6d8bc32ffba8b4c01adc465
+  vhost-partially-open-code: 0ffd07f6a880d392fbd04ebec20d4e1ac64ee0d2
+  vhost-prefetch-desc-indices: 85d767923abccc6540bee940a1ae18d038f70e86
+  drop-vhost_copy_from: b271c2bf41501d120e121871d5d32b5195b0a444
 Unapplied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch-0: c357ef0fa1d9505e92a82d7041953cc927a2b6f6
@@ -10,10 +14,6 @@ Unapplied:
   tun-support-receiving-skb: 6bb5e38ad5b394525d8a21e0fad887874c12d812
   tap-support-receive-skb-from-0: c214493200b2eee0f76f16edfd5c4c8d8eae3f2a
   vhost_net-try-batch-dequing: 0ecd4b7c695eb438fa8892cc09568b20b5424542
-  vhost-avoid-peeking-socket: 5cd9745246b7a3f2748f9ffb8836dd5baccf1142
-  vhost-partially-open-code: 5e64d310f7c19ce237798e4b819312ace648a576
-  vhost-prefetch-desc-indices: c95afe72f8268556d212830bb8b42bb39a799d64
-  drop-vhost_copy_from: 0003c7d5a2c2102847f7980aff348d4ddce7034b
   vhost_net-switch-to-use: b6ca8a02f6194b4493385ce5f3635d77e2792c77
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
   virtio-net: 2aeeb4d642068d05304a606f077f428330a88f82
