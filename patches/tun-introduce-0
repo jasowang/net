@@ -5,6 +5,9 @@ Date:   2017-03-20 13:54:40 +0800
 
 tun: export skb_array
 
+This patch exports skb_array through tun_get_skb_array(). Caller can
+then manipulate skb array directly.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
