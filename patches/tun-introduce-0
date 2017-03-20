@@ -1,5 +1,5 @@
 Bottom: 1da40b4e76554279395a47fec49f8fab4b61b6ea
-Top:    dccfd9e887b60ef0817741d3115044a0e65b10f4
+Top:    2283372d1a87396c186806d58db7a2ac1925c871
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:54:40 +0800
 
@@ -35,14 +35,14 @@ index c418f0a..2abf8e7 100644
  module_exit(tun_cleanup);
  MODULE_DESCRIPTION(DRV_DESCRIPTION);
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
-index ed6da2e..40a39d8 100644
+index ed6da2e..149fc0d 100644
 --- a/include/linux/if_tun.h
 +++ b/include/linux/if_tun.h
 @@ -19,6 +19,7 @@
  
  #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
  struct socket *tun_get_socket(struct file *);
-+struct skb_array *tap_get_skb_array(struct file *);
++struct skb_array *tun_get_skb_array(struct file *);
  #else
  #include <linux/err.h>
  #include <linux/errno.h>
@@ -50,7 +50,7 @@ index ed6da2e..40a39d8 100644
  {
  	return ERR_PTR(-EINVAL);
  }
-+static inline struct socket *tap_get_skb_array(struct file *f)
++static inline struct socket *tun_get_skb_array(struct file *f)
 +{
 +	return ERR_PTR(-EINVAL);
 +}
