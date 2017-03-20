@@ -999,7 +999,7 @@ static struct skb_array *get_tap_skb_array(int fd)
 
 	if (!file)
 		return NULL;
-	array = tap_get_skb_array(file);
+	array = tun_get_skb_array(file);
 	fput(file);
 	return array;
 }
