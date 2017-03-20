@@ -556,10 +556,10 @@ static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	struct socket *sock = sk->sk_socket;
 
 	if (rvq->rx_array)
-               return !__skb_array_empty(rvq->rx_array);
+		return !__skb_array_empty(rvq->rx_array);
 
 	if (sock->ops->peek_len)
-               return sock->ops->peek_len(sock);
+		return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
