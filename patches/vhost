@@ -15,7 +15,7 @@ copying.
 Tests were done by XDP1:
 - small buffer:
   Before: 1.88Mpps
-  After : 2.20Mpps (+17%)
+  After : 2.25Mpps (+19.6%)
 - mergeable buffer:
   Before:
   After :
