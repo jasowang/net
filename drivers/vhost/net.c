@@ -1000,6 +1000,13 @@ static struct skb_array *get_tap_skb_array(int fd)
 	if (!file)
 		return NULL;
 	array = tun_get_skb_array(file);
+	if (!IS_ERR(array))
+		goto out;
+	array = tap_get_skb_array(file);
+	if (!IS_ERROR(array))
+		goto out;
+	array = NULL;
+out:
 	fput(file);
 	return array;
 }
