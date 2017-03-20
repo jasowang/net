@@ -17,8 +17,8 @@ Tests were done by XDP1:
   Before: 1.88Mpps
   After : 2.25Mpps (+19.6%)
 - mergeable buffer:
-  Before:
-  After :
+  Before: 1.83Mpps
+  After : 2.10Mpps (+14.7%)
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
