@@ -3,7 +3,22 @@ Top:    5d2aed47b53ce0e0ec9ff1c75c138393e70a0fe3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:49:01 +0800
 
-vhost: introduce
+vhost_net: try batch dequing from skb array
+
+We used to fetch one skb during recvmsg(). This could be inefficient
+because of the bad cache utilization and spinlock touching for
+each packet. This patch tries to batch them by calling batch dequeuing
+helpers explicitly on the exported skb array and pass the skb back
+through msg_control for underlayer socket to finish the userspace
+copying.
+
+Tests were done by XDP1:
+- small buffer:
+  Before: 1.88Mpps
+  After : 2.20Mpps (+17%)
+- mergeable buffer:
+  Before:
+  After :
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
