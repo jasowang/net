@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5d2ddaf9a24cbbd3564a0acebe65496552293b7d
-Head: f75f6ec794b1dd5a1cd4d9b1ed684f3a1e32e8d1
+Previous: d8b1086a4714499ff14c90abdb5f07be5278647a
+Head: 837421d66cae6d5cc8610ab6fd35b7de842c7b6b
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
@@ -8,6 +8,7 @@ Applied:
   tap-export-skb_array: 20537644a661b3c84af8f3fbd252e7b6ecf6e04a
   tun: 2a8dd5f47e03148e005ebb467b59fe5d61831166
   tap-support-receive-skb-from: f75f6ec794b1dd5a1cd4d9b1ed684f3a1e32e8d1
+  refresh-temp: 837421d66cae6d5cc8610ab6fd35b7de842c7b6b
 Unapplied:
   vhost: 925f0d04893bd5737964bd35becd45e13c930780
   tun-introduce: 621d36eacd2c2c969ab166ecd6244c93099f6fbc
