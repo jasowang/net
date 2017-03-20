@@ -6,7 +6,7 @@ Date:   2017-03-20 20:01:43 +0800
 vhost_net: use lockless peeking for skb array during busy polling
 
 For the socket that exports its skb array, we can use lockless polling
-to avoid touching spinlocks during busy polling.
+to avoid touching spinlock during busy polling.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
