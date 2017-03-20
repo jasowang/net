@@ -5,12 +5,12 @@ Date:   2017-03-20 13:53:59 +0800
 
 vhost_net: try batch dequing from skb array
 
-We used to fetch one skb during recvmsg(). This could be inefficient
-because of the bad cache utilization and spinlock touching for
-each packet. This patch tries to batch them by calling batch dequeuing
-helpers explicitly on the exported skb array and pass the skb back
-through msg_control for underlayer socket to finish the userspace
-copying.
+We used to dequeue one skb during recvmsg() from skb_array, this could
+be inefficient because of the bad cache utilization and spinlock
+touching for each packet. This patch tries to batch them by calling
+batch dequeuing helpers explicitly on the exported skb array and pass
+the skb back through msg_control for underlayer socket to finish the
+userspace copying.
 
 Tests were done by XDP1:
 - small buffer:
