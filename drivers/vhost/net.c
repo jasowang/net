@@ -104,8 +104,8 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
 	void *rxq[VHOST_RX_BATCH];
-	int rdt;
-	int rdh;
+	int rt;
+	int rh;
 };
 
 struct vhost_net {
@@ -208,8 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
-		n->vqs[i].rdt = 0;
-		n->vqs[i].rdh = 0;
+		n->vqs[i].rt = 0;
+		n->vqs[i].rh = 0;
 	}
 
 }
@@ -514,16 +514,16 @@ out:
 
 static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 {
-	if (rvq->rdh != rvq->rdt)
+	if (rvq->rh != rvq->rt)
 		goto out;
 
-	rvq->rdh = rvq->rdt = 0;
-	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
+	rvq->rh = rvq->rt = 0;
+	rvq->rt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
 						VHOST_RX_BATCH);
-	if (!rvq->rdt)
+	if (!rvq->rt)
 		return 0;
 out:
-	return __skb_array_len_with_tag(rvq->rxq[rvq->rdh]);
+	return __skb_array_len_with_tag(rvq->rxq[rvq->rh]);
 }
 
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
@@ -728,7 +728,7 @@ static void handle_rx(struct vhost_net *net)
 		if (unlikely(headcount < 0))
 			goto out;
 		if (nvq->rx_array)
-			msg.msg_control = nvq->rxq[nvq->rdh++];
+			msg.msg_control = nvq->rxq[nvq->rh++];
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
 			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -871,8 +871,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
-		n->vqs[i].rdt = 0;
-		n->vqs[i].rdh = 0;
+		n->vqs[i].rt = 0;
+		n->vqs[i].rh = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
@@ -895,8 +895,8 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
 	sock = vq->private_data;
 	vhost_net_disable_vq(n, vq);
 	vq->private_data = NULL;
-	while (nvq->rdh != nvq->rdt)
-		kfree_skb(nvq->rxq[nvq->rdh++]);
+	while (nvq->rh != nvq->rt)
+		kfree_skb(nvq->rxq[nvq->rh++]);
 	mutex_unlock(&vq->mutex);
 	return sock;
 }
