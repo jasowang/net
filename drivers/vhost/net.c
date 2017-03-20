@@ -520,7 +520,7 @@ static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
 
 	rvq->rdh = rvq->rdt = 0;
 	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
-						  VHOST_RX_BATCH);
+						VHOST_RX_BATCH);
 	if (!rvq->rdt)
 		return 0;
 out:
