@@ -1,5 +1,5 @@
 Bottom: 7c79a16b2c71a73156b258237dab04e177109789
-Top:    7079bf2fd2ee20cb937df5d1ed91d7f84755f470
+Top:    97e3453fea328c4183f886c8a2f090b48c9dc150
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:53:59 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..52fc4d8 100644
+index 9b51989..bc41721 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -200,11 +200,10 @@ index 9b51989..52fc4d8 100644
  static struct socket *get_tap_socket(int fd)
  {
  	struct file *file = fget(fd);
-@@ -1029,6 +1080,8 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1029,6 +1080,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  
  		vhost_net_disable_vq(n, vq);
  		vq->private_data = sock;
-+		/* FIXME: only for RX virtqueue */
 +		nvq->rx_array = get_tap_skb_array(fd);
  		r = vhost_vq_init_access(vq);
  		if (r)
