@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    a1702e8e3d55901898ae87a3c9af39eecf7bf306
+Top:    3446ff8fa75c634d15e670c4a2a56cca4d7949a3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -79,7 +79,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..1dd31d4 100644
+index 9b51989..39a2d5a 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -230,7 +230,7 @@ index 9b51989..1dd31d4 100644
  	vhost_net_disable_vq(n, vq);
  	vq->private_data = NULL;
 +	while(nvq->rdh != nvq->rdt)
-+		kfree_skb(nvq->rxq[rdh++]);
++		kfree_skb(nvq->rxq[nvq->rdh++]);
  	mutex_unlock(&vq->mutex);
  	return sock;
  }
