@@ -28,6 +28,8 @@
 #include <linux/if_macvlan.h>
 #include <linux/if_tap.h>
 #include <linux/if_vlan.h>
+#include <linux/skb_array.h>
+#include <linux/skbuff.h>
 
 #include <net/sock.h>
 
@@ -85,6 +87,7 @@ struct vhost_net_ubuf_ref {
 	struct vhost_virtqueue *vq;
 };
 
+#define VHOST_RX_BATCH 64
 struct vhost_net_virtqueue {
 	struct vhost_virtqueue vq;
 	size_t vhost_hlen;
@@ -99,6 +102,10 @@ struct vhost_net_virtqueue {
 	/* Reference counting for outstanding ubufs.
 	 * Protected by vq mutex. Writers must also take device mutex. */
 	struct vhost_net_ubuf_ref *ubufs;
+	struct skb_array *rx_array;
+	void *rxq[VHOST_RX_BATCH];
+	int rdt;
+	int rdh;
 };
 
 struct vhost_net {
@@ -201,6 +208,8 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].rdt = 0;
+		n->vqs[i].rdh = 0;
 	}
 
 }
@@ -503,12 +512,29 @@ out:
 	mutex_unlock(&vq->mutex);
 }
 
-static int peek_head_len(struct sock *sk)
+static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
+{
+	if (rvq->rdh != rvq->rdt)
+		goto out;
+
+	rvq->rdh = rvq->rdt = 0;
+	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
+						VHOST_RX_BATCH);
+	if (!rvq->rdt)
+		return 0;
+out:
+	return __skb_array_len_with_tag(rvq->rxq[rvq->rdh]);
+}
+
+static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 	struct sk_buff *head;
 	int len = 0;
 	unsigned long flags;
+
+	if (rvq->rx_array)
+		return peek_head_len_batched(rvq);
 
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
@@ -525,9 +551,12 @@ static int peek_head_len(struct sock *sk)
 	return len;
 }
 
-static int sk_has_rx_data(struct sock *sk)
+static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
+
+	if (rvq->rx_array)
+		return !__skb_array_empty(rvq->rx_array);
 
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
@@ -535,12 +564,14 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+static int vhost_net_rx_peek_head_len(struct vhost_net *net,
+				      struct sock *sk)
 {
+	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
-	int len = peek_head_len(sk);
+	int len = peek_head_len(rvq, sk);
 
 	if (!len && vq->busyloop_timeout) {
 		/* Both tx vq and rx socket were polled here */
@@ -551,7 +582,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(sk) &&
+		       !sk_has_rx_data(rvq, sk) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
 
@@ -561,7 +592,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 			vhost_poll_queue(&vq->poll);
 		mutex_unlock(&vq->mutex);
 
-		len = peek_head_len(sk);
+		len = peek_head_len(rvq, sk);
 	}
 
 	return len;
@@ -699,6 +730,8 @@ static void handle_rx(struct vhost_net *net)
 		/* On error, stop handling until the next kick. */
 		if (unlikely(headcount < 0))
 			goto out;
+		if (nvq->rx_array)
+			msg.msg_control = nvq->rxq[nvq->rdh++];
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
 			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
@@ -841,6 +874,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
+		n->vqs[i].rdt = 0;
+		n->vqs[i].rdh = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
@@ -856,11 +891,15 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
 					struct vhost_virtqueue *vq)
 {
 	struct socket *sock;
+	struct vhost_net_virtqueue *nvq =
+		container_of(vq, struct vhost_net_virtqueue, vq);
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
 	vhost_net_disable_vq(n, vq);
 	vq->private_data = NULL;
+	while (nvq->rdh != nvq->rdt)
+		kfree_skb(nvq->rxq[nvq->rdh++]);
 	mutex_unlock(&vq->mutex);
 	return sock;
 }
@@ -953,6 +992,18 @@ err:
 	return ERR_PTR(r);
 }
 
+static struct skb_array *get_tap_skb_array(int fd)
+{
+	struct skb_array *array;
+	struct file *file = fget(fd);
+
+	if (!file)
+		return NULL;
+	array = tun_get_skb_array(file);
+	fput(file);
+	return array;
+}
+
 static struct socket *get_tap_socket(int fd)
 {
 	struct file *file = fget(fd);
@@ -1029,6 +1080,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 
 		vhost_net_disable_vq(n, vq);
 		vq->private_data = sock;
+		nvq->rx_array = get_tap_skb_array(fd);
 		r = vhost_vq_init_access(vq);
 		if (r)
 			goto err_used;
