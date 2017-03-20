@@ -103,7 +103,6 @@ struct vhost_net_virtqueue {
 	 * Protected by vq mutex. Writers must also take device mutex. */
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
-	/* FIXME: rename */
 	void *rxq[VHOST_RX_BATCH];
 	int rdt;
 	int rdh;
@@ -541,7 +540,6 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
-	/* FIXME: duplicated! */
 	head = skb_peek(&sk->sk_receive_queue);
 	if (likely(head)) {
 		len = head->len;
@@ -553,11 +551,13 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	return len;
 }
 
-static int sk_has_rx_data(struct sock *sk)
+static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
 
-	/* FIXME */
+	if (rvq->rx_array)
+		return !__skb_array_empty(rvq->rx_array);
+
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
 
@@ -582,7 +582,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net,
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(sk) &&
+		       !sk_has_rx_data(rvq, sk) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
 
