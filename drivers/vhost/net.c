@@ -898,7 +898,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
 	sock = vq->private_data;
 	vhost_net_disable_vq(n, vq);
 	vq->private_data = NULL;
-	while(nvq->rdh != nvq->rdt)
+	while (nvq->rdh != nvq->rdt)
 		kfree_skb(nvq->rxq[nvq->rdh++]);
 	mutex_unlock(&vq->mutex);
 	return sock;
