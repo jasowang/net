@@ -1,5 +1,5 @@
 Version: 1
-Previous: c43f9022b619921384e0db0f9432ef3bb3923b27
+Previous: df7ff936ba7189f95296c23721c3c4c171e0d3b5
 Head: fdde52ed345e6cad17b1b91b3ea8cf848f67d072
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
@@ -10,13 +10,6 @@ Applied:
   tap-support-receive-skb-from-0: 3bdc570adf36d4bb986c6f4d45d7466f97f3494a
   vhost_net-try-batch-dequing: fdde52ed345e6cad17b1b91b3ea8cf848f67d072
 Unapplied:
-  tap-export-skb_array: f5651a8222c1a49403da9a0646a677bbd32810af
-  tun: 96fe2977b91d4164e52f0348b5c22695865878cd
-  tap-support-receive-skb-from: 53b84805d94fda935392bb683927347e0f6f280d
-  vhost: a102004117e661cc819842576b23ea0a06a39122
-  tun-introduce: 621d36eacd2c2c969ab166ecd6244c93099f6fbc
-  vhost-introduce: 5f1484b2b50c705fa49c9e65eba3a9cd01f2e916
-  vhost_net-rx-batching: 8068292d2e561e8421e730bfabee88b06db0adb2
   vhost-avoid-peeking-socket: 5cd9745246b7a3f2748f9ffb8836dd5baccf1142
   vhost-partially-open-code: 5e64d310f7c19ce237798e4b819312ace648a576
   vhost-prefetch-desc-indices: c95afe72f8268556d212830bb8b42bb39a799d64
