@@ -1,5 +1,5 @@
-Bottom: 82174e40e35511dcf6da5d2abe51f60220851654
-Top:    7c79a16b2c71a73156b258237dab04e177109789
+Bottom: 8a59d6ecac2e9c12960ad27ed6f77d2a99376fe8
+Top:    3eb217f785f0b586b61c12be8f925de7c3854834
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 14:15:46 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tap.c b/drivers/net/tap.c
-index 9c0a7b3..bb5a783 100644
+index abdaf86..07d9174 100644
 --- a/drivers/net/tap.c
 +++ b/drivers/net/tap.c
 @@ -824,15 +824,17 @@ static ssize_t tap_put_user(struct tap_queue *q,
