@@ -1,0 +1,22 @@
+Bottom: b8ddd767b21ee6282685119124ccf1cac852e87b
+Top:    9feaf77e6b3d605352d7226bea2d6f19c694a078
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 13:36:22 +0800
+
+Refresh of vhost_net-rx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index a9a4603..a48edd4 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -520,7 +520,7 @@ static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
+ 
+ 	rvq->rdh = rvq->rdt = 0;
+ 	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
+-						  VHOST_RX_BATCH);
++						VHOST_RX_BATCH);
+ 	if (!rvq->rdt)
+ 		return 0;
+ out:
