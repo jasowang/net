@@ -29,7 +29,7 @@ static inline struct socket *tun_get_socket(struct file *f)
 {
 	return ERR_PTR(-EINVAL);
 }
-static inline struct socket *tun_get_skb_array(struct file *f)
+static inline struct skb_array *tun_get_skb_array(struct file *f)
 {
 	return ERR_PTR(-EINVAL);
 }
