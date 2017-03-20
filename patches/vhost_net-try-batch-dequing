@@ -1,5 +1,5 @@
 Bottom: 3eb217f785f0b586b61c12be8f925de7c3854834
-Top:    39dd55afc6b25284546e093ea14603986c084790
+Top:    49676af4878aeee1c7ee21695d88c65cfab69604
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:53:59 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..bc41721 100644
+index 9b51989..12cdc8c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -176,7 +176,7 @@ index 9b51989..bc41721 100644
  	sock = vq->private_data;
  	vhost_net_disable_vq(n, vq);
  	vq->private_data = NULL;
-+	while(nvq->rdh != nvq->rdt)
++	while (nvq->rdh != nvq->rdt)
 +		kfree_skb(nvq->rxq[nvq->rdh++]);
  	mutex_unlock(&vq->mutex);
  	return sock;
