@@ -314,7 +314,7 @@ static inline void *ptr_ring_consume_bh(struct ptr_ring *r)
 }
 
 static inline int ptr_ring_consume_batched(struct ptr_ring *r,
-                                           void **array, int n)
+					   void **array, int n)
 {
 	int ret;
 
@@ -326,7 +326,7 @@ static inline int ptr_ring_consume_batched(struct ptr_ring *r,
 }
 
 static inline int ptr_ring_consume_batched_irq(struct ptr_ring *r,
-                                               void **array, int n)
+					       void **array, int n)
 {
 	int ret;
 
@@ -351,7 +351,7 @@ static inline int ptr_ring_consume_batched_any(struct ptr_ring *r,
 }
 
 static inline int ptr_ring_consume_batched_bh(struct ptr_ring *r,
-                                              void **array, int n)
+					      void **array, int n)
 {
 	int ret;
 
