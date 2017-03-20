@@ -3,7 +3,7 @@
 
 #if IS_ENABLED(CONFIG_TAP)
 struct socket *tap_get_socket(struct file *);
-struct skb_array *tap_get_skb_array(struct file *);
+struct skb_array *tap_get_skb_array(struct file *file);
 #else
 #include <linux/err.h>
 #include <linux/errno.h>
