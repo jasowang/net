@@ -1,0 +1,22 @@
+Bottom: 39dd55afc6b25284546e093ea14603986c084790
+Top:    49676af4878aeee1c7ee21695d88c65cfab69604
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 19:45:29 +0800
+
+Refresh of vhost_net-try-batch-dequing
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index bc41721..12cdc8c 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -898,7 +898,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+ 	sock = vq->private_data;
+ 	vhost_net_disable_vq(n, vq);
+ 	vq->private_data = NULL;
+-	while(nvq->rdh != nvq->rdt)
++	while (nvq->rdh != nvq->rdt)
+ 		kfree_skb(nvq->rxq[nvq->rdh++]);
+ 	mutex_unlock(&vq->mutex);
+ 	return sock;
