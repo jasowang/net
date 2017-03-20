@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    d821b8b9e07237763026ec0d1927e961db0265ed
+Top:    a1702e8e3d55901898ae87a3c9af39eecf7bf306
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -79,7 +79,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..8fcd1d0 100644
+index 9b51989..1dd31d4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -218,15 +218,23 @@ index 9b51989..8fcd1d0 100644
  	}
  	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
  
-@@ -861,6 +896,7 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+@@ -856,11 +891,15 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+ 					struct vhost_virtqueue *vq)
+ {
+ 	struct socket *sock;
++	struct vhost_net_virtqueue *nvq =
++		container_of(vq, struct vhost_net_virtqueue, vq);
+ 
+ 	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
  	vhost_net_disable_vq(n, vq);
  	vq->private_data = NULL;
-+	/* FIXME clean rxq */
++	while(nvq->rdh != nvq->rdt)
++		kfree_skb(nvq->rxq[rdh++]);
  	mutex_unlock(&vq->mutex);
  	return sock;
  }
-@@ -953,6 +989,18 @@ static struct socket *get_raw_socket(int fd)
+@@ -953,6 +992,18 @@ static struct socket *get_raw_socket(int fd)
  	return ERR_PTR(r);
  }
  
@@ -245,7 +253,7 @@ index 9b51989..8fcd1d0 100644
  static struct socket *get_tap_socket(int fd)
  {
  	struct file *file = fget(fd);
-@@ -1029,6 +1077,8 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1029,6 +1080,8 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  
  		vhost_net_disable_vq(n, vq);
  		vq->private_data = sock;
