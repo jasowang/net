@@ -1,0 +1,26 @@
+Bottom: dc5e110420525e740e2c093edc5d181730b88858
+Top:    ae6277cc0ec1c676a1e4edcfefeb886293994282
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 20:03:06 +0800
+
+Refresh of vhost_net-use-lockless-peeking
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 3718fd7..d14f2b3 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -556,10 +556,10 @@ static int sk_has_rx_data(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 	struct socket *sock = sk->sk_socket;
+ 
+ 	if (rvq->rx_array)
+-               return !__skb_array_empty(rvq->rx_array);
++		return !__skb_array_empty(rvq->rx_array);
+ 
+ 	if (sock->ops->peek_len)
+-               return sock->ops->peek_len(sock);
++		return sock->ops->peek_len(sock);
+ 
+ 	return skb_queue_empty(&sk->sk_receive_queue);
+ }
