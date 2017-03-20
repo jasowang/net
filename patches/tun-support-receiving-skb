@@ -1,5 +1,5 @@
-Bottom: f9f283275675a336322db1ddda9ff87d210540e8
-Top:    82174e40e35511dcf6da5d2abe51f60220851654
+Bottom: b15f15f64074279c567f51d2ad756d7229f5c010
+Top:    8a59d6ecac2e9c12960ad27ed6f77d2a99376fe8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:48:55 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2abf8e7..deecc6f 100644
+index 70dd9ec..a82bced 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1498,9 +1498,8 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
