@@ -1,0 +1,21 @@
+Bottom: 59b817c22c9c3aa2e5a3b51384da89b03c9a9756
+Top:    32bfaf7dd3ec1ab6f66f8d7a51e8e571b5db2027
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-20 19:43:53 +0800
+
+Refresh of tap-export-skb_array-0
+
+---
+
+diff --git a/drivers/net/tap.c b/drivers/net/tap.c
+index 9c0a7b3..abdaf86 100644
+--- a/drivers/net/tap.c
++++ b/drivers/net/tap.c
+@@ -1196,6 +1196,7 @@ EXPORT_SYMBOL_GPL(tap_get_socket);
+ struct skb_array *tap_get_skb_array(struct file *file)
+ {
+ 	struct tap_queue *q;
++
+ 	if (file->f_op != &tap_fops)
+ 		return ERR_PTR(-EINVAL);
+ 	q = file->private_data;
