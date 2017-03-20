@@ -1,5 +1,5 @@
 Bottom: ae0ed45e74862845e37d11f5992229fd8357365f
-Top:    b8ddd767b21ee6282685119124ccf1cac852e87b
+Top:    9feaf77e6b3d605352d7226bea2d6f19c694a078
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 20:09:27 +0800
 
@@ -79,7 +79,7 @@ index f483d4b..1f1624f 100644
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..a9a4603 100644
+index 9b51989..a48edd4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -132,7 +132,7 @@ index 9b51989..a9a4603 100644
 +
 +	rvq->rdh = rvq->rdt = 0;
 +	rvq->rdt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
-+						  VHOST_RX_BATCH);
++						VHOST_RX_BATCH);
 +	if (!rvq->rdt)
 +		return 0;
 +out:
