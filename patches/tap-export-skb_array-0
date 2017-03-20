@@ -1,5 +1,5 @@
 Bottom: 8a8bc44c8b4a62fb4372b3350a8641c4ff411d1f
-Top:    59b817c22c9c3aa2e5a3b51384da89b03c9a9756
+Top:    32bfaf7dd3ec1ab6f66f8d7a51e8e571b5db2027
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 14:08:09 +0800
 
@@ -14,16 +14,17 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tap.c b/drivers/net/tap.c
-index 4d4173d..9c0a7b3 100644
+index 4d4173d..abdaf86 100644
 --- a/drivers/net/tap.c
 +++ b/drivers/net/tap.c
-@@ -1193,6 +1193,18 @@ struct socket *tap_get_socket(struct file *file)
+@@ -1193,6 +1193,19 @@ struct socket *tap_get_socket(struct file *file)
  }
  EXPORT_SYMBOL_GPL(tap_get_socket);
  
 +struct skb_array *tap_get_skb_array(struct file *file)
 +{
 +	struct tap_queue *q;
++
 +	if (file->f_op != &tap_fops)
 +		return ERR_PTR(-EINVAL);
 +	q = file->private_data;
