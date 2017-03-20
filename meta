@@ -1,14 +1,14 @@
 Version: 1
-Previous: 86c8ad216a09cb350c81e4213800042b2c19ffb9
-Head: 925f0d04893bd5737964bd35becd45e13c930780
+Previous: 27256a4d35628bbed8ac082aa9a3154c781f399f
+Head: 2a8dd5f47e03148e005ebb467b59fe5d61831166
 Applied:
   ptr_ring-introduce-batch: 00ccd72debbace8c00df12520d924604b91a2be7
   skb_array-introduce-batch-0: c68a47cc8e5e21a7be7bfbaed46ca1cc223b2e68
   tun-introduce-0: e197c568d41298d26e021d13ed6eb4b2f88b3959
   tap-export-skb_array: 20537644a661b3c84af8f3fbd252e7b6ecf6e04a
   tun: 2a8dd5f47e03148e005ebb467b59fe5d61831166
-  vhost: 925f0d04893bd5737964bd35becd45e13c930780
 Unapplied:
+  vhost: 925f0d04893bd5737964bd35becd45e13c930780
   tun-introduce: 621d36eacd2c2c969ab166ecd6244c93099f6fbc
   vhost-introduce: 5f1484b2b50c705fa49c9e65eba3a9cd01f2e916
   vhost_net-rx-batching: 8068292d2e561e8421e730bfabee88b06db0adb2
