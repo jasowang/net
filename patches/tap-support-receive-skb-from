@@ -3,7 +3,7 @@ Top:    3eb217f785f0b586b61c12be8f925de7c3854834
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 14:15:46 +0800
 
-tap: support receive skb from msg_control
+tap: support receiving skb from msg_control
 
 This patch makes tap_recvmsg() can receive from skb from its caller
 through msg_control. Vhost_net will be the first user.
