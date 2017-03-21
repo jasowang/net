@@ -1,6 +1,6 @@
 Version: 1
-Previous: 0241e3fed89f635eaf6f99b08627ba61cbdedba0
-Head: 60779effd7258878dda74c8b7e4979406c8c8789
+Previous: 6630c85ccb21900730503b8b9390d2214e8c4e35
+Head: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
@@ -9,6 +9,6 @@ Applied:
   tun-support-receiving-skb: d5001e4b8a97a9a69809af58c196783261989edc
   tap-support-receive-skb-from: 41dfa6111596a5eba01b60aad09d58f59c1b3741
   vhost_net-try-batch-dequing: 60779effd7258878dda74c8b7e4979406c8c8789
-Unapplied:
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
+Unapplied:
 Hidden:
