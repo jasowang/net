@@ -1,14 +1,14 @@
 Version: 1
-Previous: 6a3ebc49466fa375be5ed0c6685ad11869660421
-Head: 55d22d955f211361bfee86440802c55492ec91ab
+Previous: 92deb8a80f58c15d535c8b9ce218ee5d20ef8614
+Head: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
 Applied:
-  ptr_ring-introduce-batch: 6b129625eeeac99ac11c506aab7a840aa093e7a4
-  skb_array-introduce-batch: c754569bf964fc011e2d55f24d1af64789d85139
-  tun-export-skb_array: dbe9d963dddb130bffb267055eaa382c59933f85
-  tap-export-skb_array: 975672aba104820569db42a6de4cede0db8d37c3
-  tun-support-receiving-skb: 1e6a839d56fae8c4480fd0295b89dacb02eebabc
-  tap-support-receive-skb-from: 3a4af8ad80104c26847471b7a3e2d75cba78daec
-  vhost_net-try-batch-dequing: ee5dc8e559cd8c048b5cab2bc0b96ed70c2ea1d2
-  vhost_net-use-lockless-peeking: 55d22d955f211361bfee86440802c55492ec91ab
+  ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
+  skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
+  tun-export-skb_array: af63e928b1d9d45c95cc7cce802c81988abb82f6
+  tap-export-skb_array: b5fa2a69531caede19a8e5b0358f37f9380ec41b
+  tun-support-receiving-skb: d5001e4b8a97a9a69809af58c196783261989edc
+  tap-support-receive-skb-from: 41dfa6111596a5eba01b60aad09d58f59c1b3741
+  vhost_net-try-batch-dequing: 60779effd7258878dda74c8b7e4979406c8c8789
+  vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
 Unapplied:
 Hidden:
