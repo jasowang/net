@@ -539,7 +539,7 @@ static int sk_has_rx_data(struct sock *sk)
 static bool sk_rx_array_has_data(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+	struct skb_array *skb_array = tun_get_skb_array(sock->file);
 
 	if (skb_array)
 		return !__skb_array_empty(skb_array);
@@ -550,7 +550,7 @@ static bool sk_rx_array_has_data(struct sock *sk)
 static int sk_rx_array_length(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+	struct skb_array *skb_array = tun_get_skb_array(sock->file);
 
 	if (skb_array)
 		return skb_array_peek_queue_len(skb_array);
@@ -755,6 +755,7 @@ static void handle_rx(struct vhost_net *net)
 				vhost_len = vq->heads[0].len =
 					cpu_to_vhost32(vq,
 						iov_length(vq->iov, in));
+				printk("len is %d\n", vq->heads[0].len);
 				sock_len = vhost_len - vhost_hlen;
 				headcount = 1;
 				cur++;
@@ -829,6 +830,7 @@ enable_notify:
 			vhost_discard_vq_desc(vq, headcount);
 			goto out;
 		}
+		printk("add %d\n", vq->heads[0].len);
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    headcount);
 		if (unlikely(vq_log))
