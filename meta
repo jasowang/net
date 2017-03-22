@@ -1,6 +1,6 @@
 Version: 1
-Previous: 76a4657a5d34f67fdbfed70cdb85b0ec00b66354
-Head: 967f5a0b441a291cb52655eeb29ec0b8f12ba91a
+Previous: fdaa11436257fafc9610955dacbe701a59844e7c
+Head: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
@@ -10,7 +10,7 @@ Applied:
   tap-support-receive-skb-from: 41dfa6111596a5eba01b60aad09d58f59c1b3741
   vhost_net-try-batch-dequing: 60779effd7258878dda74c8b7e4979406c8c8789
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
-  vhost_net-prefetch-desc: 967f5a0b441a291cb52655eeb29ec0b8f12ba91a
 Unapplied:
+  vhost_net-prefetch-desc: 967f5a0b441a291cb52655eeb29ec0b8f12ba91a
   packet-allow-vnet-header-to-be: c297b5c545c72e4ba9f4578d293c6dc8a9e31266
 Hidden:
