@@ -5,6 +5,8 @@ Date:   2017-03-22 13:21:46 +0800
 
 vhost_net: prefetch desc indices and used ring batched updating
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
