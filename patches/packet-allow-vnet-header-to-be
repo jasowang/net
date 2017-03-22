@@ -1,0 +1,25 @@
+Bottom: 148c5ed3a5a3e04b556ca70b074c29470aa7d9e9
+Top:    6e19c5b5eea08341b35ea7d1e91ec6024c95cb97
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-21 21:51:27 +0800
+
+packet: allow vnet header to be changed on the fly
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index a0dbe7c..a25a474 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -3711,8 +3711,6 @@ packet_setsockopt(struct socket *sock, int level, int optname, char __user *optv
+ 
+ 		if (sock->type != SOCK_RAW)
+ 			return -EINVAL;
+-		if (po->rx_ring.pg_vec || po->tx_ring.pg_vec)
+-			return -EBUSY;
+ 		if (optlen < sizeof(val))
+ 			return -EINVAL;
+ 		if (copy_from_user(&val, optval, sizeof(val)))
