@@ -675,6 +675,37 @@ err:
 	return r;
 }
 
+static void handle_rx_batched(struct vhost_net *net)
+{
+	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_virtqueue *vq = &nvq->vq;
+	__virtio16 indices[VHOST_RX_BATCHED];
+	int sock_len, i;
+	int avails, head;
+
+	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+retry:
+		avails = vhost_prefetch_desc_indices(vq, indices,
+						     nvq->rt - nvq->rh);
+		if (!avail) {
+			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+				/* They have slipped one in as we were
+				 * doing that: check again. */
+				vhost_disable_notify(&net->dev, vq);
+				goto retry;
+			}
+			goto out;
+		}
+		for (i = 0; i < avails; i++) {
+			int len =__skb_array_len_with_tag(rvq->rxq[rvq->rh + i]);
+			vhost_add_used_elem(vq, indices[i],
+					    cpu_to_vhost32(vq, len), i);
+		}
+		while (nvq->rh != nvq->rt) {
+			
+	}
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_rx(struct vhost_net *net)
