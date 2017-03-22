@@ -672,6 +672,124 @@ err:
 	return r;
 }
 
+static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
+		      struct sk_buff *skb, size_t sock_len,
+		      struct vhost_log *vq_log, int log,
+		      size_t vhost_hlen, size_t sock_hlen)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	size_t vhost_len;
+	struct socket *sock = vq->private_data;
+	struct msghdr msg = {
+		.msg_name = NULL,
+		.msg_namelen = 0,
+		.msg_control = skb,
+		.msg_controllen = 0,
+		.msg_flags = MSG_DONTWAIT,
+	};
+	struct virtio_net_hdr hdr = {
+		.flags = 0,
+		.gso_type = VIRTIO_NET_HDR_GSO_NONE
+	};
+	struct iov_iter fixup;
+	int err;
+
+	sock_len += sock_hlen;
+	vhost_len = sock_len + vhost_hlen;
+
+	/* We don't need to be notified again. */
+	iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
+	fixup = msg.msg_iter;
+	if (unlikely((vhost_hlen))) {
+		/* We will supply the header ourselves
+		 * TODO: support TSO.
+		 */
+		iov_iter_advance(&msg.msg_iter, vhost_hlen);
+	}
+	err = sock->ops->recvmsg(sock, &msg,
+				 sock_len, MSG_DONTWAIT | MSG_TRUNC);
+	/* Userspace might have consumed the packet meanwhile:
+	 * it's not supposed to do this usually, but might be hard
+	 * to prevent. Discard data we got (if any) and keep going. */
+	if (unlikely(err != sock_len)) {
+		pr_debug("Discarded rx packet: "
+			" len %d, expected %zd\n", err, sock_len);
+		vhost_discard_vq_desc(vq, 1);
+		return -E2BIG;
+	}
+	/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
+	if (unlikely(vhost_hlen)) {
+		if (copy_to_iter(&hdr, sizeof(hdr),
+					&fixup) != sizeof(hdr)) {
+			vq_err(vq, "Unable to write vnet_hdr "
+				"at addr %p\n", vq->iov->iov_base);
+			return -EFAULT;
+		}
+	} else {
+		/* Header came from socket; we'll need to patch
+		 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
+		 */
+		iov_iter_advance(&fixup, sizeof(hdr));
+	}
+	/* TODO: Should check and handle checksum. */
+
+	if (unlikely(vq_log))
+		vhost_log_write(vq, vq_log, log, vhost_len);
+
+	return 0;
+}
+
+static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+{
+	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct socket *sock = vq->private_data;
+	unsigned int out, in, log = 0;
+	__virtio16 indices[VHOST_RX_BATCH];
+	size_t vhost_hlen = nvq->vhost_hlen;
+	size_t sock_hlen = nvq->sock_hlen;
+	int lens[VHOST_RX_BATCH];
+	int sock_len, i;
+	int avails, head;
+
+	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+		avails = vhost_prefetch_desc_indices(vq, indices,
+						     nvq->rt - nvq->rh);
+		if (!avails) {
+			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+				/* They have slipped one in as we were
+				 * doing that: check again. */
+				vhost_disable_notify(&net->dev, vq);
+				continue;
+			}
+			return;
+		}
+		for (i = 0; i < avails; i++) {
+			lens[i] = __skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
+			vhost_add_used_elem(vq, indices[i],
+					    cpu_to_vhost32(vq, lens[i]
+					    + vhost_hlen + sock_hlen), i);
+		}
+		for (i = 0; i < avails; i++) {
+			head = vhost_get_vq_desc2(vq, vq->iov,
+						  ARRAY_SIZE(vq->iov),
+						  &out, &in, vq_log,
+						  &log, indices[i]);
+			if (unlikely(head < 0 || head == vq->num))
+				return;
+			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
+				       lens[i], vq_log, log,
+				       vhost_hlen, sock_hlen))
+				return;
+
+			vhost_update_used_idx(vq, 1);
+			/* FIXME: batched signal */
+			vhost_signal(&net->dev, vq);
+			/* FIXME: count bytes */
+		}
+	}
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_rx(struct vhost_net *net)
@@ -717,6 +835,12 @@ static void handle_rx(struct vhost_net *net)
 	vq_log = unlikely(vhost_has_feature(vq, VHOST_F_LOG_ALL)) ?
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+
+	if (!mergeable) {
+		handle_rx_batched(net, vq_log);
+		vhost_net_enable_vq(net, vq);
+		goto out;
+	}
 
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		sock_len += sock_hlen;
