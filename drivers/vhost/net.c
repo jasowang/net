@@ -750,6 +750,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 	struct socket *sock = vq->private_data;
 	unsigned int out, in, log = 0;
 	__virtio16 indices[VHOST_RX_BATCH];
+	int lens[VHOST_RX_BATCH];
 	int sock_len, i;
 	int avails, head;
 
@@ -766,10 +767,9 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 			return;
 		}
 		for (i = 0; i < avails; i++) {
-			int len =
-				__skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
+			lens[i] = __skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
 			vhost_add_used_elem(vq, indices[i],
-					    cpu_to_vhost32(vq, len), i);
+					    cpu_to_vhost32(vq, lens[i]), i);
 		}
 		for (i = 0; i < avails; i++) {
 			if (nvq->rh == nvq->rt) {
@@ -784,7 +784,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 				return;
 			}
 			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
-				       sock_len, vq_log, log)) {
+				       lens[i], vq_log, log)) {
 				printk("recvmsg error!\n");
 				return;
 			}
