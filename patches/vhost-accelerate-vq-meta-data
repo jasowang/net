@@ -1,0 +1,11 @@
+Bottom: 1d2b3d29435a4e2483ed8bed898918b7b1364b9f
+Top:    1d2b3d29435a4e2483ed8bed898918b7b1364b9f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-22 20:07:06 +0800
+
+vhost: accelerate vq meta data access through vmap
+
+
+---
+
+
