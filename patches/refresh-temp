@@ -1,0 +1,22 @@
+Bottom: af54edf7ca98c985b077fd762d5d03a78e95bbbd
+Top:    134e72593483ee8f0d72deeae6e09127b5cec8a6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-22 16:57:30 +0800
+
+Refresh of vhost_net-prefetch-desc
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index d295367..fcefa84 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -779,7 +779,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ 						  ARRAY_SIZE(vq->iov),
+ 						  &out, &in, vq_log,
+ 						  &log, indices[i]);
+-			if (unlikely(head <= 0 || head == vq->num)) {
++			if (unlikely(head < 0 || head == vq->num)) {
+ 				printk("head error!\n");
+ 				return;
+ 			}
