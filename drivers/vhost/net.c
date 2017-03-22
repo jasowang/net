@@ -755,6 +755,7 @@ static void handle_rx(struct vhost_net *net)
 				vhost_len = vq->heads[0].len =
 					cpu_to_vhost32(vq,
 						iov_length(vq->iov, in));
+				printk("len is %d\n", vq->heads[0].len);
 				sock_len = vhost_len - vhost_hlen;
 				headcount = 1;
 				cur++;
@@ -829,6 +830,7 @@ enable_notify:
 			vhost_discard_vq_desc(vq, headcount);
 			goto out;
 		}
+		printk("add %d\n", vq->heads[0].len);
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    headcount);
 		if (unlikely(vq_log))
