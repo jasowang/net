@@ -1994,6 +1994,44 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
+/* Prefetch descriptor indices */
+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+				struct vring_used_elem_heads *heads, u16 num)
+{
+	int ret = 0;
+	u16 last_avail_idx, total;
+	__virtio16 avail_idx;
+
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	last_avail_idx = vq->last_avail_idx;
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
+
+	while (total) {
+		int ret2 = vhost_get_avail(vq, avail_idx,
+			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+		--total;
+		heads[indices++].id = vhost16_to_cpu(vq, avail_idx);
+		++last_avail_idx;
+	}
+	/* FIXME: update used ring here? together with batch dequing? */
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
+
+	return ret;
+}
+EXPORT_SYMBOL(vhost_prefetch_desc_indices);
+
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two
