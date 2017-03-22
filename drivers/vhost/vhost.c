@@ -2135,6 +2135,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 }
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 
+int vhost_get_vq_desc2(struct vhost_virtqueue *vq,
+		       struct iovec iov[], unsigned int iov_size,
+		       unsigned int *out_num, unsigned int *in_num,
+		       struct vhost_log *log, unsigned int *log_num,
+		       __virtio16 ring_head)
+{
+	struct vring_desc desc;
+	unsigned int i, head, found = 0;
+	int ret, access;
+
+	head = vhost16_to_cpu(vq, ring_head);
+
+	/* If their number is silly, that's an error. */
+	if (unlikely(head >= vq->num)) {
+		vq_err(vq, "Guest says index %u > %u is available",
+		       head, vq->num);
+		return -EINVAL;
+	}
+
+	/* When we start there are none of either input nor output. */
+	*out_num = *in_num = 0;
+	if (unlikely(log))
+		*log_num = 0;
+
+	i = head;
+	do {
+		unsigned iov_count = *in_num + *out_num;
+		if (unlikely(i >= vq->num)) {
+			vq_err(vq, "Desc index is %u > %u, head = %u",
+			       i, vq->num, head);
+			return -EINVAL;
+		}
+		if (unlikely(++found > vq->num)) {
+			vq_err(vq, "Loop detected: last one at %u "
+			       "vq size %u head %u\n",
+			       i, vq->num, head);
+			return -EINVAL;
+		}
+		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
+					   sizeof desc);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+			       i, vq->desc + i);
+			return -EFAULT;
+		}
+		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+			ret = get_indirect(vq, iov, iov_size,
+					   out_num, in_num,
+					   log, log_num, &desc);
+			if (unlikely(ret < 0)) {
+				if (ret != -EAGAIN)
+					vq_err(vq, "Failure detected "
+						"in indirect descriptor at idx %d\n", i);
+				return ret;
+			}
+			continue;
+		}
+
+		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+			access = VHOST_ACCESS_WO;
+		else
+			access = VHOST_ACCESS_RO;
+		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
+				     iov_size - iov_count, access);
+		if (unlikely(ret < 0)) {
+			if (ret != -EAGAIN)
+				vq_err(vq, "Translation failure %d descriptor idx %d\n",
+					ret, i);
+			return ret;
+		}
+		if (access == VHOST_ACCESS_WO) {
+			/* If this is an input descriptor,
+			 * increment that count. */
+			*in_num += ret;
+			if (unlikely(log)) {
+				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
+				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
+				++*log_num;
+			}
+		} else {
+			/* If it's an output descriptor, they're all supposed
+			 * to come before any input descriptors. */
+			if (unlikely(*in_num)) {
+				vq_err(vq, "Descriptor has out after in: "
+				       "idx %d\n", i);
+				return -EINVAL;
+			}
+			*out_num += ret;
+		}
+	} while ((i = next_desc(vq, &desc)) != -1);
+
+	/* On success, increment avail index. */
+	vq->last_avail_idx++;
+
+	/* Assume notifications from guest are disabled at this point,
+	 * if they aren't we would need to update avail_event index. */
+	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
+	return head;
+}
+EXPORT_SYMBOL_GPL(vhost_get_vq_desc2);
+
 /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
 void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
 {
@@ -2154,6 +2256,69 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
 	return vhost_add_used_n(vq, &heads, 1);
 }
 EXPORT_SYMBOL_GPL(vhost_add_used);
+
+int vhost_add_used_elem(struct vhost_virtqueue *vq,
+			unsigned int head, int len, int offset)
+{
+	struct vring_used_elem __user *used;
+
+	int start = (vq->last_used_idx + offset) & (vq->num - 1);
+	used = vq->used->ring + start;
+
+	if (vhost_put_user(vq, head, &used->id)) {
+		vq_err(vq, "Failed to write used id");
+		return -EFAULT;
+	}
+	if (vhost_put_user(vq, len, &used->len)) {
+		vq_err(vq, "Failed to write used len");
+		return -EFAULT;
+	}
+
+	if (unlikely(vq->log_used)) {
+		/* Make sure data is seen before log. */
+		smp_wmb();
+		/* Log used ring entry write. */
+		log_write(vq->log_base,
+			  vq->log_addr +
+			   ((void __user *)used - (void __user *)vq->used),
+			    sizeof *used);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vhost_add_used_elem);
+
+int vhost_update_used_idx(struct vhost_virtqueue *vq, int n)
+{
+	u16 old, new;
+
+	old = vq->last_used_idx;
+	new = (vq->last_used_idx += n);
+	/* If the driver never bothers to signal in a very long while,
+	 * used index might wrap around. If that happens, invalidate
+	 * signalled_used index we stored. TODO: make sure driver
+	 * signals at least once in 2^16 and remove this. */
+	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
+		vq->signalled_used_valid = false;
+
+	/* Make sure buffer is written before we update index. */
+	smp_wmb();
+	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->last_used_idx),
+			   &vq->used->idx)) {
+		vq_err(vq, "Failed to increment used idx");
+		return -EFAULT;
+	}
+	if (unlikely(vq->log_used)) {
+		/* Log used index update. */
+		log_write(vq->log_base,
+			  vq->log_addr + offsetof(struct vring_used, idx),
+			  sizeof vq->used->idx);
+		if (vq->log_ctx)
+			eventfd_signal(vq->log_ctx, 1);
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vhost_update_used_idx);
 
 static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 			    struct vring_used_elem *heads,
