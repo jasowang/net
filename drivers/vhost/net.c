@@ -779,7 +779,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 						  ARRAY_SIZE(vq->iov),
 						  &out, &in, vq_log,
 						  &log, indices[i]);
-			if (unlikely(head <= 0 || head == vq->num)) {
+			if (unlikely(head < 0 || head == vq->num)) {
 				printk("head error!\n");
 				return;
 			}
