@@ -675,6 +675,17 @@ err:
 	return r;
 }
 
+static void handle_rx_batched(struct vhost_net_virtqueue *nvq)
+{
+	int sock_len;
+	int nskbs;
+
+	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+		nskbs = nvq->rt - nvq->rh;
+
+	}
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_rx(struct vhost_net *net)
