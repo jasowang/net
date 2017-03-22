@@ -190,10 +190,17 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp);
 int vhost_vq_access_ok(struct vhost_virtqueue *vq);
 int vhost_log_access_ok(struct vhost_dev *);
 
+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+				__virtio16 *indices, u16 num);
 int vhost_get_vq_desc(struct vhost_virtqueue *,
 		      struct iovec iov[], unsigned int iov_count,
 		      unsigned int *out_num, unsigned int *in_num,
 		      struct vhost_log *log, unsigned int *log_num);
+int vhost_get_vq_desc2(struct vhost_virtqueue *,
+		       struct iovec iov[], unsigned int iov_count,
+		       unsigned int *out_num, unsigned int *in_num,
+		       struct vhost_log *log, unsigned int *log_num,
+		       __virtio16 ring_head);
 void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
 
 int vhost_vq_init_access(struct vhost_virtqueue *);
