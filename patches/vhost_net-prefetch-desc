@@ -1,5 +1,5 @@
 Bottom: 60118fbbfad29941d05206d894a46488261b3390
-Top:    965ec68027ba3c2475dae33074b57ac738a8d80e
+Top:    3af28bfdb4841edb0610eea99f399cf8f0001071
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-22 13:21:46 +0800
 
@@ -11,21 +11,22 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 41153a3..836800a 100644
+index 41153a3..3a15db6 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -675,6 +675,119 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+@@ -675,6 +675,124 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
  	return r;
  }
  
 +static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
-+		      struct sk_buff *skb)
++		      struct sk_buff *skb, size_t sock_len,
++		      struct vhost_log *vq_log, int log)
 +{
 +	struct vhost_virtqueue *vq = &nvq->vq;
 +	size_t vhost_hlen = nvq->vhost_hlen;
 +	size_t sock_hlen = nvq->sock_hlen;
++	size_t vhost_len;
 +	struct socket *sock = vq->private_data;
-+	struct vhost_log *vq_log;
 +	struct msghdr msg = {
 +		.msg_name = NULL,
 +		.msg_namelen = 0,
@@ -33,8 +34,15 @@ index 41153a3..836800a 100644
 +		.msg_controllen = 0,
 +		.msg_flags = MSG_DONTWAIT,
 +	};
++	struct virtio_net_hdr hdr = {
++		.flags = 0,
++		.gso_type = VIRTIO_NET_HDR_GSO_NONE
++	};
 +	struct iov_iter fixup;
-+	__virtio16 num_buffers;
++	int err;
++
++	sock_len += sock_hlen;
++	vhost_len = sock_len + vhost_hlen;
 +
 +	/* We don't need to be notified again. */
 +	iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
@@ -54,7 +62,7 @@ index 41153a3..836800a 100644
 +		pr_debug("Discarded rx packet: "
 +			" len %d, expected %zd\n", err, sock_len);
 +		vhost_discard_vq_desc(vq, 1);
-+		return -E2BIG
++		return -E2BIG;
 +	}
 +	/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
 +	if (unlikely(vhost_hlen)) {
@@ -72,29 +80,26 @@ index 41153a3..836800a 100644
 +	}
 +	/* TODO: Should check and handle checksum. */
 +
-+	num_buffers = cpu_to_vhost16(vq, headcount);
-+	if (likely(mergeable) &&
-+		copy_to_iter(&num_buffers, sizeof num_buffers,
-+			     &fixup) != sizeof num_buffers) {
-+		vq_err(vq, "Failed num_buffers write");
-+		vhost_discard_vq_desc(vq, headcount);
-+		return -EFAULT;
-+	}
++	if (unlikely(vq_log))
++		vhost_log_write(vq, vq_log, log, vhost_len);
++
++	return 0;
 +}
 +
 +static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 +{
 +	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
 +	struct vhost_virtqueue *vq = &nvq->vq;
-+	unsigned int out, int, log = 0;
-+	__virtio16 indices[VHOST_RX_BATCHED];
++	struct socket *sock = vq->private_data;
++	unsigned int out, in, log = 0;
++	__virtio16 indices[VHOST_RX_BATCH];
 +	int sock_len, i;
 +	int avails, head;
 +
 +	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 +		avails = vhost_prefetch_desc_indices(vq, indices,
 +						     nvq->rt - nvq->rh);
-+		if (!avail) {
++		if (!avails) {
 +			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 +				/* They have slipped one in as we were
 +				 * doing that: check again. */
@@ -104,11 +109,12 @@ index 41153a3..836800a 100644
 +			return;
 +		}
 +		for (i = 0; i < avails; i++) {
-+			int len =__skb_array_len_with_tag(rvq->rxq[rvq->rh + i]);
++			int len =
++				__skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
 +			vhost_add_used_elem(vq, indices[i],
 +					    cpu_to_vhost32(vq, len), i);
 +		}
-+		for (i = 0; i < avail; i++) {
++		for (i = 0; i < avails; i++) {
 +			if (nvq->rh == nvq->rt) {
 +				printk("wrong!\n");
 +			}
@@ -118,15 +124,14 @@ index 41153a3..836800a 100644
 +						  &log, indices[i]);
 +			if (unlikely(head <= 0 || head == vq->num))
 +				return;
-+			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++]))
++			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
++				       sock_len, vq_log, log))
 +				return;
 +
 +			vhost_update_used_idx(vq, 1);
 +			vhost_signal(&net->dev, vq);
 +
 +			/* FIXME: count bytes */
-+			if (unlikely(vq_log))
-+				vhost_log_write(vq, vq_log, log, vhost_len);
 +		}
 +	}
 +}
@@ -134,7 +139,7 @@ index 41153a3..836800a 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_rx(struct vhost_net *net)
-@@ -721,6 +834,12 @@ static void handle_rx(struct vhost_net *net)
+@@ -721,6 +839,12 @@ static void handle_rx(struct vhost_net *net)
  		vq->log : NULL;
  	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
  
@@ -306,10 +311,16 @@ index 47b7af0..796de05 100644
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 0876116..e0b4f66 100644
+index 0876116..503e034 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -194,6 +194,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+@@ -190,10 +190,17 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp);
+ int vhost_vq_access_ok(struct vhost_virtqueue *vq);
+ int vhost_log_access_ok(struct vhost_dev *);
+ 
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, u16 num);
+ int vhost_get_vq_desc(struct vhost_virtqueue *,
  		      struct iovec iov[], unsigned int iov_count,
  		      unsigned int *out_num, unsigned int *in_num,
  		      struct vhost_log *log, unsigned int *log_num);
