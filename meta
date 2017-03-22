@@ -1,6 +1,6 @@
 Version: 1
-Previous: 181acdf68f5fae923078540cd02e16357e8d422b
-Head: c06ca8ea67ce5406162609bc72b574ef8f680479
+Previous: b67226c00fbd1fa8982fda3e2d20ac68410625f9
+Head: 0571ba8b22cd0fcbfba378c19b3d7d49f8ce6e3d
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
@@ -11,8 +11,7 @@ Applied:
   vhost_net-try-batch-dequing: 60779effd7258878dda74c8b7e4979406c8c8789
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
   vhost-introduce-used-ring: 324df1eba7ff45492ccea6ba5a6f7fcc2016f699
-  vhost_net-prefetch-desc: e2ed7220a436d0638f9743ec0163a8371ff6deb1
-  refresh-temp: c06ca8ea67ce5406162609bc72b574ef8f680479
+  vhost_net-prefetch-desc: 0571ba8b22cd0fcbfba378c19b3d7d49f8ce6e3d
 Unapplied:
   packet-allow-vnet-header-to-be: c297b5c545c72e4ba9f4578d293c6dc8a9e31266
 Hidden:
