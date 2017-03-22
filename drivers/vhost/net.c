@@ -676,13 +676,14 @@ err:
 }
 
 static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
-		      struct sk_buff *skb)
+		      struct sk_buff *skb, size_t sock_len,
+		      struct vhost_log *vq_log, int log)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
 	size_t vhost_hlen = nvq->vhost_hlen;
 	size_t sock_hlen = nvq->sock_hlen;
+	size_t vhost_len;
 	struct socket *sock = vq->private_data;
-	struct vhost_log *vq_log;
 	struct msghdr msg = {
 		.msg_name = NULL,
 		.msg_namelen = 0,
@@ -690,8 +691,15 @@ static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
 		.msg_controllen = 0,
 		.msg_flags = MSG_DONTWAIT,
 	};
+	struct virtio_net_hdr hdr = {
+		.flags = 0,
+		.gso_type = VIRTIO_NET_HDR_GSO_NONE
+	};
 	struct iov_iter fixup;
-	__virtio16 num_buffers;
+	int err;
+
+	sock_len += sock_hlen;
+	vhost_len = sock_len + vhost_hlen;
 
 	/* We don't need to be notified again. */
 	iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
@@ -711,7 +719,7 @@ static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
 		pr_debug("Discarded rx packet: "
 			" len %d, expected %zd\n", err, sock_len);
 		vhost_discard_vq_desc(vq, 1);
-		return -E2BIG
+		return -E2BIG;
 	}
 	/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
 	if (unlikely(vhost_hlen)) {
@@ -729,29 +737,26 @@ static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
 	}
 	/* TODO: Should check and handle checksum. */
 
-	num_buffers = cpu_to_vhost16(vq, headcount);
-	if (likely(mergeable) &&
-		copy_to_iter(&num_buffers, sizeof num_buffers,
-			     &fixup) != sizeof num_buffers) {
-		vq_err(vq, "Failed num_buffers write");
-		vhost_discard_vq_desc(vq, headcount);
-		return -EFAULT;
-	}
+	if (unlikely(vq_log))
+		vhost_log_write(vq, vq_log, log, vhost_len);
+
+	return 0;
 }
 
 static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	unsigned int out, int, log = 0;
-	__virtio16 indices[VHOST_RX_BATCHED];
+	struct socket *sock = vq->private_data;
+	unsigned int out, in, log = 0;
+	__virtio16 indices[VHOST_RX_BATCH];
 	int sock_len, i;
 	int avails, head;
 
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		avails = vhost_prefetch_desc_indices(vq, indices,
 						     nvq->rt - nvq->rh);
-		if (!avail) {
+		if (!avails) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				/* They have slipped one in as we were
 				 * doing that: check again. */
@@ -761,11 +766,12 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 			return;
 		}
 		for (i = 0; i < avails; i++) {
-			int len =__skb_array_len_with_tag(rvq->rxq[rvq->rh + i]);
+			int len =
+				__skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
 			vhost_add_used_elem(vq, indices[i],
 					    cpu_to_vhost32(vq, len), i);
 		}
-		for (i = 0; i < avail; i++) {
+		for (i = 0; i < avails; i++) {
 			if (nvq->rh == nvq->rt) {
 				printk("wrong!\n");
 			}
@@ -775,15 +781,14 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 						  &log, indices[i]);
 			if (unlikely(head <= 0 || head == vq->num))
 				return;
-			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++]))
+			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
+				       sock_len, vq_log, log))
 				return;
 
 			vhost_update_used_idx(vq, 1);
 			vhost_signal(&net->dev, vq);
 
 			/* FIXME: count bytes */
-			if (unlikely(vq_log))
-				vhost_log_write(vq, vq_log, log, vhost_len);
 		}
 	}
 }
