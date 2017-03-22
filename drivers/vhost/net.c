@@ -702,6 +702,7 @@ retry:
 					    cpu_to_vhost32(vq, len), i);
 		}
 		while (nvq->rh != nvq->rt) {
+			
 	}
 }
 

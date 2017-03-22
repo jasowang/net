@@ -1996,7 +1996,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 
 /* Prefetch descriptor indices */
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				struct vring_used_elem_heads *heads, u16 num)
+				__virtio16 *indices, u16 num)
 {
 	int ret = 0;
 	u16 last_avail_idx, total;
@@ -2013,14 +2013,14 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	ret = total = min(total, num);
 
 	while (total) {
-		int ret2 = vhost_get_avail(vq, avail_idx,
+		int ret2 = vhost_get_avail(vq, indices[0],
 			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 		--total;
-		heads[indices++].id = vhost16_to_cpu(vq, avail_idx);
+		++indices;
 		++last_avail_idx;
 	}
 	/* FIXME: update used ring here? together with batch dequing? */
