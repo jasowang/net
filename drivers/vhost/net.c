@@ -539,7 +539,7 @@ static int sk_has_rx_data(struct sock *sk)
 static bool sk_rx_array_has_data(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+	struct skb_array *skb_array = tun_get_skb_array(sock->file);
 
 	if (skb_array)
 		return !__skb_array_empty(skb_array);
@@ -550,7 +550,7 @@ static bool sk_rx_array_has_data(struct sock *sk)
 static int sk_rx_array_length(struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
-	struct skb_array *skb_array = tap_get_skb_array(sock->file);
+	struct skb_array *skb_array = tun_get_skb_array(sock->file);
 
 	if (skb_array)
 		return skb_array_peek_queue_len(skb_array);
