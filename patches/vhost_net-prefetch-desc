@@ -1,5 +1,5 @@
 Bottom: 60118fbbfad29941d05206d894a46488261b3390
-Top:    22d5c5f48710b88acfe1daa41a318a85cb952581
+Top:    1d2b3d29435a4e2483ed8bed898918b7b1364b9f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-22 13:21:46 +0800
 
@@ -153,10 +153,10 @@ index 41153a3..3047781 100644
  		sock_len += sock_hlen;
  		vhost_len = sock_len + vhost_hlen;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 47b7af0..796de05 100644
+index 47b7af0..019ae79 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1994,6 +1994,44 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1994,6 +1994,43 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -189,7 +189,6 @@ index 47b7af0..796de05 100644
 +		++indices;
 +		++last_avail_idx;
 +	}
-+	/* FIXME: update used ring here? together with batch dequing? */
 +
 +	/* Only get avail ring entries after they have been exposed by guest. */
 +	smp_rmb();
@@ -201,7 +200,7 @@ index 47b7af0..796de05 100644
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2145,6 +2183,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2145,6 +2182,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
