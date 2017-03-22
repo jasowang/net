@@ -1,5 +1,5 @@
 Bottom: 60118fbbfad29941d05206d894a46488261b3390
-Top:    3d7f8cdb9b4cea1468c9dbaa0e8943b1015c3137
+Top:    c5bd0b81f3e56159d325a97a21cc0d306515e9ec
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-22 13:21:46 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 41153a3..0ef4f3f 100644
+index 41153a3..74d5961 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -675,6 +675,40 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+@@ -675,6 +675,36 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
  	return r;
  }
  
@@ -41,14 +41,10 @@ index 41153a3..0ef4f3f 100644
 +		}
 +		for (i = 0; i < avails; i++) {
 +			int len =__skb_array_len_with_tag(rvq->rxq[rvq->rh + i]);
-+			
-+			vhost_add_used(indices[i], cpu_to_vhost32(vq, len));
++			vhost_add_used_elem(vq, indices[i],
++					    cpu_to_vhost32(vq, len), i);
 +		}
-+
-+		/* Make sure buffer is written before we update index. */
-+		smp_wmb();
-+
-+		
++		while (nvq->rh != nvq->rt) {
 +	}
 +}
 +
