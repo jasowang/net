@@ -1,14 +1,14 @@
 Version: 1
-Previous: 624bf1d52bcf60e3807a381ce44bba50f591b22f
-Head: 68daf5324c04efb877a27b66eec033f9a4a81f2c
+Previous: 325c594f02b2f92a3e33f637ab999c33d49ddf36
+Head: 48de1bb0d99bc2552a73925c56be5c5e7657a075
 Applied:
   vhost-avoid-peeking-socket: b37c9ad06687b4b1b6d8bc32ffba8b4c01adc465
   vhost-partially-open-code: 0ffd07f6a880d392fbd04ebec20d4e1ac64ee0d2
   vhost-prefetch-desc-indices: 85d767923abccc6540bee940a1ae18d038f70e86
   drop-vhost_copy_from: b271c2bf41501d120e121871d5d32b5195b0a444
   tun-introduce-0: 48de1bb0d99bc2552a73925c56be5c5e7657a075
-  patch: 68daf5324c04efb877a27b66eec033f9a4a81f2c
 Unapplied:
+  patch: 68daf5324c04efb877a27b66eec033f9a4a81f2c
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch-0: c357ef0fa1d9505e92a82d7041953cc927a2b6f6
   tap-export-skb_array-0: f93415f0c769481172567cc85bb5137c322d2a59
