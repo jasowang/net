@@ -2023,7 +2023,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		++indices;
 		++last_avail_idx;
 	}
-	/* FIXME: update used ring here? together with batch dequing? */
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
