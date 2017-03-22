@@ -5,6 +5,8 @@ Date:   2017-03-22 14:10:20 +0800
 
 vhost: introduce used ring manipulation helpers
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
