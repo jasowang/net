@@ -677,11 +677,10 @@ err:
 
 static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
 		      struct sk_buff *skb, size_t sock_len,
-		      struct vhost_log *vq_log, int log)
+		      struct vhost_log *vq_log, int log,
+		      size_t vhost_hlen, size_t sock_hlen)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
-	size_t vhost_hlen = nvq->vhost_hlen;
-	size_t sock_hlen = nvq->sock_hlen;
 	size_t vhost_len;
 	struct socket *sock = vq->private_data;
 	struct msghdr msg = {
@@ -750,6 +749,8 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 	struct socket *sock = vq->private_data;
 	unsigned int out, in, log = 0;
 	__virtio16 indices[VHOST_RX_BATCH];
+	size_t vhost_hlen = nvq->vhost_hlen;
+	size_t sock_hlen = nvq->sock_hlen;
 	int lens[VHOST_RX_BATCH];
 	int sock_len, i;
 	int avails, head;
@@ -769,7 +770,8 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 		for (i = 0; i < avails; i++) {
 			lens[i] = __skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
 			vhost_add_used_elem(vq, indices[i],
-					    cpu_to_vhost32(vq, lens[i]), i);
+					    cpu_to_vhost32(vq, lens[i]
+					    + vhost_hlen + sock_hlen), i);
 		}
 		for (i = 0; i < avails; i++) {
 			if (nvq->rh == nvq->rt) {
@@ -784,7 +786,8 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 				return;
 			}
 			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
-				       lens[i], vq_log, log)) {
+				       lens[i], vq_log, log,
+				       vhost_hlen, sock_hlen)) {
 				printk("recvmsg error!\n");
 				return;
 			}
