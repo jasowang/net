@@ -1,5 +1,5 @@
 Bottom: 148c5ed3a5a3e04b556ca70b074c29470aa7d9e9
-Top:    148c5ed3a5a3e04b556ca70b074c29470aa7d9e9
+Top:    52305ab80d3a26ebe794b8d2b3e133355f52334d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-22 13:21:46 +0800
 
@@ -10,4 +10,25 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 41153a3..44f9b59 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -675,6 +675,17 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+ 	return r;
+ }
+ 
++static void handle_rx_batched(struct vhost_net_virtqueue *nvq)
++{
++	int sock_len;
++	int nskbs;
++
++	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
++		nskbs = nvq->rt - nvq->rh;
++
++	}
++}
++
+ /* Expects to be always run from workqueue - which acts as
+  * read-size critical section for our kind of RCU. */
+ static void handle_rx(struct vhost_net *net)
