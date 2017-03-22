@@ -698,14 +698,10 @@ retry:
 		}
 		for (i = 0; i < avails; i++) {
 			int len =__skb_array_len_with_tag(rvq->rxq[rvq->rh + i]);
-			
-			vhost_add_used(indices[i], cpu_to_vhost32(vq, len));
+			vhost_add_used_elem(vq, indices[i],
+					    cpu_to_vhost32(vq, len), i);
 		}
-
-		/* Make sure buffer is written before we update index. */
-		smp_wmb();
-
-		
+		while (nvq->rh != nvq->rt) {
 	}
 }
 
