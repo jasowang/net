@@ -774,29 +774,22 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 					    + vhost_hlen + sock_hlen), i);
 		}
 		for (i = 0; i < avails; i++) {
-			if (nvq->rh == nvq->rt) {
-				printk("wrong!\n");
-			}
 			head = vhost_get_vq_desc2(vq, vq->iov,
 						  ARRAY_SIZE(vq->iov),
 						  &out, &in, vq_log,
 						  &log, indices[i]);
-			if (unlikely(head < 0 || head == vq->num)) {
-				printk("head error!\n");
+			if (unlikely(head < 0 || head == vq->num))
 				return;
-			}
 			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
 				       lens[i], vq_log, log,
-				       vhost_hlen, sock_hlen)) {
-				printk("recvmsg error!\n");
+				       vhost_hlen, sock_hlen))
 				return;
-			}
 
 			vhost_update_used_idx(vq, 1);
-			vhost_signal(&net->dev, vq);
-
 			/* FIXME: count bytes */
 		}
+		/* FIXME: batched signal */
+		vhost_signal(&net->dev, vq);
 	}
 }
 
