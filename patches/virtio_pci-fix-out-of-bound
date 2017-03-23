@@ -1,5 +1,5 @@
 Bottom: 1d2b3d29435a4e2483ed8bed898918b7b1364b9f
-Top:    ac37c217f36cd3ab289ab7928ad5ece32caa3941
+Top:    52e29216b14131b7296ad15d24ac8355ffc64dd6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-23 13:07:16 +0800
 
@@ -10,18 +10,6 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/char/virtio_console.c b/drivers/char/virtio_console.c
-index e9b7e0b..ee9a0f5 100644
---- a/drivers/char/virtio_console.c
-+++ b/drivers/char/virtio_console.c
-@@ -1944,6 +1944,7 @@ static int init_vqs(struct ports_device *portdev)
- 			io_names[j + 1] = "output";
- 		}
- 	}
-+
- 	/* Find the queues. */
- 	err = portdev->vdev->config->find_vqs(portdev->vdev, nr_queues, vqs,
- 					      io_callbacks,
 diff --git a/drivers/virtio/virtio_pci_common.c b/drivers/virtio/virtio_pci_common.c
 index df548a6..5905349 100644
 --- a/drivers/virtio/virtio_pci_common.c
