@@ -1944,7 +1944,6 @@ static int init_vqs(struct ports_device *portdev)
 			io_names[j + 1] = "output";
 		}
 	}
-
 	/* Find the queues. */
 	err = portdev->vdev->config->find_vqs(portdev->vdev, nr_queues, vqs,
 					      io_callbacks,
