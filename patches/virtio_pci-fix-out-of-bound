@@ -5,6 +5,8 @@ Date:   2017-03-23 13:07:16 +0800
 
 virtio_pci: fix out of bound access for msix_names
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
