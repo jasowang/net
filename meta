@@ -1,6 +1,6 @@
 Version: 1
-Previous: 61ea73a1ba3a993314b09ce2b71d08e7ce48d3bc
-Head: 8e9c2b11703e596ac05a2ae6766ae14fb84db419
+Previous: 3d57d198d35c6495c81edab22cbf685797b4b288
+Head: c4d618665e7a64819b6d051c0a4b01434eb124c4
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
@@ -12,7 +12,7 @@ Applied:
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
   vhost-introduce-used-ring: 324df1eba7ff45492ccea6ba5a6f7fcc2016f699
   vhost_net-prefetch-desc: 09379c02e8909c1c7cf8470cd0e6256a0a93920f
-  vhost-accelerate-vq-metadata: 8e9c2b11703e596ac05a2ae6766ae14fb84db419
+  vhost-accelerate-vq-metadata: c4d618665e7a64819b6d051c0a4b01434eb124c4
 Unapplied:
   vhost-accelerate-vq-meta-data: 5066ca8b5e3dcb36feca7813c8fd1459f7367bc1
   virtio_pci-fix-out-of-bound: 312859b596e83a2164a8430343d31fce2a5ad808
