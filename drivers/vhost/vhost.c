@@ -300,6 +300,35 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
 		__vhost_vq_meta_reset(d->vqs[i]);
 }
 
+static int vhost_map_uaddr(struct vhost_virtqueue *vq)
+{
+	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
+	unsigned long used = (unsigned long) vq->used;
+	struct page *pages[4];
+	size_t len;
+	int n, res;
+
+	used &= (PAGE_SIZE - 1);
+	len = sizeof *vq->used + vq->num * sizeof *vq->used->ring + s;
+	n = DIV_ROUND_UP(len, PAGE_SIZE);
+	res = get_user_pages_fast(used, n, 1, pages);
+	if (unlikely(res < n)) {
+		/* FIXME: put pages */
+		return -EFAULT;
+	}
+	vq->used_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL);
+	if (!vq->used_addr)
+		return -EFAULT;
+
+	return 0;
+}
+
+static void vhost_unmap_uaddr(struct vhost_virtqueue *vq)
+{
+	if (vq->used_addr)
+		vunmap(vq->used_addr);
+}
+
 static void vhost_vq_reset(struct vhost_dev *dev,
 			   struct vhost_virtqueue *vq)
 {
@@ -330,7 +359,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->busyloop_timeout = 0;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
+	vq->used_addr = 0;
 	__vhost_vq_meta_reset(vq);
+	vhost_unmap_uaddr(vq);
 }
 
 static int vhost_worker(void *data)
@@ -1355,6 +1386,8 @@ err:
 	return -EFAULT;
 }
 
+#define MAX_VHOST_PAGES 4
+
 long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 {
 	struct file *eventfp, *filep = NULL;
@@ -1476,6 +1509,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
+		if (vhost_map_uaddr(vq)) {
+			printk("fail to map!\n");
+		} else {
+			printk("map %p to vaddr %p\n",
+				vq->used, vq->used_addr);
+		}
 		break;
 	case VHOST_SET_VRING_KICK:
 		if (copy_from_user(&f, argp, sizeof f)) {
