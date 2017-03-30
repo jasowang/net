@@ -1,10 +1,10 @@
 Version: 1
-Previous: 5aaa0e0e46f350e4b01d0bb25d8f60022122feaa
-Head: 06a1d0cce9e573aa354e9887d1007c048f911f08
+Previous: 77bc3017ceb7fd4b5da84699a62e7a8fcf7a7f4e
+Head: db22f902b07c6a2b1ea9cc84c60c9773966411ef
 Applied:
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
+  skb_array-introduce-batch: db22f902b07c6a2b1ea9cc84c60c9773966411ef
 Unapplied:
-  skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
   tun-export-skb_array: af63e928b1d9d45c95cc7cce802c81988abb82f6
   tap-export-skb_array: b5fa2a69531caede19a8e5b0358f37f9380ec41b
   tun-support-receiving-skb: d5001e4b8a97a9a69809af58c196783261989edc
