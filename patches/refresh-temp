@@ -1,0 +1,22 @@
+Bottom: 2347bd7497f4b54721e2fdcb0cd00754b30b7659
+Top:    52a54100cfff7944bd566e9700b4c56bed013c9e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-30 14:19:25 +0800
+
+Refresh of ptr_ring-introduce-batch
+
+---
+
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index ec3369d..2be0f350 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -253,7 +253,7 @@ static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
+ 	void *ptr;
+ 	int i;
+ 
+-        for (i = 0; i < n; i++) {
++	for (i = 0; i < n; i++) {
+ 		ptr = __ptr_ring_consume(r);
+ 		if (!ptr)
+ 			break;
