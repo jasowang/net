@@ -3,7 +3,7 @@ Top:    0ce414ba79269bc752857412fe58a600ee566195
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-23 17:10:24 +0800
 
-vhost: accelerate vq metadata access
+vhost: accelerate vq metadata access with vmap()
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
