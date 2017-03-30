@@ -512,14 +512,14 @@ out:
 	mutex_unlock(&vq->mutex);
 }
 
-static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
+static int fetch_skbs(struct vhost_net_virtqueue *rvq)
 {
 	if (rvq->rh != rvq->rt)
 		goto out;
 
 	rvq->rh = rvq->rt = 0;
-	rvq->rt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
-						VHOST_RX_BATCH);
+	rvq->rt = skb_array_consume_batched(rvq->rx_array, rvq->rxq,
+					    VHOST_RX_BATCH);
 	if (!rvq->rt)
 		return 0;
 out:
@@ -534,7 +534,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	unsigned long flags;
 
 	if (rvq->rx_array)
-		return peek_head_len_batched(rvq);
+		return fetch_skbs(rvq);
 
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
