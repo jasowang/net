@@ -896,10 +896,12 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (skb_array_produce(&tfile->tx_array, skb))
 		goto drop;
 
-	/* Notify and wake up reader process */
-	if (tfile->flags & TUN_FASYNC)
-		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+	if (!skb->xmit_more) {
+		/* Notify and wake up reader process */
+		if (tfile->flags & TUN_FASYNC)
+			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+	}
 
 	rcu_read_unlock();
 	return NETDEV_TX_OK;
