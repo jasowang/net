@@ -303,22 +303,28 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
 static int vhost_map_uaddr(struct vhost_virtqueue *vq)
 {
 	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
-	unsigned long used = (unsigned long) vq->used;
+	u64 used = (u64)vq->used;
+	u64 offset;
 	struct page *pages[4];
 	size_t len;
 	int n, res;
 
-	used &= (PAGE_SIZE - 1);
+	offset = used & (PAGE_SIZE - 1);
 	len = sizeof *vq->used + vq->num * sizeof *vq->used->ring + s;
 	n = DIV_ROUND_UP(len, PAGE_SIZE);
+	printk("used %p\n", used);
 	res = get_user_pages_fast(used, n, 1, pages);
 	if (unlikely(res < n)) {
+		printk("gup fail! res %d n %d\n", res, n);
 		/* FIXME: put pages */
 		return -EFAULT;
 	}
-	vq->used_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL);
-	if (!vq->used_addr)
+	printk("succeed!\n");
+	vq->used_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL) + offset;
+	if (!vq->used_addr) {
+		printk("vmap fail!\n");
 		return -EFAULT;
+	}
 
 	return 0;
 }
@@ -1509,6 +1515,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
+		printk("vq->used %p\n", vq->used);
 		if (vhost_map_uaddr(vq)) {
 			printk("fail to map!\n");
 		} else {
@@ -2208,24 +2215,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 			    struct vring_used_elem *heads,
 			    unsigned count)
 {
-	struct vring_used_elem __user *used;
+	struct vring_used_elem *used;
 	u16 old, new;
 	int start;
 
 	start = vq->last_used_idx & (vq->num - 1);
-	used = vq->used->ring + start;
+	used = vq->used_addr->ring + start;
 	if (count == 1) {
-		if (vhost_put_user(vq, heads[0].id, &used->id)) {
-			vq_err(vq, "Failed to write used id");
-			return -EFAULT;
+		used->id = heads[0].id;
+		used->len = heads[0].len;
+	} else {
+		int i;
+		for (i = 0; i < count; i++) {
+			used->id = heads[i].id;
+			used->len = heads[i].len;
+			++used;
 		}
-		if (vhost_put_user(vq, heads[0].len, &used->len)) {
-			vq_err(vq, "Failed to write used len");
-			return -EFAULT;
-		}
-	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
-		vq_err(vq, "Failed to write used");
-		return -EFAULT;
 	}
 	if (unlikely(vq->log_used)) {
 		/* Make sure data is seen before log. */
