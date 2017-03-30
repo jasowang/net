@@ -1,5 +1,5 @@
 Bottom: 9ae5c6c54d1e4e1d43424e81d21571950e0b9149
-Top:    b7b58d927ee5cdb649ab634aa428e2aa6f6ccba7
+Top:    4bb8b1e2af578041984ee401219e821c90debd73
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:53:59 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..53f09f2 100644
+index 9b51989..ffa78c6 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
@@ -71,14 +71,14 @@ index 9b51989..53f09f2 100644
  }
  
 -static int peek_head_len(struct sock *sk)
-+static int peek_head_len_batched(struct vhost_net_virtqueue *rvq)
++static int fetch_skbs(struct vhost_net_virtqueue *rvq)
 +{
 +	if (rvq->rh != rvq->rt)
 +		goto out;
 +
 +	rvq->rh = rvq->rt = 0;
-+	rvq->rt = skb_array_consume_batched_bh(rvq->rx_array, rvq->rxq,
-+						VHOST_RX_BATCH);
++	rvq->rt = skb_array_consume_batched(rvq->rx_array, rvq->rxq,
++					    VHOST_RX_BATCH);
 +	if (!rvq->rt)
 +		return 0;
 +out:
@@ -93,7 +93,7 @@ index 9b51989..53f09f2 100644
  	unsigned long flags;
  
 +	if (rvq->rx_array)
-+		return peek_head_len_batched(rvq);
++		return fetch_skbs(rvq);
 +
  	if (sock->ops->peek_len)
  		return sock->ops->peek_len(sock);
