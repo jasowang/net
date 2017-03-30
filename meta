@@ -1,8 +1,9 @@
 Version: 1
-Previous: 04f668bd2665612c3d31c9d52d80eee71b04dc41
-Head: 8a622c2f5f7291d119451b32d3f0735d9cedc077
+Previous: e6f542f957445c4f735278555c84311680ecfc82
+Head: a822dc08d5481fd886ea7db70b4b19637d472845
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
+  refresh-temp: a822dc08d5481fd886ea7db70b4b19637d472845
 Unapplied:
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
   tun-export-skb_array: af63e928b1d9d45c95cc7cce802c81988abb82f6
