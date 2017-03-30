@@ -1,5 +1,5 @@
 Bottom: 7cbec879d4691538acd1489b65f289c405bee96f
-Top:    ab91d5c97c38db815a88541833eeecda70b93dd4
+Top:    0ce414ba79269bc752857412fe58a600ee566195
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-23 17:10:24 +0800
 
@@ -11,32 +11,38 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f0ba362..e892fd7 100644
+index f0ba362..a5caa38 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -300,6 +300,35 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
+@@ -300,6 +300,41 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
  		__vhost_vq_meta_reset(d->vqs[i]);
  }
  
 +static int vhost_map_uaddr(struct vhost_virtqueue *vq)
 +{
 +	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
-+	unsigned long used = (unsigned long) vq->used;
++	u64 used = (u64)vq->used;
++	u64 offset;
 +	struct page *pages[4];
 +	size_t len;
 +	int n, res;
 +
-+	used &= (PAGE_SIZE - 1);
++	offset = used & (PAGE_SIZE - 1);
 +	len = sizeof *vq->used + vq->num * sizeof *vq->used->ring + s;
 +	n = DIV_ROUND_UP(len, PAGE_SIZE);
++	printk("used %p\n", used);
 +	res = get_user_pages_fast(used, n, 1, pages);
 +	if (unlikely(res < n)) {
++		printk("gup fail! res %d n %d\n", res, n);
 +		/* FIXME: put pages */
 +		return -EFAULT;
 +	}
-+	vq->used_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL);
-+	if (!vq->used_addr)
++	printk("succeed!\n");
++	vq->used_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL) + offset;
++	if (!vq->used_addr) {
++		printk("vmap fail!\n");
 +		return -EFAULT;
++	}
 +
 +	return 0;
 +}
@@ -50,7 +56,7 @@ index f0ba362..e892fd7 100644
  static void vhost_vq_reset(struct vhost_dev *dev,
  			   struct vhost_virtqueue *vq)
  {
-@@ -330,7 +359,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+@@ -330,7 +365,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
  	vq->busyloop_timeout = 0;
  	vq->umem = NULL;
  	vq->iotlb = NULL;
@@ -60,7 +66,7 @@ index f0ba362..e892fd7 100644
  }
  
  static int vhost_worker(void *data)
-@@ -1355,6 +1386,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
+@@ -1355,6 +1392,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
  	return -EFAULT;
  }
  
@@ -69,10 +75,11 @@ index f0ba362..e892fd7 100644
  long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  {
  	struct file *eventfp, *filep = NULL;
-@@ -1476,6 +1509,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+@@ -1476,6 +1515,13 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
  		vq->log_addr = a.log_guest_addr;
  		vq->used = (void __user *)(unsigned long)a.used_user_addr;
++		printk("vq->used %p\n", vq->used);
 +		if (vhost_map_uaddr(vq)) {
 +			printk("fail to map!\n");
 +		} else {
@@ -82,15 +89,50 @@ index f0ba362..e892fd7 100644
  		break;
  	case VHOST_SET_VRING_KICK:
  		if (copy_from_user(&f, argp, sizeof f)) {
+@@ -2169,24 +2215,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 			    struct vring_used_elem *heads,
+ 			    unsigned count)
+ {
+-	struct vring_used_elem __user *used;
++	struct vring_used_elem *used;
+ 	u16 old, new;
+ 	int start;
+ 
+ 	start = vq->last_used_idx & (vq->num - 1);
+-	used = vq->used->ring + start;
++	used = vq->used_addr->ring + start;
+ 	if (count == 1) {
+-		if (vhost_put_user(vq, heads[0].id, &used->id)) {
+-			vq_err(vq, "Failed to write used id");
+-			return -EFAULT;
+-		}
+-		if (vhost_put_user(vq, heads[0].len, &used->len)) {
+-			vq_err(vq, "Failed to write used len");
+-			return -EFAULT;
++		used->id = heads[0].id;
++		used->len = heads[0].len;
++	} else {
++		int i;
++		for (i = 0; i < count; i++) {
++			used->id = heads[i].id;
++			used->len = heads[i].len;
++			++used;
+ 		}
+-	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
+-		vq_err(vq, "Failed to write used");
+-		return -EFAULT;
+ 	}
+ 	if (unlikely(vq->log_used)) {
+ 		/* Make sure data is seen before log. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index f55671d..7c85064 100644
+index f55671d..4752ff3 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -93,6 +93,7 @@ struct vhost_virtqueue {
  	struct vring_desc __user *desc;
  	struct vring_avail __user *avail;
  	struct vring_used __user *used;
-+	void *used_addr;
++	struct vring_used *used_addr;
  	const struct vhost_umem_node *meta_iotlb[VHOST_NUM_ADDRS];
  	struct file *kick;
  	struct file *call;
