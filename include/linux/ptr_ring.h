@@ -253,7 +253,7 @@ static inline int __ptr_ring_consume_batched(struct ptr_ring *r,
 	void *ptr;
 	int i;
 
-        for (i = 0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		ptr = __ptr_ring_consume(r);
 		if (!ptr)
 			break;
