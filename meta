@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4248e18a243836c10de101b686dd2d1fd2a3a329
-Head: 603059d5226358e57d0ebdedc786b9c4c4b55137
+Previous: f64e1959a69fdba6764115e5ad4faf080e89fd21
+Head: 3e0e3a7ee5e005dc617b7b359d7150c539819443
 Applied:
   ptr_ring-introduce-batch: 8a622c2f5f7291d119451b32d3f0735d9cedc077
   skb_array-introduce-batch: 2cbd2f6cf85d615488c7ba066f8e90a60e8b7910
@@ -11,6 +11,7 @@ Applied:
   vhost_net-try-batch-dequing: 60779effd7258878dda74c8b7e4979406c8c8789
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
   tun-xmit_more-support: 603059d5226358e57d0ebdedc786b9c4c4b55137
+  refresh-temp: 3e0e3a7ee5e005dc617b7b359d7150c539819443
 Unapplied:
   vhost-introduce-used-ring: 324df1eba7ff45492ccea6ba5a6f7fcc2016f699
   vhost_net-prefetch-desc: 09379c02e8909c1c7cf8470cd0e6256a0a93920f
