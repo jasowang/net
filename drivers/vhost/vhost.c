@@ -236,6 +236,7 @@ EXPORT_SYMBOL_GPL(vhost_poll_stop);
 void vhost_work_flush(struct vhost_dev *dev, struct vhost_work *work)
 {
 	struct vhost_flush_struct flush;
+	printk("flush work %p\n", &flush);
 
 	if (dev->worker) {
 		init_completion(&flush.wait_event);
@@ -243,6 +244,8 @@ void vhost_work_flush(struct vhost_dev *dev, struct vhost_work *work)
 
 		vhost_work_queue(dev, &flush.work);
 		wait_for_completion(&flush.wait_event);
+	} else {
+		printk("no worker\n");
 	}
 }
 EXPORT_SYMBOL_GPL(vhost_work_flush);
@@ -257,8 +260,7 @@ EXPORT_SYMBOL_GPL(vhost_poll_flush);
 
 void vhost_work_queue(struct vhost_dev *dev, struct vhost_work *work)
 {
-	if (!dev->worker)
-		return;
+	BUG_ON(!dev->worker);
 
 	if (!test_and_set_bit(VHOST_WORK_QUEUED, &work->flags)) {
 		/* We can only add the work to the list after we're
@@ -267,6 +269,7 @@ void vhost_work_queue(struct vhost_dev *dev, struct vhost_work *work)
 		 */
 		llist_add(&work->node, &dev->work_list);
 		wake_up_process(dev->worker);
+		printk("work %p queued\n", work);
 	}
 }
 EXPORT_SYMBOL_GPL(vhost_work_queue);
@@ -362,6 +365,7 @@ static int vhost_worker(void *data)
 		llist_for_each_entry_safe(work, work_next, node, node) {
 			clear_bit(VHOST_WORK_QUEUED, &work->flags);
 			__set_current_state(TASK_RUNNING);
+			printk("work fn %p\n", work);
 			work->fn(work);
 			if (need_resched())
 				schedule();
@@ -476,6 +480,7 @@ static int vhost_attach_cgroups(struct vhost_dev *dev)
 {
 	struct vhost_attach_cgroups_struct attach;
 
+	printk("attach work %p\n", &attach);
 	attach.owner = current;
 	vhost_work_init(&attach.work, vhost_attach_cgroups_work);
 	vhost_work_queue(dev, &attach.work);
