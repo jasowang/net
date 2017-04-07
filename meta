@@ -1,7 +1,8 @@
 Version: 1
-Previous: 0ade57e10dd72ccc5142c72e2cae484663df69e6
+Previous: 97593047a119442faff958a9568a1aa61f9a1cf7
 Head: c660abef36a47c712086d87516eed41982b13b2a
 Applied:
+  vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
 Unapplied:
   vhost-avoid-peeking-socket: b37c9ad06687b4b1b6d8bc32ffba8b4c01adc465
   vhost-partially-open-code: 0ffd07f6a880d392fbd04ebec20d4e1ac64ee0d2
