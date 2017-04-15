@@ -100,4 +100,16 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 	return 0;
 }
 
+static inline int virtio_net_ext_to_skb(struct sk_buff *skb,
+					struct virtio_net_ext_hdr *ext)
+{
+	return 0;
+}
+
+static inline int virtio_net_ext_from_skb(const struct sk_buff *skb,
+					  struct virtio_net_ext_hdr *ext,
+					  __u32 ext_mask)
+{
+	return 0;
+}
 #endif /* _LINUX_VIRTIO_NET_H */

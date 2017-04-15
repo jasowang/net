@@ -88,6 +88,7 @@ struct virtio_net_config {
 struct virtio_net_hdr_v1 {
 #define VIRTIO_NET_HDR_F_NEEDS_CSUM	1	/* Use csum_start, csum_offset */
 #define VIRTIO_NET_HDR_F_DATA_VALID	2	/* Csum is valid */
+#define VIRTIO_NET_HDR_F_VNET_EXT	4	/* Vnet extensions present */
 	__u8 flags;
 #define VIRTIO_NET_HDR_GSO_NONE		0	/* Not a GSO frame */
 #define VIRTIO_NET_HDR_GSO_TCPV4	1	/* GSO frame, IPv4 TCP (TSO) */
@@ -100,6 +101,16 @@ struct virtio_net_hdr_v1 {
 	__virtio16 csum_start;	/* Position to start checksumming from */
 	__virtio16 csum_offset;	/* Offset after that to place checksum */
 	__virtio16 num_buffers;	/* Number of merged rx buffers */
+};
+
+/* If IRTIO_NET_HDR_F_VNET_EXT flags is set, this header immediately
+ * follows the virtio_net_hdr.  The flags in this header will indicate
+ * which extension will follow.  The extnsion data will immidiately follow
+ * this header.
+ */
+struct virtio_net_ext_hdr {
+	__u32 flags;
+	__u8 extensions[];
 };
 
 #ifndef VIRTIO_NET_NO_LEGACY

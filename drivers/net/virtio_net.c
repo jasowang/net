@@ -145,6 +145,10 @@ struct virtnet_info {
 	/* Packet virtio header size */
 	u8 hdr_len;
 
+	/* Header extensions were negotiated */
+	bool hdr_ext;
+	u32 ext_mask;
+
 	/* Active statistics */
 	struct virtnet_stats __percpu *stats;
 
@@ -172,6 +176,11 @@ struct virtnet_info {
 	/* Ethtool settings */
 	u8 duplex;
 	u32 speed;
+};
+
+struct virtio_net_hdr_max {
+	struct virtio_net_hdr_mrg_rxbuf hdr;
+	struct virtio_net_ext_hdr ext_hdr;
 };
 
 static inline u8 padded_vnet_hdr(struct virtnet_info *vi)
@@ -214,6 +223,7 @@ static int rxq2vq(int rxq)
 
 static inline struct virtio_net_hdr_mrg_rxbuf *skb_vnet_hdr(struct sk_buff *skb)
 {
+	BUILD_BUG_ON(sizeof(struct virtio_net_hdr_max) > sizeof(skb->cb));
 	return (struct virtio_net_hdr_mrg_rxbuf *)skb->cb;
 }
 
@@ -767,6 +777,12 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 		goto frame_err;
 	}
 
+	if (vi->hdr_ext &&
+	    virtio_net_ext_to_skb(skb,
+				  (struct virtio_net_ext_hdr *)(hdr + 1))) {
+		goto frame_err;
+	}
+
 	skb->protocol = eth_type_trans(skb, dev);
 	pr_debug("Receiving skb proto 0x%04x len %i type %i\n",
 		 ntohs(skb->protocol), skb->len, skb->pkt_type);
@@ -1105,6 +1121,11 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 
 	if (vi->mergeable_rx_bufs)
 		hdr->num_buffers = 0;
+
+	if (vi->hdr_ext &&
+	    virtio_net_ext_from_skb(skb, (struct virtio_net_ext_hdr *)(hdr + 1),
+				    vi->ext_mask))
+		BUG();
 
 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
 	if (can_push) {
