@@ -174,15 +174,20 @@ struct virtnet_info {
 	u32 speed;
 };
 
-struct padded_vnet_hdr {
-	struct virtio_net_hdr_mrg_rxbuf hdr;
+static inline u8 padded_vnet_hdr(struct virtnet_info *vi)
+{
+	u8 hdr_len = vi->hdr_len;
+
 	/*
 	 * hdr is in a separate sg buffer, and data sg buffer shares same page
 	 * with this header sg. This padding makes next sg 16 byte aligned
 	 * after the header.
 	 */
-	char padding[4];
-};
+	if (!vi->mergeable_rx_bufs)
+		hdr_len = __ALIGN_KERNEL_MASK(hdr_len, 15);
+
+	return hdr_len;
+}
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -289,10 +294,7 @@ static struct sk_buff *page_to_skb(struct virtnet_info *vi,
 	hdr = skb_vnet_hdr(skb);
 
 	hdr_len = vi->hdr_len;
-	if (vi->mergeable_rx_bufs)
-		hdr_padded_len = sizeof *hdr;
-	else
-		hdr_padded_len = sizeof(struct padded_vnet_hdr);
+	hdr_padded_len = padded_vnet_hdr(vi);
 
 	memcpy(hdr, p, hdr_len);
 
@@ -840,7 +842,7 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
 	sg_set_buf(&rq->sg[0], p, vi->hdr_len);
 
 	/* rq->sg[1] for data packet, from offset */
-	offset = sizeof(struct padded_vnet_hdr);
+	offset = padded_vnet_hdr(vi);
 	sg_set_buf(&rq->sg[1], p + offset, PAGE_SIZE - offset);
 
 	/* chain first in list head */
@@ -1780,8 +1782,8 @@ err:
 
 static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog)
 {
-	unsigned long int max_sz = PAGE_SIZE - sizeof(struct padded_vnet_hdr);
 	struct virtnet_info *vi = netdev_priv(dev);
+	unsigned long int max_sz = PAGE_SIZE - padded_vnet_hdr(vi);
 	struct bpf_prog *old_prog;
 	u16 xdp_qp = 0, curr_qp;
 	int i, err;
