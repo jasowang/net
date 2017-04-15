@@ -2269,6 +2269,11 @@ static inline int skb_inner_network_offset(const struct sk_buff *skb)
 	return skb_inner_network_header(skb) - skb->data;
 }
 
+static inline int skb_inner_mac_offset(const struct sk_buff *skb)
+{
+	return skb_inner_mac_header(skb) - skb->data;
+}
+
 static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
 {
 	return pskb_may_pull(skb, skb_network_offset(skb) + len);

@@ -58,6 +58,7 @@
 #define VIRTIO_NET_F_CTRL_MAC_ADDR 23	/* Set MAC address */
 #define VIRTIO_NET_F_IP6_FRAGID    24	/* Host supports VLAN accleration */
 #define VIRTIO_NET_F_VLAN_OFFLOAD 25	/* Host supports VLAN accleration */
+#define VIRTIO_NET_F_UDP_TUNNEL    26   /* Host supports UDP tunnel offload */
 
 #ifndef VIRTIO_NET_NO_LEGACY
 #define VIRTIO_NET_F_GSO	6	/* Host handles pkts w/ any GSO type */
@@ -96,7 +97,14 @@ struct virtio_net_hdr_v1 {
 #define VIRTIO_NET_HDR_GSO_TCPV4	1	/* GSO frame, IPv4 TCP (TSO) */
 #define VIRTIO_NET_HDR_GSO_UDP		3	/* GSO frame, IPv4 UDP (UFO) */
 #define VIRTIO_NET_HDR_GSO_TCPV6	4	/* GSO frame, IPv6 TCP */
+#define VIRTIO_NET_HDR_GSO_UDP_TUNNEL	0x10	/* GSO frame, UDP tunnel */
+#define VIRTIO_NET_HDR_GSO_UDP_TUNNEL_CSUM 0x20 /* GSO frame, UDP tnl + csum */
+#define VIRTIO_NET_HDR_GSO_TUNNEL_REMCSUM  0x40	/* tunnel with TSO + remcsum */
 #define VIRTIO_NET_HDR_GSO_ECN		0x80	/* TCP has ECN set */
+#define VIRTIO_NET_HDR_GSO_FLAGS	(VIRTIO_NET_HDR_GSO_UDP_TUNNEL | \
+					 VIRTIO_NET_HDR_GSO_UDP_TUNNEL_CSUM | \
+					 VIRTIO_NET_HDR_GSO_TUNNEL_REMCSUM | \
+					 VIRTIO_NET_HDR_GSO_ECN)
 	__u8 gso_type;
 	__virtio16 hdr_len;	/* Ethernet + IP + tcp/udp hdrs */
 	__virtio16 gso_size;	/* Bytes to append to hdr_len per frame */
@@ -113,6 +121,7 @@ struct virtio_net_hdr_v1 {
 struct virtio_net_ext_hdr {
 #define VIRTIO_NET_EXT_F_IP6FRAG	(1<<0)
 #define VIRTIO_NET_EXT_F_VLAN		(1<<1)
+#define VIRTIO_NET_EXT_F_UDP_TUNNEL	(1<<2)
 	__u32 flags;
 	__u8 extensions[];
 };
@@ -125,6 +134,10 @@ struct virtio_net_ext_ip6frag {
 struct virtio_net_ext_vlan {
 	__be16 vlan_tci;
 	__be16 vlan_proto;
+};
+
+struct virtio_net_ext_udp_tunnel {
+	__virtio16 inner_mac_offset;
 };
 
 #ifndef VIRTIO_NET_NO_LEGACY

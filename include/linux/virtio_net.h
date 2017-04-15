@@ -11,7 +11,7 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 	unsigned short gso_type = 0;
 
 	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
-		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_ECN) {
+		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_FLAGS) {
 		case VIRTIO_NET_HDR_GSO_TCPV4:
 			gso_type = SKB_GSO_TCPV4;
 			break;
@@ -27,6 +27,14 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 
 		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_ECN)
 			gso_type |= SKB_GSO_TCP_ECN;
+		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_UDP_TUNNEL)
+			gso_type |= SKB_GSO_UDP_TUNNEL;
+		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_UDP_TUNNEL_CSUM)
+			gso_type |= SKB_GSO_UDP_TUNNEL_CSUM;
+		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_TUNNEL_REMCSUM) {
+			gso_type |= SKB_GSO_TUNNEL_REMCSUM;
+			skb->remcsum_offload = true;
+		}
 
 		if (hdr->gso_size == 0)
 			return -EINVAL;
@@ -77,8 +85,15 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 			hdr->gso_type = VIRTIO_NET_HDR_GSO_UDP;
 		else
 			return -EINVAL;
+
 		if (sinfo->gso_type & SKB_GSO_TCP_ECN)
 			hdr->gso_type |= VIRTIO_NET_HDR_GSO_ECN;
+		if (sinfo->gso_type & SKB_GSO_UDP_TUNNEL)
+			hdr->gso_type = VIRTIO_NET_HDR_GSO_UDP_TUNNEL;
+		if (sinfo->gso_type & SKB_GSO_UDP_TUNNEL_CSUM)
+			hdr->gso_type = VIRTIO_NET_HDR_GSO_UDP_TUNNEL_CSUM;
+		if (sinfo->gso_type & SKB_GSO_TUNNEL_REMCSUM)
+			hdr->gso_type = VIRTIO_NET_HDR_GSO_TUNNEL_REMCSUM;
 	} else
 		hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
 
@@ -101,7 +116,8 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 }
 
 static inline int virtio_net_ext_to_skb(struct sk_buff *skb,
-					struct virtio_net_ext_hdr *ext)
+					struct virtio_net_ext_hdr *ext,
+					bool little_endian)
 {
 	__u8 *ptr = ext->extensions;
 
@@ -121,12 +137,27 @@ static inline int virtio_net_ext_to_skb(struct sk_buff *skb,
 		ptr += sizeof(struct virtio_net_ext_vlan);
 	}
 
+	if (ext->flags & VIRTIO_NET_EXT_F_UDP_TUNNEL) {
+		struct virtio_net_ext_udp_tunnel *uhdr =
+					(struct virtio_net_ext_udp_tunnel *)ptr;
+		u16 inner_offset = __virtio16_to_cpu(little_endian,
+						     uhdr->inner_mac_offset);
+
+		skb->encapsulation = 1;
+		skb_set_inner_mac_header(skb, inner_offset);
+		skb_set_inner_network_header(skb, inner_offset + ETH_HLEN);
+		/* this would be set by skb_partial_csum_set */
+		skb_set_inner_transport_header(skb,
+					       skb_checksum_start_offset(skb));
+	}
+
 	return 0;
 }
 
 static inline int virtio_net_ext_from_skb(const struct sk_buff *skb,
 					  struct virtio_net_ext_hdr *ext,
-					  __u32 ext_mask)
+					  __u32 ext_mask,
+					  bool little_endian)
 {
 	__u8 *ptr = ext->extensions;
 
@@ -145,6 +176,15 @@ static inline int virtio_net_ext_from_skb(const struct sk_buff *skb,
 		vlan_get_tag(skb, &vhdr->vlan_tci);
 		vhdr->vlan_proto = skb->vlan_proto;
 		ext->flags |= VIRTIO_NET_EXT_F_VLAN;
+	}
+
+	if (ext_mask & VIRTIO_NET_EXT_F_UDP_TUNNEL && skb_is_gso(skb) &&
+	    skb->encapsulation) {
+		struct virtio_net_ext_udp_tunnel *uhdr =
+					(struct virtio_net_ext_udp_tunnel *)ptr;
+
+		uhdr->inner_mac_offset = skb_inner_mac_offset(skb);
+		ext->flags |= VIRTIO_NET_EXT_F_UDP_TUNNEL;
 	}
 
 	return 0;

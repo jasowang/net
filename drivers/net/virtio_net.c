@@ -183,6 +183,7 @@ struct virtio_net_hdr_max {
 	struct virtio_net_ext_hdr ext_hdr;
 	struct virtio_net_ext_ip6frag ip6f_ext;
 	struct virtio_net_ext_vlan vlan_ext;
+	struct virtio_net_ext_udp_tunnel enc_ext;
 };
 
 static inline u8 padded_vnet_hdr(struct virtnet_info *vi)
@@ -738,6 +739,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 	struct sk_buff *skb;
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
 	int ret;
+	bool little_endian = virtio_is_little_endian(vi->vdev);
 
 	if (unlikely(len < vi->hdr_len + ETH_HLEN)) {
 		pr_debug("%s: short packet %i\n", dev->name, len);
@@ -771,8 +773,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_DATA_VALID)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 
-	if (virtio_net_hdr_to_skb(skb, &hdr->hdr,
-				  virtio_is_little_endian(vi->vdev))) {
+	if (virtio_net_hdr_to_skb(skb, &hdr->hdr, little_endian)) {
 		net_warn_ratelimited("%s: bad gso: type: %u, size: %u\n",
 				     dev->name, hdr->hdr.gso_type,
 				     hdr->hdr.gso_size);
@@ -781,7 +782,8 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 
 	if (vi->hdr_ext &&
 	    virtio_net_ext_to_skb(skb,
-				  (struct virtio_net_ext_hdr *)(hdr + 1))) {
+				  (struct virtio_net_ext_hdr *)(hdr + 1),
+				  little_endian)) {
 		goto frame_err;
 	}
 
@@ -1104,6 +1106,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	unsigned num_sg;
 	unsigned hdr_len = vi->hdr_len;
 	bool can_push;
+	bool little_endian = virtio_is_little_endian(vi->vdev);
 
 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
 
@@ -1126,7 +1129,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 
 	if (vi->hdr_ext &&
 	    virtio_net_ext_from_skb(skb, (struct virtio_net_ext_hdr *)(hdr + 1),
-				    vi->ext_mask))
+				    vi->ext_mask, little_endian))
 		BUG();
 
 	sg_init_table(sq->sg, skb_shinfo(skb)->nr_frags + (can_push ? 1 : 2));
@@ -2272,6 +2275,11 @@ static void virtnet_init_extensions(struct virtio_device *vdev)
 		vi->hdr_len += sizeof(struct virtio_net_ext_vlan);
 		vi->ext_mask |= VIRTIO_NET_EXT_F_VLAN;
 	}
+
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_UDP_TUNNEL)) {
+		vi->hdr_len += sizeof(struct virtio_net_ext_udp_tunnel);
+		vi->ext_mask |= VIRTIO_NET_EXT_F_UDP_TUNNEL;
+	}
 }
 
 #define MIN_MTU ETH_MIN_MTU
@@ -2328,6 +2336,12 @@ static int virtnet_probe(struct virtio_device *vdev)
 		if (virtio_has_feature(vdev, VIRTIO_NET_F_GSO)) {
 			dev->hw_features |= NETIF_F_TSO | NETIF_F_UFO
 				| NETIF_F_TSO_ECN | NETIF_F_TSO6;
+
+			if (virtio_has_feature(vdev, VIRTIO_NET_F_UDP_TUNNEL)) {
+				dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL |
+						    NETIF_F_GSO_UDP_TUNNEL_CSUM |
+						    NETIF_F_GSO_TUNNEL_REMCSUM;
+			}
 		}
 		/* Individual feature bits: what can host handle? */
 		if (virtio_has_feature(vdev, VIRTIO_NET_F_HOST_TSO4))
@@ -2338,11 +2352,20 @@ static int virtnet_probe(struct virtio_device *vdev)
 			dev->hw_features |= NETIF_F_TSO_ECN;
 		if (virtio_has_feature(vdev, VIRTIO_NET_F_HOST_UFO))
 			dev->hw_features |= NETIF_F_UFO;
+		if (virtio_has_feature(vdev, VIRTIO_NET_F_UDP_TUNNEL)) {
+			dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL |
+					    NETIF_F_GSO_UDP_TUNNEL_CSUM |
+					    NETIF_F_GSO_TUNNEL_REMCSUM;
+		}
+
 
 		dev->features |= NETIF_F_GSO_ROBUST;
 
 		if (gso)
-			dev->features |= dev->hw_features & (NETIF_F_ALL_TSO|NETIF_F_UFO);
+			dev->features |= dev->hw_features &
+					 (NETIF_F_ALL_TSO |
+					  NETIF_F_UFO |
+					  NETIF_F_GSO_ENCAP_ALL);
 		/* (!csum && gso) case will be fixed by register_netdev() */
 	}
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_GUEST_CSUM))
@@ -2400,7 +2423,8 @@ static int virtnet_probe(struct virtio_device *vdev)
 		vi->mergeable_rx_bufs = true;
 
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_IP6_FRAGID) ||
-	    virtio_has_feature(vdev, VIRTIO_NET_F_VLAN_OFFLOAD))
+	    virtio_has_feature(vdev, VIRTIO_NET_F_VLAN_OFFLOAD) ||
+	    virtio_has_feature(vdev, VIRTIO_NET_F_UDP_TUNNEL))
 		vi->hdr_ext = true;
 
 	if (vi->hdr_ext)
