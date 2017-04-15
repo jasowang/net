@@ -103,6 +103,16 @@ static inline int virtio_net_hdr_from_skb(const struct sk_buff *skb,
 static inline int virtio_net_ext_to_skb(struct sk_buff *skb,
 					struct virtio_net_ext_hdr *ext)
 {
+	__u8 *ptr = ext->extensions;
+
+	if (ext->flags & VIRTIO_NET_EXT_F_IP6FRAG) {
+		struct virtio_net_ext_ip6frag *fhdr =
+					(struct virtio_net_ext_ip6frag *)ptr;
+
+		skb_shinfo(skb)->ip6_frag_id = fhdr->frag_id;
+		ptr += sizeof(struct virtio_net_ext_ip6frag);
+	}
+
 	return 0;
 }
 
@@ -110,6 +120,16 @@ static inline int virtio_net_ext_from_skb(const struct sk_buff *skb,
 					  struct virtio_net_ext_hdr *ext,
 					  __u32 ext_mask)
 {
+	__u8 *ptr = ext->extensions;
+
+	if ((ext_mask & VIRTIO_NET_EXT_F_IP6FRAG) &&
+	    skb_shinfo(skb)->ip6_frag_id) {
+		struct virtio_net_ext_ip6frag *fhdr =
+					(struct virtio_net_ext_ip6frag *)ptr;
+		fhdr->frag_id = skb_shinfo(skb)->ip6_frag_id;
+		ext->flags |= VIRTIO_NET_EXT_F_IP6FRAG;
+	}
+
 	return 0;
 }
 #endif /* _LINUX_VIRTIO_NET_H */

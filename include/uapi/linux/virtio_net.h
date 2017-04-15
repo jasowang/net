@@ -56,6 +56,7 @@
 #define VIRTIO_NET_F_MQ	22	/* Device supports Receive Flow
 					 * Steering */
 #define VIRTIO_NET_F_CTRL_MAC_ADDR 23	/* Set MAC address */
+#define VIRTIO_NET_F_IP6_FRAGID    24	/* Host supports VLAN accleration */
 
 #ifndef VIRTIO_NET_NO_LEGACY
 #define VIRTIO_NET_F_GSO	6	/* Host handles pkts w/ any GSO type */
@@ -109,8 +110,14 @@ struct virtio_net_hdr_v1 {
  * this header.
  */
 struct virtio_net_ext_hdr {
+#define VIRTIO_NET_EXT_F_IP6FRAG	(1<<0)
 	__u32 flags;
 	__u8 extensions[];
+};
+
+/* Same as vlan_hdr */
+struct virtio_net_ext_ip6frag {
+	__be32 frag_id;
 };
 
 #ifndef VIRTIO_NET_NO_LEGACY

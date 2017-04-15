@@ -181,6 +181,7 @@ struct virtnet_info {
 struct virtio_net_hdr_max {
 	struct virtio_net_hdr_mrg_rxbuf hdr;
 	struct virtio_net_ext_hdr ext_hdr;
+	struct virtio_net_ext_ip6frag ip6f_ext;
 };
 
 static inline u8 padded_vnet_hdr(struct virtnet_info *vi)
@@ -2250,6 +2251,23 @@ static bool virtnet_validate_features(struct virtio_device *vdev)
 	return true;
 }
 
+static void virtnet_init_extensions(struct virtio_device *vdev)
+{
+	struct virtnet_info *vi = vdev->priv;
+
+	/* Start with V1 header size plus the extension header */
+	vi->hdr_len = sizeof(struct virtio_net_hdr_v1) +
+		      sizeof(struct virtio_net_ext_hdr);
+
+	/* now check all the negotiated extensions and add up
+	 * the sizes
+	 */
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_IP6_FRAGID)) {
+		vi->hdr_len += sizeof(u32);
+		vi->ext_mask |= VIRTIO_NET_EXT_F_IP6FRAG;
+	}
+}
+
 #define MIN_MTU ETH_MIN_MTU
 #define MAX_MTU ETH_MAX_MTU
 
@@ -2367,8 +2385,13 @@ static int virtnet_probe(struct virtio_device *vdev)
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_MRG_RXBUF))
 		vi->mergeable_rx_bufs = true;
 
-	if (virtio_has_feature(vdev, VIRTIO_NET_F_MRG_RXBUF) ||
-	    virtio_has_feature(vdev, VIRTIO_F_VERSION_1))
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_IP6_FRAGID))
+		vi->hdr_ext = true;
+
+	if (vi->hdr_ext)
+		virtnet_init_extensions(vdev);
+	else if (virtio_has_feature(vdev, VIRTIO_NET_F_MRG_RXBUF) ||
+		 virtio_has_feature(vdev, VIRTIO_F_VERSION_1))
 		vi->hdr_len = sizeof(struct virtio_net_hdr_mrg_rxbuf);
 	else
 		vi->hdr_len = sizeof(struct virtio_net_hdr);
