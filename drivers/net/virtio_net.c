@@ -182,6 +182,7 @@ struct virtio_net_hdr_max {
 	struct virtio_net_hdr_mrg_rxbuf hdr;
 	struct virtio_net_ext_hdr ext_hdr;
 	struct virtio_net_ext_ip6frag ip6f_ext;
+	struct virtio_net_ext_vlan vlan_ext;
 };
 
 static inline u8 padded_vnet_hdr(struct virtnet_info *vi)
@@ -2266,6 +2267,11 @@ static void virtnet_init_extensions(struct virtio_device *vdev)
 		vi->hdr_len += sizeof(u32);
 		vi->ext_mask |= VIRTIO_NET_EXT_F_IP6FRAG;
 	}
+
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_VLAN_OFFLOAD)) {
+		vi->hdr_len += sizeof(struct virtio_net_ext_vlan);
+		vi->ext_mask |= VIRTIO_NET_EXT_F_VLAN;
+	}
 }
 
 #define MIN_MTU ETH_MIN_MTU
@@ -2342,6 +2348,14 @@ static int virtnet_probe(struct virtio_device *vdev)
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_GUEST_CSUM))
 		dev->features |= NETIF_F_RXCSUM;
 
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_VLAN_OFFLOAD)) {
+		dev->features |= NETIF_F_HW_VLAN_CTAG_TX |
+				 NETIF_F_HW_VLAN_CTAG_RX |
+				 NETIF_F_HW_VLAN_STAG_TX |
+				 NETIF_F_HW_VLAN_STAG_RX;
+	}
+
+
 	dev->vlan_features = dev->features;
 
 	/* MTU range: 68 - 65535 */
@@ -2385,7 +2399,8 @@ static int virtnet_probe(struct virtio_device *vdev)
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_MRG_RXBUF))
 		vi->mergeable_rx_bufs = true;
 
-	if (virtio_has_feature(vdev, VIRTIO_NET_F_IP6_FRAGID))
+	if (virtio_has_feature(vdev, VIRTIO_NET_F_IP6_FRAGID) ||
+	    virtio_has_feature(vdev, VIRTIO_NET_F_VLAN_OFFLOAD))
 		vi->hdr_ext = true;
 
 	if (vi->hdr_ext)

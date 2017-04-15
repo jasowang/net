@@ -113,6 +113,14 @@ static inline int virtio_net_ext_to_skb(struct sk_buff *skb,
 		ptr += sizeof(struct virtio_net_ext_ip6frag);
 	}
 
+	if (ext->flags & VIRTIO_NET_EXT_F_VLAN) {
+		struct virtio_net_ext_vlan *vhdr =
+					(struct virtio_net_ext_vlan *)ptr;
+
+		__vlan_hwaccel_put_tag(skb, vhdr->vlan_proto, vhdr->vlan_tci);
+		ptr += sizeof(struct virtio_net_ext_vlan);
+	}
+
 	return 0;
 }
 
@@ -128,6 +136,15 @@ static inline int virtio_net_ext_from_skb(const struct sk_buff *skb,
 					(struct virtio_net_ext_ip6frag *)ptr;
 		fhdr->frag_id = skb_shinfo(skb)->ip6_frag_id;
 		ext->flags |= VIRTIO_NET_EXT_F_IP6FRAG;
+	}
+
+	if (ext_mask & VIRTIO_NET_EXT_F_VLAN && skb_vlan_tag_present(skb)) {
+		struct virtio_net_ext_vlan *vhdr =
+					(struct virtio_net_ext_vlan *)ptr;
+
+		vlan_get_tag(skb, &vhdr->vlan_tci);
+		vhdr->vlan_proto = skb->vlan_proto;
+		ext->flags |= VIRTIO_NET_EXT_F_VLAN;
 	}
 
 	return 0;
