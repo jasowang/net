@@ -1,6 +1,6 @@
 Version: 1
-Previous: 3c7bc54a92e4bf6db49527bf97d02d633dc9908c
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: bc54637e1106253dff3d2aba296340c662bd770e
+Head: eda743555a85b71b403db0934e638bf36e690a0a
 Applied:
 Unapplied:
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
