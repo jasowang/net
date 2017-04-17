@@ -1,8 +1,7 @@
 Version: 1
-Previous: 971c5b93eecc4d9d68dc896606619a276edcee6c
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: b7b1fce1526845eebad515846d285a9fa68b8e58
+Head: c94bece6597a9add815d1e35647a9c4d203a83fb
 Applied:
-Unapplied:
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
   skb_array-introduce-batch: db22f902b07c6a2b1ea9cc84c60c9773966411ef
   tun-export-skb_array: 0ed79904a53682d8797444afed1de4fa5217b8a6
@@ -10,6 +9,7 @@ Unapplied:
   tun-support-receiving-skb: 74b20376b3b04c5ce644502364adc8d650f73f7c
   tap-support-receive-skb-from: 86934741dd6d45d6d33ce16367f1f04e82867146
   vhost_net-try-batch-dequing: c94bece6597a9add815d1e35647a9c4d203a83fb
+Unapplied:
   tun-xmit_more-support: 76611efd577a1c35dbac04688f602bd734c3b412
   vhost-accelerate-vq-metadata: e3a529f9d2a3ac66dc7ad7e57d88d1c72adb3ed5
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
