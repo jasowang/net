@@ -1,9 +1,9 @@
 Version: 1
-Previous: 31858caab85b52ec0614bffa4c394639fcba720d
-Head: eda743555a85b71b403db0934e638bf36e690a0a
+Previous: 6325d8f05aaec68c018c905fb2c25c7ef2d10698
+Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
 Applied:
-  ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
 Unapplied:
+  ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
   skb_array-introduce-batch: db22f902b07c6a2b1ea9cc84c60c9773966411ef
   tun-export-skb_array: 0ed79904a53682d8797444afed1de4fa5217b8a6
