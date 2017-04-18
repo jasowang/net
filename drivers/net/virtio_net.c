@@ -1196,8 +1196,14 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	bool use_napi = sq->napi.weight;
 
 	/* Free up any pending old buffers before queueing new ones. */
-	if (!use_napi)
+	if (use_napi) {
+		if (kick)
+			virtqueue_enable_cb_delayed(sq->vq);
+		else
+			virtqueue_disable_cb(sq->vq);
+	} else {
 		free_old_xmit_skbs(sq);
+	}
 
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
