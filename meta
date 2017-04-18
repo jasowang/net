@@ -1,7 +1,8 @@
 Version: 1
-Previous: bc54637e1106253dff3d2aba296340c662bd770e
+Previous: 31858caab85b52ec0614bffa4c394639fcba720d
 Head: eda743555a85b71b403db0934e638bf36e690a0a
 Applied:
+  ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
 Unapplied:
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
   skb_array-introduce-batch: db22f902b07c6a2b1ea9cc84c60c9773966411ef
