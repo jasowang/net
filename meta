@@ -1,6 +1,6 @@
 Version: 1
-Previous: a3e2bc52b9e8508aab086cf72029f2b03e0aa4bb
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: e4d22579d5721c86ec5d33c1696aa1935714cf4a
+Head: 5829bfe927439fa36994f16fe212d23bb329be1a
 Applied:
 Unapplied:
   ptr_ring-batch-ring-zeroing: 1ebcfd3d1172ec39fd0c32fb8e32daf733c2ad7d
