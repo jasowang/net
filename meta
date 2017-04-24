@@ -1,8 +1,7 @@
 Version: 1
-Previous: 172b82375a02caa435affe9884b627d01f9d1eac
-Head: be2c37777f89c64767d560b096566b7e28773369
+Previous: 010c825593c5a0ab76549c4b46cdaa71137bef27
+Head: 9868879f293c599ce13b584c5bd8800312970781
 Applied:
-  virtio-net-napi-helper: be2c37777f89c64767d560b096566b7e28773369
 Unapplied:
   virtio-net-keep-tx-interrupts: 5829bfe927439fa36994f16fe212d23bb329be1a
   ptr_ring-batch-ring-zeroing: 1ebcfd3d1172ec39fd0c32fb8e32daf733c2ad7d
