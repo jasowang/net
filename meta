@@ -1,9 +1,8 @@
 Version: 1
-Previous: 010c825593c5a0ab76549c4b46cdaa71137bef27
+Previous: 7552561126f52dbd2a85dc151aac61f0313892ba
 Head: 9868879f293c599ce13b584c5bd8800312970781
 Applied:
 Unapplied:
-  virtio-net-keep-tx-interrupts: 5829bfe927439fa36994f16fe212d23bb329be1a
   ptr_ring-batch-ring-zeroing: 1ebcfd3d1172ec39fd0c32fb8e32daf733c2ad7d
   vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
   vhost-avoid-peeking-socket: b37c9ad06687b4b1b6d8bc32ffba8b4c01adc465
