@@ -1,11 +1,10 @@
 Version: 1
-Previous: 3a83e0d11c5dcd8dbf3cee971a3cfd4901ca19f6
-Head: 324d98e8a23fa554ea3c03e901cb15d56b05fca0
+Previous: 6533bef0a666a712ee5f7e13f11acd8e91d0ab94
+Head: 0e25ff4bb87e6de40ef0548f33f787146402c69e
 Applied:
   virtio-net-napi-helper: be2c37777f89c64767d560b096566b7e28773369
   virtio-net-transmit-napi: 027133a9d7f6619fdf9fc97823431bf221775861
   virtio-net-move: 0e25ff4bb87e6de40ef0548f33f787146402c69e
-  virtio-net-clean-tx: 324d98e8a23fa554ea3c03e901cb15d56b05fca0
 Unapplied:
   virtio-net-keep-tx-interrupts: 5829bfe927439fa36994f16fe212d23bb329be1a
   ptr_ring-batch-ring-zeroing: 1ebcfd3d1172ec39fd0c32fb8e32daf733c2ad7d
