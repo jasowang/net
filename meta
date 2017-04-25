@@ -1,9 +1,9 @@
 Version: 1
-Previous: a135ffc10141622539ee3e2d4cfb5ee98febcda4
-Head: db8ba9226c05c8d7d2083347d973e878ce5da341
+Previous: 6a1c198714c257b56f8766420aafca541cd66984
+Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
 Applied:
-  vhost-accelerate-vq-metadata: db8ba9226c05c8d7d2083347d973e878ce5da341
 Unapplied:
+  vhost-accelerate-vq-metadata: db8ba9226c05c8d7d2083347d973e878ce5da341
   ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
   ptr_ring-introduce-batch: 06a1d0cce9e573aa354e9887d1007c048f911f08
   skb_array-introduce-batch: db22f902b07c6a2b1ea9cc84c60c9773966411ef
