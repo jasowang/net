@@ -1,0 +1,33 @@
+Bottom: 53dfadb8aa5536fb7029b405a1b854551a6d9502
+Top:    8f9058bb092fc07343de5df77994cf91417dd013
+Author: Willem de Bruijn <willemb@google.com>
+Date:   2017-04-24 13:49:30 -0400
+
+virtio-net: keep tx interrupts disabled unless kick
+
+Tx napi mode increases the rate of transmit interrupts. Suppress some
+by masking interrupts while more packets are expected. The interrupts
+will be reenabled before the last packet is sent.
+
+This optimization reduces the througput drop with tx napi for
+unidirectional flows such as UDP_STREAM that do not benefit from
+cleaning tx completions in the the receive napi handler.
+
+Signed-off-by: Willem de Bruijn <willemb@google.com>
+
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 9dd978f..0031438 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1200,6 +1200,9 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	/* Free up any pending old buffers before queueing new ones. */
+ 	free_old_xmit_skbs(sq);
+ 
++	if (use_napi && kick)
++		virtqueue_enable_cb_delayed(sq->vq);
++
+ 	/* timestamp packet in software */
+ 	skb_tx_timestamp(skb);
