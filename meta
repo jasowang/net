@@ -1,6 +1,6 @@
 Version: 1
-Previous: 6a1c198714c257b56f8766420aafca541cd66984
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: 26cbe3afbbad729be3f3b4046e1f25697033b80c
+Head: fe1070afb5ca6e4670df9337f474138e39a028d2
 Applied:
 Unapplied:
   vhost-accelerate-vq-metadata: db8ba9226c05c8d7d2083347d973e878ce5da341
