@@ -1,5 +1,5 @@
-Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    52a54100cfff7944bd566e9700b4c56bed013c9e
+Bottom: 72d74ab5293638c3aa79a13dbf5962f6a3180eda
+Top:    a2183d7582a62d1bf208a178c7e97761fade5826
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-16 17:50:49 +0800
 
@@ -15,10 +15,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
-index 6c70444..2be0f350 100644
+index 6b2e0dd..5080a1b 100644
 --- a/include/linux/ptr_ring.h
 +++ b/include/linux/ptr_ring.h
-@@ -247,6 +247,22 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
+@@ -278,6 +278,22 @@ static inline void *__ptr_ring_consume(struct ptr_ring *r)
  	return ptr;
  }
  
@@ -41,7 +41,7 @@ index 6c70444..2be0f350 100644
  /*
   * Note: resize (below) nests producer lock within consumer lock, so if you
   * call this in interrupt or BH context, you must disable interrupts/BH when
-@@ -297,6 +313,55 @@ static inline void *ptr_ring_consume_bh(struct ptr_ring *r)
+@@ -328,6 +344,55 @@ static inline void *ptr_ring_consume_bh(struct ptr_ring *r)
  	return ptr;
  }
  
