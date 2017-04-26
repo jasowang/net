@@ -1,9 +1,9 @@
 Version: 1
-Previous: 6449660899d6fcf709b2b7adf8839a22773c51b0
-Head: 45d3a01328e849f7702ca86625205285ac9b6db7
+Previous: 65031321e193dd93db5ecd478b77f181b28a3564
+Head: 91ec701a553cb3de470fd471c6fefe3ad1125455
 Applied:
-  ptr_ring-batch-ring-zeroing: 45d3a01328e849f7702ca86625205285ac9b6db7
 Unapplied:
+  ptr_ring-batch-ring-zeroing: 45d3a01328e849f7702ca86625205285ac9b6db7
   vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
   vhost-avoid-peeking-socket: b37c9ad06687b4b1b6d8bc32ffba8b4c01adc465
   vhost-partially-open-code: 0ffd07f6a880d392fbd04ebec20d4e1ac64ee0d2
