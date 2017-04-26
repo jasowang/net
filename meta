@@ -1,8 +1,7 @@
 Version: 1
-Previous: 63adc583ca7667b6f31994a334adcd0cc4b32bbf
-Head: 3ceadcd4a1433e07dda02157bdd74ee438d64017
+Previous: 0c1242af07488ab6159c0c5f42fb49dcb2eedf38
+Head: 91ec701a553cb3de470fd471c6fefe3ad1125455
 Applied:
-  virtio-net-napi-helper: 3ceadcd4a1433e07dda02157bdd74ee438d64017
 Unapplied:
   ptr_ring-batch-ring-zeroing: 1ebcfd3d1172ec39fd0c32fb8e32daf733c2ad7d
   vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
