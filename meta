@@ -1,6 +1,6 @@
 Version: 1
-Previous: 0c2bd259a45196467f05cc1386ea2fc007b6326c
-Head: 8a09d2305036690810cd29fcfd1c48a6eb65f2c9
+Previous: 201de8437055a948a22e9bccc3517dab96324e49
+Head: 14059e835bb904507347111e2a038fdbd6cf658a
 Applied:
   virtio-net-napi-helper: 0ededee63b53a69ad825f621fb532c936d2ba05d
   virtio-net-transmit-napi: 8a09d2305036690810cd29fcfd1c48a6eb65f2c9
