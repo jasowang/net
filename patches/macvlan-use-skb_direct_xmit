@@ -1,5 +1,5 @@
-Bottom: 6792732a4bcf1c365885aa4c88ce2e1dda5a6a1a
-Top:    7921ea2619b4870f71698b29792d4b6459dd4798
+Bottom: 7321e8b59b9fb3dc6006a7a57151c518e7867c58
+Top:    7321e8b59b9fb3dc6006a7a57151c518e7867c58
 Author: = <=>
 Date:   2016-12-08 17:47:06 +0800
 
@@ -10,18 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/macvtap.c b/drivers/net/macvtap.c
-index 52a9d81..98e1374 100644
---- a/drivers/net/macvtap.c
-+++ b/drivers/net/macvtap.c
-@@ -780,8 +780,8 @@ static ssize_t macvtap_get_user(struct macvtap_queue *q, struct msghdr *m,
- 	}
- 
- 	if (vlan) {
--		skb->dev = vlan->dev;
--		dev_queue_xmit(skb);
-+		skb->dev = vlan->lowerdev;
-+		skb_direct_xmit(skb, false);
- 	} else {
- 		kfree_skb(skb);
- 	}
+
