@@ -1,7 +1,8 @@
 Version: 1
-Previous: 65031321e193dd93db5ecd478b77f181b28a3564
-Head: 91ec701a553cb3de470fd471c6fefe3ad1125455
+Previous: 96ff832e920c3870f6630bc93e6dee607419c33c
+Head: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
 Applied:
+  net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
 Unapplied:
   ptr_ring-batch-ring-zeroing: 45d3a01328e849f7702ca86625205285ac9b6db7
   vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
@@ -33,7 +34,6 @@ Unapplied:
   polling: c00bb50790787c84bb38cf26cf3938999082198f
   vhost-prefetch-next-descriptor: 23d42c88c4664f76d90971946cb66be08987c030
   tun-prefetch-skb-data-before: 870a17fb97cc7a7be567709ae09f703b0b5592b8
-  net-introduce-skb_direct_xmit: d6a58900e307e928f4a7058fa5e864535aa19fce
   macvlan-use-skb_direct_xmit: e33d7c68029ba5e545317b1894b71e7f7410a46b
   macvtap-submit-skb-list-for-0: c153b673efaddba4f094f25122d293be496b59f2
   macvtap-tx-batching: fb5a4b8249e2dfd46fe18492228e82e0596dbc89

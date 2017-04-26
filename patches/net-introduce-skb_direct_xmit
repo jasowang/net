@@ -1,5 +1,5 @@
-Bottom: a4b273519593dd2321156b103734a2efce1828a1
-Top:    6792732a4bcf1c365885aa4c88ce2e1dda5a6a1a
+Bottom: 542d0fcd16478312c482e5a629fdf0210d44077d
+Top:    7321e8b59b9fb3dc6006a7a57151c518e7867c58
 Author: = <=>
 Date:   2016-12-08 17:40:33 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: = <=>
 ---
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 1ff5ea6..af7e4c0 100644
+index 5d5267f..e86b1cb 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2421,6 +2421,7 @@ void dev_disable_lro(struct net_device *dev);
+@@ -2418,6 +2418,7 @@ void dev_disable_lro(struct net_device *dev);
  int dev_loopback_xmit(struct net *net, struct sock *sk, struct sk_buff *newskb);
  int dev_queue_xmit(struct sk_buff *skb);
  int dev_queue_xmit_accel(struct sk_buff *skb, void *accel_priv);
@@ -23,10 +23,10 @@ index 1ff5ea6..af7e4c0 100644
  void unregister_netdevice_queue(struct net_device *dev, struct list_head *head);
  void unregister_netdevice_many(struct list_head *head);
 diff --git a/net/core/dev.c b/net/core/dev.c
-index bffb525..87a02b0 100644
+index db6e315..fa719bd 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -2880,6 +2880,44 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
+@@ -2894,6 +2894,44 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
  }
  EXPORT_SYMBOL(netif_skb_features);
  
@@ -72,7 +72,7 @@ index bffb525..87a02b0 100644
  		    struct netdev_queue *txq, bool more)
  {
 diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
-index 89f2e8c..376e86d 100644
+index 94052f4..94eefa26 100644
 --- a/net/packet/af_packet.c
 +++ b/net/packet/af_packet.c
 @@ -249,38 +249,7 @@ static void __fanout_link(struct sock *sk, struct packet_sock *po);
