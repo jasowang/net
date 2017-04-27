@@ -759,7 +759,7 @@ static void handle_rx(struct vhost_net *net)
 			 * TODO: support TSO.
 			 */
 			if (copy_to_iter(&hdr, sizeof(hdr),
-					 &fixup) != sizeof(hdr)) {
+					 &msg.msg_iter) != sizeof(hdr)) {
 				vq_err(vq, "Unable to write vnet_hdr "
 				       "at addr %p\n", vq->iov->iov_base);
 				goto out;
@@ -778,8 +778,8 @@ static void handle_rx(struct vhost_net *net)
 			continue;
 		}
 		if (mergeable) {
-			/* Header came from socket; we'll need to patch
-			 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
+			/* We'll need to patch ->num_buffers over if
+			 * VIRTIO_NET_F_MRG_RXBUF
 			 */
 			iov_iter_advance(&fixup, sizeof(hdr));
 		}
