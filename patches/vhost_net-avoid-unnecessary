@@ -5,6 +5,8 @@ Date:   2017-04-27 22:27:58 +0800
 
 vhost_net: avoid unnecessary iov_iter advancing
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
