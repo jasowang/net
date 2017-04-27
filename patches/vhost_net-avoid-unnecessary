@@ -1,5 +1,5 @@
 Bottom: 19eab26b2d5f90a553c64821d1eb0a420fb09a8b
-Top:    c5f857e9afbae35f699258fe8bb1aff83896e5e8
+Top:    23712a6a6eeac910e5524c9d6fcf6827f653c8c3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-04-27 22:27:58 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ffa78c6..6b91a40 100644
+index ffa78c6..289054d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -751,12 +751,20 @@ static void handle_rx(struct vhost_net *net)
@@ -28,7 +28,7 @@ index ffa78c6..6b91a40 100644
  			 */
 -			iov_iter_advance(&msg.msg_iter, vhost_hlen);
 +			if (copy_to_iter(&hdr, sizeof(hdr),
-+					 &fixup) != sizeof(hdr)) {
++					 &msg.msg_iter) != sizeof(hdr)) {
 +				vq_err(vq, "Unable to write vnet_hdr "
 +				       "at addr %p\n", vq->iov->iov_base);
 +				goto out;
@@ -37,7 +37,7 @@ index ffa78c6..6b91a40 100644
  		}
  		err = sock->ops->recvmsg(sock, &msg,
  					 sock_len, MSG_DONTWAIT | MSG_TRUNC);
-@@ -769,15 +777,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -769,17 +777,9 @@ static void handle_rx(struct vhost_net *net)
  			vhost_discard_vq_desc(vq, headcount);
  			continue;
  		}
@@ -50,7 +50,11 @@ index ffa78c6..6b91a40 100644
 -				goto out;
 -			}
 -		} else {
+-			/* Header came from socket; we'll need to patch
+-			 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
 +		if (mergeable) {
- 			/* Header came from socket; we'll need to patch
- 			 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
++			/* We'll need to patch ->num_buffers over if
++			 * VIRTIO_NET_F_MRG_RXBUF
  			 */
+ 			iov_iter_advance(&fixup, sizeof(hdr));
+ 		}
