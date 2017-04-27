@@ -5,6 +5,11 @@ Date:   2017-04-27 22:27:58 +0800
 
 vhost_net: avoid unnecessary iov_iter advancing
 
+
+
+Note: This slow down the case of vhost_hlen && mergeable, but is was
+      really rare.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
