@@ -751,12 +751,20 @@ static void handle_rx(struct vhost_net *net)
 		}
 		/* We don't need to be notified again. */
 		iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
-		fixup = msg.msg_iter;
+		if (mergeable)
+			fixup = msg.msg_iter;
+		/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
 		if (unlikely((vhost_hlen))) {
 			/* We will supply the header ourselves
 			 * TODO: support TSO.
 			 */
-			iov_iter_advance(&msg.msg_iter, vhost_hlen);
+			if (copy_to_iter(&hdr, sizeof(hdr),
+					 &msg.msg_iter) != sizeof(hdr)) {
+				vq_err(vq, "Unable to write vnet_hdr "
+				       "at addr %p\n", vq->iov->iov_base);
+				goto out;
+			}
+			iov_iter_advance(&msg.msg_iter, vhost_hlen - sizeof(hdr));
 		}
 		err = sock->ops->recvmsg(sock, &msg,
 					 sock_len, MSG_DONTWAIT | MSG_TRUNC);
@@ -769,17 +777,9 @@ static void handle_rx(struct vhost_net *net)
 			vhost_discard_vq_desc(vq, headcount);
 			continue;
 		}
-		/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
-		if (unlikely(vhost_hlen)) {
-			if (copy_to_iter(&hdr, sizeof(hdr),
-					 &fixup) != sizeof(hdr)) {
-				vq_err(vq, "Unable to write vnet_hdr "
-				       "at addr %p\n", vq->iov->iov_base);
-				goto out;
-			}
-		} else {
-			/* Header came from socket; we'll need to patch
-			 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
+		if (mergeable) {
+			/* We'll need to patch ->num_buffers over if
+			 * VIRTIO_NET_F_MRG_RXBUF
 			 */
 			iov_iter_advance(&fixup, sizeof(hdr));
 		}
