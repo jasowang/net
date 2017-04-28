@@ -1,5 +1,5 @@
 Bottom: 73edeef883e45bce7704256108e583f8e422cc8c
-Top:    e853487120e022d657839d614cf6f91ade76bcad
+Top:    2880507b6e5f57d436348f5c3fdb356880baf19e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-22 13:21:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ffa78c6..25b6b3d 100644
+index ffa78c6..6e6225c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -672,6 +672,124 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
@@ -129,10 +129,10 @@ index ffa78c6..25b6b3d 100644
 +				return;
 +
 +			vhost_update_used_idx(vq, 1);
++			/* FIXME: batched signal */
++			vhost_signal(&net->dev, vq);
 +			/* FIXME: count bytes */
 +		}
-+		/* FIXME: batched signal */
-+		vhost_signal(&net->dev, vq);
 +	}
 +}
 +

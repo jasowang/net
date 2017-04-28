@@ -1,6 +1,6 @@
 Version: 1
-Previous: 81428e308061989d804ecef42522d99549868b52
-Head: 03c3ba3f380a679ffa87046cec465448cad74e7d
+Previous: f4f9b6ed28edf68014f3219c595c341e2b8fb0dd
+Head: 92d541a825cfc7f44cbf2e77ec74e05deb9d185f
 Applied:
   ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
   ptr_ring-introduce-batch: cee1c3a3877169940e94ffca77d252eb280ea9c6
@@ -11,8 +11,7 @@ Applied:
   tap-support-receive-skb-from: 9758ac613f0e62ba8d6ab84f1c3901bce2fe5cc6
   vhost_net-try-batch-dequing: e922a8765273855a3121ec549bf35561623a0696
   vhost-introduce-used-ring: ed7f6113aa5bc71898e1f102d1b68b1ed2e53574
-  vhost_net-prefetch-desc: 4e1d4bf245d35309dd3209a498155f409513efb9
-  refresh-temp: 03c3ba3f380a679ffa87046cec465448cad74e7d
+  vhost_net-prefetch-desc: 92d541a825cfc7f44cbf2e77ec74e05deb9d185f
 Unapplied:
   vhost_net-avoid-unnecessary: 8456bacf82f12f222547d79ed9495590548c5c4c
   vhost-accelerate-vq-metadata: 420ce77b7a4498777d33c2ba6cffe23b61ce9d88
