@@ -1,6 +1,6 @@
 Version: 1
-Previous: 0023c4100209e309898880233a7d66888bd2960c
-Head: e922a8765273855a3121ec549bf35561623a0696
+Previous: 448409b6241fdcbea8cd6bbcfa155cffd40307e7
+Head: ed7f6113aa5bc71898e1f102d1b68b1ed2e53574
 Applied:
   ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
   ptr_ring-introduce-batch: cee1c3a3877169940e94ffca77d252eb280ea9c6
@@ -10,12 +10,12 @@ Applied:
   tun-support-receiving-skb: 118038bc697ad0f4c3e777850d553fd9f2311d08
   tap-support-receive-skb-from: 9758ac613f0e62ba8d6ab84f1c3901bce2fe5cc6
   vhost_net-try-batch-dequing: e922a8765273855a3121ec549bf35561623a0696
+  vhost-introduce-used-ring: ed7f6113aa5bc71898e1f102d1b68b1ed2e53574
 Unapplied:
   vhost_net-avoid-unnecessary: 8456bacf82f12f222547d79ed9495590548c5c4c
   vhost-accelerate-vq-metadata: 420ce77b7a4498777d33c2ba6cffe23b61ce9d88
   tun-xmit_more-support: 76611efd577a1c35dbac04688f602bd734c3b412
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
-  vhost-introduce-used-ring: 324df1eba7ff45492ccea6ba5a6f7fcc2016f699
   vhost_net-prefetch-desc: 09379c02e8909c1c7cf8470cd0e6256a0a93920f
   vhost-accelerate-vq-meta-data: 5066ca8b5e3dcb36feca7813c8fd1459f7367bc1
   packet-allow-vnet-header-to-be: c297b5c545c72e4ba9f4578d293c6dc8a9e31266
