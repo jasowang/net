@@ -783,10 +783,10 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 				return;
 
 			vhost_update_used_idx(vq, 1);
+			/* FIXME: batched signal */
+			vhost_signal(&net->dev, vq);
 			/* FIXME: count bytes */
 		}
-		/* FIXME: batched signal */
-		vhost_signal(&net->dev, vq);
 	}
 }
 
