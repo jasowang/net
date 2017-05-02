@@ -6,9 +6,9 @@ Date:   2017-04-27 22:27:58 +0800
 vhost_net: avoid unnecessary iov_iter initialization and advancing
 
 We don't need patch num_buffers is mergeable buffer is not enabled. So
-try to avoid initialize and advance fixup in this case. Note: This
-slow down the case of vhost_hlen && mergeable, but is was a not a
-common setup nowdays.
+try to avoid initializing and advancing fixup in this case. Note: This
+slows down the case of vhost_hlen && mergeable, but is was a not a
+common setup now.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
