@@ -1,9 +1,8 @@
 Version: 1
-Previous: e972b9235683cb089884256fea27b4a0a4342f65
-Head: 4cbef0515e2d165104dd805b60a86941aa7e81ee
+Previous: f4bb53b826a6fa919d23af7090acbe7bbe166f99
+Head: 0a2b30b28b28f46d7b58cc0708b7f342c434c108
 Applied:
-  vhost-accelerate-vq-metadata: f76a548db15284241728fb45337489594c98fa9d
-  refresh-temp: 4cbef0515e2d165104dd805b60a86941aa7e81ee
+  vhost-accelerate-vq-metadata: 0a2b30b28b28f46d7b58cc0708b7f342c434c108
 Unapplied:
   ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
   ptr_ring-introduce-batch: cee1c3a3877169940e94ffca77d252eb280ea9c6

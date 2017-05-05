@@ -1,5 +1,5 @@
 Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    d8a986d84e77cbe9bfdaa8aff6281e9c0a94c37e
+Top:    736752ad13319aa033b50a949ca8bd84799f34b0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-23 17:10:24 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f0ba362..a5caa38 100644
+index f0ba362..78e4981 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -300,6 +300,41 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
+@@ -300,6 +300,60 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
  		__vhost_vq_meta_reset(d->vqs[i]);
  }
  
@@ -22,6 +22,7 @@ index f0ba362..a5caa38 100644
 +{
 +	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
 +	u64 used = (u64)vq->used;
++	u64 desc = (u64)vq->desc;
 +	u64 offset;
 +	struct page *pages[4];
 +	size_t len;
@@ -44,6 +45,22 @@ index f0ba362..a5caa38 100644
 +		return -EFAULT;
 +	}
 +
++	offset = desc & (PAGE_SIZE - 1);
++	len = vq->num * sizeof *vq->desc;
++	n = DIV_ROUND_UP(len, PAGE_SIZE);
++	printk("desc %p\n", desc);
++	res = get_user_pages_fast(desc, n, 1, pages);
++	if (unlikely(res < n)) {
++		printk("gup fail! res %d n %d\n", res, n);
++		/* FIXME: put pages and vunmap */
++		return -EFAULT;
++	}
++	vq->desc_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL) + offset;
++	if (!vq->desc_addr) {
++		printk("vmap fail!\n");
++		return -EFAULT;
++	}
++
 +	return 0;
 +}
 +
@@ -51,22 +68,25 @@ index f0ba362..a5caa38 100644
 +{
 +	if (vq->used_addr)
 +		vunmap(vq->used_addr);
++	if (vq->desc_addr)
++		vunmap(vq->desc_addr);
 +}
 +
  static void vhost_vq_reset(struct vhost_dev *dev,
  			   struct vhost_virtqueue *vq)
  {
-@@ -330,7 +365,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+@@ -330,7 +384,10 @@ static void vhost_vq_reset(struct vhost_dev *dev,
  	vq->busyloop_timeout = 0;
  	vq->umem = NULL;
  	vq->iotlb = NULL;
 +	vq->used_addr = 0;
++	vq->desc_addr = 0;
  	__vhost_vq_meta_reset(vq);
 +	vhost_unmap_uaddr(vq);
  }
  
  static int vhost_worker(void *data)
-@@ -1355,6 +1392,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
+@@ -1355,6 +1412,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
  	return -EFAULT;
  }
  
@@ -75,7 +95,7 @@ index f0ba362..a5caa38 100644
  long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  {
  	struct file *eventfp, *filep = NULL;
-@@ -1476,6 +1515,13 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+@@ -1476,6 +1535,13 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
  		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
  		vq->log_addr = a.log_guest_addr;
  		vq->used = (void __user *)(unsigned long)a.used_user_addr;
@@ -89,7 +109,75 @@ index f0ba362..a5caa38 100644
  		break;
  	case VHOST_SET_VRING_KICK:
  		if (copy_from_user(&f, argp, sizeof f)) {
-@@ -2169,24 +2215,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2007,7 +2073,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num)
+ {
+-	struct vring_desc desc;
++	struct vring_desc *desc;
+ 	unsigned int i, head, found = 0;
+ 	u16 last_avail_idx;
+ 	__virtio16 avail_idx;
+@@ -2081,6 +2147,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
++		#if 0
+ 		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
+ 					   sizeof desc);
+ 		if (unlikely(ret)) {
+@@ -2088,10 +2155,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->desc + i);
+ 			return -EFAULT;
+ 		}
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
++		#endif
++		desc = &vq->desc_addr[i];
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+-					   log, log_num, &desc);
++					   log, log_num, desc);
+ 			if (unlikely(ret < 0)) {
+ 				if (ret != -EAGAIN)
+ 					vq_err(vq, "Failure detected "
+@@ -2101,12 +2170,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			continue;
+ 		}
+ 
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+ 			access = VHOST_ACCESS_WO;
+ 		else
+ 			access = VHOST_ACCESS_RO;
+-		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+-				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
++		ret = translate_desc(vq, vhost64_to_cpu(vq, desc->addr),
++				     vhost32_to_cpu(vq, desc->len), iov + iov_count,
+ 				     iov_size - iov_count, access);
+ 		if (unlikely(ret < 0)) {
+ 			if (ret != -EAGAIN)
+@@ -2119,8 +2188,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			 * increment that count. */
+ 			*in_num += ret;
+ 			if (unlikely(log)) {
+-				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
+-				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
++				log[*log_num].addr = vhost64_to_cpu(vq, desc->addr);
++				log[*log_num].len = vhost32_to_cpu(vq, desc->len);
+ 				++*log_num;
+ 			}
+ 		} else {
+@@ -2133,7 +2202,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			}
+ 			*out_num += ret;
+ 		}
+-	} while ((i = next_desc(vq, &desc)) != -1);
++	} while ((i = next_desc(vq, desc)) != -1);
+ 
+ 	/* On success, increment avail index. */
+ 	vq->last_avail_idx++;
+@@ -2169,24 +2238,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  			    struct vring_used_elem *heads,
  			    unsigned count)
  {
@@ -125,14 +213,15 @@ index f0ba362..a5caa38 100644
  	if (unlikely(vq->log_used)) {
  		/* Make sure data is seen before log. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index f55671d..4752ff3 100644
+index f55671d..c335fa2 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -93,6 +93,7 @@ struct vhost_virtqueue {
+@@ -93,6 +93,8 @@ struct vhost_virtqueue {
  	struct vring_desc __user *desc;
  	struct vring_avail __user *avail;
  	struct vring_used __user *used;
 +	struct vring_used *used_addr;
++	struct vring_desc *desc_addr;
  	const struct vhost_umem_node *meta_iotlb[VHOST_NUM_ADDRS];
  	struct file *kick;
  	struct file *call;
