@@ -304,6 +304,7 @@ static int vhost_map_uaddr(struct vhost_virtqueue *vq)
 {
 	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
 	u64 used = (u64)vq->used;
+	u64 desc = (u64)vq->desc;
 	u64 offset;
 	struct page *pages[4];
 	size_t len;
@@ -326,6 +327,22 @@ static int vhost_map_uaddr(struct vhost_virtqueue *vq)
 		return -EFAULT;
 	}
 
+	offset = desc & (PAGE_SIZE - 1);
+	len = vq->num * sizeof *vq->desc;
+	n = DIV_ROUND_UP(len, PAGE_SIZE);
+	printk("desc %p\n", desc);
+	res = get_user_pages_fast(desc, n, 1, pages);
+	if (unlikely(res < n)) {
+		printk("gup fail! res %d n %d\n", res, n);
+		/* FIXME: put pages and vunmap */
+		return -EFAULT;
+	}
+	vq->desc_addr = vmap(pages, n, VM_MAP, PAGE_KERNEL) + offset;
+	if (!vq->desc_addr) {
+		printk("vmap fail!\n");
+		return -EFAULT;
+	}
+
 	return 0;
 }
 
@@ -333,6 +350,8 @@ static void vhost_unmap_uaddr(struct vhost_virtqueue *vq)
 {
 	if (vq->used_addr)
 		vunmap(vq->used_addr);
+	if (vq->desc_addr)
+		vunmap(vq->desc_addr);
 }
 
 static void vhost_vq_reset(struct vhost_dev *dev,
@@ -366,6 +385,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	vq->used_addr = 0;
+	vq->desc_addr = 0;
 	__vhost_vq_meta_reset(vq);
 	vhost_unmap_uaddr(vq);
 }
@@ -2053,7 +2073,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		      unsigned int *out_num, unsigned int *in_num,
 		      struct vhost_log *log, unsigned int *log_num)
 {
-	struct vring_desc desc;
+	struct vring_desc *desc;
 	unsigned int i, head, found = 0;
 	u16 last_avail_idx;
 	__virtio16 avail_idx;
@@ -2127,6 +2147,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
+		#if 0
 		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
 					   sizeof desc);
 		if (unlikely(ret)) {
@@ -2134,10 +2155,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->desc + i);
 			return -EFAULT;
 		}
-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+		#endif
+		desc = &vq->desc_addr[i];
+		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 			ret = get_indirect(vq, iov, iov_size,
 					   out_num, in_num,
-					   log, log_num, &desc);
+					   log, log_num, desc);
 			if (unlikely(ret < 0)) {
 				if (ret != -EAGAIN)
 					vq_err(vq, "Failure detected "
@@ -2147,12 +2170,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			continue;
 		}
 
-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
 			access = VHOST_ACCESS_WO;
 		else
 			access = VHOST_ACCESS_RO;
-		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
-				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
+		ret = translate_desc(vq, vhost64_to_cpu(vq, desc->addr),
+				     vhost32_to_cpu(vq, desc->len), iov + iov_count,
 				     iov_size - iov_count, access);
 		if (unlikely(ret < 0)) {
 			if (ret != -EAGAIN)
@@ -2165,8 +2188,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			 * increment that count. */
 			*in_num += ret;
 			if (unlikely(log)) {
-				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
-				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
+				log[*log_num].addr = vhost64_to_cpu(vq, desc->addr);
+				log[*log_num].len = vhost32_to_cpu(vq, desc->len);
 				++*log_num;
 			}
 		} else {
@@ -2179,7 +2202,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			}
 			*out_num += ret;
 		}
-	} while ((i = next_desc(vq, &desc)) != -1);
+	} while ((i = next_desc(vq, desc)) != -1);
 
 	/* On success, increment avail index. */
 	vq->last_avail_idx++;
