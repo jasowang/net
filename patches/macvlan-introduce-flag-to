@@ -1,5 +1,5 @@
 Bottom: 7321e8b59b9fb3dc6006a7a57151c518e7867c58
-Top:    7321e8b59b9fb3dc6006a7a57151c518e7867c58
+Top:    14ebf5701bba2dc96fb1f29b02dee56748353c6f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-05-09 13:59:58 +0800
 
@@ -10,4 +10,41 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index 9261722..dad2936 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -503,7 +503,10 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ xmit_world:
+ 	skb->dev = vlan->lowerdev;
+-	return dev_queue_xmit(skb);
++	if (vlan->flags & MACVLAN_FLAG_DIRECT)
++		return skb_direct_xmit(skb);
++	else
++		return dev_queue_xmit(skb);
+ }
+ 
+ static inline netdev_tx_t macvlan_netpoll_send_skb(struct macvlan_dev *vlan, struct sk_buff *skb)
+@@ -1162,7 +1165,8 @@ static int macvlan_validate(struct nlattr *tb[], struct nlattr *data[])
+ 	}
+ 
+ 	if (data && data[IFLA_MACVLAN_FLAGS] &&
+-	    nla_get_u16(data[IFLA_MACVLAN_FLAGS]) & ~MACVLAN_FLAG_NOPROMISC)
++	    nla_get_u16(data[IFLA_MACVLAN_FLAGS]) &
++	    ~(MACVLAN_FLAG_NOPROMISC | MACVLAN_FLAG_DIRECT))
+ 		return -EINVAL;
+ 
+ 	if (data && data[IFLA_MACVLAN_MODE]) {
+diff --git a/include/uapi/linux/if_link.h b/include/uapi/linux/if_link.h
+index 8b405af..bce3cd9 100644
+--- a/include/uapi/linux/if_link.h
++++ b/include/uapi/linux/if_link.h
+@@ -408,6 +408,7 @@ enum macvlan_macaddr_mode {
+ };
+ 
+ #define MACVLAN_FLAG_NOPROMISC	1
++#define MACVLAN_FLAG_DIRECT     2
+ 
+ /* VRF section */
+ enum {
