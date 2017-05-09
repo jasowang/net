@@ -1,0 +1,11 @@
+Bottom: 7321e8b59b9fb3dc6006a7a57151c518e7867c58
+Top:    7321e8b59b9fb3dc6006a7a57151c518e7867c58
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-05-09 13:59:58 +0800
+
+macvlan: introduce flag to bypass qdisc layer
+
+
+---
+
+
