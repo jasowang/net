@@ -5,6 +5,9 @@ Date:   2017-05-09 13:59:58 +0800
 
 macvlan: introduce flag to bypass qdisc layer
 
+This patch introduces a flag to bypass qdisc layer during xmit. This
+could be useful for e.g an VM who want extreme performance.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
