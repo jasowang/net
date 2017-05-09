@@ -408,6 +408,7 @@ enum macvlan_macaddr_mode {
 };
 
 #define MACVLAN_FLAG_NOPROMISC	1
+#define MACVLAN_FLAG_DIRECT     2
 
 /* VRF section */
 enum {
