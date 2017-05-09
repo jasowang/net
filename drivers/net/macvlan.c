@@ -503,7 +503,10 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
 
 xmit_world:
 	skb->dev = vlan->lowerdev;
-	return dev_queue_xmit(skb);
+	if (vlan->flags & MACVLAN_FLAG_DIRECT)
+		return skb_direct_xmit(skb);
+	else
+		return dev_queue_xmit(skb);
 }
 
 static inline netdev_tx_t macvlan_netpoll_send_skb(struct macvlan_dev *vlan, struct sk_buff *skb)
@@ -1162,7 +1165,8 @@ static int macvlan_validate(struct nlattr *tb[], struct nlattr *data[])
 	}
 
 	if (data && data[IFLA_MACVLAN_FLAGS] &&
-	    nla_get_u16(data[IFLA_MACVLAN_FLAGS]) & ~MACVLAN_FLAG_NOPROMISC)
+	    nla_get_u16(data[IFLA_MACVLAN_FLAGS]) &
+	    ~(MACVLAN_FLAG_NOPROMISC | MACVLAN_FLAG_DIRECT))
 		return -EINVAL;
 
 	if (data && data[IFLA_MACVLAN_MODE]) {
