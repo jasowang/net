@@ -1,5 +1,5 @@
-Bottom: 7c61bba2257c97d54d164b9c546e3c7d800c23d3
-Top:    19eab26b2d5f90a553c64821d1eb0a420fb09a8b
+Bottom: 51056a586786c0e64a350b21e463fe0390253a7c
+Top:    23712a6a6eeac910e5524c9d6fcf6827f653c8c3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-20 13:53:59 +0800
 
@@ -26,7 +26,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9b51989..ffa78c6 100644
+index 4dc448b..289054d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -28,6 +28,8 @@
