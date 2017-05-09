@@ -1,11 +1,11 @@
 Version: 1
-Previous: 6b9dd3d6b941abf53e5a1e4d0fcdf63b30839700
-Head: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
+Previous: 01f911ae17cc0f52a16071c55c7d79cffc8183c7
+Head: 1848eea96ad99f7302d59db5da7d08177b1eb8d1
 Applied:
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
+  macvlan-introduce-flag-to: 1848eea96ad99f7302d59db5da7d08177b1eb8d1
 Unapplied:
   vhost_net-conditionally-start: a796d6a455929a196937ce78cc27212f902baf2a
-  macvlan-introduce-flag-to: 1848eea96ad99f7302d59db5da7d08177b1eb8d1
   macvlan-use-skb_direct_xmit: 76fed679844f4cb58ea4f435bc128bd91fa30d2f
   ptr_ring-batch-ring-zeroing: 45d3a01328e849f7702ca86625205285ac9b6db7
   vhost-debug: c660abef36a47c712086d87516eed41982b13b2a
