@@ -1,5 +1,5 @@
-Bottom: db2d4a15710640eed07e4ed008fcb933677011fb
-Top:    73388ccbbf4d3e6eda5c1888e0fe73b2f999c55e
+Bottom: 14ebf5701bba2dc96fb1f29b02dee56748353c6f
+Top:    14ebf5701bba2dc96fb1f29b02dee56748353c6f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2016-05-26 12:01:35 +0800
 
@@ -10,57 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index cafca63..2fdddb1 100644
---- a/drivers/vhost/net.c
-+++ b/drivers/vhost/net.c
-@@ -351,6 +351,32 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
- 	return r;
- }
- 
-+static void vhost_net_disable_vq(struct vhost_net *n,
-+				 struct vhost_virtqueue *vq)
-+{
-+	struct vhost_net_virtqueue *nvq =
-+		container_of(vq, struct vhost_net_virtqueue, vq);
-+	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
-+	if (!vq->private_data)
-+		return;
-+	vhost_poll_stop(poll);
-+}
-+
-+static int vhost_net_enable_vq(struct vhost_net *n,
-+				struct vhost_virtqueue *vq)
-+{
-+	struct vhost_net_virtqueue *nvq =
-+		container_of(vq, struct vhost_net_virtqueue, vq);
-+	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
-+	struct socket *sock;
-+
-+	sock = vq->private_data;
-+	if (!sock)
-+		return 0;
-+
-+	return vhost_poll_start(poll, sock->file);
-+}
-+
- /* Expects to be always run from workqueue - which acts as
-  * read-size critical section for our kind of RCU. */
- static void handle_tx(struct vhost_net *net)
-@@ -382,6 +408,7 @@ static void handle_tx(struct vhost_net *net)
- 		goto out;
- 
- 	vhost_disable_notify(&net->dev, vq);
-+	vhost_net_disable_vq(net, vq);
- 
- 	hdr_size = nvq->vhost_hlen;
- 	zcopy = nvq->ubufs;
-@@ -469,6 +496,8 @@ static void handle_tx(struct vhost_net *net)
- 					% UIO_MAXIOV;
- 			}
- 			vhost_discard_vq_desc(vq, 1);
-+			if (err == -EAGAIN)
-+				vhost_net_enable_vq(net, vq);
- 			break;
- 		}
- 		if (err != len)
+
