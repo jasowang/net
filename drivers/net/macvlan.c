@@ -504,7 +504,7 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
 xmit_world:
 	skb->dev = vlan->lowerdev;
 	if (vlan->flags & MACVLAN_FLAG_DIRECT)
-		return skb_direct_xmit(skb);
+		return skb_direct_xmit(skb, false);
 	else
 		return dev_queue_xmit(skb);
 }
