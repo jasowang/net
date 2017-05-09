@@ -5,6 +5,8 @@ Date:   2017-05-09 13:59:58 +0800
 
 macvlan: introduce flag to bypass qdisc layer
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
