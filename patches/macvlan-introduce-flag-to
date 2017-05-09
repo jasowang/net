@@ -1,5 +1,5 @@
 Bottom: 7321e8b59b9fb3dc6006a7a57151c518e7867c58
-Top:    14ebf5701bba2dc96fb1f29b02dee56748353c6f
+Top:    faf3bcc67324b9045716085982dc7bff2e93e4aa
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-05-09 13:59:58 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index 9261722..dad2936 100644
+index 9261722..68b2963 100644
 --- a/drivers/net/macvlan.c
 +++ b/drivers/net/macvlan.c
 @@ -503,7 +503,10 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
@@ -23,7 +23,7 @@ index 9261722..dad2936 100644
  	skb->dev = vlan->lowerdev;
 -	return dev_queue_xmit(skb);
 +	if (vlan->flags & MACVLAN_FLAG_DIRECT)
-+		return skb_direct_xmit(skb);
++		return skb_direct_xmit(skb, false);
 +	else
 +		return dev_queue_xmit(skb);
  }
