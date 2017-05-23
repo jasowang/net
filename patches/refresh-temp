@@ -1,0 +1,90 @@
+Bottom: 7966b5c515107c9d30e328ee0f241df117147a5b
+Top:    1206ff2e082bccd0154a5db8f87204d0cf937d73
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-05-23 20:06:35 +0800
+
+Refresh of vhost_net-switch-to-use-new
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5a379b6..b94dffb 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -128,10 +128,10 @@ struct vhost_net {
+ 
+ static unsigned vhost_net_zcopy_mask __read_mostly;
+ 
+-static void *vhost_net_buf_get_ptr(struct vhost_net_buf *rxq)
++static void *vhost_net_buf_get_ptr(struct vhost_net_buf *rxq, int n)
+ {
+ 	if (rxq->tail != rxq->head)
+-		return rxq->queue[rxq->head];
++		return rxq->queue[rxq->head + n];
+ 	else
+ 		return NULL;
+ }
+@@ -148,7 +148,7 @@ static int vhost_net_buf_is_empty(struct vhost_net_buf *rxq)
+ 
+ static void *vhost_net_buf_consume(struct vhost_net_buf *rxq)
+ {
+-	void *ret = vhost_net_buf_get_ptr(rxq);
++	void *ret = vhost_net_buf_get_ptr(rxq, 0);
+ 	++rxq->head;
+ 	return ret;
+ }
+@@ -174,7 +174,7 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
+ 	}
+ }
+ 
+-static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
++static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq, int n)
+ {
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+ 
+@@ -185,7 +185,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+ 		return 0;
+ 
+ out:
+-	return __skb_array_len_with_tag(vhost_net_buf_get_ptr(rxq));
++	return __skb_array_len_with_tag(vhost_net_buf_get_ptr(rxq, n));
+ }
+ 
+ static void vhost_net_buf_init(struct vhost_net_buf *rxq)
+@@ -587,7 +587,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 	unsigned long flags;
+ 
+ 	if (rvq->rx_array)
+-		return vhost_net_buf_peek(rvq);
++		return vhost_net_buf_peek(rvq, 0);
+ 
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+ 	head = skb_peek(&sk->sk_receive_queue);
+@@ -803,7 +803,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ 
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		avails = vhost_prefetch_desc_indices(vq, indices,
+-						     nvq->rt - nvq->rh);
++				vhost_net_buf_get_size(&nvq->rxq));
+ 		if (!avails) {
+ 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+ 				/* They have slipped one in as we were
+@@ -814,7 +814,7 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ 			return;
+ 		}
+ 		for (i = 0; i < avails; i++) {
+-			lens[i] = __skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
++			lens[i] = vhost_net_buf_peek(nvq, i);
+ 			vhost_add_used_elem(vq, indices[i],
+ 					    cpu_to_vhost32(vq, lens[i]
+ 					    + vhost_hlen + sock_hlen), i);
+@@ -826,7 +826,8 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ 						  &log, indices[i]);
+ 			if (unlikely(head < 0 || head == vq->num))
+ 				return;
+-			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
++			if (rx_recvmsg(nvq, in,
++				       vhost_net_buf_consume(&nvq->rxq),
+ 				       lens[i], vq_log, log,
+ 				       vhost_hlen, sock_hlen))
+ 				return;
