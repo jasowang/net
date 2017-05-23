@@ -5,6 +5,8 @@ Date:   2017-05-23 20:06:28 +0800
 
 vhost_net: switch to use new buffer API
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
