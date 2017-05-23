@@ -1,5 +1,5 @@
-Bottom: c4afce8d065c19f682f4294f54864d53864b61b5
-Top:    736752ad13319aa033b50a949ca8bd84799f34b0
+Bottom: f638a155bab74aab7dbb9086c018a067849ad5c6
+Top:    530957a3e558423a7e89136bfa8c4a8e8bf5d7c5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-03-23 17:10:24 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f0ba362..78e4981 100644
+index 47b7af0..686c9ab 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -300,6 +300,60 @@ static void vhost_vq_meta_reset(struct vhost_dev *d)
@@ -177,7 +177,7 @@ index f0ba362..78e4981 100644
  
  	/* On success, increment avail index. */
  	vq->last_avail_idx++;
-@@ -2169,24 +2238,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2232,24 +2301,22 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  			    struct vring_used_elem *heads,
  			    unsigned count)
  {
@@ -213,7 +213,7 @@ index f0ba362..78e4981 100644
  	if (unlikely(vq->log_used)) {
  		/* Make sure data is seen before log. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index f55671d..c335fa2 100644
+index 0876116..a2c9440 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -93,6 +93,8 @@ struct vhost_virtqueue {
