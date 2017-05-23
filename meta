@@ -1,6 +1,6 @@
 Version: 1
-Previous: 678ed23e1e668bbcd1da353f88e1552e161d3eba
-Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
+Previous: 8475dec4813987765928f96e3228009de847c35c
+Head: 218b6a5b23e939caf2064549b1cb61ba22b9d0a1
 Applied:
 Unapplied:
   vhost-introduce-used-ring: 58a66c330a50040aa22212dc8bd1b7532403e37b
