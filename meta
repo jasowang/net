@@ -1,16 +1,7 @@
 Version: 1
-Previous: 34bf22c94524d7937ca349d08b3508389d72d55f
-Head: 0524e06cdeeedbf524e0a78cc8a16cb87eb6eac7
+Previous: d6918f3475252cce038a5f9fb810f97b75bd6ca8
+Head: 9c79ddaa0f962d1f26537a670b0652ff509a6fe0
 Applied:
-  ptr_ring-batch-ring-zeroing: eda743555a85b71b403db0934e638bf36e690a0a
-  ptr_ring-introduce-batch: cee1c3a3877169940e94ffca77d252eb280ea9c6
-  skb_array-introduce-batch: 3647bc43dfff7f78ac1578c1ca65ef7bb2b9fbc3
-  tun-export-skb_array: 49b2130fde3e47ff5298ef67502e1b33d129c8f6
-  tap-export-skb_array: 8f7828db13f4ec8cb9f04e9c4fcc23d2311d50ae
-  tun-support-receiving-skb: 118038bc697ad0f4c3e777850d553fd9f2311d08
-  tap-support-receive-skb-from: 9758ac613f0e62ba8d6ab84f1c3901bce2fe5cc6
-  vhost_net-avoid-unnecessary: 5ff85d45ba93835562b5d232850a7d6f2e04f365
-  vhost_net-try-batch-dequing: 0524e06cdeeedbf524e0a78cc8a16cb87eb6eac7
 Unapplied:
   vhost-accelerate-vq-metadata: 0a2b30b28b28f46d7b58cc0708b7f342c434c108
   vhost-introduce-used-ring: ed7f6113aa5bc71898e1f102d1b68b1ed2e53574
