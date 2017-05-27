@@ -1,0 +1,193 @@
+Bottom: 1206ff2e082bccd0154a5db8f87204d0cf937d73
+Top:    62f5955f249a162e25f0bb0d64c68216f943fade
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-05-27 20:13:08 +0800
+
+Refresh of new-road
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b94dffb..ec0f852 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -788,22 +788,26 @@ static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
+ 	return 0;
+ }
+ 
++static int vq_peek_len(struct vhost_virtqueue *vq, int i)
++{
++	struct vhost_net_virtqueue *nvq =
++	       container_of(vq, struct vhost_net_virtqueue, vq);
++
++	return vhost_net_buf_peek(nvq, i) + nvq->vhost_hlen + nvq->sock_hlen;
++}
++
+ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ {
+ 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+ 	struct socket *sock = vq->private_data;
+ 	unsigned int out, in, log = 0;
+-	__virtio16 indices[VHOST_RX_BATCH];
+-	size_t vhost_hlen = nvq->vhost_hlen;
+-	size_t sock_hlen = nvq->sock_hlen;
+-	int lens[VHOST_RX_BATCH];
+ 	int sock_len, i;
+ 	int avails, head;
+ 
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+-		avails = vhost_prefetch_desc_indices(vq, indices,
+-				vhost_net_buf_get_size(&nvq->rxq));
++		avails = vhost_prefetch_heads(vq, vq->heads,
++			 vhost_net_buf_get_size(&nvq->rxq), vq_peek_len);
+ 		if (!avails) {
+ 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+ 				/* They have slipped one in as we were
+@@ -814,22 +818,19 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
+ 			return;
+ 		}
+ 		for (i = 0; i < avails; i++) {
+-			lens[i] = vhost_net_buf_peek(nvq, i);
+-			vhost_add_used_elem(vq, indices[i],
+-					    cpu_to_vhost32(vq, lens[i]
+-					    + vhost_hlen + sock_hlen), i);
+-		}
+-		for (i = 0; i < avails; i++) {
++			/* FIXME: endian */
+ 			head = vhost_get_vq_desc2(vq, vq->iov,
+ 						  ARRAY_SIZE(vq->iov),
+ 						  &out, &in, vq_log,
+-						  &log, indices[i]);
++						  &log, vq->heads[i].id);
+ 			if (unlikely(head < 0 || head == vq->num))
+ 				return;
++			/* FIXME: endian, remove useless parameter */
+ 			if (rx_recvmsg(nvq, in,
+ 				       vhost_net_buf_consume(&nvq->rxq),
+-				       lens[i], vq_log, log,
+-				       vhost_hlen, sock_hlen))
++				       vq->heads[i].len - nvq->vhost_hlen - nvq->sock_hlen,
++				       vq_log, log,
++				       nvq->vhost_hlen, nvq->sock_hlen))
+ 				return;
+ 
+ 			vhost_update_used_idx(vq, 1);
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index dc629c9..281b5fd 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1985,43 +1985,6 @@ static int get_indirect(struct vhost_virtqueue *vq,
+ 	return 0;
+ }
+ 
+-/* Prefetch descriptor indices */
+-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+-				__virtio16 *indices, u16 num)
+-{
+-	int ret = 0;
+-	u16 last_avail_idx, total;
+-	__virtio16 avail_idx;
+-
+-	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+-		vq_err(vq, "Failed to access avail idx at %p\n",
+-		       &vq->avail->idx);
+-		return -EFAULT;
+-	}
+-	last_avail_idx = vq->last_avail_idx;
+-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+-	total = vq->avail_idx - vq->last_avail_idx;
+-	ret = total = min(total, num);
+-
+-	while (total) {
+-		int ret2 = vhost_get_avail(vq, indices[0],
+-			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
+-		if (unlikely(ret2)) {
+-			vq_err(vq, "Failed to get descriptors\n");
+-			return -EFAULT;
+-		}
+-		--total;
+-		++indices;
+-		++last_avail_idx;
+-	}
+-
+-	/* Only get avail ring entries after they have been exposed by guest. */
+-	smp_rmb();
+-
+-	return ret;
+-}
+-EXPORT_SYMBOL(vhost_prefetch_desc_indices);
+-
+ /* This looks in the virtqueue and for the first available buffer, and converts
+  * it to an iovec for convenient access.  Since descriptors consist of some
+  * number of output then some number of input descriptors, it's actually two
+@@ -2438,6 +2401,43 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+ }
+ EXPORT_SYMBOL_GPL(vhost_add_used_n);
+ 
++/* Prefetch descriptor indices */
++int vhost_prefetch_heads(struct vhost_virtqueue *vq,
++			 struct vring_used_elem *heads, u16 num,
++			 vhost_peek_fn_t peek)
++{
++	int i, ret = 0;
++	u16 last_avail_idx, total;
++	__virtio16 avail_idx;
++
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
++		vq_err(vq, "Failed to access avail idx at %p\n",
++		       &vq->avail->idx);
++		return -EFAULT;
++	}
++	last_avail_idx = vq->last_avail_idx;
++	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
++	total = vq->avail_idx - vq->last_avail_idx;
++	ret = total = min(total, num);
++
++	for (i = 0; i < total; i++) {
++		if (unlikely(vhost_get_avail(vq, heads[i].id,
++		    &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
++			vq_err(vq, "Failed to get descriptors\n");
++			return -EFAULT;
++		}
++		heads[i].len = peek(vq, i);
++		++last_avail_idx;
++	}
++	__vhost_add_used_n(vq, heads, total);
++
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
++
++	return ret;
++}
++EXPORT_SYMBOL(vhost_prefetch_heads);
++
+ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ {
+ 	__u16 old, new;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 503e034..31a060d 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -13,7 +13,9 @@
+ #include <linux/atomic.h>
+ 
+ struct vhost_work;
++struct vhost_virtqueue;
+ typedef void (*vhost_work_fn_t)(struct vhost_work *work);
++typedef int (*vhost_peek_fn_t)(struct vhost_virtqueue *vq, int i);
+ 
+ #define VHOST_WORK_QUEUED 1
+ struct vhost_work {
+@@ -190,8 +192,9 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp);
+ int vhost_vq_access_ok(struct vhost_virtqueue *vq);
+ int vhost_log_access_ok(struct vhost_dev *);
+ 
+-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+-				__virtio16 *indices, u16 num);
++int vhost_prefetch_heads(struct vhost_virtqueue *vq,
++                         struct vring_used_elem *used, u16 num,
++			 vhost_peek_fn_t peek);
+ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
