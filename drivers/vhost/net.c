@@ -788,22 +788,26 @@ static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
 	return 0;
 }
 
+static int vq_peek_len(struct vhost_virtqueue *vq, int i)
+{
+	struct vhost_net_virtqueue *nvq =
+	       container_of(vq, struct vhost_net_virtqueue, vq);
+
+	return vhost_net_buf_peek(nvq, i) + nvq->vhost_hlen + nvq->sock_hlen;
+}
+
 static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	struct socket *sock = vq->private_data;
 	unsigned int out, in, log = 0;
-	__virtio16 indices[VHOST_RX_BATCH];
-	size_t vhost_hlen = nvq->vhost_hlen;
-	size_t sock_hlen = nvq->sock_hlen;
-	int lens[VHOST_RX_BATCH];
 	int sock_len, i;
 	int avails, head;
 
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
-		avails = vhost_prefetch_desc_indices(vq, indices,
-				vhost_net_buf_get_size(&nvq->rxq));
+		avails = vhost_prefetch_heads(vq, vq->heads,
+			 vhost_net_buf_get_size(&nvq->rxq), vq_peek_len);
 		if (!avails) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				/* They have slipped one in as we were
@@ -814,22 +818,19 @@ static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
 			return;
 		}
 		for (i = 0; i < avails; i++) {
-			lens[i] = vhost_net_buf_peek(nvq, i);
-			vhost_add_used_elem(vq, indices[i],
-					    cpu_to_vhost32(vq, lens[i]
-					    + vhost_hlen + sock_hlen), i);
-		}
-		for (i = 0; i < avails; i++) {
+			/* FIXME: endian */
 			head = vhost_get_vq_desc2(vq, vq->iov,
 						  ARRAY_SIZE(vq->iov),
 						  &out, &in, vq_log,
-						  &log, indices[i]);
+						  &log, vq->heads[i].id);
 			if (unlikely(head < 0 || head == vq->num))
 				return;
+			/* FIXME: endian, remove useless parameter */
 			if (rx_recvmsg(nvq, in,
 				       vhost_net_buf_consume(&nvq->rxq),
-				       lens[i], vq_log, log,
-				       vhost_hlen, sock_hlen))
+				       vq->heads[i].len - nvq->vhost_hlen - nvq->sock_hlen,
+				       vq_log, log,
+				       nvq->vhost_hlen, nvq->sock_hlen))
 				return;
 
 			vhost_update_used_idx(vq, 1);

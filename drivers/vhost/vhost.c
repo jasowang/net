@@ -1985,43 +1985,6 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-/* Prefetch descriptor indices */
-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				__virtio16 *indices, u16 num)
-{
-	int ret = 0;
-	u16 last_avail_idx, total;
-	__virtio16 avail_idx;
-
-	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-		vq_err(vq, "Failed to access avail idx at %p\n",
-		       &vq->avail->idx);
-		return -EFAULT;
-	}
-	last_avail_idx = vq->last_avail_idx;
-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = vq->avail_idx - vq->last_avail_idx;
-	ret = total = min(total, num);
-
-	while (total) {
-		int ret2 = vhost_get_avail(vq, indices[0],
-			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to get descriptors\n");
-			return -EFAULT;
-		}
-		--total;
-		++indices;
-		++last_avail_idx;
-	}
-
-	/* Only get avail ring entries after they have been exposed by guest. */
-	smp_rmb();
-
-	return ret;
-}
-EXPORT_SYMBOL(vhost_prefetch_desc_indices);
-
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two
@@ -2437,6 +2400,43 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 	return r;
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_n);
+
+/* Prefetch descriptor indices */
+int vhost_prefetch_heads(struct vhost_virtqueue *vq,
+			 struct vring_used_elem *heads, u16 num,
+			 vhost_peek_fn_t peek)
+{
+	int i, ret = 0;
+	u16 last_avail_idx, total;
+	__virtio16 avail_idx;
+
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	last_avail_idx = vq->last_avail_idx;
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
+
+	for (i = 0; i < total; i++) {
+		if (unlikely(vhost_get_avail(vq, heads[i].id,
+		    &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+		heads[i].len = peek(vq, i);
+		++last_avail_idx;
+	}
+	__vhost_add_used_n(vq, heads, total);
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
+
+	return ret;
+}
+EXPORT_SYMBOL(vhost_prefetch_heads);
 
 static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
