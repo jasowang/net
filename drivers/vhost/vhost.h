@@ -13,7 +13,9 @@
 #include <linux/atomic.h>
 
 struct vhost_work;
+struct vhost_virtqueue;
 typedef void (*vhost_work_fn_t)(struct vhost_work *work);
+typedef int (*vhost_peek_fn_t)(struct vhost_virtqueue *vq, int i);
 
 #define VHOST_WORK_QUEUED 1
 struct vhost_work {
@@ -190,8 +192,9 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp);
 int vhost_vq_access_ok(struct vhost_virtqueue *vq);
 int vhost_log_access_ok(struct vhost_dev *);
 
-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				__virtio16 *indices, u16 num);
+int vhost_prefetch_heads(struct vhost_virtqueue *vq,
+                         struct vring_used_elem *used, u16 num,
+			 vhost_peek_fn_t peek);
 int vhost_get_vq_desc(struct vhost_virtqueue *,
 		      struct iovec iov[], unsigned int iov_count,
 		      unsigned int *out_num, unsigned int *in_num,
@@ -204,8 +207,6 @@ int vhost_get_vq_desc2(struct vhost_virtqueue *,
 void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
 
 int vhost_vq_init_access(struct vhost_virtqueue *);
-int vhost_add_used_elem(struct vhost_virtqueue *vq,
-			unsigned int head, int len, int offset);
 int vhost_update_used_idx(struct vhost_virtqueue *vq, int n);
 int vhost_add_used(struct vhost_virtqueue *, unsigned int head, int len);
 int vhost_add_used_n(struct vhost_virtqueue *, struct vring_used_elem *heads,
