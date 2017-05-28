@@ -2422,14 +2422,14 @@ int vhost_prefetch_heads(struct vhost_virtqueue *vq,
 
 	for (i = 0; i < total; i++) {
 		if (unlikely(vhost_get_avail(vq, heads[i].id,
-		    &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
+							&vq->avail->ring[(last_avail_idx
+		+ i)& (vq->num - 1)]))) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 		heads[i].len = peek(vq, i);
-		++last_avail_idx;
+		vhost_add_used_elem(vq, heads[i].id, heads[i].len, i);
 	}
-	__vhost_add_used_n(vq, heads, total);
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
