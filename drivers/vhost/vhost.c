@@ -2259,22 +2259,26 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
 EXPORT_SYMBOL_GPL(vhost_add_used);
 
 int vhost_add_used_elem(struct vhost_virtqueue *vq,
-			unsigned int head, int len, int offset)
+			struct vring_used_elem *heads,
+			unsigned int count, int offset)
 {
 	struct vring_used_elem __user *used;
-
 	int start = (vq->last_used_idx + offset) & (vq->num - 1);
+
 	used = vq->used->ring + start;
-
-	if (vhost_put_user(vq, head, &used->id)) {
-		vq_err(vq, "Failed to write used id");
+	if (count == 1) {
+		if (vhost_put_user(vq, heads[0].id, &used->id)) {
+			vq_err(vq, "Failed to write used id");
+			return -EFAULT;
+		}
+		if (vhost_put_user(vq, heads[0].len, &used->len)) {
+			vq_err(vq, "Failed to write used len");
+			return -EFAULT;
+		}
+	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
+		vq_err(vq, "Failed to write used");
 		return -EFAULT;
 	}
-	if (vhost_put_user(vq, len, &used->len)) {
-		vq_err(vq, "Failed to write used len");
-		return -EFAULT;
-	}
-
 	if (unlikely(vq->log_used)) {
 		/* Make sure data is seen before log. */
 		smp_wmb();
@@ -2282,12 +2286,11 @@ int vhost_add_used_elem(struct vhost_virtqueue *vq,
 		log_write(vq->log_base,
 			  vq->log_addr +
 			   ((void __user *)used - (void __user *)vq->used),
-			    sizeof *used);
+			  count * sizeof *used);
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(vhost_add_used_elem);
 
 int vhost_update_used_idx(struct vhost_virtqueue *vq, int n)
 {
@@ -2428,7 +2431,7 @@ int vhost_prefetch_heads(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 		heads[i].len = peek(vq, i);
-		vhost_add_used_elem(vq, heads[i].id, heads[i].len, i);
+		vhost_add_used_elem(vq, &heads[i], 1, i);
 	}
 
 	/* Only get avail ring entries after they have been exposed by guest. */
