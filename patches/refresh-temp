@@ -1,0 +1,86 @@
+Bottom: 69be1c7205658c882e5af23d2e838078d4c45c1d
+Top:    01e550ecebaf1ee55350d9c6878fc3b5a9aaf54c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-05-28 15:09:24 +0800
+
+Refresh of new-road
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index eb0c97c..79999a6 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2259,22 +2259,26 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
+ EXPORT_SYMBOL_GPL(vhost_add_used);
+ 
+ int vhost_add_used_elem(struct vhost_virtqueue *vq,
+-			unsigned int head, int len, int offset)
++			struct vring_used_elem *heads,
++			unsigned int count, int offset)
+ {
+ 	struct vring_used_elem __user *used;
+-
+ 	int start = (vq->last_used_idx + offset) & (vq->num - 1);
+-	used = vq->used->ring + start;
+ 
+-	if (vhost_put_user(vq, head, &used->id)) {
+-		vq_err(vq, "Failed to write used id");
+-		return -EFAULT;
+-	}
+-	if (vhost_put_user(vq, len, &used->len)) {
+-		vq_err(vq, "Failed to write used len");
++	used = vq->used->ring + start;
++	if (count == 1) {
++		if (vhost_put_user(vq, heads[0].id, &used->id)) {
++			vq_err(vq, "Failed to write used id");
++			return -EFAULT;
++		}
++		if (vhost_put_user(vq, heads[0].len, &used->len)) {
++			vq_err(vq, "Failed to write used len");
++			return -EFAULT;
++		}
++	} else if (vhost_copy_to_user(vq, used, heads, count * sizeof *used)) {
++		vq_err(vq, "Failed to write used");
+ 		return -EFAULT;
+ 	}
+-
+ 	if (unlikely(vq->log_used)) {
+ 		/* Make sure data is seen before log. */
+ 		smp_wmb();
+@@ -2282,12 +2286,11 @@ int vhost_add_used_elem(struct vhost_virtqueue *vq,
+ 		log_write(vq->log_base,
+ 			  vq->log_addr +
+ 			   ((void __user *)used - (void __user *)vq->used),
+-			    sizeof *used);
++			  count * sizeof *used);
+ 	}
+ 
+ 	return 0;
+ }
+-EXPORT_SYMBOL_GPL(vhost_add_used_elem);
+ 
+ int vhost_update_used_idx(struct vhost_virtqueue *vq, int n)
+ {
+@@ -2428,7 +2431,7 @@ int vhost_prefetch_heads(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 		heads[i].len = peek(vq, i);
+-		vhost_add_used_elem(vq, heads[i].id, heads[i].len, i);
++		vhost_add_used_elem(vq, &heads[i], 1, i);
+ 	}
+ 
+ 	/* Only get avail ring entries after they have been exposed by guest. */
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 31a060d..d0d8b2a 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -207,8 +207,6 @@ int vhost_get_vq_desc2(struct vhost_virtqueue *,
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
+-int vhost_add_used_elem(struct vhost_virtqueue *vq,
+-			unsigned int head, int len, int offset);
+ int vhost_update_used_idx(struct vhost_virtqueue *vq, int n);
+ int vhost_add_used(struct vhost_virtqueue *, unsigned int head, int len);
+ int vhost_add_used_n(struct vhost_virtqueue *, struct vring_used_elem *heads,
