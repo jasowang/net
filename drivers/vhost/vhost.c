@@ -2425,8 +2425,7 @@ int vhost_prefetch_heads(struct vhost_virtqueue *vq,
 
 	for (i = 0; i < total; i++) {
 		if (unlikely(vhost_get_avail(vq, heads[i].id,
-							&vq->avail->ring[(last_avail_idx
-		+ i)& (vq->num - 1)]))) {
+		    &vq->avail->ring[(last_avail_idx + i)& (vq->num - 1)]))) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
