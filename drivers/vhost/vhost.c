@@ -1566,12 +1566,14 @@ EXPORT_SYMBOL_GPL(vhost_vring_ioctl);
 
 int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled)
 {
-	struct vhost_umem *niotlb, *oiotlb;
+	struct vhost_umem *niotlb = NULL, *oiotlb;
 	int i;
 
-	niotlb = vhost_umem_alloc();
-	if (!niotlb)
-		return -ENOMEM;
+	if (enabled) {
+		niotlb = vhost_umem_alloc();
+		if (!niotlb)
+			return -ENOMEM;
+	}
 
 	oiotlb = d->iotlb;
 	d->iotlb = niotlb;
