@@ -1220,6 +1220,7 @@ done:
 static int vhost_net_set_features(struct vhost_net *n, u64 features)
 {
 	size_t vhost_hlen, sock_hlen, hdr_len;
+	bool device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
 	int i;
 
 	hdr_len = (features & ((1ULL << VIRTIO_NET_F_MRG_RXBUF) |
@@ -1240,10 +1241,8 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
 	    !vhost_log_access_ok(&n->dev))
 		goto out_unlock;
 
-	if ((features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))) {
-		if (vhost_init_device_iotlb(&n->dev, true))
-			goto out_unlock;
-	}
+	if (vhost_init_device_iotlb(&n->dev, device_iotlb))
+		goto out_unlock;
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
 		mutex_lock(&n->vqs[i].vq.mutex);
