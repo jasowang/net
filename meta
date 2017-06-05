@@ -1,9 +1,8 @@
 Version: 1
-Previous: 821a19b2eca70752d7272042d9c85f0e95f78087
-Head: 6a6ff22c7c5eccf12f09baefd79b2a33ed9b8c5e
+Previous: 8a1c4c986fa5c3ec13556ec2ad87b6caf8edbca4
+Head: 94aaec31e74e27f96559eecbe18fa074669fb8d5
 Applied:
-  vhost-allow-to-disable-device: 1cb72ded5fd343e8a1d2f8dc866937c6a2f5dc60
-  refresh-temp: 6a6ff22c7c5eccf12f09baefd79b2a33ed9b8c5e
+  vhost-allow-to-disable-device: 94aaec31e74e27f96559eecbe18fa074669fb8d5
 Unapplied:
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
   macvlan-introduce-flag-to: 7ba1ca3f9a1e1cb2f1bcca55c97c1e402ddc2f6c
