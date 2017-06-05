@@ -1,7 +1,8 @@
 Version: 1
-Previous: 8d714a5c9bc591d21d3f181bd35c7798f08fb7a1
-Head: a11227dcc345c1792945cae8a3b22882a723620f
+Previous: 9c89276e83d6cfc3413a1e2fbe0ce44c2d626338
+Head: ab4469afa487617a44a86e32a8d32e092a9fb123
 Applied:
+  vhost-allow-to-disable-device: ab4469afa487617a44a86e32a8d32e092a9fb123
 Unapplied:
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
   macvlan-introduce-flag-to: 7ba1ca3f9a1e1cb2f1bcca55c97c1e402ddc2f6c
