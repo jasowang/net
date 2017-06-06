@@ -1,0 +1,34 @@
+Bottom: 6fb3405f1d68a4ed924959315aa8a24e0da1f8b9
+Top:    9305abf9e4b6c4a47bc9d9dc5571b04a3add44c6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-06-06 13:26:07 +0800
+
+Refresh of vhost-allow-to-disable-device
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e3d7ea1..b18c580 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -1220,6 +1220,7 @@ static long vhost_net_reset_owner(struct vhost_net *n)
+ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+ {
+ 	size_t vhost_hlen, sock_hlen, hdr_len;
++	int device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
+ 	int i;
+ 
+ 	hdr_len = (features & ((1ULL << VIRTIO_NET_F_MRG_RXBUF) |
+@@ -1240,10 +1241,8 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+ 	    !vhost_log_access_ok(&n->dev))
+ 		goto out_unlock;
+ 
+-	if ((features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))) {
+-		if (vhost_init_device_iotlb(&n->dev, true))
+-			goto out_unlock;
+-	}
++	if (vhost_init_device_iotlb(&n->dev, device_iotlb))
++		goto out_unlock;
+ 
+ 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
+ 		mutex_lock(&n->vqs[i].vq.mutex);
