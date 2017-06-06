@@ -1,0 +1,16 @@
+Bottom: 754be25be7f1808e265bf2e8a65d190fdeaa75da
+Top:    754be25be7f1808e265bf2e8a65d190fdeaa75da
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-06-06 13:32:48 +0800
+
+tun: use symmetric hash
+
+Tun actually expects a symmetric hash for queue selecting to work
+correctly, otherwise packets belongs to a single flow may be
+redirected to multiple queues. So this patch switch to use
+__skb_get_hash_symmetric().
+
+
+---
+
+
