@@ -1,8 +1,8 @@
 Version: 1
-Previous: 342ca1f677f902e0998fe268c04878287ca66a36
-Head: f3e7d77613a0dfbdd52b3ccdfff0e379dcfc68a5
+Previous: d15edd5e8dfddd9c95f5dc01cd6efefa3d874903
+Head: 015b2ad99c6b8ca7f12b8d356497710f001fa467
 Applied:
-  tun-use-symmetric-hash: f3e7d77613a0dfbdd52b3ccdfff0e379dcfc68a5
+  tun-use-symmetric-hash: 015b2ad99c6b8ca7f12b8d356497710f001fa467
 Unapplied:
   vhost-allow-to-disable-device: d7de272e9c49f7d97df0f5eae2eed0eae01b87a2
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c

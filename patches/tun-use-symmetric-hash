@@ -10,6 +10,8 @@ correctly, otherwise packets belongs to a single flow may be
 redirected to multiple queues. So this patch switch to use
 __skb_get_hash_symmetric().
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
