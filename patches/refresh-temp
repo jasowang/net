@@ -1,0 +1,22 @@
+Bottom: 6d8cd5822a7d0bf7911773adc53cf4aa99fa0214
+Top:    d305381dde53d93be4ee53795935786e1f1f4543
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-06-06 15:11:28 +0800
+
+Refresh of vhost-allow-to-disable-device
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b18c580..fb9bd24 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -1220,7 +1220,7 @@ static long vhost_net_reset_owner(struct vhost_net *n)
+ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+ {
+ 	size_t vhost_hlen, sock_hlen, hdr_len;
+-	int device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
++	bool device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
+ 	int i;
+ 
+ 	hdr_len = (features & ((1ULL << VIRTIO_NET_F_MRG_RXBUF) |
