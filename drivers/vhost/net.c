@@ -1220,7 +1220,7 @@ done:
 static int vhost_net_set_features(struct vhost_net *n, u64 features)
 {
 	size_t vhost_hlen, sock_hlen, hdr_len;
-	int device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
+	bool device_iotlb = features & (1ULL << VIRTIO_F_IOMMU_PLATFORM);
 	int i;
 
 	hdr_len = (features & ((1ULL << VIRTIO_NET_F_MRG_RXBUF) |
