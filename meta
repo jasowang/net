@@ -1,9 +1,9 @@
 Version: 1
-Previous: ec54bbef53457cf9714c4ed10ec89a928a4765bf
-Head: 596f6948aad55803f2978d973f3afa760aa45738
+Previous: d913b8df26ba4c0b1f04e19572d153e745946e2e
+Head: 9d15e5cc8cb68326f7f89b76e04c834fe8e1a2db
 Applied:
-  vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
 Unapplied:
+  vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   tun-use-symmetric-hash: 30413e0c92e18d9c982c258a9d404fb442a7faec
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
   macvlan-introduce-flag-to: 7ba1ca3f9a1e1cb2f1bcca55c97c1e402ddc2f6c
