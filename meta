@@ -1,9 +1,9 @@
 Version: 1
-Previous: 5dc9d8a2769d46f8d661a82cf50e0b7e48d7abe9
-Head: 3715c47bcda8bb56f7e2be27276282a2d0d48c09
+Previous: 5545167b31a18d22b84ce93c59f127cff7cbc285
+Head: 254069238c2374b1962ab9db51a3dd0a9088a93d
 Applied:
-Unapplied:
   virtio-net-fix-use-after-free: 254069238c2374b1962ab9db51a3dd0a9088a93d
+Unapplied:
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   tun-use-symmetric-hash: 30413e0c92e18d9c982c258a9d404fb442a7faec
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
