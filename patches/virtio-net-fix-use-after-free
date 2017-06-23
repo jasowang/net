@@ -5,6 +5,8 @@ Date:   2017-06-23 13:04:42 +0800
 
 virtio-net: fix use after free
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
