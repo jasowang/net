@@ -1,9 +1,8 @@
 Version: 1
-Previous: 6062681c90e30e67367527662e27f059cf34d41b
-Head: ce94515f5faf69f89fcb56ab1d34575e1bddadae
+Previous: 739e21fd820acaf7fdddeef58e25a2311066bc74
+Head: 254069238c2374b1962ab9db51a3dd0a9088a93d
 Applied:
-  virtio-net-fix-use-after-free: 8b5ab95a86e249b3c6417aed3b1f353630dc8f08
-  refresh-temp: ce94515f5faf69f89fcb56ab1d34575e1bddadae
+  virtio-net-fix-use-after-free: 254069238c2374b1962ab9db51a3dd0a9088a93d
 Unapplied:
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   tun-use-symmetric-hash: 30413e0c92e18d9c982c258a9d404fb442a7faec
