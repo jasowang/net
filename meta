@@ -1,6 +1,6 @@
 Version: 1
-Previous: 138133e51bdd4b737f6c74ddc68f1115e3a46973
-Head: 254069238c2374b1962ab9db51a3dd0a9088a93d
+Previous: b37e80bc684fd562ea2e10cbc4a3883ecca41233
+Head: 3715c47bcda8bb56f7e2be27276282a2d0d48c09
 Applied:
   virtio-net-fix-use-after-free: 254069238c2374b1962ab9db51a3dd0a9088a93d
 Unapplied:
