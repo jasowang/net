@@ -1,8 +1,8 @@
 Version: 1
-Previous: cc31aad6017657b7b48167aab643eea78202a2ae
-Head: 902827aee37b748ddb1ed0f4d483d817f890116f
+Previous: 1421fc5de54d735c24a20f8ea32dee5ca4a5c806
+Head: df5c5c103235f784a8ee05d3816b5cd75c902100
 Applied:
-  virtio-net-serialize-tx: 902827aee37b748ddb1ed0f4d483d817f890116f
+  virtio-net-serialize-tx: df5c5c103235f784a8ee05d3816b5cd75c902100
 Unapplied:
   virtio-net-fix-use-after-free: 254069238c2374b1962ab9db51a3dd0a9088a93d
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
