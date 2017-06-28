@@ -5,6 +5,8 @@ Date:   2017-06-28 09:41:11 +0800
 
 virtio-net: serialize tx routine duing reset
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
