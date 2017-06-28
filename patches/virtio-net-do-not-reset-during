@@ -5,6 +5,8 @@ Date:   2017-06-28 15:59:01 +0800
 
 virtio-net: do not reset during xdp set
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
