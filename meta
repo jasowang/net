@@ -1,7 +1,8 @@
 Version: 1
-Previous: 1beeff7fc79ff66fbbab49956c5b6833ffdc3398
-Head: 3715c47bcda8bb56f7e2be27276282a2d0d48c09
+Previous: 9b5e77ad5c030d2097cbfbdbb99db35b0b4f4c30
+Head: 2b4538d08fdf54e6b00dba3b6b861cca87a3fbd9
 Applied:
+  virtio-net-go-back: 2b4538d08fdf54e6b00dba3b6b861cca87a3fbd9
 Unapplied:
   virtio-net-support-guest: dd2cfe7391eb6f61c4e21694119ae886b0c98579
   virtio-net-serialize-tx: 0fe2c8a7f73446e0a49d76aadab65dd5b90fb75f
