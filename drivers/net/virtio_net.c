@@ -2678,7 +2678,8 @@ static struct virtio_device_id id_table[] = {
 	VIRTIO_NET_F_CTRL_RX, VIRTIO_NET_F_CTRL_VLAN, \
 	VIRTIO_NET_F_GUEST_ANNOUNCE, VIRTIO_NET_F_MQ, \
 	VIRTIO_NET_F_CTRL_MAC_ADDR, \
-	VIRTIO_NET_F_MTU
+	VIRTIO_NET_F_MTU,   \
+	VIRTIO_NET_F_CTRL_GUEST_OFFLOADS
 
 static unsigned int features[] = {
 	VIRTNET_FEATURES,
