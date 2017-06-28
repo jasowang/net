@@ -5,6 +5,8 @@ Date:   2017-06-28 14:25:34 +0800
 
 virtio-net: pack headroom into ctx for mergeable buffer
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
