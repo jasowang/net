@@ -48,6 +48,11 @@ module_param(napi_tx, bool, 0644);
 /* Amount of XDP headroom to prepend to packets for use by xdp_adjust_head */
 #define VIRTIO_XDP_HEADROOM 256
 
+#define GUEST_OFFLOADS_MASK (VIRTIO_NET_F_GUEST_TSO4 |
+			     VIRTIO_NET_F_GUEST_TSO6 |
+			     VIRTIO_NET_F_ECN |
+			     VIRTIO_NET_F_UFO)
+
 /* RX packet size EWMA. The average packet size is used to determine the packet
  * buffer size when refilling RX rings. As the entire RX ring may be refilled
  * at once, the weight is chosen so that the EWMA will be insensitive to short-
@@ -1439,6 +1444,27 @@ static int virtnet_set_queues(struct virtnet_info *vi, u16 queue_pairs)
 	return err;
 }
 
+static int virtnet_set_guest_offloads(struct virtnet_info *vi, u64 offloads)
+{
+	struct scatterlist sg;
+	struct net_device *dev = vi->dev;
+	__virtio64 guest_offloads = cpu_to_virtio64(vi->vdev, offloads);
+
+	if (!vi->has_cvq ||
+	    !virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_OFFLOADS))
+		return -EFAULT;
+
+	sg_init_one(&sg, &guest_offloads, sizeof(guest_offloads));
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_GUEST_OFFLOAD,
+				  VIRTIO_NET_CTRL_GUEST_OFFLOADS_SET, &sg)) {
+
+		dev_warn(&dev->dev, "Fail to set guest offloads to %lx\n",
+			 offloads);
+		return -EFAULT;
+	}
+	return 0;
+}
+
 static int virtnet_close(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
@@ -1884,10 +1910,11 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 	u16 xdp_qp = 0, curr_qp;
 	int i, err;
 
-	if (virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO4) ||
-	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO6) ||
-	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_ECN) ||
-	    virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_UFO)) {
+	if (!virtio_has_feature(vi->vdev, VIRTIO_NET_CTRL_GUEST_OFFLOADS) &&
+	    (virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO4) ||
+	     virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_TSO6) ||
+	     virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_ECN) ||
+	     virtio_has_feature(vi->vdev, VIRTIO_NET_F_GUEST_UFO))) {
 		NL_SET_ERR_MSG_MOD(extack, "Can't set XDP while host is implementing LRO, disable LRO first");
 		return -EOPNOTSUPP;
 	}
