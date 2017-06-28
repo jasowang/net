@@ -3,8 +3,16 @@ Top:    de7bf3b50e5ed8374cae1a9ccb7de90565db3f8e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-06-28 09:41:11 +0800
 
-virtio-net: serialize tx routine duing reset
+virtio-net: serialize tx routine during reset
 
+We don't hold any tx lock when trying to disable TX during reset, this
+would lead a use after free since ndo_start_xmit() tries to access the
+virtqueue which has already been freed. Fix this by using
+netif_tx_disable() before freeing the vqs, this could make sure no tx
+after vq freeing.
+
+
+Fixes
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
