@@ -1,10 +1,9 @@
 Version: 1
-Previous: 0cc2abe4d54e6255ce5201dc9bb0ba65248d6f52
-Head: 8b4140cd6c153989914944eec2e07e403190df95
+Previous: 68db9842bad7a7a03d8f2f5c113a4fbdb0b3903d
+Head: 8892b6e12140608c013586d911b82ac43298529a
 Applied:
   virtio-net-pack-headroom-into: 4c4b163b4a128de29efe5c993f615b9914d24324
-  virtio-net-switch-to-use-new: d418d37fd1a3782f07c3cec4ccb4f87dd193128e
-  refresh-temp: 8b4140cd6c153989914944eec2e07e403190df95
+  virtio-net-switch-to-use-new: 8892b6e12140608c013586d911b82ac43298529a
 Unapplied:
   virtio-net-do-not-reset-during: 416354e4d751260c41e7581caeeb563c10353c2f
   virtio-net-go-back: a2da434b3704c3d839979fcd23d7c58c87138079
