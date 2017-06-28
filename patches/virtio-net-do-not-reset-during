@@ -1,0 +1,11 @@
+Bottom: d9c2e699f1e1ba4e8594d75b2371252c9669f3ca
+Top:    d9c2e699f1e1ba4e8594d75b2371252c9669f3ca
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-06-28 15:59:01 +0800
+
+virtio-net: do not reset during xdp set
+
+
+---
+
+
