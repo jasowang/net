@@ -16,6 +16,8 @@ Tested-by: Jean-Philippe Menil <jpmenil@gmail.com>
 Fixes f600b6905015 ("virtio_net: Add XDP support")
 Cc: John Fastabend <john.fastabend@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+The patch is needed for -stable.
 
 
 ---
