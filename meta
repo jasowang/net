@@ -1,9 +1,8 @@
 Version: 1
-Previous: ab164b3c2a906c03de9754a74f171cee8e781eaa
-Head: 7d47ec97f1a1027b353e0bd3ecb41f325cb5c5de
+Previous: ebb142ee998430df9cb1dd802fc4537429560cf1
+Head: 02ffb3ae160239c3c1960559f1a5a9021b88c93c
 Applied:
-  virtio-net-support-guest: 65eaa7318e31077e78b52f2113f81ae8fa574ca7
-  refresh-temp: 7d47ec97f1a1027b353e0bd3ecb41f325cb5c5de
+  virtio-net-support-guest: 02ffb3ae160239c3c1960559f1a5a9021b88c93c
 Unapplied:
   virtio-net-serialize-tx: 0fe2c8a7f73446e0a49d76aadab65dd5b90fb75f
   virtio-net-fix-use-after-free: 254069238c2374b1962ab9db51a3dd0a9088a93d
