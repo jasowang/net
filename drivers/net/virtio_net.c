@@ -1942,6 +1942,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 			return PTR_ERR(prog);
 	}
 
+#if 0
 	/* Changing the headroom in buffers is a disruptive operation because
 	 * existing buffers must be flushed and reallocated. This will happen
 	 * when a xdp program is initially added or xdp is disabled by removing
@@ -1954,6 +1955,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 			goto virtio_reset_err;
 		}
 	}
+#endif
 
 	netif_set_real_num_rx_queues(dev, curr_qp + xdp_qp);
 
