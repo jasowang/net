@@ -1,5 +1,5 @@
 Bottom: 2d2e369c79e203c61fa95e4f41a60f1b67974144
-Top:    674d7d0df6f31ec4f093a0e78127c11c0de1f2be
+Top:    ec416a8f4deb09a89962242f58ae4849ed964660
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-06-28 15:59:01 +0800
 
@@ -11,21 +11,205 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index cf6f969..0a30ea9 100644
+index cf6f969..8ca0561 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -1942,6 +1942,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+@@ -374,6 +374,11 @@ static bool virtnet_xdp_xmit(struct virtnet_info *vi,
+ 	int err;
+ 
+ 	qp = vi->curr_queue_pairs - vi->xdp_queue_pairs + smp_processor_id();
++	if (qp >= vi->max_queue_pairs)
++		printk("qp %d curr %d xdp %d smp %d\n", qp,
++			vi->curr_queue_pairs,
++			vi->xdp_queue_pairs,
++			smp_processor_id());
+ 	sq = &vi->sq[qp];
+ 
+ 	/* Free up any pending old buffers before queueing new ones. */
+@@ -421,9 +426,12 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 	unsigned int buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
+ 			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+ 	unsigned int delta = 0;
++	unsigned long room = (unsigned long)ctx;
+ 	len -= vi->hdr_len;
+ 
+ 	rcu_read_lock();
++	if (room < xdp_headroom)
++		printk("WOWOWOW!\n");
+ 	xdp_prog = rcu_dereference(rq->xdp_prog);
+ 	if (xdp_prog) {
+ 		struct virtio_net_hdr_mrg_rxbuf *hdr = buf + header_offset;
+@@ -576,7 +584,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 	int offset = buf - page_address(page);
+ 	struct sk_buff *head_skb, *curr_skb;
+ 	struct bpf_prog *xdp_prog;
+-	unsigned int truesize;
++	unsigned int truesize, headroom = mergeable_ctx_to_headroom(ctx);
+ 
+ 	head_skb = NULL;
+ 
+@@ -588,8 +596,12 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		void *data;
+ 		u32 act;
+ 
++		if (headroom < virtnet_get_headroom(vi))
++			printk("MMMMMMMMMMM\n");
++
+ 		/* This happens when rx buffer size is underestimated */
+-		if (unlikely(num_buf > 1)) {
++		if (unlikely(headroom < virtnet_get_headroom(vi) ||
++			     num_buf > 1)) {
+ 			/* linearize data for XDP */
+ 			xdp_page = xdp_linearize_page(rq, &num_buf,
+ 						      page, offset, &len);
+@@ -1814,17 +1826,10 @@ static const struct ethtool_ops virtnet_ethtool_ops = {
+ 	.set_link_ksettings = virtnet_set_link_ksettings,
+ };
+ 
+-static void virtnet_freeze_down(struct virtio_device *vdev)
++static void virtnet_disable_napi(struct virtnet_info *vi)
+ {
+-	struct virtnet_info *vi = vdev->priv;
+ 	int i;
+ 
+-	/* Make sure no work handler is accessing the device */
+-	flush_work(&vi->config_work);
+-
+-	netif_device_detach(vi->dev);
+-	cancel_delayed_work_sync(&vi->refill);
+-
+ 	if (netif_running(vi->dev)) {
+ 		for (i = 0; i < vi->max_queue_pairs; i++) {
+ 			napi_disable(&vi->rq[i].napi);
+@@ -1833,19 +1838,9 @@ static void virtnet_freeze_down(struct virtio_device *vdev)
+ 	}
+ }
+ 
+-static int init_vqs(struct virtnet_info *vi);
+-static void _remove_vq_common(struct virtnet_info *vi);
+-
+-static int virtnet_restore_up(struct virtio_device *vdev)
++static void virtnet_enable_napi(struct virtnet_info *vi)
+ {
+-	struct virtnet_info *vi = vdev->priv;
+-	int err, i;
+-
+-	err = init_vqs(vi);
+-	if (err)
+-		return err;
+-
+-	virtio_device_ready(vdev);
++	int i;
+ 
+ 	if (netif_running(vi->dev)) {
+ 		for (i = 0; i < vi->curr_queue_pairs; i++)
+@@ -1858,42 +1853,37 @@ static int virtnet_restore_up(struct virtio_device *vdev)
+ 					       &vi->sq[i].napi);
+ 		}
+ 	}
+-
+-	netif_device_attach(vi->dev);
+-	return err;
+ }
+ 
+-static int virtnet_reset(struct virtnet_info *vi, int curr_qp, int xdp_qp)
++static void virtnet_freeze_down(struct virtio_device *vdev)
+ {
+-	struct virtio_device *dev = vi->vdev;
+-	int ret;
++	struct virtnet_info *vi = vdev->priv;
++
++	/* Make sure no work handler is accessing the device */
++	flush_work(&vi->config_work);
++
++	netif_device_detach(vi->dev);
++	cancel_delayed_work_sync(&vi->refill);
+ 
+-	virtio_config_disable(dev);
+-	dev->failed = dev->config->get_status(dev) & VIRTIO_CONFIG_S_FAILED;
+-	virtnet_freeze_down(dev);
+-	_remove_vq_common(vi);
++	virtnet_disable_napi(vi);
++}
+ 
+-	virtio_add_status(dev, VIRTIO_CONFIG_S_ACKNOWLEDGE);
+-	virtio_add_status(dev, VIRTIO_CONFIG_S_DRIVER);
++static int init_vqs(struct virtnet_info *vi);
++static void _remove_vq_common(struct virtnet_info *vi);
+ 
+-	ret = virtio_finalize_features(dev);
+-	if (ret)
+-		goto err;
++static int virtnet_restore_up(struct virtio_device *vdev)
++{
++	struct virtnet_info *vi = vdev->priv;
++	int err;
+ 
+-	vi->xdp_queue_pairs = xdp_qp;
+-	ret = virtnet_restore_up(dev);
+-	if (ret)
+-		goto err;
+-	ret = _virtnet_set_queues(vi, curr_qp);
+-	if (ret)
+-		goto err;
++	err = init_vqs(vi);
++	if (err)
++		return err;
+ 
+-	virtio_add_status(dev, VIRTIO_CONFIG_S_DRIVER_OK);
+-	virtio_config_enable(dev);
+-	return 0;
+-err:
+-	virtio_add_status(dev, VIRTIO_CONFIG_S_FAILED);
+-	return ret;
++	virtio_device_ready(vdev);
++	virtnet_enable_napi(vi);
++	netif_device_attach(vi->dev);
++	return err;
+ }
+ 
+ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+@@ -1942,20 +1932,14 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
  			return PTR_ERR(prog);
  	}
  
-+#if 0
- 	/* Changing the headroom in buffers is a disruptive operation because
- 	 * existing buffers must be flushed and reallocated. This will happen
- 	 * when a xdp program is initially added or xdp is disabled by removing
-@@ -1954,6 +1955,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
- 			goto virtio_reset_err;
- 		}
- 	}
-+#endif
+-	/* Changing the headroom in buffers is a disruptive operation because
+-	 * existing buffers must be flushed and reallocated. This will happen
+-	 * when a xdp program is initially added or xdp is disabled by removing
+-	 * the xdp program resulting in number of XDP queues changing.
+-	 */
+-	if (vi->xdp_queue_pairs != xdp_qp) {
+-		err = virtnet_reset(vi, curr_qp + xdp_qp, xdp_qp);
+-		if (err) {
+-			dev_warn(&dev->dev, "XDP reset failure.\n");
+-			goto virtio_reset_err;
+-		}
+-	}
  
++	/* Synchronized with rx which use xdp_queue_pairs */
++	virtnet_disable_napi(vi);
++	vi->xdp_queue_pairs = xdp_qp;
++	if (_virtnet_set_queues(vi, curr_qp))
++		goto virtio_reset_err;
  	netif_set_real_num_rx_queues(dev, curr_qp + xdp_qp);
++	virtnet_enable_napi(vi);
+ 
+ 	for (i = 0; i < vi->max_queue_pairs; i++) {
+ 		old_prog = rtnl_dereference(vi->rq[i].xdp_prog);
+@@ -1973,6 +1957,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+ 	 */
+ 	if (prog)
+ 		bpf_prog_sub(prog, vi->max_queue_pairs - 1);
++	virtnet_enable_napi(vi);
+ 	return err;
+ }
+ 
+@@ -2200,7 +2185,7 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
+ 	names = kmalloc(total_vqs * sizeof(*names), GFP_KERNEL);
+ 	if (!names)
+ 		goto err_names;
+-	if (vi->mergeable_rx_bufs) {
++	if (!vi->big_packets) {
+ 		ctx = kzalloc(total_vqs * sizeof(*ctx), GFP_KERNEL);
+ 		if (!ctx)
+ 			goto err_ctx;
