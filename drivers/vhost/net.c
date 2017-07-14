@@ -601,9 +601,12 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	return len;
 }
 
-static int sk_has_rx_data(struct sock *sk)
+static int sk_has_rx_data(struct vhost_net_virtqueue *vq, struct sock *sk)
 {
 	struct socket *sock = sk->sk_socket;
+
+	if (vq->rx_array)
+		return vhost_net_buf_peek(vq);
 
 	if (sock->ops->peek_len)
 		return sock->ops->peek_len(sock);
