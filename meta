@@ -1,10 +1,9 @@
 Version: 1
-Previous: 97ec510c410e3fed75ad2b2863800d86db780254
-Head: 671fac91d8541410b829be4c93e1553085ba6c36
+Previous: 67e49649d52766b430795951d73a9bc4f6c5b0d1
+Head: 229df90c8b612f2c62ca7afa4c906b24b278b151
 Applied:
   patch-0: 4119ac5baf9807c54886e132125babc5843b219e
-  vhost_net-reduce-rx-kick: dc5929687437b4d3fdfcadcaa2edd4bc4bc6a52d
-  refresh-temp: 671fac91d8541410b829be4c93e1553085ba6c36
+  vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
 Unapplied:
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c

@@ -1,5 +1,5 @@
 Bottom: 039938181ed773367fb1a1d7f84f745b5cb868b5
-Top:    039938181ed773367fb1a1d7f84f745b5cb868b5
+Top:    071d555b96a1a40fa792e3a77e4bc8bfcc6dce86
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-14 20:56:53 +0800
 
@@ -10,4 +10,16 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e3d7ea1..2b502f4 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -628,7 +628,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 		endtime = busy_clock() + vq->busyloop_timeout;
+ 
+ 		while (vhost_can_busy_poll(&net->dev, endtime) &&
+-		       !sk_has_rx_data(sk) &&
++			(!sk_has_rx_data(sk) ||
++			 vhost_vq_avail_empty(&net->dev, &rvq->vq)) &&
+ 		       vhost_vq_avail_empty(&net->dev, vq))
+ 			cpu_relax();
