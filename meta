@@ -1,7 +1,8 @@
 Version: 1
-Previous: 9cc9e48b9bf520246fa913ae426e65fe4fee0817
-Head: a5192c52377e6d283abb5dcd5d25d65bf2316f62
+Previous: 58338d306932f131373b01428d577e62cf8117af
+Head: 4119ac5baf9807c54886e132125babc5843b219e
 Applied:
+  patch-0: 4119ac5baf9807c54886e132125babc5843b219e
 Unapplied:
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
