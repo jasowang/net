@@ -373,13 +373,40 @@ static inline unsigned long busy_clock(void)
 	return local_clock() >> 10;
 }
 
-static bool vhost_can_busy_poll(struct vhost_dev *dev,
+static int sk_has_rx_data(struct sock *sk)
+{
+	struct socket *sock = sk->sk_socket;
+
+	if (sock->ops->peek_len)
+		return sock->ops->peek_len(sock);
+
+	return skb_queue_empty(&sk->sk_receive_queue);
+}
+
+static bool vhost_net_vq_pending(struct vhost_net *net)
+{
+	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_net_virtqueue *tvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_virtqueue *vq = &rvq->vq;
+	struct socket *sock = vq->private_data;
+
+	if (sk_has_rx_data(sock->sk) &&
+	    !vhost_avail_empty(&net->dev, vq))
+		return true;
+
+	if (!vhost_avail_empty(&net->dev, &tvq->vq))
+		return true;
+
+	return false;
+}
+
+static bool vhost_can_busy_poll(struct vhost_net *net,
 				unsigned long endtime)
 {
 	return likely(!need_resched()) &&
 	       likely(!time_after(busy_clock(), endtime)) &&
 	       likely(!signal_pending(current)) &&
-	       !vhost_has_work(dev);
+	       !vhost_net_vq_pending(net);
 }
 
 static void vhost_net_disable_vq(struct vhost_net *n,
@@ -601,16 +628,6 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	return len;
 }
 
-static int sk_has_rx_data(struct sock *sk)
-{
-	struct socket *sock = sk->sk_socket;
-
-	if (sock->ops->peek_len)
-		return sock->ops->peek_len(sock);
-
-	return skb_queue_empty(&sk->sk_receive_queue);
-}
-
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 {
 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
@@ -627,7 +644,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 
-		while (vhost_can_busy_poll(&net->dev, endtime) &&
+		while (vhost_can_busy_poll(net, endtime) &&
 		       !sk_has_rx_data(sk) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
