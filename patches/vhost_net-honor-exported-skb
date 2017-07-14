@@ -5,6 +5,8 @@ Date:   2017-07-14 20:57:46 +0800
 
 vhost_net: honor exported skb array when doing busy polling
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
