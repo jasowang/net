@@ -1,9 +1,9 @@
 Version: 1
-Previous: b9acc724274b12fe4188b56f61c37affb4e191eb
-Head: 1b44d989cb6a207c139cec88ae4b4de06c9f77b9
+Previous: ff96fdf9e41585cdae297197350ea982c5fccf68
+Head: e339281292913dad0abdc15f4ef3749e46bb8956
 Applied:
   patch-0: 4119ac5baf9807c54886e132125babc5843b219e
-  vhost_net-honor-exported-skb: 1b44d989cb6a207c139cec88ae4b4de06c9f77b9
+  vhost_net-honor-exported-skb: e339281292913dad0abdc15f4ef3749e46bb8956
 Unapplied:
   vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738

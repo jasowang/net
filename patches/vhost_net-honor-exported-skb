@@ -3,7 +3,7 @@ Top:    6a3ee6aaf48cfecc309f714a6b79cf0938a1bec8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-14 20:57:46 +0800
 
-vhost_net: honor exported skb array when doing busy polling
+vhost_net: honor batched dequeuing for busy polling
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
