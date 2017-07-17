@@ -1,9 +1,8 @@
 Version: 1
-Previous: b638307f725e4fcfc2c3133f94965699db81cdec
-Head: 6f677d6579365ee8b7e3ce5432b92b4f366813c6
+Previous: 611265467e3d3e45c884793d4c8e5cba1544fda1
+Head: ba8657d50ee5dad172a3fb771837c9ca53524b33
 Applied:
-  patch-0: 53ed8875402b527f27e3cc4f270ac037d7a1139c
-  refresh-temp: 6f677d6579365ee8b7e3ce5432b92b4f366813c6
+  patch-0: ba8657d50ee5dad172a3fb771837c9ca53524b33
 Unapplied:
   vhost_net-honor-exported-skb: e339281292913dad0abdc15f4ef3749e46bb8956
   vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
