@@ -1,7 +1,8 @@
 Version: 1
-Previous: 08d88d4dedc72acaff25cd4d940fc4e9a9f2b37a
-Head: a5192c52377e6d283abb5dcd5d25d65bf2316f62
+Previous: 2a5c925db92bc23f419f09b5079dace8933ec509
+Head: d37644f99ed295fb0cceb85e1a78eb5c877663d2
 Applied:
+  debug-0: d37644f99ed295fb0cceb85e1a78eb5c877663d2
 Unapplied:
   patch-0: ba8657d50ee5dad172a3fb771837c9ca53524b33
   vhost_net-honor-exported-skb: e339281292913dad0abdc15f4ef3749e46bb8956
