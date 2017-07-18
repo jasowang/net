@@ -1,9 +1,8 @@
 Version: 1
-Previous: 39e7b4416f69ca062355423eb460687be32016af
+Previous: 7037505648b23c5040807b9b3501da123fbf1fd9
 Head: a5192c52377e6d283abb5dcd5d25d65bf2316f62
 Applied:
 Unapplied:
-  debug-0: e52691f60798103fa4d52292b2db09924e33385a
   patch-0: ba8657d50ee5dad172a3fb771837c9ca53524b33
   vhost_net-honor-exported-skb: e339281292913dad0abdc15f4ef3749e46bb8956
   vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
