@@ -1,8 +1,9 @@
 Version: 1
-Previous: 86da3598c3cd48367bb53f42f11c86acd87bfd13
-Head: d4ffbaf4c8a2e0fda2c4c20db9ce29edc5ec885f
+Previous: 7e8b3fe2726c24f993e2e52cc121997289d6663d
+Head: e72e42ba065166c21ab6160113d658b126d3386b
 Applied:
   vhost_net-honor-exported-skb: d4ffbaf4c8a2e0fda2c4c20db9ce29edc5ec885f
+  vhost-reduce-rx-kick: e72e42ba065166c21ab6160113d658b126d3386b
 Unapplied:
   vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
