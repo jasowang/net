@@ -1,0 +1,23 @@
+Bottom: e4e06c8e6a0c39d37e08abb6b726af0495e51b0e
+Top:    f08cee6c150eef2ddc3c7929d119b397452bee92
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-18 11:44:57 +0800
+
+Refresh of vhost-reduce-rx-kick
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9dcd345..f5ddea2 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -451,7 +451,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 		preempt_disable();
+ 		endtime = busy_clock() + vq->busyloop_timeout;
+ 		while (vhost_can_busy_poll(vq->dev, endtime) &&
+-		       vhost_vq_avail_empty(vq->dev, vq))
++		       vhost_vq_avail_empty(vq->dev, vq) &&
++		       !vhost_has_work(vq->dev))
+ 			cpu_relax();
+ 		preempt_enable();
+ 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
