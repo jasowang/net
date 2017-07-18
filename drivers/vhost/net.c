@@ -373,13 +373,43 @@ static inline unsigned long busy_clock(void)
 	return local_clock() >> 10;
 }
 
+static int sk_has_rx_data(struct vhost_net_virtqueue *vq, struct sock *sk)
+{
+	struct socket *sock = sk->sk_socket;
+
+	if (vq->rx_array)
+		return vhost_net_buf_peek(vq);
+
+	if (sock->ops->peek_len)
+		return sock->ops->peek_len(sock);
+
+	return skb_queue_empty(&sk->sk_receive_queue);
+}
+
+static bool vhost_net_vq_pending(struct vhost_net *net)
+{
+	struct vhost_net_virtqueue *rx_nvq = &net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_net_virtqueue *tx_nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_virtqueue *rvq = &rx_nvq->vq;
+	struct vhost_virtqueue *tvq = &tx_nvq->vq;
+	struct socket *sock = vq->private_data;
+
+	if (sk_has_rx_data(rvq, sock->sk) &&
+	    !vhost_vq_avail_empty(rvq->dev, rvq))
+		return true;
+
+	if (!vhost_vq_avail_empty(tvq->dev, tvq))
+		return true;
+
+	return false;
+}
+
 static bool vhost_can_busy_poll(struct vhost_dev *dev,
 				unsigned long endtime)
 {
 	return likely(!need_resched()) &&
 	       likely(!time_after(busy_clock(), endtime)) &&
-	       likely(!signal_pending(current)) &&
-	       !vhost_has_work(dev);
+	       likely(!signal_pending(current));
 }
 
 static void vhost_net_disable_vq(struct vhost_net *n,
@@ -421,7 +451,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq))
+		       vhost_vq_avail_empty(vq->dev, vq) &&
+		       !vhost_has_work(vq->dev))
 			cpu_relax();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
@@ -631,8 +662,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(rvq, sk) &&
-		       vhost_vq_avail_empty(&net->dev, vq))
+		       vhost_net_vq_pending(net));
 			cpu_relax();
 
 		preempt_enable();
