@@ -5,6 +5,8 @@ Date:   2017-07-18 11:37:21 +0800
 
 vhost: reduce rx kick
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
