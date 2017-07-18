@@ -451,7 +451,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq))
+		       vhost_vq_avail_empty(vq->dev, vq) &&
+		       !vhost_has_work(vq->dev))
 			cpu_relax();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
