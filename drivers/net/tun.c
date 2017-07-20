@@ -73,6 +73,8 @@
 #include <linux/seq_file.h>
 #include <linux/uio.h>
 #include <linux/skb_array.h>
+#include <linux/bpf.h>
+#include <linux/bpf_trace.h>
 
 #include <linux/uaccess.h>
 
@@ -105,7 +107,8 @@ do {								\
 } while (0)
 #endif
 
-#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
+#define TUN_HEADROOM 256
+#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
 
 /* TUN device flags */
 
@@ -173,6 +176,7 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct skb_array tx_array;
 	struct page_frag alloc_frag;
+	struct bpf_prog __rcu *xdp_prog;
 };
 
 struct tun_flow_entry {
@@ -1008,6 +1012,70 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 	stats->tx_dropped = tx_dropped;
 }
 
+static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+		       struct netlink_ext_ack *extack)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct bpf_prog *old_prog;
+	struct tun_file *tfile;
+	int i, n = 0;
+
+	/* We will shift the packet that can't be handled to generic
+	 * XDP layer.
+	 */
+
+	for (i = 0; i < tun->numqueues; i++) {
+		tfile = rtnl_dereference(tun->tfiles[i]);
+		old_prog = rtnl_dereference(tfile->xdp_prog);
+		if (old_prog)
+			bpf_prog_put(old_prog);
+		rcu_assign_pointer(tfile->xdp_prog, prog);
+	}
+	/* FIXME: new queue prog attach */
+	list_for_each_entry(tfile, &tun->disabled, next) {
+		old_prog = rtnl_dereference(tfile->xdp_prog);
+		if (old_prog)
+			bpf_prog_put(old_prog);
+		rcu_assign_pointer(tfile->xdp_prog, prog);
+		n++;
+	}
+
+	if (prog) {
+		prog = bpf_prog_add(prog, tun->numqueues + n - 1);
+		if (IS_ERR(prog))
+			return PTR_ERR(prog);
+	}
+
+	return 0;
+}
+
+static u32 tun_xdp_query(struct net_device *dev)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
+	const struct bpf_prog *xdp_prog;
+
+	xdp_prog = rtnl_dereference(tfile->xdp_prog);
+	if (xdp_prog)
+		return xdp_prog->aux->id;
+
+	return 0;
+}
+
+static int tun_xdp(struct net_device *dev, struct netdev_xdp *xdp)
+{
+	switch (xdp->command) {
+	case XDP_SETUP_PROG:
+		return tun_xdp_set(dev, xdp->prog, xdp->extack);
+	case XDP_QUERY_PROG:
+		xdp->prog_id = tun_xdp_query(dev);
+		xdp->prog_attached = !!xdp->prog_id;
+		return 0;
+	default:
+		return -EINVAL;
+	}
+}
+
 static const struct net_device_ops tun_netdev_ops = {
 	.ndo_uninit		= tun_net_uninit,
 	.ndo_open		= tun_net_open,
@@ -1038,6 +1106,7 @@ static const struct net_device_ops tap_netdev_ops = {
 	.ndo_features_check	= passthru_features_check,
 	.ndo_set_rx_headroom	= tun_set_headroom,
 	.ndo_get_stats64	= tun_net_get_stats64,
+	.ndo_xdp		= tun_xdp,
 };
 
 static void tun_flow_init(struct tun_struct *tun)
@@ -1195,16 +1264,20 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	}
 }
 
-static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+				     struct tun_file *tfile,
 				     struct iov_iter *from,
 				     int len)
 {
 	struct page_frag *alloc_frag = &tfile->alloc_frag;
 	struct sk_buff *skb;
+	struct bpf_prog *xdp_prog;
 	int buflen = SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	unsigned int delta = 0;
 	char *buf;
 	size_t copied;
+	bool xdp_xmit = false;
 
 	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
 		return ERR_PTR(-ENOMEM);
@@ -1216,16 +1289,67 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
 
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(tfile->xdp_prog);
+	if (xdp_prog) {
+		struct xdp_buff xdp;
+		void *orig_data;
+		u32 act;
+
+		xdp.data_hard_start = buf;
+		xdp.data = buf + TUN_RX_PAD;
+		xdp.data_end = xdp.data + len;
+		orig_data = xdp.data;
+		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+
+		switch (act) {
+		case XDP_PASS:
+		case XDP_TX:
+			delta = orig_data - xdp.data;
+			xdp_xmit = true;
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto err_xdp;
+		}
+	}
+	rcu_read_unlock();
+
 	skb = build_skb(buf, buflen);
 	if (!skb)
 		return ERR_PTR(-ENOMEM);
 
-	skb_reserve(skb, TUN_RX_PAD);
-	skb_put(skb, len);
+	skb_reserve(skb, TUN_RX_PAD - delta);
+	skb_put(skb, len + delta);
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
 
+	if (xdp_xmit) {
+		int ret;
+
+		skb->queue_mapping = tfile->queue_index;
+		ret = tun_net_xmit(skb, tun->dev);
+		if (ret == NET_XMIT_DROP)
+			goto err_xmit;
+
+		return NULL;
+	}
+
 	return skb;
+
+err_xdp:
+	rcu_read_unlock();
+	return NULL;
+
+err_xmit:
+	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+	kfree_skb(skb);
+	return NULL;
 }
 
 /* Get packet from user space buffer */
@@ -1304,7 +1428,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	/* FIXME: check DONTWAIT and INT_MAX */
 	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
-		skb = tun_build_skb(tfile, from, len);
+		skb = tun_build_skb(tun, tfile, from, len);
 		if (IS_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
