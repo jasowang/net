@@ -170,6 +170,7 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_array tx_array;
+	struct bpf_prog __rcu *xdp_prog;
 };
 
 struct tun_flow_entry {
@@ -1003,6 +1004,75 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 	stats->tx_dropped = tx_dropped;
 }
 
+static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+		       struct netlink_ext_ack *extack)
+{
+	unsigned long int max_sz = PAGE_SIZE - sizeof(struct padded_vnet_hdr);
+	struct tun_struct *tun = netdev_priv(dev);
+	struct bpf_prog *old_prog;
+	struct tun_file *tfile;
+	int i, n = 0;
+
+	/* TODO: check offload settings */
+
+	if (dev->mtu > max_sz) {
+		NL_SET_ERR_MSG_MOD(extack, "MTU too large to enable XDP");
+		netdev_warn(dev, "XDP requires MTU less than %lu\n", max_sz);
+		return -EINVAL;
+	}
+
+	/* TODO: synchronize with RX and use new headroom */
+
+	for (i = 0; i < tun->tun->numqueues; i++) {
+		tfile = rtnl_deference(tun->tfiles[i]);
+		old_prog = rtnl_deference(tfile->xdp_prog);
+		if (old_prog)
+			bpf_prog_put(old_prog);
+		rcu_assign_pointer(tfile->xdp_prog, prog);
+	}
+	list_for_each_entry(tfile, &tun->disabled, next) {
+		old_prog = rtnl_deference(tfile->xdp_prog);
+		if (old_prog)
+			bpf_prog_put(old_prog);
+		rcu_assign_pointer(tfile->xdp_prog, prog);
+		n++;
+	}
+
+	if (prog) {
+		prog = bpf_prog_add(prog, tun->numqueues + n - 1);
+		if (IS_ERR(prog))
+			return PTR_ERR(prog);
+	}
+
+}
+
+static u32 tun_xdp_query(struct net_device *dev)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
+	const struct bpf_prog *xdp_prog;
+
+	xdp_prog = rtnl_deference(tfile->xdp_prog);
+	if (xdp_prog)
+		return xdp_prog->aux->id;
+
+	return 0;
+}
+
+static int virtnet_xdp(struct net_device *dev, struct netdev_xdp *xdp)
+{
+	switch (xdp->command) {
+	case XDP_SETUP_PROG:
+		return tun_xdp_set(dev, xdp->prog, xdp->extack);
+	case XDP_QUERY_PROG:
+		xdp->prog_id = tun_xdp_query(dev);
+		xdp->prog_attached = !!xdp->prog_id;
+		return 0;
+	default:
+		return -EINVAL;
+	}
+}
+
 static const struct net_device_ops tun_netdev_ops = {
 	.ndo_uninit		= tun_net_uninit,
 	.ndo_open		= tun_net_open,
@@ -1015,6 +1085,7 @@ static const struct net_device_ops tun_netdev_ops = {
 #endif
 	.ndo_set_rx_headroom	= tun_set_headroom,
 	.ndo_get_stats64	= tun_net_get_stats64,
+	.ndo_xdp		= tun_xdp,
 };
 
 static const struct net_device_ops tap_netdev_ops = {
@@ -1201,9 +1272,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	size_t len = total_len, align = tun->align, linear;
 	struct virtio_net_hdr gso = { 0 };
 	struct tun_pcpu_stats *stats;
+	struct bpf_prog *xdp_prog;
 	int good_linear;
 	int copylen;
 	bool zerocopy = false;
+	bool xdp_xmit = false;
 	int err;
 	u32 rxhash;
 
@@ -1244,6 +1317,45 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
 			return -EINVAL;
 	}
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(tfile->xdp_prog);
+	if (xdp_prog) {
+		struct iovec iov = iov_iter_iovec(from);
+		struct xdp_buff xdp;
+		void *orig_data;
+		u32 act;
+
+		if (unlikely(hdr->hdr.gso_type))
+			goto err_xdp;
+		if (iov->iov_len > PAGE_SIZE)
+			goto err_xdp;
+		if (from->nr_segs > 1)
+			tun_linearize_page();
+
+		xdp.data_hard_start = iov.iov_base - vnet_hdr_sz;
+		xdp.data = iov.iov_base;
+		xdp.data_end = xdp.data + iov.iov_len;
+		orig_data = xdp.data;
+		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+
+		switch (act) {
+		case XDP_PASS:
+			break;
+		case XDP_TX:
+			xdp_xmit = true;
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(vi->dev, xdp_prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto err_xdp;
+		}
+	}
+	rcu_read_unlock();
 
 	good_linear = SKB_MAX_HEAD(align);
 
@@ -1349,6 +1461,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	put_cpu_ptr(stats);
 
 	tun_flow_update(tun, rxhash, tfile);
+	return total_len;
+
+err_xdp:
+	rcu_read_unlock();
+	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 	return total_len;
 }
 
