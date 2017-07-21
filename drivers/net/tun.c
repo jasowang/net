@@ -1272,9 +1272,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	size_t len = total_len, align = tun->align, linear;
 	struct virtio_net_hdr gso = { 0 };
 	struct tun_pcpu_stats *stats;
+	struct bpf_prog *xdp_prog;
 	int good_linear;
 	int copylen;
 	bool zerocopy = false;
+	bool xdp_xmit = false;
 	int err;
 	u32 rxhash;
 
@@ -1315,6 +1317,45 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
 			return -EINVAL;
 	}
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(tfile->xdp_prog);
+	if (xdp_prog) {
+		struct iovec iov = iov_iter_iovec(from);
+		struct xdp_buff xdp;
+		void *orig_data;
+		u32 act;
+
+		if (unlikely(hdr->hdr.gso_type))
+			goto err_xdp;
+		if (iov->iov_len > PAGE_SIZE)
+			goto err_xdp;
+		if (from->nr_segs > 1)
+			tun_linearize_page();
+
+		xdp.data_hard_start = iov.iov_base - vnet_hdr_sz;
+		xdp.data = iov.iov_base;
+		xdp.data_end = xdp.data + iov.iov_len;
+		orig_data = xdp.data;
+		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+
+		switch (act) {
+		case XDP_PASS:
+			break;
+		case XDP_TX:
+			xdp_xmit = true;
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(vi->dev, xdp_prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto err_xdp;
+		}
+	}
+	rcu_read_unlock();
 
 	good_linear = SKB_MAX_HEAD(align);
 
@@ -1420,6 +1461,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	put_cpu_ptr(stats);
 
 	tun_flow_update(tun, rxhash, tfile);
+	return total_len;
+
+err_xdp:
+	rcu_read_unlock();
+	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 	return total_len;
 }
 
