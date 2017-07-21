@@ -392,9 +392,9 @@ static bool vhost_net_vq_pending(struct vhost_net *net)
 	struct vhost_net_virtqueue *tx_nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *rvq = &rx_nvq->vq;
 	struct vhost_virtqueue *tvq = &tx_nvq->vq;
-	struct socket *sock = vq->private_data;
+	struct socket *sock = rvq->private_data;
 
-	if (sk_has_rx_data(rvq, sock->sk) &&
+	if (sk_has_rx_data(rx_nvq, sock->sk) &&
 	    !vhost_vq_avail_empty(rvq->dev, rvq))
 		return true;
 
@@ -630,19 +630,6 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 
 	spin_unlock_irqrestore(&sk->sk_receive_queue.lock, flags);
 	return len;
-}
-
-static int sk_has_rx_data(struct vhost_net_virtqueue *vq, struct sock *sk)
-{
-	struct socket *sock = sk->sk_socket;
-
-	if (vq->rx_array)
-		return vhost_net_buf_peek(vq);
-
-	if (sock->ops->peek_len)
-		return sock->ops->peek_len(sock);
-
-	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
