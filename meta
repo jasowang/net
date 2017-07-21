@@ -1,8 +1,9 @@
 Version: 1
-Previous: 03672bcf0ebe255e2de57ca6ed9293b79cd509cd
-Head: 3c38e78a78850add8d49b3dcdb9ab1323d0a6243
+Previous: 0847f6337f5a5519e035c9749c9ae8f8a4402e0c
+Head: 06ba85a11049547c1f8317ac7bf247fb3dbb9d1a
 Applied:
   tun-xdp-support: 3c38e78a78850add8d49b3dcdb9ab1323d0a6243
+  refresh-temp: 06ba85a11049547c1f8317ac7bf247fb3dbb9d1a
 Unapplied:
   vhost_net-honor-exported-skb: d4ffbaf4c8a2e0fda2c4c20db9ce29edc5ec885f
   vhost-reduce-rx-kick: bf5ea7d5a1a68659b734cfe32529b7435f6b0aa2
