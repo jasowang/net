@@ -628,7 +628,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		endtime = busy_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(sk) &&
+		       (!sk_has_rx_data(sk) ||
+			vhost_vq_avail_empty(&net->dev, &rvq->vq)) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
 
