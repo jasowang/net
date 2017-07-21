@@ -1,5 +1,5 @@
 Bottom: ca4ae90d6b4e7312717901f00c11daf8790d0b7a
-Top:    0fe649efe4e4fde179c1273bbab38f065a30f24c
+Top:    d360b42fd6b89499d9b02ecc4ec70b336a7f3b3f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-18 11:37:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 82ec6f7..f5ddea2 100644
+index 82ec6f7..da79f52 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -373,13 +373,43 @@ static inline unsigned long busy_clock(void)
@@ -37,9 +37,9 @@ index 82ec6f7..f5ddea2 100644
 +	struct vhost_net_virtqueue *tx_nvq = &net->vqs[VHOST_NET_VQ_TX];
 +	struct vhost_virtqueue *rvq = &rx_nvq->vq;
 +	struct vhost_virtqueue *tvq = &tx_nvq->vq;
-+	struct socket *sock = vq->private_data;
++	struct socket *sock = rvq->private_data;
 +
-+	if (sk_has_rx_data(rvq, sock->sk) &&
++	if (sk_has_rx_data(rx_nvq, sock->sk) &&
 +	    !vhost_vq_avail_empty(rvq->dev, rvq))
 +		return true;
 +
@@ -70,7 +70,27 @@ index 82ec6f7..f5ddea2 100644
  			cpu_relax();
  		preempt_enable();
  		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-@@ -631,8 +662,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -601,19 +632,6 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 	return len;
+ }
+ 
+-static int sk_has_rx_data(struct vhost_net_virtqueue *vq, struct sock *sk)
+-{
+-	struct socket *sock = sk->sk_socket;
+-
+-	if (vq->rx_array)
+-		return vhost_net_buf_peek(vq);
+-
+-	if (sock->ops->peek_len)
+-		return sock->ops->peek_len(sock);
+-
+-	return skb_queue_empty(&sk->sk_receive_queue);
+-}
+-
+ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ {
+ 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
+@@ -631,8 +649,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  		endtime = busy_clock() + vq->busyloop_timeout;
  
  		while (vhost_can_busy_poll(&net->dev, endtime) &&
