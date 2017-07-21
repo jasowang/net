@@ -1,9 +1,10 @@
 Version: 1
-Previous: 4fca878826ba9514d5128c09294ec33f1e10a519
-Head: b67adf3fedf303038bdf33731eda0ebb60639808
+Previous: 430262c1a695e7feb12a7de84d75c6054564e225
+Head: fd41213eedf128bf1ae4adb45570dd6e7f984fc5
 Applied:
   vhost_net-honor-exported-skb: 6850a10e6ffb5860df27cec13a372c998c1644c5
   vhost-prevent-being-kicked: b67adf3fedf303038bdf33731eda0ebb60639808
+  refresh-temp: fd41213eedf128bf1ae4adb45570dd6e7f984fc5
 Unapplied:
   vhost-reduce-rx-kick: ac366841d0b95c58dcd75699cd2e76b85fdf97c7
   tun-xdp-support: 739eb8f1d729baae1d7190c30ebf30af9304c341
