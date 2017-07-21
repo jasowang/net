@@ -2386,7 +2386,16 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 		if (r)
 			vq_err(vq, "Failed to enable notification at %p: %d\n",
 			       &vq->used->flags, r);
+	} else {
+		r = vhost_update_avail_event(vq, vq->last_avail_idx);
+		if (r) {
+			vq_err(vq, "Failed to update avail event index at %p: %d\n",
+			       vhost_avail_event(vq), r);
+			return;
+		}
 	}
+
+	return;
 }
 EXPORT_SYMBOL_GPL(vhost_disable_notify);
 
