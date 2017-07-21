@@ -1,0 +1,45 @@
+Bottom: 0fe649efe4e4fde179c1273bbab38f065a30f24c
+Top:    d360b42fd6b89499d9b02ecc4ec70b336a7f3b3f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-21 22:33:22 +0800
+
+Refresh of vhost-reduce-rx-kick
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f5ddea2..da79f52 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -392,9 +392,9 @@ static bool vhost_net_vq_pending(struct vhost_net *net)
+ 	struct vhost_net_virtqueue *tx_nvq = &net->vqs[VHOST_NET_VQ_TX];
+ 	struct vhost_virtqueue *rvq = &rx_nvq->vq;
+ 	struct vhost_virtqueue *tvq = &tx_nvq->vq;
+-	struct socket *sock = vq->private_data;
++	struct socket *sock = rvq->private_data;
+ 
+-	if (sk_has_rx_data(rvq, sock->sk) &&
++	if (sk_has_rx_data(rx_nvq, sock->sk) &&
+ 	    !vhost_vq_avail_empty(rvq->dev, rvq))
+ 		return true;
+ 
+@@ -632,19 +632,6 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 	return len;
+ }
+ 
+-static int sk_has_rx_data(struct vhost_net_virtqueue *vq, struct sock *sk)
+-{
+-	struct socket *sock = sk->sk_socket;
+-
+-	if (vq->rx_array)
+-		return vhost_net_buf_peek(vq);
+-
+-	if (sock->ops->peek_len)
+-		return sock->ops->peek_len(sock);
+-
+-	return skb_queue_empty(&sk->sk_receive_queue);
+-}
+-
+ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ {
+ 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
