@@ -1,13 +1,13 @@
 Version: 1
-Previous: cb075938e079ab76ebaee053ee210f014ed2bc92
-Head: 9492f4269e6bf3c857412b464ce77bd84e7a81f9
+Previous: a9d4de68b10af734db99b23f492141b070bc8d56
+Head: 739eb8f1d729baae1d7190c30ebf30af9304c341
 Applied:
+  tun-xdp-support: 739eb8f1d729baae1d7190c30ebf30af9304c341
 Unapplied:
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
   vhost_net-honor-exported-skb: 3bd7ff79bb69da7f1eb3c962d30728c22471538d
   vhost-reduce-rx-kick: 58b78b6ee7626a47282acb88782b09333fa93fcd
   vhost-prevent-being-kicked: 9b5097f622c30b043c1488006b2c302844781190
-  tun-xdp-support: 739eb8f1d729baae1d7190c30ebf30af9304c341
   vhost_net-reduce-rx-kick: 229df90c8b612f2c62ca7afa4c906b24b278b151
   vhost-allow-to-disable-device: 596f6948aad55803f2978d973f3afa760aa45738
   net-introduce-skb_direct_xmit: c3a4d9973b1cbf43c9c6c125beffda4ede925b5c
