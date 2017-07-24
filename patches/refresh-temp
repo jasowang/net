@@ -1,0 +1,30 @@
+Bottom: 41088e43ec65d13d914feceb25b1ee1131de578e
+Top:    9cab99596df6281dda23cd8acb2add1dd0344956
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-24 21:29:48 +0800
+
+Refresh of tun-use-build_skb-for-small
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index f994444..afe311f 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1215,6 +1215,7 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+ 				     len, from);
+ 	if (copied != len)
+ 		return ERR_PTR(-EFAULT);
++
+ 	skb = build_skb(buf, buflen);
+ 	if (!skb)
+ 		return ERR_PTR(-ENOMEM);
+@@ -1303,7 +1304,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
+ 	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
+ 		skb = tun_build_skb(tfile, from, len);
+-		if (PTR_ERR(skb)) {
++		if (IS_ERR(skb)) {
+ 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
+ 			return PTR_ERR(skb);
+ 		}
