@@ -1195,10 +1195,12 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 
 static struct sk_buff *tun_build_skb(struct tun_file *tfile,
 				     struct iov_iter *from,
-				     int buflen, int len)
+				     int len)
 {
 	struct page_frag *alloc_frag = &tfile->alloc_frag;
 	struct sk_buff *skb;
+	int buflen = SKB_DATA_ALIGN(len) +
+		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	char *buf;
 	size_t copied;
 
@@ -1239,9 +1241,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	bool zerocopy = false;
 	int err;
 	u32 rxhash;
-	/* FIXME: pi */
-	int buflen = SKB_DATA_ALIGN(total_len - tun->vnet_hdr_sz) +
-		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 
 	if (!(tun->dev->flags & IFF_UP))
 		return -EIO;
@@ -1300,7 +1299,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	}
 
 	if (len < PAGE_SIZE) {
-		skb = tun_build_skb(tfile, from, buflen, total_len);
+		skb = tun_build_skb(tfile, from, len);
 		if (PTR_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
