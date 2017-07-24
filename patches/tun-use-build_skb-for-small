@@ -1,5 +1,5 @@
 Bottom: 3736927f2f621ae83d4830280ac3a3ab93274c06
-Top:    41088e43ec65d13d914feceb25b1ee1131de578e
+Top:    9cab99596df6281dda23cd8acb2add1dd0344956
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-24 20:59:54 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a93392d..f994444 100644
+index a93392d..afe311f 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -105,6 +105,8 @@ do {								\
@@ -40,7 +40,7 @@ index a93392d..f994444 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -1190,6 +1195,38 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1190,6 +1195,39 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  	}
  }
  
@@ -64,6 +64,7 @@ index a93392d..f994444 100644
 +				     len, from);
 +	if (copied != len)
 +		return ERR_PTR(-EFAULT);
++
 +	skb = build_skb(buf, buflen);
 +	if (!skb)
 +		return ERR_PTR(-ENOMEM);
@@ -79,7 +80,7 @@ index a93392d..f994444 100644
  /* Get packet from user space buffer */
  static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			    void *msg_control, struct iov_iter *from,
-@@ -1263,30 +1300,39 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1263,30 +1301,39 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			zerocopy = true;
  	}
  
@@ -93,7 +94,7 @@ index a93392d..f994444 100644
 +	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 +	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
 +		skb = tun_build_skb(tfile, from, len);
-+		if (PTR_ERR(skb)) {
++		if (IS_ERR(skb)) {
 +			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 +			return PTR_ERR(skb);
 +		}
@@ -139,7 +140,7 @@ index a93392d..f994444 100644
  	}
  
  	if (virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun))) {
-@@ -2377,6 +2423,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2377,6 +2424,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	tfile->sk.sk_write_space = tun_sock_write_space;
  	tfile->sk.sk_sndbuf = INT_MAX;
  
