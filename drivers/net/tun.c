@@ -1201,7 +1201,7 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
 {
 	struct page_frag *alloc_frag = &tfile->alloc_frag;
 	struct sk_buff *skb;
-	int buflen = SKB_DATA_ALIGN(len) +
+	int buflen = SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	char *buf;
 	size_t copied;
@@ -1300,7 +1300,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			zerocopy = true;
 	}
 
-	if (len < PAGE_SIZE) {
+	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
+	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
 		skb = tun_build_skb(tfile, from, len);
 		if (PTR_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
