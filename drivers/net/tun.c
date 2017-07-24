@@ -1215,6 +1215,7 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
 				     len, from);
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
+
 	skb = build_skb(buf, buflen);
 	if (!skb)
 		return ERR_PTR(-ENOMEM);
@@ -1303,7 +1304,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
 		skb = tun_build_skb(tfile, from, len);
-		if (PTR_ERR(skb)) {
+		if (IS_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
 		}
