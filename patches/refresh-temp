@@ -1,0 +1,22 @@
+Bottom: f9735da38fa6d4e5910fc3470afef36ff2983e84
+Top:    4c1772c373165c2e62f84f32b7b5aeef96d52598
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-24 21:06:53 +0800
+
+Refresh of tun-use-build_skb-for-small
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7b9ad7b..2a8b11d 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -574,6 +574,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 		}
+ 		if (tun)
+ 			skb_array_cleanup(&tfile->tx_array);
++		if (tfile->alloc_frag.page)
++			put_page(tfile->alloc_frag.page);
+ 		sock_put(&tfile->sk);
+ 	}
+ }
