@@ -574,6 +574,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 		}
 		if (tun)
 			skb_array_cleanup(&tfile->tx_array);
+		if (tfile->alloc_frag.page)
+			put_page(tfile->alloc_frag.page);
 		sock_put(&tfile->sk);
 	}
 }
