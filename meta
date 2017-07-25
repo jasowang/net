@@ -1,10 +1,9 @@
 Version: 1
-Previous: 494db68df2b59eec1fb71da568b5523ef2724a28
-Head: f704636e28a14fc0f187662b6d4a5cff41284f6a
+Previous: 73ced0bf4a48aa8f0720b7d635dc16ee5e162a47
+Head: fc2199112b8a6a3431020f0afd82ffde37e82a38
 Applied:
   tun-use-build_skb-for-small: fdde607b0f938433d2f419953f432ddc4232f16c
-  tun-xdp-support: b616a558ee4d262c9d549c6a8563dde7ff4786ce
-  refresh-temp: f704636e28a14fc0f187662b6d4a5cff41284f6a
+  tun-xdp-support: fc2199112b8a6a3431020f0afd82ffde37e82a38
 Unapplied:
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
   vhost_net-honor-exported-skb: 3bd7ff79bb69da7f1eb3c962d30728c22471538d
