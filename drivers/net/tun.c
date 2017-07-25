@@ -1371,6 +1371,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 err_xdp:
 	rcu_read_unlock();
+	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 	return NULL;
 }
 
