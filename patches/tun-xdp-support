@@ -1,5 +1,5 @@
 Bottom: d9da6a0a021115fdf7d572c722126f33577ab06c
-Top:    dfc3deb2e380ed50923b1b6d30ff23c9c2660c05
+Top:    490158a7208d10d874df48ccc2fbf1de8d399913
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5652bf3..12ff351 100644
+index 5652bf3..1e552fd 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
@@ -162,7 +162,7 @@ index 5652bf3..12ff351 100644
  
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
-@@ -1216,16 +1309,69 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+@@ -1216,16 +1309,70 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
@@ -230,11 +230,12 @@ index 5652bf3..12ff351 100644
 +
 +err_xdp:
 +	rcu_read_unlock();
++	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 +	return NULL;
  }
  
  /* Get packet from user space buffer */
-@@ -1304,7 +1450,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1304,7 +1451,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	/* FIXME: check DONTWAIT and INT_MAX */
  	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
  	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
