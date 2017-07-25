@@ -1,0 +1,82 @@
+Bottom: d51132164ff0556b0d1312f0660045577c4e84f0
+Top:    3a1c304fe4154f59e2b09c57841520281048e833
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-25 13:50:03 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 72880d2..6447035 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1264,6 +1264,24 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 	}
+ }
+ 
++/* For simplicity, work at skb level. This could be optimized in the
++ * future.
++ */
++static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
++			 struct sk_buff *skb)
++{
++	int ret;
++
++	skb->queue_mapping = tfile->queue_index;
++	ret = tun_net_xmit(skb, tun->dev);
++	if (ret == NET_XMIT_DROP) {
++		this_cpu_inc(tun->pcpu_stats->tx_dropped);
++		kfree_skb(skb);
++	}
++
++	return;
++}
++
+ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     struct tun_file *tfile,
+ 				     struct iov_iter *from,
+@@ -1303,10 +1321,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+ 
+ 		switch (act) {
+-		case XDP_PASS:
+ 		case XDP_TX:
+-			delta = orig_data - xdp.data;
+ 			xdp_xmit = true;
++			/* fall through */
++		case XDP_PASS:
++			delta = orig_data - xdp.data;
+ 			break;
+ 		default:
+ 			bpf_warn_invalid_xdp_action(act);
+@@ -1329,27 +1348,14 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	get_page(alloc_frag->page);
+ 	alloc_frag->offset += buflen;
+ 
+-	if (xdp_xmit) {
+-		int ret;
+-
+-		skb->queue_mapping = tfile->queue_index;
+-		ret = tun_net_xmit(skb, tun->dev);
+-		if (ret == NET_XMIT_DROP)
+-			goto err_xmit;
+-
+-		return NULL;
+-	}
++	if (xdp_xmit)
++		tun_xdp_xmit(tun, tfile, skb);
+ 
+ 	return skb;
+ 
+ err_xdp:
+ 	rcu_read_unlock();
+ 	return NULL;
+-
+-err_xmit:
+-	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+-	kfree_skb(skb);
+-	return NULL;
+ }
+ 
+ /* Get packet from user space buffer */
