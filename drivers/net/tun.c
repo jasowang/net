@@ -1297,6 +1297,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	char *buf;
 	size_t copied;
 	bool xdp_xmit = false;
+	bool generic_xdp = false;
 
 	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
 		return ERR_PTR(-ENOMEM);
@@ -1308,9 +1309,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
 
+	if (hdr->gso_type)
+		generic_xdp = true;
+
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tfile->xdp_prog);
-	if (xdp_prog) {
+	if (xdp_prog && !generic_xdp) {
 		struct xdp_buff xdp;
 		void *orig_data;
 		u32 act;
@@ -1351,6 +1355,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	if (xdp_xmit)
 		tun_xdp_xmit(tun, tfile, skb);
+
+	if (generic_xdp) {
+		int ret;
+
+		rcu_read_lock();
+		ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog), skb);
+		rcu_read_unlock();
+
+		if (ret != XDP_PASS)
+			return NULL;
+	}
 
 	return skb;
 
