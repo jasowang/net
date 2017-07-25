@@ -1270,17 +1270,11 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
 			 struct sk_buff *skb)
 {
-	int ret;
-
 	skb->queue_mapping = tfile->queue_index;
+	skb->protocol = eth_type_trans(skb, tun->dev);
 	local_bh_disable();
-	ret = tun_net_xmit(skb, tun->dev);
+	tun_net_xmit(skb, tun->dev);
 	local_bh_enable();
-	if (ret == NET_XMIT_DROP) {
-		this_cpu_inc(tun->pcpu_stats->tx_dropped);
-		kfree_skb(skb);
-	}
-
 	return;
 }
 
@@ -1361,6 +1355,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	if (generic_xdp) {
 		int ret;
 
+		/* FIXME: hdr conversion and other stuffs */
 		rcu_read_lock();
 		ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog), skb);
 		rcu_read_unlock();
