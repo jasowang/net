@@ -1349,8 +1349,10 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
 
-	if (xdp_xmit)
+	if (xdp_xmit) {
 		tun_xdp_xmit(tun, tfile, skb);
+		return NULL;
+	}
 
 	if (generic_xdp) {
 		int ret;
