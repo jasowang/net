@@ -1,0 +1,25 @@
+Bottom: 4e7c3030c1590ad5fe2cfaf9df12bc72e70b6452
+Top:    f3b2a3904ca6b2f5fe46e82a728d81906286df25
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-25 21:17:43 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index deb446d..ec3a565 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1349,8 +1349,10 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	get_page(alloc_frag->page);
+ 	alloc_frag->offset += buflen;
+ 
+-	if (xdp_xmit)
++	if (xdp_xmit) {
+ 		tun_xdp_xmit(tun, tfile, skb);
++		return NULL;
++	}
+ 
+ 	if (generic_xdp) {
+ 		int ret;
