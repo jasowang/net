@@ -1285,6 +1285,7 @@ static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
 static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     struct tun_file *tfile,
 				     struct iov_iter *from,
+				     struct virtio_net_hdr *hdr,
 				     int len)
 {
 	struct page_frag *alloc_frag = &tfile->alloc_frag;
@@ -1434,7 +1435,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	/* FIXME: check DONTWAIT and INT_MAX */
 	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
-		skb = tun_build_skb(tun, tfile, from, len);
+		skb = tun_build_skb(tun, tfile, from, &gso, len);
 		if (IS_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
