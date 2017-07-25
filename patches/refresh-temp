@@ -1,0 +1,42 @@
+Bottom: e472511ce0c4efdbc099d667b8851311ba0bdc27
+Top:    d9da6a0a021115fdf7d572c722126f33577ab06c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-25 14:04:48 +0800
+
+Refresh of net-export-do_xdp_generic
+
+---
+
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 614642e..c8633b0 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -3260,6 +3260,7 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
+ 	__dev_kfree_skb_any(skb, SKB_REASON_CONSUMED);
+ }
+ 
++int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb);
+ int netif_rx(struct sk_buff *skb);
+ int netif_rx_ni(struct sk_buff *skb);
+ int netif_receive_skb(struct sk_buff *skb);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index e306528..b201309 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3943,7 +3943,7 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+ 
+ static struct static_key generic_xdp_needed __read_mostly;
+ 
+-static int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
++int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
+ {
+ 	if (xdp_prog) {
+ 		u32 act = netif_receive_generic_xdp(skb, xdp_prog);
+@@ -3969,6 +3969,7 @@ static int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
+ 	kfree_skb(skb);
+ 	return XDP_DROP;
+ }
++EXPORT_SYMBOL_GPL(do_xdp_generic);
+ 
+ static int netif_rx_internal(struct sk_buff *skb)
+ {
