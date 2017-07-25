@@ -1273,7 +1273,9 @@ static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
 	int ret;
 
 	skb->queue_mapping = tfile->queue_index;
+	local_bh_disable();
 	ret = tun_net_xmit(skb, tun->dev);
+	local_bh_enable();
 	if (ret == NET_XMIT_DROP) {
 		this_cpu_inc(tun->pcpu_stats->tx_dropped);
 		kfree_skb(skb);
