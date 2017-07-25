@@ -1,0 +1,53 @@
+Bottom: 1a0deb2b58194147f37d4824e7142510646bac9d
+Top:    dfc3deb2e380ed50923b1b6d30ff23c9c2660c05
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-25 14:08:53 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 55a69ff..12ff351 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1297,6 +1297,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	char *buf;
+ 	size_t copied;
+ 	bool xdp_xmit = false;
++	bool generic_xdp = false;
+ 
+ 	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
+ 		return ERR_PTR(-ENOMEM);
+@@ -1308,9 +1309,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	if (copied != len)
+ 		return ERR_PTR(-EFAULT);
+ 
++	if (hdr->gso_type)
++		generic_xdp = true;
++
+ 	rcu_read_lock();
+ 	xdp_prog = rcu_dereference(tfile->xdp_prog);
+-	if (xdp_prog) {
++	if (xdp_prog && !generic_xdp) {
+ 		struct xdp_buff xdp;
+ 		void *orig_data;
+ 		u32 act;
+@@ -1352,6 +1356,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	if (xdp_xmit)
+ 		tun_xdp_xmit(tun, tfile, skb);
+ 
++	if (generic_xdp) {
++		int ret;
++
++		rcu_read_lock();
++		ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog), skb);
++		rcu_read_unlock();
++
++		if (ret != XDP_PASS)
++			return NULL;
++	}
++
+ 	return skb;
+ 
+ err_xdp:
