@@ -1,12 +1,11 @@
 Version: 1
-Previous: c965da633840f2a8e6a70e77aa263ae6c0382718
-Head: 83819b725153a409f34dca9b1fce6e90a2aeedbf
+Previous: b8671ba6b13eef43db4b305ecb1c2be926fba488
+Head: 991d45f9198ac710fac2e18f65943339b484940d
 Applied:
   tun-use-build_skb-for-small: fdde607b0f938433d2f419953f432ddc4232f16c
   net-decouple-bpf_prog-out-of: 8f1b12c7a4bba065dfd1e1e1530d291445afae44
   net-export-do_xdp_generic: 5658238281c18bb05815909f747b8987432c169f
-  tun-xdp-support: 402865f9348c335818297ec300e6a518f7fa079b
-  refresh-temp: 83819b725153a409f34dca9b1fce6e90a2aeedbf
+  tun-xdp-support: 991d45f9198ac710fac2e18f65943339b484940d
 Unapplied:
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
   vhost_net-honor-exported-skb: 3bd7ff79bb69da7f1eb3c962d30728c22471538d
