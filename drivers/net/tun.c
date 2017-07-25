@@ -1456,6 +1456,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
 		}
+		if (!skb)
+			return total_len;
 	} else {
 		if (!zerocopy) {
 			copylen = len;
