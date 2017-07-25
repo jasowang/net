@@ -3944,7 +3944,7 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
 
 static struct static_key generic_xdp_needed __read_mostly;
 
-static int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
+int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
 {
 	if (xdp_prog) {
 		u32 act = netif_receive_generic_xdp(skb, xdp_prog);
@@ -3970,6 +3970,7 @@ out_redir:
 	kfree_skb(skb);
 	return XDP_DROP;
 }
+EXPORT_SYMBOL_GPL(do_xdp_generic);
 
 static int netif_rx_internal(struct sk_buff *skb)
 {
