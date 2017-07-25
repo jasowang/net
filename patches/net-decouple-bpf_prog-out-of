@@ -1,0 +1,14 @@
+Bottom: 2be4ba096dd79076b5a6723f7a7b3f138d85311e
+Top:    2be4ba096dd79076b5a6723f7a7b3f138d85311e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-25 14:00:02 +0800
+
+net: decouple bpf_prog out of skb in do_xdp_generic()
+
+Sometimes, we want to do generic XDP at device driver layer, this
+requires us to decouple bpf_prog out of skb->dev.
+
+
+---
+
+
