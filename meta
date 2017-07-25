@@ -1,10 +1,10 @@
 Version: 1
-Previous: 1505e7c84d805946b7e96155dce8106271b8328e
-Head: b95d5fa4ff5a055d6bfea734736267fc5969b755
+Previous: c61f4ed8f9ecb216312d0a7d96c0efad7d888029
+Head: e233a504c559499056c8c29ceea6c9ee25191d27
 Applied:
   tun-use-build_skb-for-small: fdde607b0f938433d2f419953f432ddc4232f16c
   net-decouple-bpf_prog-out-of: 8f1b12c7a4bba065dfd1e1e1530d291445afae44
-  net-export-do_xdp_generic: b95d5fa4ff5a055d6bfea734736267fc5969b755
+  net-export-do_xdp_generic: e233a504c559499056c8c29ceea6c9ee25191d27
 Unapplied:
   tun-xdp-support: 08ea254731c9beead78bca3087d25d95f5214202
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
