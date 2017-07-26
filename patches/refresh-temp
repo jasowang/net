@@ -1,0 +1,41 @@
+Bottom: 7d44eadd2ddb1fb50345c2b98b3e5bea7eec78e7
+Top:    e71d22650b28101f1ba820232dfba951f438d81b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-26 16:10:31 +0800
+
+Refresh of net-export-generic_xdp_tx
+
+---
+
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 0fa1bbb..a736b7c 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -3261,6 +3261,7 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
+ 	__dev_kfree_skb_any(skb, SKB_REASON_CONSUMED);
+ }
+ 
++void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog);
+ int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb);
+ int netif_rx(struct sk_buff *skb);
+ int netif_rx_ni(struct sk_buff *skb);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 11eb5be..eb0d937 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3920,7 +3920,7 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
+ /* When doing generic XDP we have to bypass the qdisc layer and the
+  * network taps in order to match in-driver-XDP behavior.
+  */
+-static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
++void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+ {
+ 	struct net_device *dev = skb->dev;
+ 	struct netdev_queue *txq;
+@@ -3941,6 +3941,7 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+ 		kfree_skb(skb);
+ 	}
+ }
++EXPORT_SYMBOL_GPL(generic_xdp_tx);
+ 
+ static struct static_key generic_xdp_needed __read_mostly;
