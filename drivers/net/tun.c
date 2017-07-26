@@ -1044,7 +1044,6 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 static u32 tun_xdp_query(struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
-	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
 	const struct bpf_prog *xdp_prog;
 
 	xdp_prog = rtnl_dereference(tun->xdp_prog);
@@ -1506,6 +1505,8 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if (generic_xdp) {
 		struct bpf_prog *xdp_prog;
 		int ret;
+
+		printk("generic!\n");
 
 		rcu_read_lock();
 		xdp_prog = rcu_dereference(tun->xdp_prog);
