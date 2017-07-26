@@ -176,7 +176,6 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct skb_array tx_array;
 	struct page_frag alloc_frag;
-	struct bpf_prog __rcu *xdp_prog;
 };
 
 struct tun_flow_entry {
@@ -228,6 +227,7 @@ struct tun_struct {
 	u32 flow_count;
 	u32 rx_batched;
 	struct tun_pcpu_stats __percpu *pcpu_stats;
+	struct bpf_prog __rcu *xdp_prog;
 };
 
 #ifdef CONFIG_TUN_VNET_CROSS_LE
@@ -569,11 +569,6 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 	}
 
 	if (clean) {
-		struct bpf_prog *xdp_prog = rtnl_dereference(tfile->xdp_prog);
-
-		if (xdp_prog)
-			bpf_prog_put(xdp_prog);
-
 		if (tun && tun->numqueues == 0 && tun->numdisabled == 0) {
 			netif_carrier_off(tun->dev);
 
@@ -599,6 +594,7 @@ static void tun_detach(struct tun_file *tfile, bool clean)
 static void tun_detach_all(struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
+	struct bpf_prog *xdp_prog = rtnl_dereference(tun->xdp_prog);
 	struct tun_file *tfile, *tmp;
 	int i, n = tun->numqueues;
 
@@ -630,6 +626,9 @@ static void tun_detach_all(struct net_device *dev)
 		sock_put(&tfile->sk);
 	}
 	BUG_ON(tun->numdisabled != 0);
+
+	if (xdp_prog)
+		bpf_prog_put(xdp_prog);
 
 	if (tun->flags & IFF_PERSIST)
 		module_put(THIS_MODULE);
@@ -1022,31 +1021,19 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	struct bpf_prog *old_prog;
-	struct tun_file *tfile;
-	int i, n = 0;
 
 	/* We will shift the packet that can't be handled to generic
 	 * XDP layer.
 	 */
 
-	for (i = 0; i < tun->numqueues; i++) {
-		tfile = rtnl_dereference(tun->tfiles[i]);
-		old_prog = rtnl_dereference(tfile->xdp_prog);
-		if (old_prog)
-			bpf_prog_put(old_prog);
-		rcu_assign_pointer(tfile->xdp_prog, prog);
-	}
-	/* FIXME: new queue prog attach */
-	list_for_each_entry(tfile, &tun->disabled, next) {
-		old_prog = rtnl_dereference(tfile->xdp_prog);
-		if (old_prog)
-			bpf_prog_put(old_prog);
-		rcu_assign_pointer(tfile->xdp_prog, prog);
-		n++;
-	}
+	old_prog = rtnl_dereference(tun->xdp_prog);
+	if (old_prog)
+		bpf_prog_put(old_prog);
+	rcu_assign_pointer(tun->xdp_prog, prog);
+
 
 	if (prog) {
-		prog = bpf_prog_add(prog, tun->numqueues + n - 1);
+		prog = bpf_prog_add(prog, 1);
 		if (IS_ERR(prog))
 			return PTR_ERR(prog);
 	}
@@ -1060,7 +1047,7 @@ static u32 tun_xdp_query(struct net_device *dev)
 	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
 	const struct bpf_prog *xdp_prog;
 
-	xdp_prog = rtnl_dereference(tfile->xdp_prog);
+	xdp_prog = rtnl_dereference(tun->xdp_prog);
 	if (xdp_prog)
 		return xdp_prog->aux->id;
 
@@ -1301,7 +1288,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		*generic_xdp = 0;
 
 	rcu_read_lock();
-	xdp_prog = rcu_dereference(tfile->xdp_prog);
+	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog && !*generic_xdp) {
 		struct xdp_buff xdp;
 		void *orig_data;
@@ -1521,10 +1508,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		int ret;
 
 		rcu_read_lock();
-		xdp_prog = rcu_dereference(tfile->xdp_prog);
+		xdp_prog = rcu_dereference(tun->xdp_prog);
 		if (xdp_prog) {
-			ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog),
-					     skb);
+			ret = do_xdp_generic(xdp_prog, skb);
 			if (ret != XDP_PASS) {
 				rcu_read_unlock();
 				return total_len;
