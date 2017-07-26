@@ -1,0 +1,24 @@
+Bottom: 5a0639de5ef6ae7ad544d008105b4d0e54cacc7b
+Top:    7258514b982f3fb73b80253b9315b2a9e84f4cab
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-26 16:44:51 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 4d9ed7f6..0d4b51c 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -569,6 +569,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 	}
+ 
+ 	if (clean) {
++		struct bpf_prog *xdp_prog = rtnl_dereference(tfile->xdp_prog);
++
++		if (xdp_prog)
++			bpf_prog_put(xdp_prog);
++
+ 		if (tun && tun->numqueues == 0 && tun->numdisabled == 0) {
+ 			netif_carrier_off(tun->dev);
