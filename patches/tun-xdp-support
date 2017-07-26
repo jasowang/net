@@ -1,5 +1,5 @@
 Bottom: e71d22650b28101f1ba820232dfba951f438d81b
-Top:    e66cc37e2617b7fd91400d9c10c8d3d335630c77
+Top:    e396f327bf9ee25371268685b3fb6064d26f2a3e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5652bf3..82bbce4 100644
+index 5652bf3..9497a96 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
@@ -248,15 +248,13 @@ index 5652bf3..82bbce4 100644
  	} else {
  		if (!zerocopy) {
  			copylen = len;
-@@ -1382,6 +1502,24 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1382,6 +1502,22 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_reset_network_header(skb);
  	skb_probe_transport_header(skb, 0);
  
 +	if (generic_xdp) {
 +		struct bpf_prog *xdp_prog;
 +		int ret;
-+
-+		printk("generic!\n");
 +
 +		rcu_read_lock();
 +		xdp_prog = rcu_dereference(tun->xdp_prog);
