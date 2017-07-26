@@ -1,5 +1,5 @@
 Bottom: e71d22650b28101f1ba820232dfba951f438d81b
-Top:    7258514b982f3fb73b80253b9315b2a9e84f4cab
+Top:    f24e419fa87e4b33c0ec18518cca505e9079f045
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5652bf3..0d4b51c 100644
+index 5652bf3..2b6696d 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
@@ -33,27 +33,33 @@ index 5652bf3..0d4b51c 100644
  
  /* TUN device flags */
  
-@@ -173,6 +176,7 @@ struct tun_file {
- 	struct tun_struct *detached;
- 	struct skb_array tx_array;
- 	struct page_frag alloc_frag;
+@@ -224,6 +227,7 @@ struct tun_struct {
+ 	u32 flow_count;
+ 	u32 rx_batched;
+ 	struct tun_pcpu_stats __percpu *pcpu_stats;
 +	struct bpf_prog __rcu *xdp_prog;
  };
  
- struct tun_flow_entry {
-@@ -565,6 +569,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ #ifdef CONFIG_TUN_VNET_CROSS_LE
+@@ -590,6 +594,7 @@ static void tun_detach(struct tun_file *tfile, bool clean)
+ static void tun_detach_all(struct net_device *dev)
+ {
+ 	struct tun_struct *tun = netdev_priv(dev);
++	struct bpf_prog *xdp_prog = rtnl_dereference(tun->xdp_prog);
+ 	struct tun_file *tfile, *tmp;
+ 	int i, n = tun->numqueues;
+ 
+@@ -622,6 +627,9 @@ static void tun_detach_all(struct net_device *dev)
  	}
+ 	BUG_ON(tun->numdisabled != 0);
  
- 	if (clean) {
-+		struct bpf_prog *xdp_prog = rtnl_dereference(tfile->xdp_prog);
++	if (xdp_prog)
++		bpf_prog_put(xdp_prog);
 +
-+		if (xdp_prog)
-+			bpf_prog_put(xdp_prog);
-+
- 		if (tun && tun->numqueues == 0 && tun->numdisabled == 0) {
- 			netif_carrier_off(tun->dev);
- 
-@@ -1008,6 +1017,70 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
+ 	if (tun->flags & IFF_PERSIST)
+ 		module_put(THIS_MODULE);
+ }
+@@ -1008,6 +1016,58 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
  	stats->tx_dropped = tx_dropped;
  }
  
@@ -62,31 +68,19 @@ index 5652bf3..0d4b51c 100644
 +{
 +	struct tun_struct *tun = netdev_priv(dev);
 +	struct bpf_prog *old_prog;
-+	struct tun_file *tfile;
-+	int i, n = 0;
 +
 +	/* We will shift the packet that can't be handled to generic
 +	 * XDP layer.
 +	 */
 +
-+	for (i = 0; i < tun->numqueues; i++) {
-+		tfile = rtnl_dereference(tun->tfiles[i]);
-+		old_prog = rtnl_dereference(tfile->xdp_prog);
-+		if (old_prog)
-+			bpf_prog_put(old_prog);
-+		rcu_assign_pointer(tfile->xdp_prog, prog);
-+	}
-+	/* FIXME: new queue prog attach */
-+	list_for_each_entry(tfile, &tun->disabled, next) {
-+		old_prog = rtnl_dereference(tfile->xdp_prog);
-+		if (old_prog)
-+			bpf_prog_put(old_prog);
-+		rcu_assign_pointer(tfile->xdp_prog, prog);
-+		n++;
-+	}
++	old_prog = rtnl_dereference(tun->xdp_prog);
++	if (old_prog)
++		bpf_prog_put(old_prog);
++	rcu_assign_pointer(tun->xdp_prog, prog);
++
 +
 +	if (prog) {
-+		prog = bpf_prog_add(prog, tun->numqueues + n - 1);
++		prog = bpf_prog_add(prog, 1);
 +		if (IS_ERR(prog))
 +			return PTR_ERR(prog);
 +	}
@@ -100,7 +94,7 @@ index 5652bf3..0d4b51c 100644
 +	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
 +	const struct bpf_prog *xdp_prog;
 +
-+	xdp_prog = rtnl_dereference(tfile->xdp_prog);
++	xdp_prog = rtnl_dereference(tun->xdp_prog);
 +	if (xdp_prog)
 +		return xdp_prog->aux->id;
 +
@@ -124,7 +118,7 @@ index 5652bf3..0d4b51c 100644
  static const struct net_device_ops tun_netdev_ops = {
  	.ndo_uninit		= tun_net_uninit,
  	.ndo_open		= tun_net_open,
-@@ -1038,6 +1111,7 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1038,6 +1098,7 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_features_check	= passthru_features_check,
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
@@ -132,7 +126,7 @@ index 5652bf3..0d4b51c 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1195,16 +1269,21 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1195,16 +1256,21 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  	}
  }
  
@@ -156,7 +150,7 @@ index 5652bf3..0d4b51c 100644
  
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
-@@ -1216,16 +1295,68 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+@@ -1216,16 +1282,68 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
@@ -166,7 +160,7 @@ index 5652bf3..0d4b51c 100644
 +		*generic_xdp = 0;
 +
 +	rcu_read_lock();
-+	xdp_prog = rcu_dereference(tfile->xdp_prog);
++	xdp_prog = rcu_dereference(tun->xdp_prog);
 +	if (xdp_prog && !*generic_xdp) {
 +		struct xdp_buff xdp;
 +		void *orig_data;
@@ -228,7 +222,7 @@ index 5652bf3..0d4b51c 100644
  }
  
  /* Get packet from user space buffer */
-@@ -1244,6 +1375,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1244,6 +1362,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	bool zerocopy = false;
  	int err;
  	u32 rxhash;
@@ -236,7 +230,7 @@ index 5652bf3..0d4b51c 100644
  
  	if (!(tun->dev->flags & IFF_UP))
  		return -EIO;
-@@ -1301,14 +1433,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1301,14 +1420,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			zerocopy = true;
  	}
  
@@ -255,7 +249,7 @@ index 5652bf3..0d4b51c 100644
  	} else {
  		if (!zerocopy) {
  			copylen = len;
-@@ -1382,6 +1516,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1382,6 +1503,22 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_reset_network_header(skb);
  	skb_probe_transport_header(skb, 0);
  
@@ -264,10 +258,9 @@ index 5652bf3..0d4b51c 100644
 +		int ret;
 +
 +		rcu_read_lock();
-+		xdp_prog = rcu_dereference(tfile->xdp_prog);
++		xdp_prog = rcu_dereference(tun->xdp_prog);
 +		if (xdp_prog) {
-+			ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog),
-+					     skb);
++			ret = do_xdp_generic(xdp_prog, skb);
 +			if (ret != XDP_PASS) {
 +				rcu_read_unlock();
 +				return total_len;
