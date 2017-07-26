@@ -1264,18 +1264,6 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	}
 }
 
-/* For simplicity, work at skb level. This could be optimized in the
- * future.
- */
-static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
-			 struct sk_buff *skb)
-{
-	skb->dev = tun->dev;
-	dev_queue_xmit(skb);
-
-	return;
-}
-
 static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     struct tun_file *tfile,
 				     struct iov_iter *from,
@@ -1336,11 +1324,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			goto err_xdp;
 		}
 	}
-	rcu_read_unlock();
 
 	skb = build_skb(buf, buflen);
-	if (!skb)
+	if (!skb) {
+		rcu_read_unlock();
 		return ERR_PTR(-ENOMEM);
+	}
 
 	skb_reserve(skb, TUN_RX_PAD - delta);
 	skb_put(skb, len + delta);
@@ -1348,9 +1337,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	alloc_frag->offset += buflen;
 
 	if (xdp_xmit) {
-		tun_xdp_xmit(tun, tfile, skb);
+		skb->dev = tun->dev;
+		generic_xdp_tx(skb, xdp_prog);
 		return NULL;
 	}
+
+	rcu_read_unlock();
 
 	if (generic_xdp) {
 		int ret;
