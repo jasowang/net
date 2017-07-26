@@ -1,0 +1,64 @@
+Bottom: 3e3883c84672758cefedd4f0d3109d10a5a75a62
+Top:    0c0ee2964502f171b6a275d45a662ed84a862069
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-26 16:08:52 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 0407271..1afa19c 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1347,12 +1347,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	get_page(alloc_frag->page);
+ 	alloc_frag->offset += buflen;
+ 
+-	if (virtio_net_hdr_to_skb(skb, hdr, tun_is_little_endian(tun))) {
+-		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
+-		kfree_skb(skb);
+-		return ERR_PTR(-EINVAL);
+-	}
+-
+ 	if (xdp_xmit) {
+ 		tun_xdp_xmit(tun, tfile, skb);
+ 		return NULL;
+@@ -1369,8 +1363,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			return NULL;
+ 	}
+ 
+-	printk("build: data - head %d\n", skb->data - skb->head);
+-
+ 	return skb;
+ 
+ err_xdp:
+@@ -1495,7 +1487,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		kfree_skb(skb);
+ 		return -EINVAL;
+ 	}
+-	printk("4:data - head %d\n", skb->data - skb->head);
+ 
+ 	switch (tun->flags & TUN_TYPE_MASK) {
+ 	case IFF_TUN:
+@@ -1522,7 +1513,6 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		skb->protocol = eth_type_trans(skb, tun->dev);
+ 		break;
+ 	}
+-	printk("3:data - head %d\n", skb->data - skb->head);
+ 
+ 	/* copy skb_ubuf_info for callback when skb has no error */
+ 	if (zerocopy) {
+@@ -1534,12 +1524,9 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		uarg->callback(uarg, false);
+ 	}
+ 
+-	printk("2: data - head %d\n", skb->data - skb->head);
+-
+ 	skb_reset_network_header(skb);
+ 	skb_probe_transport_header(skb, 0);
+ 
+-	printk("data - head %d\n", skb->data - skb->head);
+ 	rxhash = __skb_get_hash_symmetric(skb);
+ #ifndef CONFIG_4KSTACKS
+ 	tun_rx_batched(tun, tfile, skb, more);
