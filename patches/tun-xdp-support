@@ -1,5 +1,5 @@
 Bottom: e71d22650b28101f1ba820232dfba951f438d81b
-Top:    f24e419fa87e4b33c0ec18518cca505e9079f045
+Top:    e66cc37e2617b7fd91400d9c10c8d3d335630c77
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5652bf3..2b6696d 100644
+index 5652bf3..82bbce4 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
@@ -59,7 +59,7 @@ index 5652bf3..2b6696d 100644
  	if (tun->flags & IFF_PERSIST)
  		module_put(THIS_MODULE);
  }
-@@ -1008,6 +1016,58 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
+@@ -1008,6 +1016,57 @@ tun_net_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
  	stats->tx_dropped = tx_dropped;
  }
  
@@ -91,7 +91,6 @@ index 5652bf3..2b6696d 100644
 +static u32 tun_xdp_query(struct net_device *dev)
 +{
 +	struct tun_struct *tun = netdev_priv(dev);
-+	struct tun_file *tfile = rtnl_dereference(tun->tfiles[0]);
 +	const struct bpf_prog *xdp_prog;
 +
 +	xdp_prog = rtnl_dereference(tun->xdp_prog);
@@ -118,7 +117,7 @@ index 5652bf3..2b6696d 100644
  static const struct net_device_ops tun_netdev_ops = {
  	.ndo_uninit		= tun_net_uninit,
  	.ndo_open		= tun_net_open,
-@@ -1038,6 +1098,7 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1038,6 +1097,7 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_features_check	= passthru_features_check,
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
@@ -126,7 +125,7 @@ index 5652bf3..2b6696d 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1195,16 +1256,21 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1195,16 +1255,21 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  	}
  }
  
@@ -150,7 +149,7 @@ index 5652bf3..2b6696d 100644
  
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
-@@ -1216,16 +1282,68 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+@@ -1216,16 +1281,68 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
@@ -222,7 +221,7 @@ index 5652bf3..2b6696d 100644
  }
  
  /* Get packet from user space buffer */
-@@ -1244,6 +1362,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1244,6 +1361,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	bool zerocopy = false;
  	int err;
  	u32 rxhash;
@@ -230,7 +229,7 @@ index 5652bf3..2b6696d 100644
  
  	if (!(tun->dev->flags & IFF_UP))
  		return -EIO;
-@@ -1301,14 +1420,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1301,14 +1419,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			zerocopy = true;
  	}
  
@@ -249,13 +248,15 @@ index 5652bf3..2b6696d 100644
  	} else {
  		if (!zerocopy) {
  			copylen = len;
-@@ -1382,6 +1503,22 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1382,6 +1502,24 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_reset_network_header(skb);
  	skb_probe_transport_header(skb, 0);
  
 +	if (generic_xdp) {
 +		struct bpf_prog *xdp_prog;
 +		int ret;
++
++		printk("generic!\n");
 +
 +		rcu_read_lock();
 +		xdp_prog = rcu_dereference(tun->xdp_prog);
