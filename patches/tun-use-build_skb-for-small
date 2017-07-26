@@ -3,7 +3,7 @@ Top:    c0f7ba20f514b5e86a37fe0455707ca40b3fd0f7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-24 20:59:54 +0800
 
-tun: use build_skb() for small packet
+tap: use build_skb() for small packet
 
 We use tun_alloc_skb() which calls sock-alloc_send_pskb() to allocate
 skb in the past. This socket based method is not suitable for high
@@ -23,12 +23,12 @@ are all met:
 - zerocopy is not used
 - packet size is smaller enough to use build_skb()
 
-Pktgen from guest to host shows:
+Pktgen from guest to host shows ~15% improvement for rx pps of tap:
 
-Before:
-After : 2.2Mpps
+Before: ~1.9Mpps
+After : ~2.2Mpps
 
-What's more important, this makes it possible to implement XDP for tun
+What's more important, this makes it possible to implement XDP for tap
 before creating skbs.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
