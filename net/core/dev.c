@@ -3920,7 +3920,7 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 /* When doing generic XDP we have to bypass the qdisc layer and the
  * network taps in order to match in-driver-XDP behavior.
  */
-static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
 {
 	struct net_device *dev = skb->dev;
 	struct netdev_queue *txq;
@@ -3941,6 +3941,7 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
 		kfree_skb(skb);
 	}
 }
+EXPORT_SYMBOL_GPL(generic_xdp_tx);
 
 static struct static_key generic_xdp_needed __read_mostly;
 
