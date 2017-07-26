@@ -569,6 +569,11 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 	}
 
 	if (clean) {
+		struct bpf_prog *xdp_prog = rtnl_dereference(tfile->xdp_prog);
+
+		if (xdp_prog)
+			bpf_prog_put(xdp_prog);
+
 		if (tun && tun->numqueues == 0 && tun->numdisabled == 0) {
 			netif_carrier_off(tun->dev);
 
