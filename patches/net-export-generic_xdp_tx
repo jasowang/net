@@ -5,6 +5,8 @@ Date:   2017-07-26 16:10:28 +0800
 
 net: export generic_xdp_tx
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
