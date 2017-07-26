@@ -1,0 +1,61 @@
+Bottom: 18a814e500cc0d3c9deee79d094dd763e3910a02
+Top:    7c3df8564b8bb161f3837a5db888ef6e073fd1eb
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-07-26 16:18:00 +0800
+
+Refresh of tun-xdp-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 1afa19c..243831a 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1264,18 +1264,6 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 	}
+ }
+ 
+-/* For simplicity, work at skb level. This could be optimized in the
+- * future.
+- */
+-static void tun_xdp_xmit(struct tun_struct *tun, struct tun_file *tfile,
+-			 struct sk_buff *skb)
+-{
+-	skb->dev = tun->dev;
+-	dev_queue_xmit(skb);
+-
+-	return;
+-}
+-
+ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     struct tun_file *tfile,
+ 				     struct iov_iter *from,
+@@ -1336,11 +1324,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			goto err_xdp;
+ 		}
+ 	}
+-	rcu_read_unlock();
+ 
+ 	skb = build_skb(buf, buflen);
+-	if (!skb)
++	if (!skb) {
++		rcu_read_unlock();
+ 		return ERR_PTR(-ENOMEM);
++	}
+ 
+ 	skb_reserve(skb, TUN_RX_PAD - delta);
+ 	skb_put(skb, len + delta);
+@@ -1348,10 +1337,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	alloc_frag->offset += buflen;
+ 
+ 	if (xdp_xmit) {
+-		tun_xdp_xmit(tun, tfile, skb);
++		skb->dev = tun->dev;
++		generic_xdp_tx(skb, xdp_prog);
+ 		return NULL;
+ 	}
+ 
++	rcu_read_unlock();
++
+ 	if (generic_xdp) {
+ 		int ret;
