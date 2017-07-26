@@ -1,5 +1,5 @@
 Bottom: e71d22650b28101f1ba820232dfba951f438d81b
-Top:    7c3df8564b8bb161f3837a5db888ef6e073fd1eb
+Top:    5a0639de5ef6ae7ad544d008105b4d0e54cacc7b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5652bf3..243831a 100644
+index 5652bf3..4d9ed7f6 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
@@ -120,7 +120,7 @@ index 5652bf3..243831a 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1195,16 +1264,22 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1195,16 +1264,21 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  	}
  }
  
@@ -128,8 +128,9 @@ index 5652bf3..243831a 100644
 +static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 +				     struct tun_file *tfile,
  				     struct iov_iter *from,
+-				     int len)
 +				     struct virtio_net_hdr *hdr,
- 				     int len)
++				     int len, int *generic_xdp)
  {
  	struct page_frag *alloc_frag = &tfile->alloc_frag;
  	struct sk_buff *skb;
@@ -140,20 +141,21 @@ index 5652bf3..243831a 100644
  	char *buf;
  	size_t copied;
 +	bool xdp_xmit = false;
-+	bool generic_xdp = false;
  
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
-@@ -1216,16 +1291,76 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
+@@ -1216,16 +1290,68 @@ static struct sk_buff *tun_build_skb(struct tun_file *tfile,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
 +	if (hdr->gso_type)
-+		generic_xdp = true;
++		*generic_xdp = 1;
++	else
++		*generic_xdp = 0;
 +
 +	rcu_read_lock();
 +	xdp_prog = rcu_dereference(tfile->xdp_prog);
-+	if (xdp_prog && !generic_xdp) {
++	if (xdp_prog && !*generic_xdp) {
 +		struct xdp_buff xdp;
 +		void *orig_data;
 +		u32 act;
@@ -199,21 +201,11 @@ index 5652bf3..243831a 100644
 +	if (xdp_xmit) {
 +		skb->dev = tun->dev;
 +		generic_xdp_tx(skb, xdp_prog);
++		rcu_read_lock();
 +		return NULL;
 +	}
 +
 +	rcu_read_unlock();
-+
-+	if (generic_xdp) {
-+		int ret;
-+
-+		rcu_read_lock();
-+		ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog), skb);
-+		rcu_read_unlock();
-+
-+		if (ret != XDP_PASS)
-+			return NULL;
-+	}
 +
  	return skb;
 +
@@ -224,7 +216,15 @@ index 5652bf3..243831a 100644
  }
  
  /* Get packet from user space buffer */
-@@ -1301,14 +1436,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1244,6 +1370,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	bool zerocopy = false;
+ 	int err;
+ 	u32 rxhash;
++	int generic_xdp = 1;
+ 
+ 	if (!(tun->dev->flags & IFF_UP))
+ 		return -EIO;
+@@ -1301,14 +1428,16 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			zerocopy = true;
  	}
  
@@ -233,7 +233,7 @@ index 5652bf3..243831a 100644
  	if (SKB_DATA_ALIGN(len + TUN_RX_PAD) +
  	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) < PAGE_SIZE) {
 -		skb = tun_build_skb(tfile, from, len);
-+		skb = tun_build_skb(tun, tfile, from, &gso, len);
++		skb = tun_build_skb(tun, tfile, from, &gso, len, &generic_xdp);
  		if (IS_ERR(skb)) {
  			this_cpu_inc(tun->pcpu_stats->rx_dropped);
  			return PTR_ERR(skb);
@@ -243,3 +243,27 @@ index 5652bf3..243831a 100644
  	} else {
  		if (!zerocopy) {
  			copylen = len;
+@@ -1382,6 +1511,23 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	skb_reset_network_header(skb);
+ 	skb_probe_transport_header(skb, 0);
+ 
++	if (generic_xdp) {
++		struct bpf_prog *xdp_prog;
++		int ret;
++
++		rcu_read_lock();
++		xdp_prog = rcu_dereference(tfile->xdp_prog);
++		if (xdp_prog) {
++			ret = do_xdp_generic(rcu_dereference(tfile->xdp_prog),
++					     skb);
++			if (ret != XDP_PASS) {
++				rcu_read_unlock();
++				return total_len;
++			}
++		}
++		rcu_read_unlock();
++	}
++
+ 	rxhash = __skb_get_hash_symmetric(skb);
+ #ifndef CONFIG_4KSTACKS
+ 	tun_rx_batched(tun, tfile, skb, more);
