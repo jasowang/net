@@ -1,5 +1,5 @@
 Bottom: ad49fbd2ddb2214efd045008417397b9bd367821
-Top:    c0f7ba20f514b5e86a37fe0455707ca40b3fd0f7
+Top:    b8bbdb8ed1a36de7f3a74d97fffa62269479bd1b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-24 20:59:54 +0800
 
@@ -37,7 +37,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a93392d..c8e8a32 100644
+index a93392d..de1a2ef 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -105,6 +105,8 @@ do {								\
@@ -139,10 +139,16 @@ index a93392d..c8e8a32 100644
 -		else
 -			linear = tun16_to_cpu(tun, gso.hdr_len);
 -	}
+-
+-	skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
+-	if (IS_ERR(skb)) {
+-		if (PTR_ERR(skb) != -EAGAIN)
 +	if (tun_can_build_skb(tun, tfile, len, noblock, zerocopy)) {
 +		skb = tun_build_skb(tfile, from, len);
 +		if (IS_ERR(skb)) {
-+			this_cpu_inc(tun->pcpu_stats->rx_dropped);
+ 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
+-		return PTR_ERR(skb);
+-	}
 +			return PTR_ERR(skb);
 +		}
 +	} else {
@@ -154,31 +160,26 @@ index a93392d..c8e8a32 100644
 +				linear = tun16_to_cpu(tun, gso.hdr_len);
 +		}
  
--	skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
--	if (IS_ERR(skb)) {
--		if (PTR_ERR(skb) != -EAGAIN)
-+		skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
-+		if (IS_ERR(skb)) {
-+			if (PTR_ERR(skb) != -EAGAIN)
- 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
--		return PTR_ERR(skb);
--	}
-+			return PTR_ERR(skb);
-+		}
- 
 -	if (zerocopy)
 -		err = zerocopy_sg_from_iter(skb, from);
 -	else
 -		err = skb_copy_datagram_from_iter(skb, 0, from, len);
-+		if (zerocopy)
-+			err = zerocopy_sg_from_iter(skb, from);
-+		else
-+			err = skb_copy_datagram_from_iter(skb, 0, from, len);
++		skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
++		if (IS_ERR(skb)) {
++			if (PTR_ERR(skb) != -EAGAIN)
++				this_cpu_inc(tun->pcpu_stats->rx_dropped);
++			return PTR_ERR(skb);
++		}
  
 -	if (err) {
 -		this_cpu_inc(tun->pcpu_stats->rx_dropped);
 -		kfree_skb(skb);
 -		return -EFAULT;
++		if (zerocopy)
++			err = zerocopy_sg_from_iter(skb, from);
++		else
++			err = skb_copy_datagram_from_iter(skb, 0, from, len);
++
 +		if (err) {
 +			this_cpu_inc(tun->pcpu_stats->rx_dropped);
 +			kfree_skb(skb);
