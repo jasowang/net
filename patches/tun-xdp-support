@@ -3,15 +3,19 @@ Top:    7e512b553dc9696c07a508a93489cbec0bad9ff0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
-tun: XDP support
+tap: XDP support
 
 This patch tries to implement XDP for tun. The implementation was
 split into two parts:
 
 - fast path: small and no gso packet. We try to do XDP at page level
-  before build_skb().
+  before build_skb(). For XDP_TX, since creating/destroying queues
+  were completely under control of userspace, it was implemented
+  through generic XDP helper after skb has been built.
 - slow path: big or gso packet. We try to do it after skb was created
   through generic XDP helpers.
+
+
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
