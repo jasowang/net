@@ -1031,7 +1031,6 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 		bpf_prog_put(old_prog);
 	rcu_assign_pointer(tun->xdp_prog, prog);
 
-
 	if (prog) {
 		prog = bpf_prog_add(prog, 1);
 		if (IS_ERR(prog))
