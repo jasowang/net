@@ -1341,7 +1341,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		skb = tun_alloc_skb(tfile, align, copylen, linear, noblock);
 		if (IS_ERR(skb)) {
 			if (PTR_ERR(skb) != -EAGAIN)
-			this_cpu_inc(tun->pcpu_stats->rx_dropped);
+				this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			return PTR_ERR(skb);
 		}
 
