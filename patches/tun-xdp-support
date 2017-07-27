@@ -18,6 +18,11 @@ split into two parts:
 
 XDP_REDIRECT was not implemented, it could be done on top.
 
+xdp1 test shows 47.6% improvement:
+
+Before: ~2.1Mpps
+After:  ~3.1Mpps
+
 Suggested-by: Michael S. Tsirkin <mst@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
