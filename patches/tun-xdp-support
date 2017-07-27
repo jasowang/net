@@ -11,12 +11,14 @@ split into two parts:
 - fast path: small and no gso packet. We try to do XDP at page level
   before build_skb(). For XDP_TX, since creating/destroying queues
   were completely under control of userspace, it was implemented
-  through generic XDP helper after skb has been built.
+  through generic XDP helper after skb has been built. This could be
+  optimized in the future.
 - slow path: big or gso packet. We try to do it after skb was created
   through generic XDP helpers.
 
+XDP_REDIRECT was not implemented, it could be done on top.
 
-
+Suggested-by: Michael S. Tsirkin <mst@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
