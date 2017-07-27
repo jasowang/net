@@ -1,7 +1,7 @@
 Bottom: c0f7ba20f514b5e86a37fe0455707ca40b3fd0f7
-Top:    2f2a3f41c63fa8653e5bd818a06b80d89ec1a161
+Top:    5201df80a3509442d27e643db43e16ce2de8f57b
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-07-25 14:00:02 +0800
+Date:   2017-07-27 16:27:42 +0800
 
 net: decouple bpf_prog out of skb in do_xdp_generic()
 
@@ -10,26 +10,59 @@ requires us to decouple bpf_prog out of skb->dev.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 3a3cdc1..a736b7c 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -3261,6 +3261,8 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
+ 	__dev_kfree_skb_any(skb, SKB_REASON_CONSUMED);
+ }
+ 
++void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog);
++int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb);
+ int netif_rx(struct sk_buff *skb);
+ int netif_rx_ni(struct sk_buff *skb);
+ int netif_receive_skb(struct sk_buff *skb);
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 8ea6b4b..2772525 100644
+index 8ea6b4b..eb0d937 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3944,10 +3944,8 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+@@ -3920,7 +3920,7 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
+ /* When doing generic XDP we have to bypass the qdisc layer and the
+  * network taps in order to match in-driver-XDP behavior.
+  */
+-static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
++void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+ {
+ 	struct net_device *dev = skb->dev;
+ 	struct netdev_queue *txq;
+@@ -3941,13 +3941,12 @@ static void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog)
+ 		kfree_skb(skb);
+ 	}
+ }
++EXPORT_SYMBOL_GPL(generic_xdp_tx);
  
  static struct static_key generic_xdp_needed __read_mostly;
  
 -static int do_xdp_generic(struct sk_buff *skb)
-+static int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
++int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb)
  {
 -	struct bpf_prog *xdp_prog = rcu_dereference(skb->dev->xdp_prog);
 -
  	if (xdp_prog) {
  		u32 act = netif_receive_generic_xdp(skb, xdp_prog);
  		int err;
-@@ -3982,7 +3980,8 @@ static int netif_rx_internal(struct sk_buff *skb)
+@@ -3972,6 +3971,7 @@ static int do_xdp_generic(struct sk_buff *skb)
+ 	kfree_skb(skb);
+ 	return XDP_DROP;
+ }
++EXPORT_SYMBOL_GPL(do_xdp_generic);
+ 
+ static int netif_rx_internal(struct sk_buff *skb)
+ {
+@@ -3982,7 +3982,8 @@ static int netif_rx_internal(struct sk_buff *skb)
  	trace_netif_rx(skb);
  
  	if (static_key_false(&generic_xdp_needed)) {
@@ -39,7 +72,7 @@ index 8ea6b4b..2772525 100644
  
  		/* Consider XDP consuming the packet a success from
  		 * the netdev point of view we do not want to count
-@@ -4503,7 +4502,8 @@ static int netif_receive_skb_internal(struct sk_buff *skb)
+@@ -4503,7 +4504,8 @@ static int netif_receive_skb_internal(struct sk_buff *skb)
  	rcu_read_lock();
  
  	if (static_key_false(&generic_xdp_needed)) {
