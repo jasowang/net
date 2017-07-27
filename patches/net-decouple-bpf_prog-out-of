@@ -3,7 +3,7 @@ Top:    5201df80a3509442d27e643db43e16ce2de8f57b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-27 16:27:42 +0800
 
-net: export generic xdp helpers
+net: export some generic xdp helpers
 
 This patch tries to export some generic xdp helpers to drivers. This
 can let driver to do XDP for a specific skb. This is useful for the
