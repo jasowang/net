@@ -16,8 +16,6 @@ split into two parts:
 - slow path: big or gso packet. We try to do it after skb was created
   through generic XDP helpers.
 
-XDP_REDIRECT was not implemented, it could be done on top.
-
 xdp1 test shows 47.6% improvement:
 
 Before: ~2.1Mpps
