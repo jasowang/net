@@ -1281,6 +1281,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	char *buf;
 	size_t copied;
 	bool xdp_xmit = false;
+	int err;
 
 	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
 		return ERR_PTR(-ENOMEM);
@@ -1311,6 +1312,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		act = bpf_prog_run_xdp(xdp_prog, &xdp);
 
 		switch (act) {
+		case XDP_REDIRECT:
+			get_page(alloc_frag->page);
+			alloc_frag->offset += buflen;
+			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
+			if (err)
+				goto err_redirect;
+			return NULL;
 		case XDP_TX:
 			xdp_xmit = true;
 			/* fall through */
@@ -1350,6 +1358,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	return skb;
 
+err_redirect:
+	put_page(alloc_frag->page);
 err_xdp:
 	rcu_read_unlock();
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
