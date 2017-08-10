@@ -1022,10 +1022,6 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 	struct tun_struct *tun = netdev_priv(dev);
 	struct bpf_prog *old_prog;
 
-	/* We will shift the packet that can't be handled to generic
-	 * XDP layer.
-	 */
-
 	old_prog = rtnl_dereference(tun->xdp_prog);
 	rcu_assign_pointer(tun->xdp_prog, prog);
 	if (old_prog)
