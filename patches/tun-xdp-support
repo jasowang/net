@@ -16,10 +16,10 @@ split into two parts:
 - slow path: big or gso packet. We try to do it after skb was created
   through generic XDP helpers.
 
-xdp1 test shows 47.6% improvement:
+xdp1 test shows ~41.1% improvement:
 
-Before: ~2.1Mpps
-After:  ~3.1Mpps
+Before: ~1.7Mpps
+After:  ~2.3Mpps
 
 Suggested-by: Michael S. Tsirkin <mst@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
