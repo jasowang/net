@@ -1,5 +1,5 @@
-Bottom: c9dffcc410454d2d42b7b9763cae080f7bf94eb7
-Top:    28bae10b27a2f17de7ce02ad2c043830f3b596c5
+Bottom: 9d48120e6c4ad6b7ac71fea735f7036bda0876a0
+Top:    3cc27df75e771112a05a2a64a3e4519de8113374
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-07-20 15:19:27 +0800
 
@@ -30,7 +30,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index de1a2ef..5debe1b 100644
+index 9736df4..7e92192 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -73,6 +73,8 @@
