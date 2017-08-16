@@ -176,6 +176,7 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct skb_array tx_array;
 	struct page_frag alloc_frag;
+	spinlock_t lock;
 };
 
 struct tun_flow_entry {
@@ -1273,25 +1274,37 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     int len, int *generic_xdp)
 {
 	struct page_frag *alloc_frag = &tfile->alloc_frag;
+	struct page *page;
 	struct sk_buff *skb;
 	struct bpf_prog *xdp_prog;
 	int buflen = SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
+	size_t offset;
 	char *buf;
 	size_t copied;
 	bool xdp_xmit = false;
 	int err;
 
-	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
+	spin_lock(&tfile->lock);
+	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL))) {
+		spin_unlock(&tfile->lock);
 		return ERR_PTR(-ENOMEM);
+	}
 
-	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
-	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset + TUN_RX_PAD,
+	page = alloc_frag->page;
+	offset = alloc_frag->offset;
+	get_page(page);
+	buf = (char *)page_address(page) + offset;
+	alloc_frag->offset += buflen;
+	spin_unlock(&tfile->lock);
+
+	copied = copy_page_from_iter(page, offset + TUN_RX_PAD,
 				     len, from);
-	if (copied != len)
+	if (copied != len) {
+		put_page(page);
 		return ERR_PTR(-EFAULT);
+	}
 
 	if (hdr->gso_type)
 		*generic_xdp = 1;
@@ -1313,11 +1326,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 		switch (act) {
 		case XDP_REDIRECT:
-			get_page(alloc_frag->page);
-			alloc_frag->offset += buflen;
 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
 			if (err)
-				goto err_redirect;
+				goto err_xdp;
 			return NULL;
 		case XDP_TX:
 			xdp_xmit = true;
@@ -1339,13 +1350,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	skb = build_skb(buf, buflen);
 	if (!skb) {
 		rcu_read_unlock();
+		put_page(page);
 		return ERR_PTR(-ENOMEM);
 	}
 
 	skb_reserve(skb, TUN_RX_PAD - delta);
 	skb_put(skb, len + delta);
-	get_page(alloc_frag->page);
-	alloc_frag->offset += buflen;
 
 	if (xdp_xmit) {
 		skb->dev = tun->dev;
@@ -1358,9 +1368,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	return skb;
 
-err_redirect:
-	put_page(alloc_frag->page);
 err_xdp:
+	put_page(page);
 	rcu_read_unlock();
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 	return NULL;
@@ -2586,6 +2595,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+	spin_lock_init(&tfile->lock);
 
 	return 0;
 }
