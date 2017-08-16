@@ -3,23 +3,12 @@ Top:    ae9a4a5ec0c7603de30e73f4fb6852e4ce672358
 Author: Eric Dumazet <eric.dumazet@gmail.com>
 Date:   2017-08-16 03:24:44 -0700
 
-tap: use build_skb() for small packet
+tun: make tun_build_skb() thread safe
 
-On Wed, 2017-08-16 at 11:55 +0800, Jason Wang wrote:
->
-> On 2017年08月16日 11:45, Eric Dumazet wrote:
-> >
-> > You do realize that tun_build_skb() is not thread safe ?
->
-> Ok, I think the issue if skb_page_frag_refill(), need a spinlock
-> probably. Will prepare a patch.
+tun_build_skb() is not thread safe since it uses per queue page frag,
+this will break things when multiple threads are sending through same
+queue. Switch to use per-thread generator (no lock involved).
 
-But since tun is used from process context, why don't you use the
-per-thread generator (no lock involved)
-
-tcp_sendmsg() uses this for GFP_KERNEL allocations.
-
-Untested patch :
 
 
 ---
