@@ -1,5 +1,5 @@
 Bottom: e1bfb451c527379fcdedae511b17d78cd35e4728
-Top:    ceec528c24bf42dc076bef01c4e9dce27226cf1d
+Top:    c85841b2a6c9a4b8e339da29cf7ec352d7934fd2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-16 13:17:15 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 5892284..2fe035e 100644
+index 5892284..a5592e6 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -176,6 +176,7 @@ struct tun_file {
@@ -22,7 +22,7 @@ index 5892284..2fe035e 100644
  };
  
  struct tun_flow_entry {
-@@ -1273,6 +1274,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1273,25 +1274,37 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  				     int len, int *generic_xdp)
  {
  	struct page_frag *alloc_frag = &tfile->alloc_frag;
@@ -30,7 +30,11 @@ index 5892284..2fe035e 100644
  	struct sk_buff *skb;
  	struct bpf_prog *xdp_prog;
  	int buflen = SKB_DATA_ALIGN(len + TUN_RX_PAD) +
-@@ -1283,15 +1285,25 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+ 	unsigned int delta = 0;
++	size_t offset;
+ 	char *buf;
+ 	size_t copied;
  	bool xdp_xmit = false;
  	int err;
  
@@ -40,15 +44,18 @@ index 5892284..2fe035e 100644
 +		spin_unlock(&tfile->lock);
  		return ERR_PTR(-ENOMEM);
 +	}
- 
++
 +	page = alloc_frag->page;
++	offset = alloc_frag->offset;
 +	get_page(page);
- 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
++	buf = (char *)page_address(page) + offset;
 +	alloc_frag->offset += buflen;
 +	spin_unlock(&tfile->lock);
-+
- 	copied = copy_page_from_iter(alloc_frag->page,
- 				     alloc_frag->offset + TUN_RX_PAD,
+ 
+-	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
+-	copied = copy_page_from_iter(alloc_frag->page,
+-				     alloc_frag->offset + TUN_RX_PAD,
++	copied = copy_page_from_iter(page, offset + TUN_RX_PAD,
  				     len, from);
 -	if (copied != len)
 +	if (copied != len) {
@@ -58,7 +65,7 @@ index 5892284..2fe035e 100644
  
  	if (hdr->gso_type)
  		*generic_xdp = 1;
-@@ -1313,11 +1325,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1313,11 +1326,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  
  		switch (act) {
  		case XDP_REDIRECT:
@@ -71,7 +78,7 @@ index 5892284..2fe035e 100644
  			return NULL;
  		case XDP_TX:
  			xdp_xmit = true;
-@@ -1339,13 +1349,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1339,13 +1350,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	skb = build_skb(buf, buflen);
  	if (!skb) {
  		rcu_read_unlock();
@@ -86,7 +93,7 @@ index 5892284..2fe035e 100644
  
  	if (xdp_xmit) {
  		skb->dev = tun->dev;
-@@ -1358,9 +1367,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1358,9 +1368,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  
  	return skb;
  
@@ -97,7 +104,7 @@ index 5892284..2fe035e 100644
  	rcu_read_unlock();
  	this_cpu_inc(tun->pcpu_stats->rx_dropped);
  	return NULL;
-@@ -2586,6 +2594,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2586,6 +2595,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	INIT_LIST_HEAD(&tfile->next);
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
