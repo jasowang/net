@@ -9,6 +9,7 @@ tun_build_skb() is not thread safe since it uses per queue page frag,
 this will break things when multiple threads are sending through same
 queue. Switch to use per-thread generator (no lock involved).
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
