@@ -1280,6 +1280,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	int buflen = SKB_DATA_ALIGN(len + TUN_RX_PAD) +
 		     SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
+	size_t offset;
 	char *buf;
 	size_t copied;
 	bool xdp_xmit = false;
@@ -1292,13 +1293,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	}
 
 	page = alloc_frag->page;
+	offset = alloc_frag->offset;
 	get_page(page);
-	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
+	buf = (char *)page_address(page) + offset;
 	alloc_frag->offset += buflen;
 	spin_unlock(&tfile->lock);
 
-	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset + TUN_RX_PAD,
+	copied = copy_page_from_iter(page, offset + TUN_RX_PAD,
 				     len, from);
 	if (copied != len) {
 		put_page(page);
