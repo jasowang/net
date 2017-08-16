@@ -10,6 +10,7 @@ this will break things when multiple threads are sending through same
 queue. Switch to use per-thread generator (no lock involved).
 
 Fixes: 66ccbc9c87c2 ("tap: use build_skb() for small packet")
+Tested-by: Jason Wang <jasowang@redhat.com>
 Signed-off-by: Eric Dumazet <eric.dumazet@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
