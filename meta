@@ -1,9 +1,8 @@
 Version: 1
-Previous: 983ca41bb9831d0ab75c12b5f2e328cbe9132265
+Previous: 4994db1dc7655f1e4c81fe7b730a2068ebde80da
 Head: c2aa968d97f1ac892a93d14cbbf06dac0b91fb49
 Applied:
 Unapplied:
-  tun-use-build_skb-for-small: 467af8f02938e715d4af036ee48631cb7f1923f2
   net-decouple-bpf_prog-out-of: a850a0aeada662c91358d08632515c5aa530152c
   tun-xdp-support: f0d21ab732158c316de68ed55a5bc7584531a1c3
   brute-forcing-xdp-tx-test: 846c89e73cba16713016ce95a7d42d7e3955ab4f
