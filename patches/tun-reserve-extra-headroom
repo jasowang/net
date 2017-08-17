@@ -1,0 +1,11 @@
+Bottom: e84b4fd3acbb89d94bc378e37c404462fa23cd00
+Top:    e84b4fd3acbb89d94bc378e37c404462fa23cd00
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-17 16:59:20 +0800
+
+tun: reserve extra headroom only when XDP is set
+
+
+---
+
+
