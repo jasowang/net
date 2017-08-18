@@ -7,6 +7,8 @@ vhost_net: use __skb_array_len_with_tag() in peek_head_len()
 
 Reuse instead of open code __skb_array_len_with_tag().
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
