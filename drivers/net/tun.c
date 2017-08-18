@@ -1272,7 +1272,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	struct page_frag *alloc_frag = &current->task_frag;
 	struct sk_buff *skb;
 	struct bpf_prog *xdp_prog;
-	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info);
+	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
 	char *buf;
 	size_t copied;
