@@ -1,5 +1,5 @@
 Version: 1
-Previous: 5eab55e9cfbff840cb5a2f792ae72ba0ece46a7d
+Previous: cd0b37b47edc2912cebe16414897301ae3e7b144
 Head: 4904cecc00185a9bacdf1977b997d58ddb4263f8
 Applied:
   tun-reserve-extra-headroom: 36dec4c51c7d668effa4361d25210defb9e42815
@@ -26,7 +26,6 @@ Unapplied:
   tun-introduce-0: 48de1bb0d99bc2552a73925c56be5c5e7657a075
   patch: 68daf5324c04efb877a27b66eec033f9a4a81f2c
   skb_array-introduce-batch-0: c357ef0fa1d9505e92a82d7041953cc927a2b6f6
-  tap-export-skb_array-0: f93415f0c769481172567cc85bb5137c322d2a59
   tun-support-receiving-skb: 6bb5e38ad5b394525d8a21e0fad887874c12d812
   tap-support-receive-skb-from-0: c214493200b2eee0f76f16edfd5c4c8d8eae3f2a
   vhost_net-try-batch-dequing: 0ecd4b7c695eb438fa8892cc09568b20b5424542
