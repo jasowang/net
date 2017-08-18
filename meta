@@ -1,8 +1,9 @@
 Version: 1
-Previous: ab1356e5b29771d6e004ad310189d6bd2b78aeee
-Head: 36dec4c51c7d668effa4361d25210defb9e42815
+Previous: 5dc778e0e7f148fa920ff1b65807f579e7bd22b3
+Head: 0173e7aa6e58c9a893ed22dfaa2bfe691028056f
 Applied:
   tun-reserve-extra-headroom: 36dec4c51c7d668effa4361d25210defb9e42815
+  tun-rename-generic_xdp-to: 0173e7aa6e58c9a893ed22dfaa2bfe691028056f
 Unapplied:
   tap-use-build_skb-for-small: f5e82224b2f90061cde39c5098fe11a3b449e593
   tun-serialize-page-frag: cf6533fd18cd2712093fdd7e068ca9e1bf4047bd
