@@ -108,6 +108,7 @@ do {								\
 #endif
 
 #define TUN_HEADROOM 256
+/* FIXME */
 #define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
 
 /* TUN device flags */
