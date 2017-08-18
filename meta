@@ -1,5 +1,5 @@
 Version: 1
-Previous: cd0b37b47edc2912cebe16414897301ae3e7b144
+Previous: be08ab285b27898c8955663157dc3cfe34df1871
 Head: 4904cecc00185a9bacdf1977b997d58ddb4263f8
 Applied:
   tun-reserve-extra-headroom: 36dec4c51c7d668effa4361d25210defb9e42815
@@ -28,7 +28,6 @@ Unapplied:
   skb_array-introduce-batch-0: c357ef0fa1d9505e92a82d7041953cc927a2b6f6
   tun-support-receiving-skb: 6bb5e38ad5b394525d8a21e0fad887874c12d812
   tap-support-receive-skb-from-0: c214493200b2eee0f76f16edfd5c4c8d8eae3f2a
-  vhost_net-try-batch-dequing: 0ecd4b7c695eb438fa8892cc09568b20b5424542
   vhost_net-switch-to-use: b6ca8a02f6194b4493385ce5f3635d77e2792c77
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
   virtio-net: 2aeeb4d642068d05304a606f077f428330a88f82
