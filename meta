@@ -1,10 +1,9 @@
 Version: 1
-Previous: e9df66e92b3001cf900165a21f01564208ae6891
+Previous: 8582bdc59eadc0fbc2628371b3f7005f9f6cca26
 Head: e2d0e2bde692b851095be3212aff5e1a04047fb0
 Applied:
   tun-reserve-extra-headroom: e2d0e2bde692b851095be3212aff5e1a04047fb0
 Unapplied:
-  tap-use-build_skb-for-small: f5e82224b2f90061cde39c5098fe11a3b449e593
   tun-serialize-page-frag: cf6533fd18cd2712093fdd7e068ca9e1bf4047bd
   brute-forcing-xdp-tx-test: c332ccfe360cb857ee529e9911f9cb7e15d4fead
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
