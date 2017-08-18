@@ -1357,7 +1357,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	if (xdp_xmit) {
 		skb->dev = tun->dev;
-		skb_xdp_tx(skb, xdp_prog);
+		generic_xdp_tx(skb, xdp_prog);
 		rcu_read_lock();
 		return NULL;
 	}
