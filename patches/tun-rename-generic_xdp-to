@@ -5,6 +5,8 @@ Date:   2017-08-18 16:09:54 +0800
 
 tun: rename generic_xdp to skb_xdp
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
