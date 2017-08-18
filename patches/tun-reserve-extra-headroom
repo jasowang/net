@@ -1,5 +1,5 @@
 Bottom: e84b4fd3acbb89d94bc378e37c404462fa23cd00
-Top:    0a7024b7ae9a9367a5076b9de237cd5b3626804c
+Top:    f400d85c19c9be3a3ced7aeff54d661adec2fd84
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-17 16:59:20 +0800
 
@@ -11,10 +11,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 19cbbbb..674a8e2 100644
+index 19cbbbb..3587689 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1272,14 +1272,21 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -108,6 +108,7 @@ do {								\
+ #endif
+ 
+ #define TUN_HEADROOM 256
++/* FIXME */
+ #define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
+ 
+ /* TUN device flags */
+@@ -1272,14 +1273,21 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	struct page_frag *alloc_frag = &current->task_frag;
  	struct sk_buff *skb;
  	struct bpf_prog *xdp_prog;
@@ -38,7 +46,7 @@ index 19cbbbb..674a8e2 100644
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
  
-@@ -1290,7 +1297,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1290,7 +1298,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
