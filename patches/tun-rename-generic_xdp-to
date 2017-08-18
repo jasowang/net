@@ -1,5 +1,5 @@
 Bottom: 0a7024b7ae9a9367a5076b9de237cd5b3626804c
-Top:    f734d98e6105ee950f7a199e72b06e09e2579d64
+Top:    3364fe6dd47894ba374351c71bd944e8d8b76eae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-18 16:09:54 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 674a8e2..0fe5c91 100644
+index 674a8e2..54be759 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1267,7 +1267,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
@@ -40,15 +40,6 @@ index 674a8e2..0fe5c91 100644
  		struct xdp_buff xdp;
  		void *orig_data;
  		u32 act;
-@@ -1357,7 +1357,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 
- 	if (xdp_xmit) {
- 		skb->dev = tun->dev;
--		generic_xdp_tx(skb, xdp_prog);
-+		skb_xdp_tx(skb, xdp_prog);
- 		rcu_read_lock();
- 		return NULL;
- 	}
 @@ -1390,7 +1390,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	bool zerocopy = false;
  	int err;
