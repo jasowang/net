@@ -1,12 +1,11 @@
 Version: 1
-Previous: 33c570c5a0c14bbd34429ae79b00fbf2427eb8f4
+Previous: 31150fd417c2a8e4dd3cd370a2aa9adaab0c92ac
 Head: 5597a4fea55fd87f026ecfbc7fad16e7597d8120
 Applied:
   tun-reserve-extra-headroom: 36dec4c51c7d668effa4361d25210defb9e42815
   tun-rename-generic_xdp-to: 4904cecc00185a9bacdf1977b997d58ddb4263f8
   vhost_net-use: 5597a4fea55fd87f026ecfbc7fad16e7597d8120
 Unapplied:
-  vhost_net-switch-to-use: 47acd765bf5e0be2191a4bd55a3952311abfb228
   tap-use-build_skb-for-small: f5e82224b2f90061cde39c5098fe11a3b449e593
   tun-serialize-page-frag: cf6533fd18cd2712093fdd7e068ca9e1bf4047bd
   brute-forcing-xdp-tx-test: c332ccfe360cb857ee529e9911f9cb7e15d4fead
