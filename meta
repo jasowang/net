@@ -1,9 +1,10 @@
 Version: 1
-Previous: c65fbf59736c7c01f852cc2b9b7cba0d81abc5db
-Head: 4904cecc00185a9bacdf1977b997d58ddb4263f8
+Previous: 007a5151f8bad2817076f28f44965bfa17f57b2a
+Head: e007d5bac476630b7b8a7ce94504785cf5f74ce2
 Applied:
   tun-reserve-extra-headroom: 36dec4c51c7d668effa4361d25210defb9e42815
   tun-rename-generic_xdp-to: 4904cecc00185a9bacdf1977b997d58ddb4263f8
+  vhost_net-use: e007d5bac476630b7b8a7ce94504785cf5f74ce2
 Unapplied:
   vhost_net-switch-to-use: 47acd765bf5e0be2191a4bd55a3952311abfb228
   tap-use-build_skb-for-small: f5e82224b2f90061cde39c5098fe11a3b449e593
