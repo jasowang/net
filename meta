@@ -1,5 +1,5 @@
 Version: 1
-Previous: e3e13634cbe38c19d182ce8ac3fd61de5e7218fb
+Previous: fd3b5e6fecc73f8bf92964e9388c61fb99d70a4c
 Head: f03b488b2fb1af20a290509b1ed25db08391b4e7
 Applied:
 Unapplied:
@@ -23,7 +23,6 @@ Unapplied:
   vhost-prefetch-desc-indices: 85d767923abccc6540bee940a1ae18d038f70e86
   drop-vhost_copy_from: b271c2bf41501d120e121871d5d32b5195b0a444
   tun-introduce-0: 48de1bb0d99bc2552a73925c56be5c5e7657a075
-  skb_array-introduce-batch-0: c357ef0fa1d9505e92a82d7041953cc927a2b6f6
   tun-support-receiving-skb: 6bb5e38ad5b394525d8a21e0fad887874c12d812
   tap-support-receive-skb-from-0: c214493200b2eee0f76f16edfd5c4c8d8eae3f2a
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
