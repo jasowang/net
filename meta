@@ -1,5 +1,5 @@
 Version: 1
-Previous: fd3b5e6fecc73f8bf92964e9388c61fb99d70a4c
+Previous: 6bd5f3b5fa15ce463d0a866583f962807146309d
 Head: f03b488b2fb1af20a290509b1ed25db08391b4e7
 Applied:
 Unapplied:
@@ -23,7 +23,6 @@ Unapplied:
   vhost-prefetch-desc-indices: 85d767923abccc6540bee940a1ae18d038f70e86
   drop-vhost_copy_from: b271c2bf41501d120e121871d5d32b5195b0a444
   tun-introduce-0: 48de1bb0d99bc2552a73925c56be5c5e7657a075
-  tun-support-receiving-skb: 6bb5e38ad5b394525d8a21e0fad887874c12d812
   tap-support-receive-skb-from-0: c214493200b2eee0f76f16edfd5c4c8d8eae3f2a
   skb_array-introduce-batch: 36ea45ccfa11e3a6bdcd32252ff4aab30a5c920b
   virtio-net: 2aeeb4d642068d05304a606f077f428330a88f82
