@@ -1,12 +1,12 @@
 Version: 1
-Previous: d9b2808565cb18523cf073cf55bf7bc40c1cfbb0
-Head: 8d983a9dfe1e03809a04a32ec8d367b1e387d7d3
+Previous: de8b5492189b395c1212b125694f24c7a788b329
+Head: ac0916f2522c05fc19cf1c1e538b56ad3829b72c
 Applied:
   vhost-introduce-used-ring: d1eaa4cdca45ae64f36d25bf83dec4d5b7a08ce9
   vhost_net-prefetch-desc: 05d9913339c6827e6e60bdc6c6b55eeef6018830
   vhost_net-switch-to-use-new: ac0916f2522c05fc19cf1c1e538b56ad3829b72c
-  new-road: 8d983a9dfe1e03809a04a32ec8d367b1e387d7d3
 Unapplied:
+  new-road: 8d983a9dfe1e03809a04a32ec8d367b1e387d7d3
   vhost-accelerate-vq-metadata: 064c19b6aed6542bf99eb97e1d7255dd06dfd542
   tun-xmit_more-support: 76611efd577a1c35dbac04688f602bd734c3b412
   vhost_net-use-lockless-peeking: f62fbb520a4c3f9ad49ad75dc9c7bcb8d21d65a1
