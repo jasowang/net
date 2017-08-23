@@ -1,5 +1,5 @@
 Bottom: 9eb0f6e2cebbdd282a212836b91c44b0a5e76e74
-Top:    09b701233001c37651556e226577bd7c75efede7
+Top:    892f78646743f2a1f0fee699766b042da674fe2c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 17:39:18 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ba08b78..46befcf 100644
+index ba08b78..3742d1d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -447,7 +447,7 @@ static void handle_tx(struct vhost_net *net)
@@ -23,30 +23,31 @@ index ba08b78..46befcf 100644
  	struct msghdr msg = {
  		.msg_name = NULL,
  		.msg_namelen = 0,
-@@ -461,6 +461,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -461,6 +461,8 @@ static void handle_tx(struct vhost_net *net)
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	bool zcopy, zcopy_used;
 +	__virtio16 indices[VHOST_RX_BATCH];
++	int i;
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -486,95 +487,102 @@ static void handle_tx(struct vhost_net *net)
+@@ -486,95 +488,103 @@ static void handle_tx(struct vhost_net *net)
  		if (unlikely(vhost_exceeds_maxpend(net)))
  			break;
  
 -		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
 -						ARRAY_SIZE(vq->iov),
 -						&out, &in);
-+		avail = vhost_prefetch_desc_indices(vq, indices,
++		avails = vhost_prefetch_desc_indices(vq, indices,
 +						    VHOST_RX_BATCH);
  		/* On error, stop handling until the next kick. */
 -		if (unlikely(head < 0))
-+		if (unlikely(avail < 0))
++		if (unlikely(avails < 0))
  			break;
  		/* Nothing new?  Wait for eventfd to tell us they refilled. */
 -		if (head == vq->num) {
-+		if (!avail) {
++		if (!avails) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
  				vhost_disable_notify(&net->dev, vq);
  				continue;
@@ -105,11 +106,11 @@ index ba08b78..46befcf 100644
 -		} else {
 -			msg.msg_flags &= ~MSG_MORE;
 -		}
-+		for (i = 0; i < avail; i++) {
++		for (i = 0; i < avails; i++) {
 +			head = vhost_get_vq_desc2(vq, vq->iov,
 +						  ARRAY_SIZE(vq->iov),
-+						  &out, &in, vq_log,
-+						  &log, indices[i]);
++						  &out, &in, NULL, NULL,
++						  indices[i]);
 +			if (in) {
 +				vq_err(vq, "Unexpected descriptor format for TX: "
 +				       "out %d, int %d\n", out, in);
@@ -128,15 +129,15 @@ index ba08b78..46befcf 100644
 +				goto out;
 +			}
 +			len = msg_data_left(&msg);
-+
-+			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
-+				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
-+				         nvq->done_idx
-+				     && vhost_net_tx_select_zcopy(net);
  
 -		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 -		err = sock->ops->sendmsg(sock, &msg, len);
 -		if (unlikely(err < 0)) {
++			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
++				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
++				         nvq->done_idx
++				     && vhost_net_tx_select_zcopy(net);
++
 +			/* use msg_control to pass vhost zerocopy ubuf info to skb */
  			if (zcopy_used) {
 -				vhost_net_ubuf_put(ubufs);
@@ -184,9 +185,10 @@ index ba08b78..46befcf 100644
 +			if (err != len)
 +				pr_debug("Truncated TX packet: "
 +					" len %d != %zd\n", err, len);
-+			if (!zcopy_used)
-+				vhost_add_used_and_signal(&net->dev, vq, head, 0);
-+			else
++			if (!zcopy_used) {
++				vhost_update_used_idx(vq, 1);
++				vhost_signal(&net->dev, vq);
++			} else
 +				vhost_zerocopy_signal_used(net, vq);
 +			vhost_net_tx_packet(net);
 +			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
