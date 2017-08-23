@@ -5,6 +5,8 @@ Date:   2017-08-23 16:54:42 +0800
 
 vhost: introduce helper to prefetch desc index
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
