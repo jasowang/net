@@ -462,6 +462,7 @@ static void handle_tx(struct vhost_net *net)
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
 	__virtio16 indices[VHOST_RX_BATCH];
+	int i;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -487,13 +488,13 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avail = vhost_prefetch_desc_indices(vq, indices,
+		avails = vhost_prefetch_desc_indices(vq, indices,
 						    VHOST_RX_BATCH);
 		/* On error, stop handling until the next kick. */
-		if (unlikely(avail < 0))
+		if (unlikely(avails < 0))
 			break;
 		/* Nothing new?  Wait for eventfd to tell us they refilled. */
-		if (!avail) {
+		if (!avails) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
 				continue;
@@ -501,11 +502,11 @@ static void handle_tx(struct vhost_net *net)
 			break;
 		}
 
-		for (i = 0; i < avail; i++) {
+		for (i = 0; i < avails; i++) {
 			head = vhost_get_vq_desc2(vq, vq->iov,
 						  ARRAY_SIZE(vq->iov),
-						  &out, &in, vq_log,
-						  &log, indices[i]);
+						  &out, &in, NULL, NULL,
+						  indices[i]);
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for TX: "
 				       "out %d, int %d\n", out, in);
@@ -574,9 +575,10 @@ static void handle_tx(struct vhost_net *net)
 			if (err != len)
 				pr_debug("Truncated TX packet: "
 					" len %d != %zd\n", err, len);
-			if (!zcopy_used)
-				vhost_add_used_and_signal(&net->dev, vq, head, 0);
-			else
+			if (!zcopy_used) {
+				vhost_update_used_idx(vq, 1);
+				vhost_signal(&net->dev, vq);
+			} else
 				vhost_zerocopy_signal_used(net, vq);
 			vhost_net_tx_packet(net);
 			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
