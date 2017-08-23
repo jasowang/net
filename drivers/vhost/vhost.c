@@ -2437,6 +2437,74 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
+/* Prefetch descriptor indices */
+int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+				struct vring_used_elem *heads,
+				__virtio16 *indices, u16 num)
+{
+	int ret, ret2;
+	u16 last_avail_idx, last_used_idx, total, copied;
+	__virtio16 avail_idx;
+	struct vring_used_elem __user *used;
+	int i;
+
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	last_avail_idx = vq->last_avail_idx;
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
+
+	while (total) {
+		copied = vq->num - (last_avail_idx & (vq->num - 1));
+		copied = min(copied, total);
+		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
+			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
+					copied * sizeof *indices);
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+
+		last_avail_idx += copied;
+		total -= copied;
+	}
+
+	if (!heads)
+		return ret;
+
+	for (i = 0; i < ret; i++) {
+		heads[i].id = indices[i];
+		heads[i].len = 0;
+	}
+
+	total = ret;
+	last_used_idx = vq->last_used_idx;
+	while (total) {
+		copied = vq->num - (last_used_idx & (vq->num - 1));
+		copied = min(copied, total);
+		ret2 = vhost_copy_to_user(vq,
+				&vq->used->ring[last_used_idx & (vq->num - 1)],
+				&heads[ret - total], copied * sizeof *used);
+
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to update used ring!\n");
+			return -EFAULT;
+		}
+
+		total -= copied;
+		last_used_idx += copied;
+	}
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
+
+	return ret;
+}
+EXPORT_SYMBOL(vhost_prefetch_desc_indices);
 
 static int __init vhost_init(void)
 {
