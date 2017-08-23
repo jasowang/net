@@ -1,0 +1,69 @@
+Bottom: e84b4fd3acbb89d94bc378e37c404462fa23cd00
+Top:    617195fa31d11e9b1f01f0e045d27aab73ea25f8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-23 16:54:46 +0800
+
+Refresh of vhost-introduce-helper-to
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 9cb3f72..75edf92 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2414,6 +2414,42 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+ }
+ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
++/* Prefetch descriptor indices */
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, u16 num)
++{
++	int ret = 0;
++	u16 last_avail_idx, total;
++	__virtio16 avail_idx;
++
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
++		vq_err(vq, "Failed to access avail idx at %p\n",
++		       &vq->avail->idx);
++		return -EFAULT;
++	}
++	last_avail_idx = vq->last_avail_idx;
++	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
++	total = vq->avail_idx - vq->last_avail_idx;
++	ret = total = min(total, num);
++
++	while (total) {
++		int ret2 = vhost_get_avail(vq, indices[0],
++			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to get descriptors\n");
++			return -EFAULT;
++		}
++		--total;
++		++indices;
++		++last_avail_idx;
++	}
++
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
++
++	return ret;
++}
++EXPORT_SYMBOL(vhost_prefetch_desc_indices);
+ 
+ static int __init vhost_init(void)
+ {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index bb7c29b..2d3acf6 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -223,6 +223,8 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, u16 num);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
