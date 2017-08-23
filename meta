@@ -1,9 +1,8 @@
 Version: 1
-Previous: 446e74b23b864eda62d6b144483fdc25771464aa
-Head: ff2d8f112f18bfa6b9d87dd309cda54350b31c5d
+Previous: 6433b5a920767687d887d09b13652c415b0d02c5
+Head: fae50bfd8ce8965dc98acea33329df871161a474
 Applied:
-  vhost-introduce-used-ring: 98a29fa25a83730dece014108737c6027f05a19d
-  refresh-temp: ff2d8f112f18bfa6b9d87dd309cda54350b31c5d
+  vhost-introduce-used-ring: fae50bfd8ce8965dc98acea33329df871161a474
 Unapplied:
   vhost-introduce-helper-to: 5e986ffd61d488b9055898e289081b19c90b52c6
   vhost_net-tx-batching: a1f19dca87ba1ce05d7cd035b2b1f976fdfb5057
