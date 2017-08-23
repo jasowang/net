@@ -27,6 +27,12 @@ struct vhost_work {
 	unsigned long		  flags;
 };
 
+struct vhost_avails {
+	__virtio16 idx[64];
+	int head;
+	int tail;
+};
+
 /* Poll a file (eventfd or socket) */
 /* Note: there's nothing vhost specific about this structure. */
 struct vhost_poll {
@@ -150,6 +156,8 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
+
+	struct vhost_avails avails;
 };
 
 struct vhost_msg_node {
