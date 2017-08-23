@@ -1,0 +1,23 @@
+Bottom: 400f6b6fd145b5b4c6060fa798405a5deea82aca
+Top:    7c3d2e4d94b6e99f4e478ffbaaf03f62ffe9e723
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-23 17:52:17 +0800
+
+Refresh of vhost-introduce-used-ring
+
+---
+
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index e3fbc1d..a46ae9d 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -195,8 +195,7 @@ int vhost_get_vq_desc2(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
+                       struct vhost_log *log, unsigned int *log_num,
+-		      __virtio16 ring_head)
+-);
++		      __virtio16 ring_head);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
