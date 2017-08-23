@@ -1,5 +1,5 @@
 Bottom: d646f1007248636ea78a48ecfdd5fd0cc4a13588
-Top:    49cb6aa3d3dee206ef9cbdc19ec9e15dcf17685d
+Top:    71323f790daba0f5d4e67f91c319beb123273fbd
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 07ceb08..a8b5488 100644
+index 07ceb08..dc8c3d9 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2477,6 +2477,42 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+@@ -2477,6 +2477,43 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
  }
  EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
@@ -43,6 +43,7 @@ index 07ceb08..a8b5488 100644
 +			vq_err(vq, "Failed to get descriptors\n");
 +			return -EFAULT;
 +		}
++		vhost_add_used_elem(vq, indices[0], 0, ret - total);
 +		--total;
 +		++indices;
 +		++last_avail_idx;
