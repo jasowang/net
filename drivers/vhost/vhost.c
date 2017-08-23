@@ -2502,6 +2502,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
+		vhost_add_used_elem(vq, indices[0], 0, ret - total);
 		--total;
 		++indices;
 		++last_avail_idx;
