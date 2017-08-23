@@ -1,0 +1,333 @@
+Bottom: d646f1007248636ea78a48ecfdd5fd0cc4a13588
+Top:    58c2c632869c3fef3bba27a7172c7fd1c1816cc5
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-22 13:21:46 +0800
+
+vhost_net: prefetch desc indices and used ring batched updating
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index ba08b78..9f01150 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -722,6 +722,124 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
+ 	return r;
+ }
+ 
++static int rx_recvmsg(struct vhost_net_virtqueue *nvq, int in,
++		      struct sk_buff *skb, size_t sock_len,
++		      struct vhost_log *vq_log, int log,
++		      size_t vhost_hlen, size_t sock_hlen)
++{
++	struct vhost_virtqueue *vq = &nvq->vq;
++	size_t vhost_len;
++	struct socket *sock = vq->private_data;
++	struct msghdr msg = {
++		.msg_name = NULL,
++		.msg_namelen = 0,
++		.msg_control = skb,
++		.msg_controllen = 0,
++		.msg_flags = MSG_DONTWAIT,
++	};
++	struct virtio_net_hdr hdr = {
++		.flags = 0,
++		.gso_type = VIRTIO_NET_HDR_GSO_NONE
++	};
++	struct iov_iter fixup;
++	int err;
++
++	sock_len += sock_hlen;
++	vhost_len = sock_len + vhost_hlen;
++
++	/* We don't need to be notified again. */
++	iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
++	fixup = msg.msg_iter;
++	if (unlikely((vhost_hlen))) {
++		/* We will supply the header ourselves
++		 * TODO: support TSO.
++		 */
++		iov_iter_advance(&msg.msg_iter, vhost_hlen);
++	}
++	err = sock->ops->recvmsg(sock, &msg,
++				 sock_len, MSG_DONTWAIT | MSG_TRUNC);
++	/* Userspace might have consumed the packet meanwhile:
++	 * it's not supposed to do this usually, but might be hard
++	 * to prevent. Discard data we got (if any) and keep going. */
++	if (unlikely(err != sock_len)) {
++		pr_debug("Discarded rx packet: "
++			" len %d, expected %zd\n", err, sock_len);
++		vhost_discard_vq_desc(vq, 1);
++		return -E2BIG;
++	}
++	/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
++	if (unlikely(vhost_hlen)) {
++		if (copy_to_iter(&hdr, sizeof(hdr),
++					&fixup) != sizeof(hdr)) {
++			vq_err(vq, "Unable to write vnet_hdr "
++				"at addr %p\n", vq->iov->iov_base);
++			return -EFAULT;
++		}
++	} else {
++		/* Header came from socket; we'll need to patch
++		 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
++		 */
++		iov_iter_advance(&fixup, sizeof(hdr));
++	}
++	/* TODO: Should check and handle checksum. */
++
++	if (unlikely(vq_log))
++		vhost_log_write(vq, vq_log, log, vhost_len);
++
++	return 0;
++}
++
++static void handle_rx_batched(struct vhost_net *net, struct vhost_log *vq_log)
++{
++	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
++	struct vhost_virtqueue *vq = &nvq->vq;
++	struct socket *sock = vq->private_data;
++	unsigned int out, in, log = 0;
++	__virtio16 indices[VHOST_RX_BATCH];
++	size_t vhost_hlen = nvq->vhost_hlen;
++	size_t sock_hlen = nvq->sock_hlen;
++	int lens[VHOST_RX_BATCH];
++	int sock_len, i;
++	int avails, head;
++
++	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
++		avails = vhost_prefetch_desc_indices(vq, indices,
++						     nvq->rt - nvq->rh);
++		if (!avails) {
++			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
++				/* They have slipped one in as we were
++				 * doing that: check again. */
++				vhost_disable_notify(&net->dev, vq);
++				continue;
++			}
++			return;
++		}
++		for (i = 0; i < avails; i++) {
++			lens[i] = __skb_array_len_with_tag(nvq->rxq[nvq->rh + i]);
++			vhost_add_used_elem(vq, indices[i],
++					    cpu_to_vhost32(vq, lens[i]
++					    + vhost_hlen + sock_hlen), i);
++		}
++		for (i = 0; i < avails; i++) {
++			head = vhost_get_vq_desc2(vq, vq->iov,
++						  ARRAY_SIZE(vq->iov),
++						  &out, &in, vq_log,
++						  &log, indices[i]);
++			if (unlikely(head < 0 || head == vq->num))
++				return;
++			if (rx_recvmsg(nvq, in, nvq->rxq[nvq->rh++],
++				       lens[i], vq_log, log,
++				       vhost_hlen, sock_hlen))
++				return;
++
++			vhost_update_used_idx(vq, 1);
++			/* FIXME: batched signal */
++			vhost_signal(&net->dev, vq);
++			/* FIXME: count bytes */
++		}
++	}
++}
++
+ /* Expects to be always run from workqueue - which acts as
+  * read-size critical section for our kind of RCU. */
+ static void handle_rx(struct vhost_net *net)
+@@ -768,6 +886,12 @@ static void handle_rx(struct vhost_net *net)
+ 		vq->log : NULL;
+ 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
+ 
++	if (!mergeable) {
++		handle_rx_batched(net, vq_log);
++		vhost_net_enable_vq(net, vq);
++		goto out;
++	}
++
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		sock_len += sock_hlen;
+ 		vhost_len = sock_len + vhost_hlen;
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 07ceb08..f2fa37a 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1984,6 +1984,43 @@ static int get_indirect(struct vhost_virtqueue *vq,
+ 	return 0;
+ }
+ 
++/* Prefetch descriptor indices */
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, u16 num)
++{
++	int ret = 0;
++	u16 last_avail_idx, total;
++	__virtio16 avail_idx;
++
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
++		vq_err(vq, "Failed to access avail idx at %p\n",
++		       &vq->avail->idx);
++		return -EFAULT;
++	}
++	last_avail_idx = vq->last_avail_idx;
++	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
++	total = vq->avail_idx - vq->last_avail_idx;
++	ret = total = min(total, num);
++
++	while (total) {
++		int ret2 = vhost_get_avail(vq, indices[0],
++			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to get descriptors\n");
++			return -EFAULT;
++		}
++		--total;
++		++indices;
++		++last_avail_idx;
++	}
++
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
++
++	return ret;
++}
++EXPORT_SYMBOL(vhost_prefetch_desc_indices);
++
+ /* This looks in the virtqueue and for the first available buffer, and converts
+  * it to an iovec for convenient access.  Since descriptors consist of some
+  * number of output then some number of input descriptors, it's actually two
+@@ -2135,6 +2172,108 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ }
+ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+ 
++int vhost_get_vq_desc2(struct vhost_virtqueue *vq,
++		       struct iovec iov[], unsigned int iov_size,
++		       unsigned int *out_num, unsigned int *in_num,
++		       struct vhost_log *log, unsigned int *log_num,
++		       __virtio16 ring_head)
++{
++	struct vring_desc desc;
++	unsigned int i, head, found = 0;
++	int ret, access;
++
++	head = vhost16_to_cpu(vq, ring_head);
++
++	/* If their number is silly, that's an error. */
++	if (unlikely(head >= vq->num)) {
++		vq_err(vq, "Guest says index %u > %u is available",
++		       head, vq->num);
++		return -EINVAL;
++	}
++
++	/* When we start there are none of either input nor output. */
++	*out_num = *in_num = 0;
++	if (unlikely(log))
++		*log_num = 0;
++
++	i = head;
++	do {
++		unsigned iov_count = *in_num + *out_num;
++		if (unlikely(i >= vq->num)) {
++			vq_err(vq, "Desc index is %u > %u, head = %u",
++			       i, vq->num, head);
++			return -EINVAL;
++		}
++		if (unlikely(++found > vq->num)) {
++			vq_err(vq, "Loop detected: last one at %u "
++			       "vq size %u head %u\n",
++			       i, vq->num, head);
++			return -EINVAL;
++		}
++		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
++					   sizeof desc);
++		if (unlikely(ret)) {
++			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
++			       i, vq->desc + i);
++			return -EFAULT;
++		}
++		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
++			ret = get_indirect(vq, iov, iov_size,
++					   out_num, in_num,
++					   log, log_num, &desc);
++			if (unlikely(ret < 0)) {
++				if (ret != -EAGAIN)
++					vq_err(vq, "Failure detected "
++						"in indirect descriptor at idx %d\n", i);
++				return ret;
++			}
++			continue;
++		}
++
++		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
++			access = VHOST_ACCESS_WO;
++		else
++			access = VHOST_ACCESS_RO;
++		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
++				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
++				     iov_size - iov_count, access);
++		if (unlikely(ret < 0)) {
++			if (ret != -EAGAIN)
++				vq_err(vq, "Translation failure %d descriptor idx %d\n",
++					ret, i);
++			return ret;
++		}
++		if (access == VHOST_ACCESS_WO) {
++			/* If this is an input descriptor,
++			 * increment that count. */
++			*in_num += ret;
++			if (unlikely(log)) {
++				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
++				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
++				++*log_num;
++			}
++		} else {
++			/* If it's an output descriptor, they're all supposed
++			 * to come before any input descriptors. */
++			if (unlikely(*in_num)) {
++				vq_err(vq, "Descriptor has out after in: "
++				       "idx %d\n", i);
++				return -EINVAL;
++			}
++			*out_num += ret;
++		}
++	} while ((i = next_desc(vq, &desc)) != -1);
++
++	/* On success, increment avail index. */
++	vq->last_avail_idx++;
++
++	/* Assume notifications from guest are disabled at this point,
++	 * if they aren't we would need to update avail_event index. */
++	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
++	return head;
++}
++EXPORT_SYMBOL_GPL(vhost_get_vq_desc2);
++
+ /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
+ void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
+ {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 5ac564d..68169d5 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -187,10 +187,17 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp);
+ int vhost_vq_access_ok(struct vhost_virtqueue *vq);
+ int vhost_log_access_ok(struct vhost_dev *);
+ 
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				__virtio16 *indices, u16 num);
+ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num);
++int vhost_get_vq_desc2(struct vhost_virtqueue *,
++		       struct iovec iov[], unsigned int iov_count,
++		       unsigned int *out_num, unsigned int *in_num,
++		       struct vhost_log *log, unsigned int *log_num,
++		       __virtio16 ring_head);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
