@@ -1,0 +1,100 @@
+Bottom: 617195fa31d11e9b1f01f0e045d27aab73ea25f8
+Top:    49cb6aa3d3dee206ef9cbdc19ec9e15dcf17685d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-03-22 14:10:20 +0800
+
+vhost: introduce used ring manipulation helpers
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 75edf92..a8b5488 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2155,6 +2155,69 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
+ }
+ EXPORT_SYMBOL_GPL(vhost_add_used);
+ 
++int vhost_add_used_elem(struct vhost_virtqueue *vq,
++			unsigned int head, int len, int offset)
++{
++	struct vring_used_elem __user *used;
++
++	int start = (vq->last_used_idx + offset) & (vq->num - 1);
++	used = vq->used->ring + start;
++
++	if (vhost_put_user(vq, head, &used->id)) {
++		vq_err(vq, "Failed to write used id");
++		return -EFAULT;
++	}
++	if (vhost_put_user(vq, len, &used->len)) {
++		vq_err(vq, "Failed to write used len");
++		return -EFAULT;
++	}
++
++	if (unlikely(vq->log_used)) {
++		/* Make sure data is seen before log. */
++		smp_wmb();
++		/* Log used ring entry write. */
++		log_write(vq->log_base,
++			  vq->log_addr +
++			   ((void __user *)used - (void __user *)vq->used),
++			    sizeof *used);
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(vhost_add_used_elem);
++
++int vhost_update_used_idx(struct vhost_virtqueue *vq, int n)
++{
++	u16 old, new;
++
++	old = vq->last_used_idx;
++	new = (vq->last_used_idx += n);
++	/* If the driver never bothers to signal in a very long while,
++	 * used index might wrap around. If that happens, invalidate
++	 * signalled_used index we stored. TODO: make sure driver
++	 * signals at least once in 2^16 and remove this. */
++	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
++		vq->signalled_used_valid = false;
++
++	/* Make sure buffer is written before we update index. */
++	smp_wmb();
++	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->last_used_idx),
++			   &vq->used->idx)) {
++		vq_err(vq, "Failed to increment used idx");
++		return -EFAULT;
++	}
++	if (unlikely(vq->log_used)) {
++		/* Log used index update. */
++		log_write(vq->log_base,
++			  vq->log_addr + offsetof(struct vring_used, idx),
++			  sizeof vq->used->idx);
++		if (vq->log_ctx)
++			eventfd_signal(vq->log_ctx, 1);
++	}
++	return 0;
++}
++EXPORT_SYMBOL_GPL(vhost_update_used_idx);
++
+ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 			    struct vring_used_elem *heads,
+ 			    unsigned count)
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 2d3acf6..af0865a 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -194,6 +194,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
++int vhost_add_used_elem(struct vhost_virtqueue *vq,
++			unsigned int head, int len, int offset);
++int vhost_update_used_idx(struct vhost_virtqueue *vq, int n);
+ int vhost_add_used(struct vhost_virtqueue *, unsigned int head, int len);
+ int vhost_add_used_n(struct vhost_virtqueue *, struct vring_used_elem *heads,
+ 		     unsigned count);

@@ -1,8 +1,9 @@
 Version: 1
-Previous: ce93021ac08296181b3353224005922d51926aa9
+Previous: 6938fdb29b611496871ac6e707c4f7c54fe74bdc
 Head: 990061cfb1945831e2b6f59c38b153216b2fcea6
 Applied:
   vhost-introduce-helper-to: c0437e78fa30344e7f8c1d70f48deea0c2719d79
+  vhost-introduce-used-ring: 990061cfb1945831e2b6f59c38b153216b2fcea6
 Unapplied:
   vhost_net-tx-batching: d3baa7ce5fa257d231b8d8afa46fc97defc4cbce
   tun-reserve-extra-headroom: 87bfcd2e9aa651203a8bb6494f2e1a140dea157a
