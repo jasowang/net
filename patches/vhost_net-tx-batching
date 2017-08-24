@@ -1,5 +1,5 @@
-Bottom: 3478c1a2914500367269f68a110a6275b0506e48
-Top:    92d40a152fe9c9ea302dbf8bf0b51f703f1d7428
+Bottom: 9eb0f6e2cebbdd282a212836b91c44b0a5e76e74
+Top:    0540b9892857cea353d68aad41719879f5cf84d7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 17:39:18 +0800
 
@@ -218,10 +218,10 @@ index ba08b78..3742d1d 100644
  	}
  out:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 152a414..f27f81d 100644
+index 512b3ab..b51a0e9 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2420,7 +2420,11 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2585,7 +2585,11 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  {
  	int ret = 0;
  	u16 last_avail_idx, total;
@@ -234,7 +234,7 @@ index 152a414..f27f81d 100644
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
-@@ -2433,18 +2437,33 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2598,18 +2602,33 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	ret = total = min(total, num);
  
  	while (total) {
