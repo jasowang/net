@@ -2601,22 +2601,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	total = vq->avail_idx - vq->last_avail_idx;
 	ret = total = min(total, num);
 
-#if 0
-	while (total) {
-		int ret2 = vhost_get_avail(vq, indices[0],
-			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to get descriptors\n");
-			return -EFAULT;
-		}
-		heads[ret - total].id = indices[0];
-		heads[ret - total].len = 0;
-		--total;
-		++indices;
-		++last_avail_idx;
-	}
-#endif
-
 	for (i = 0; i < total; i++) {
 		int ret2 = vhost_get_avail(vq, heads[i].id,
 		    &vq->avail->ring[(last_avail_idx + i) & (vq->num - 1)]);
