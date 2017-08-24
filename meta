@@ -1,11 +1,8 @@
 Version: 1
-Previous: 37d3716b6ba5cf4d2be27d4b9ac2c91c04356253
+Previous: 1aef02678d5562bbf0e49ff4fb87756f8461ccbb
 Head: 705b326c3d116e42322bfc68cb3c8bb7c0e208fa
 Applied:
 Unapplied:
-  vhost-introduce-used-ring: 5e9525e8d78e73b13b8ce2e30d06925c60a03979
-  vhost-introduce-helper-to: 75fdd512b75bbd65ae280ee6359481b5f0631fd3
-  vhost_net-tx-batching: 3354e56b586e55362945058ab094e45e1180f599
   refresh-temp: 24bd0d078ae6c6e26ef6bc9e3de86d6f811a3490
   tun-reserve-extra-headroom: 87bfcd2e9aa651203a8bb6494f2e1a140dea157a
   tun-rename-generic_xdp-to: 4904cecc00185a9bacdf1977b997d58ddb4263f8
