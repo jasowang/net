@@ -1,5 +1,5 @@
 Bottom: 9eb0f6e2cebbdd282a212836b91c44b0a5e76e74
-Top:    0a8f88f0f8bd6adf13b44b79a052225959a08578
+Top:    d1967ebf7ced7657fd554041ef0406285bcb2590
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 17:39:18 +0800
 
@@ -213,7 +213,7 @@ index ba08b78..3742d1d 100644
  	}
  out:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 512b3ab..b9d6a45 100644
+index 512b3ab..0138650 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2586,6 +2586,10 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
@@ -227,31 +227,41 @@ index 512b3ab..b9d6a45 100644
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
-@@ -2597,19 +2601,21 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2597,6 +2601,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	total = vq->avail_idx - vq->last_avail_idx;
  	ret = total = min(total, num);
  
--	while (total) {
--		int ret2 = vhost_get_avail(vq, indices[0],
--			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
-+	for (i = 0; i < total; i++) {
-+		int ret2 = vhost_get_avail(vq, heads[i].id,
-+		    &vq->avail->ring[(last_avail_idx + i) & (vq->num - 1)]);
- 		if (unlikely(ret2)) {
++#if 0
+ 	while (total) {
+ 		int ret2 = vhost_get_avail(vq, indices[0],
+ 			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
+@@ -2604,11 +2609,28 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  			vq_err(vq, "Failed to get descriptors\n");
  			return -EFAULT;
  		}
 -		vhost_add_used_elem(vq, indices[0], 0, ret - total);
--		--total;
--		++indices;
--		++last_avail_idx;
++		heads[ret - total].id = indices[0];
++		heads[ret - total].len = 0;
+ 		--total;
+ 		++indices;
+ 		++last_avail_idx;
+ 	}
++#endif
++
++	for (i = 0; i < total; i++) {
++		int ret2 = vhost_get_avail(vq, heads[i].id,
++		    &vq->avail->ring[(last_avail_idx + i) & (vq->num - 1)]);
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to get descriptors\n");
++			return -EFAULT;
++		}
 +		indices[i] = heads[i].id;
 +		heads[i].len = 0;
- 	}
- 
++	}
++
 +	start = vq->last_used_idx % (vq->num -1);
 +	used = vq->used->ring + start;
 +	vhost_copy_to_user(vq, used, heads, ret * sizeof *used);
-+
+ 
  	/* Only get avail ring entries after they have been exposed by guest. */
  	smp_rmb();
