@@ -1,5 +1,5 @@
 Bottom: 9eb0f6e2cebbdd282a212836b91c44b0a5e76e74
-Top:    0a8f88f0f8bd6adf13b44b79a052225959a08578
+Top:    0540b9892857cea353d68aad41719879f5cf84d7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 17:39:18 +0800
 
@@ -213,13 +213,15 @@ index ba08b78..3742d1d 100644
  	}
  out:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 512b3ab..b9d6a45 100644
+index 512b3ab..b51a0e9 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2586,6 +2586,10 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2585,7 +2585,11 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ {
  	int ret = 0;
  	u16 last_avail_idx, total;
- 	__virtio16 avail_idx;
+-	__virtio16 avail_idx;
++	__virtio16 avail_idx, *idx = indices;
 +	int start;
 +	struct vring_used_elem heads[64];
 +	struct vring_used_elem __user *used;
@@ -227,16 +229,19 @@ index 512b3ab..b9d6a45 100644
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
-@@ -2597,19 +2601,21 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
- 	total = vq->avail_idx - vq->last_avail_idx;
+@@ -2598,18 +2602,33 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	ret = total = min(total, num);
  
--	while (total) {
+ 	while (total) {
 -		int ret2 = vhost_get_avail(vq, indices[0],
 -			   &vq->avail->ring[last_avail_idx & (vq->num - 1)]);
-+	for (i = 0; i < total; i++) {
-+		int ret2 = vhost_get_avail(vq, heads[i].id,
-+		    &vq->avail->ring[(last_avail_idx + i) & (vq->num - 1)]);
++		u16 copied = vq->num - (last_avail_idx & (vq->num - 1));
++		int ret2;
++
++		copied = min(copied, total);
++		ret2 = vhost_copy_from_user(vq, idx,
++			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
++					copied * sizeof *indices);
  		if (unlikely(ret2)) {
  			vq_err(vq, "Failed to get descriptors\n");
  			return -EFAULT;
@@ -245,10 +250,18 @@ index 512b3ab..b9d6a45 100644
 -		--total;
 -		++indices;
 -		++last_avail_idx;
-+		indices[i] = heads[i].id;
++
++		last_avail_idx += copied;
++		idx += copied;
++		total -= copied;
++	}
++
++	for (i = 0; i < ret; i++) {
++		heads[i].id = indices[i];
 +		heads[i].len = 0;
  	}
  
++	/* Check total and exit early */
 +	start = vq->last_used_idx % (vq->num -1);
 +	used = vq->used->ring + start;
 +	vhost_copy_to_user(vq, used, heads, ret * sizeof *used);
