@@ -503,87 +503,108 @@ static void handle_tx(struct vhost_net *net)
 		}
 
 		for (i = 0; i < avails; i++) {
-			head = vhost_get_vq_desc2(vq, vq->iov,
-						  ARRAY_SIZE(vq->iov),
-						  &out, &in, NULL, NULL,
-						  indices[i]);
-			if (in) {
-				vq_err(vq, "Unexpected descriptor format for TX: "
-				       "out %d, int %d\n", out, in);
-				goto out;
-			}
+			struct iovec *iov = vq->iov;
+			u16 iov_count = 0;
 
-			/* Skip header. TODO: support TSO. */
-			len = iov_length(vq->iov, out);
-			iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
-			iov_iter_advance(&msg.msg_iter, hdr_size);
-			/* Sanity check */
-			if (!msg_data_left(&msg)) {
-				vq_err(vq, "Unexpected header len for TX: "
-					"%zd expected %zd\n",
-					len, hdr_size);
-				goto out;
-			}
-			len = msg_data_left(&msg);
+			vq->iov_head = vq->iov_tail = 0;
 
-			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
-				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
-				         nvq->done_idx
-				     && vhost_net_tx_select_zcopy(net);
-
-			/* use msg_control to pass vhost zerocopy ubuf info to skb */
-			if (zcopy_used) {
-				struct ubuf_info *ubuf;
-				ubuf = nvq->ubuf_info + nvq->upend_idx;
-
-				vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
-				vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
-				ubuf->callback = vhost_zerocopy_callback;
-				ubuf->ctx = nvq->ubufs;
-				ubuf->desc = nvq->upend_idx;
-				atomic_set(&ubuf->refcnt, 1);
-				msg.msg_control = ubuf;
-				msg.msg_controllen = sizeof(ubuf);
-				ubufs = nvq->ubufs;
-				atomic_inc(&ubufs->refcount);
-				nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
-			} else {
-				msg.msg_control = NULL;
-				ubufs = NULL;
-			}
-
-			total_len += len;
-			if (total_len < VHOST_NET_WEIGHT &&
-				!vhost_vq_avail_empty(&net->dev, vq) &&
-				likely(!vhost_exceeds_maxpend(net))) {
-				msg.msg_flags |= MSG_MORE;
-			} else {
-				msg.msg_flags &= ~MSG_MORE;
-			}
-
-			/* TODO: Check specific error and bomb out unless ENOBUFS? */
-			err = sock->ops->sendmsg(sock, &msg, len);
-			if (unlikely(err < 0)) {
-				if (zcopy_used) {
-					vhost_net_ubuf_put(ubufs);
-					nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
-						         % UIO_MAXIOV;
+			while (iov_count < UIO_MAXIOV && i < avails) {
+				vq->head[vq->iov_tail] = vhost_get_vq_desc2(vq,
+						vq->iov + iov_count,
+					        ARRAY_SIZE(vq->iov) - iov_count,
+						&out, &in,
+						NULL, NULL, indices[i]);
+				if (in) {
+					vq_err(vq, "Unexpected descriptor "
+			          "format for TX: out %d, int %d\n", out, in);
+					goto out;
 				}
-				vhost_discard_vq_desc(vq, 1);
-				goto out;
+				vq->iov_len[vq->iov_tail] = out;
+				iov_count += out;
+				vq->iov_tail++;
+				i++;
 			}
-			if (err != len)
-				pr_debug("Truncated TX packet: "
-					" len %d != %zd\n", err, len);
-			if (!zcopy_used) {
-				vhost_update_used_idx(vq, 1);
-				vhost_signal(&net->dev, vq);
-			} else
-				vhost_zerocopy_signal_used(net, vq);
-			vhost_net_tx_packet(net);
-			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
-				vhost_poll_queue(&vq->poll);
-				goto out;
+
+			while (vq->iov_head != vq->iov_tail) {
+				out = vq->iov_len[vq->iov_head];
+				/* Skip header. TODO: support TSO. */
+				len = iov_length(iov, out);
+				iov_iter_init(&msg.msg_iter, WRITE, iov, out, len);
+
+				iov += vq->iov_len[vq->iov_head];
+				++vq->iov_head;
+
+				iov_iter_advance(&msg.msg_iter, hdr_size);
+				/* Sanity check */
+				if (!msg_data_left(&msg)) {
+					vq_err(vq, "Unexpected header len for TX: "
+						"%zd expected %zd\n",
+						len, hdr_size);
+					goto out;
+				}
+				len = msg_data_left(&msg);
+
+				zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
+					&& (nvq->upend_idx + 1) % UIO_MAXIOV !=
+					nvq->done_idx
+					&& vhost_net_tx_select_zcopy(net);
+
+				/* use msg_control to pass vhost zerocopy ubuf info to skb */
+				if (zcopy_used) {
+					struct ubuf_info *ubuf;
+					ubuf = nvq->ubuf_info + nvq->upend_idx;
+
+					vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
+					vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+					ubuf->callback = vhost_zerocopy_callback;
+					ubuf->ctx = nvq->ubufs;
+					ubuf->desc = nvq->upend_idx;
+					atomic_set(&ubuf->refcnt, 1);
+					msg.msg_control = ubuf;
+					msg.msg_controllen = sizeof(ubuf);
+					ubufs = nvq->ubufs;
+					atomic_inc(&ubufs->refcount);
+					nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+				} else {
+					msg.msg_control = NULL;
+					ubufs = NULL;
+				}
+
+				total_len += len;
+				if (total_len < VHOST_NET_WEIGHT &&
+					!vhost_vq_avail_empty(&net->dev, vq) &&
+					likely(!vhost_exceeds_maxpend(net))) {
+					msg.msg_flags |= MSG_MORE;
+				} else {
+					msg.msg_flags &= ~MSG_MORE;
+				}
+
+				/* TODO: Check specific error and bomb out unless ENOBUFS? */
+				err = sock->ops->sendmsg(sock, &msg, len);
+				if (unlikely(err < 0)) {
+					if (zcopy_used) {
+						vhost_net_ubuf_put(ubufs);
+						nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
+							% UIO_MAXIOV;
+					}
+					vhost_discard_vq_desc(vq, 1);
+					goto out;
+				}
+				if (err != len)
+					pr_debug("Truncated TX packet: "
+						" len %d != %zd\n", err, len);
+				if (!zcopy_used) {
+					vhost_update_used_idx(vq, 1);
+					vhost_signal(&net->dev, vq);
+				} else
+					vhost_zerocopy_signal_used(net, vq);
+				vhost_net_tx_packet(net);
+#if 0
+				if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+					vhost_poll_queue(&vq->poll);
+					goto out;
+				}
+#endif
 			}
 		}
 	}
