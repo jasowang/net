@@ -330,6 +330,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
+	vq->iov_head = vq->iov_tail = 0;
 }
 
 static int vhost_worker(void *data)
@@ -2586,7 +2587,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	int ret = 0;
 	u16 last_avail_idx, last_used_idx, total;
 	__virtio16 avail_idx, *idx = indices;
-	int start;
 	struct vring_used_elem heads[64], *head;
 	struct vring_used_elem __user *used;
 	int i;
