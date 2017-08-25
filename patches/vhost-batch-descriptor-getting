@@ -1,5 +1,5 @@
 Bottom: e47ce6bd33efca8af994b659c2c4f791119bdcc0
-Top:    2c67bfb9a836113fbc4d4d759eafbe4d9c3701db
+Top:    f6ce44e2a2c61f2de73ee41156d733b78b87613f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-25 11:31:35 +0800
 
@@ -10,16 +10,227 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 3742d1d..d2d42cc 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -503,87 +503,108 @@ static void handle_tx(struct vhost_net *net)
+ 		}
+ 
+ 		for (i = 0; i < avails; i++) {
+-			head = vhost_get_vq_desc2(vq, vq->iov,
+-						  ARRAY_SIZE(vq->iov),
+-						  &out, &in, NULL, NULL,
+-						  indices[i]);
+-			if (in) {
+-				vq_err(vq, "Unexpected descriptor format for TX: "
+-				       "out %d, int %d\n", out, in);
+-				goto out;
++			struct iovec *iov = vq->iov;
++			u16 iov_count = 0;
++
++			vq->iov_head = vq->iov_tail = 0;
++
++			while (iov_count < UIO_MAXIOV && i < avails) {
++				vq->head[vq->iov_tail] = vhost_get_vq_desc2(vq,
++						vq->iov + iov_count,
++					        ARRAY_SIZE(vq->iov) - iov_count,
++						&out, &in,
++						NULL, NULL, indices[i]);
++				if (in) {
++					vq_err(vq, "Unexpected descriptor "
++			          "format for TX: out %d, int %d\n", out, in);
++					goto out;
++				}
++				vq->iov_len[vq->iov_tail] = out;
++				iov_count += out;
++				vq->iov_tail++;
++				i++;
+ 			}
+ 
+-			/* Skip header. TODO: support TSO. */
+-			len = iov_length(vq->iov, out);
+-			iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+-			iov_iter_advance(&msg.msg_iter, hdr_size);
+-			/* Sanity check */
+-			if (!msg_data_left(&msg)) {
+-				vq_err(vq, "Unexpected header len for TX: "
+-					"%zd expected %zd\n",
+-					len, hdr_size);
+-				goto out;
+-			}
+-			len = msg_data_left(&msg);
+-
+-			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
+-				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
+-				         nvq->done_idx
+-				     && vhost_net_tx_select_zcopy(net);
+-
+-			/* use msg_control to pass vhost zerocopy ubuf info to skb */
+-			if (zcopy_used) {
+-				struct ubuf_info *ubuf;
+-				ubuf = nvq->ubuf_info + nvq->upend_idx;
+-
+-				vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
+-				vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+-				ubuf->callback = vhost_zerocopy_callback;
+-				ubuf->ctx = nvq->ubufs;
+-				ubuf->desc = nvq->upend_idx;
+-				atomic_set(&ubuf->refcnt, 1);
+-				msg.msg_control = ubuf;
+-				msg.msg_controllen = sizeof(ubuf);
+-				ubufs = nvq->ubufs;
+-				atomic_inc(&ubufs->refcount);
+-				nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+-			} else {
+-				msg.msg_control = NULL;
+-				ubufs = NULL;
+-			}
++			while (vq->iov_head != vq->iov_tail) {
++				out = vq->iov_len[vq->iov_head];
++				/* Skip header. TODO: support TSO. */
++				len = iov_length(iov, out);
++				iov_iter_init(&msg.msg_iter, WRITE, iov, out, len);
++
++				iov += vq->iov_len[vq->iov_head];
++				++vq->iov_head;
++
++				iov_iter_advance(&msg.msg_iter, hdr_size);
++				/* Sanity check */
++				if (!msg_data_left(&msg)) {
++					vq_err(vq, "Unexpected header len for TX: "
++						"%zd expected %zd\n",
++						len, hdr_size);
++					goto out;
++				}
++				len = msg_data_left(&msg);
+ 
+-			total_len += len;
+-			if (total_len < VHOST_NET_WEIGHT &&
+-				!vhost_vq_avail_empty(&net->dev, vq) &&
+-				likely(!vhost_exceeds_maxpend(net))) {
+-				msg.msg_flags |= MSG_MORE;
+-			} else {
+-				msg.msg_flags &= ~MSG_MORE;
+-			}
++				zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
++					&& (nvq->upend_idx + 1) % UIO_MAXIOV !=
++					nvq->done_idx
++					&& vhost_net_tx_select_zcopy(net);
+ 
+-			/* TODO: Check specific error and bomb out unless ENOBUFS? */
+-			err = sock->ops->sendmsg(sock, &msg, len);
+-			if (unlikely(err < 0)) {
++				/* use msg_control to pass vhost zerocopy ubuf info to skb */
+ 				if (zcopy_used) {
+-					vhost_net_ubuf_put(ubufs);
+-					nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
+-						         % UIO_MAXIOV;
++					struct ubuf_info *ubuf;
++					ubuf = nvq->ubuf_info + nvq->upend_idx;
++
++					vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
++					vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
++					ubuf->callback = vhost_zerocopy_callback;
++					ubuf->ctx = nvq->ubufs;
++					ubuf->desc = nvq->upend_idx;
++					atomic_set(&ubuf->refcnt, 1);
++					msg.msg_control = ubuf;
++					msg.msg_controllen = sizeof(ubuf);
++					ubufs = nvq->ubufs;
++					atomic_inc(&ubufs->refcount);
++					nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
++				} else {
++					msg.msg_control = NULL;
++					ubufs = NULL;
+ 				}
+-				vhost_discard_vq_desc(vq, 1);
+-				goto out;
+-			}
+-			if (err != len)
+-				pr_debug("Truncated TX packet: "
+-					" len %d != %zd\n", err, len);
+-			if (!zcopy_used) {
+-				vhost_update_used_idx(vq, 1);
+-				vhost_signal(&net->dev, vq);
+-			} else
+-				vhost_zerocopy_signal_used(net, vq);
+-			vhost_net_tx_packet(net);
+-			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+-				vhost_poll_queue(&vq->poll);
+-				goto out;
++
++				total_len += len;
++				if (total_len < VHOST_NET_WEIGHT &&
++					!vhost_vq_avail_empty(&net->dev, vq) &&
++					likely(!vhost_exceeds_maxpend(net))) {
++					msg.msg_flags |= MSG_MORE;
++				} else {
++					msg.msg_flags &= ~MSG_MORE;
++				}
++
++				/* TODO: Check specific error and bomb out unless ENOBUFS? */
++				err = sock->ops->sendmsg(sock, &msg, len);
++				if (unlikely(err < 0)) {
++					if (zcopy_used) {
++						vhost_net_ubuf_put(ubufs);
++						nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
++							% UIO_MAXIOV;
++					}
++					vhost_discard_vq_desc(vq, 1);
++					goto out;
++				}
++				if (err != len)
++					pr_debug("Truncated TX packet: "
++						" len %d != %zd\n", err, len);
++				if (!zcopy_used) {
++					vhost_update_used_idx(vq, 1);
++					vhost_signal(&net->dev, vq);
++				} else
++					vhost_zerocopy_signal_used(net, vq);
++				vhost_net_tx_packet(net);
++#if 0
++				if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
++					vhost_poll_queue(&vq->poll);
++					goto out;
++				}
++#endif
+ 			}
+ 		}
+ 	}
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index e15f581..02e6db8 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -330,6 +330,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vq->umem = NULL;
+ 	vq->iotlb = NULL;
+ 	__vhost_vq_meta_reset(vq);
++	vq->iov_head = vq->iov_tail = 0;
+ }
+ 
+ static int vhost_worker(void *data)
+@@ -2586,7 +2587,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	int ret = 0;
+ 	u16 last_avail_idx, last_used_idx, total;
+ 	__virtio16 avail_idx, *idx = indices;
+-	int start;
+ 	struct vring_used_elem heads[64], *head;
+ 	struct vring_used_elem __user *used;
+ 	int i;
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index b91bf6e..72e5638 100644
+index b91bf6e..9c61072 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -128,7 +128,7 @@ struct vhost_virtqueue {
+@@ -128,7 +128,10 @@ struct vhost_virtqueue {
  	bool log_used;
  	u64 log_addr;
  
 -	struct iovec iov[UIO_MAXIOV];
 +	struct iovec iov[2 * UIO_MAXIOV];
++        u16 iov_len[UIO_MAXIOV];
++        u16 iov_head, iov_tail;
++        __virtio16 head[UIO_MAXIOV];
  	struct iovec iotlb_iov[64];
  	struct iovec *indirect;
  	struct vring_used_elem *heads;
