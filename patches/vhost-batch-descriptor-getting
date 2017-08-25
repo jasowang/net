@@ -5,6 +5,8 @@ Date:   2017-08-25 11:31:35 +0800
 
 vhost: batch descriptor getting
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
