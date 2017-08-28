@@ -2586,8 +2586,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	int ret = 0;
 	u16 last_avail_idx, last_used_idx, total;
 	__virtio16 avail_idx, *idx = indices;
-	int start;
-	struct vring_used_elem heads[64], *head;
+	struct vring_used_elem heads[64];
 	struct vring_used_elem __user *used;
 	int i;
 
@@ -2626,7 +2625,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 
 	total = ret;
 	last_used_idx = vq->last_used_idx;
-	head = &heads[0];
 	while (total) {
 		int ret2;
 		u16 copied = vq->num - (last_used_idx & (vq->num - 1));
@@ -2634,7 +2632,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		copied = min(copied, total);
 		ret2 = vhost_copy_to_user(vq,
 				&vq->used->ring[last_used_idx & (vq->num - 1)],
-				head, copied * sizeof *used);
+				&heads[ret - total], copied * sizeof *used);
 
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to update used ring!\n");
@@ -2642,7 +2640,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 
 		total -= copied;
-		head += copied;
 		last_used_idx += copied;
 	}
 
