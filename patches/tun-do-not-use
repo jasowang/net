@@ -5,6 +5,8 @@ Date:   2017-08-28 21:42:20 +0800
 
 tun: do not use copy_from_iter_full()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
