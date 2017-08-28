@@ -1,12 +1,11 @@
 Version: 1
-Previous: faf5aec5feae2f29f4d22a234cd3be6879273d53
-Head: 966b3d2a6a84bb455f26fce557f502173ff144d1
+Previous: de3edea3a7eee1103877c6b64a3ea26c66b61e30
+Head: c3b1cec670a0dd02e5d12a9289cf5a87466f10c5
 Applied:
   vhost-introduce-used-ring: 0bca7e1ceef3fc28ed15bd40b4bb228fbd8c1749
   vhost-introduce-helper-to: 8337a2f6c874d9165124030ae4a4c667faee06bc
   vhost_net-tx-batching: 5acfadfc2df2195a6acc37f3cfef55c7a31de84d
-  tun-do-not-use: 507638e66ab9db4a9fe18c085f61585232706ae4
-  refresh-temp-0: 966b3d2a6a84bb455f26fce557f502173ff144d1
+  tun-do-not-use: c3b1cec670a0dd02e5d12a9289cf5a87466f10c5
 Unapplied:
   vhost-batch-descriptor-getting: a348b2cfed895dba4bc6dfc3e4de3aaa07c1b335
   refresh-temp: 24bd0d078ae6c6e26ef6bc9e3de86d6f811a3490
