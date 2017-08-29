@@ -1984,41 +1984,23 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-/* This looks in the virtqueue and for the first available buffer, and converts
- * it to an iovec for convenient access.  Since descriptors consist of some
- * number of output then some number of input descriptors, it's actually two
- * iovecs, but we pack them into one and note how many of each there were.
- *
- * This function returns the descriptor number found, or vq->num (which is
- * never a valid descriptor number) if none was found.  A negative code is
- * returned on error. */
-int vhost_get_vq_desc(struct vhost_virtqueue *vq,
-		      struct iovec iov[], unsigned int iov_size,
-		      unsigned int *out_num, unsigned int *in_num,
-		      struct vhost_log *log, unsigned int *log_num)
+static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq, int *err)
 {
-	struct vring_desc desc;
-	unsigned int i, head, found = 0;
-	u16 last_avail_idx;
-	__virtio16 avail_idx;
-	__virtio16 ring_head;
-	int ret, access;
-
-	/* Check it isn't doing very strange things with descriptor numbers. */
-	last_avail_idx = vq->last_avail_idx;
+	u16 last_avail_idx = vq->last_avail_idx;
+	__virtio16 avail_idx, ring_head;
 
 	if (vq->avail_idx == vq->last_avail_idx) {
 		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 			vq_err(vq, "Failed to access avail idx at %p\n",
 				&vq->avail->idx);
-			return -EFAULT;
+			goto err;
 		}
 		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
 
 		if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
 			vq_err(vq, "Guest moved used index from %u to %u",
 				last_avail_idx, vq->avail_idx);
-			return -EFAULT;
+			goto err;
 		}
 
 		/* If there's nothing new since last we looked, return
@@ -2040,13 +2022,42 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		vq_err(vq, "Failed to read head: idx %d address %p\n",
 		       last_avail_idx,
 		       &vq->avail->ring[last_avail_idx % vq->num]);
-		return -EFAULT;
+		goto err;
 	}
 
-	head = vhost16_to_cpu(vq, ring_head);
+	return vhost16_to_cpu(vq, ring_head);
+err:
+	*err = -EFAULT;
+	return 0;
+}
+
+/* This looks in the virtqueue and for the first available buffer, and converts
+ * it to an iovec for convenient access.  Since descriptors consist of some
+ * number of output then some number of input descriptors, it's actually two
+ * iovecs, but we pack them into one and note how many of each there were.
+ *
+ * This function returns the descriptor number found, or vq->num (which is
+ * never a valid descriptor number) if none was found.  A negative code is
+ * returned on error. */
+int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+		      struct iovec iov[], unsigned int iov_size,
+		      unsigned int *out_num, unsigned int *in_num,
+		      struct vhost_log *log, unsigned int *log_num)
+{
+	struct vring_desc desc;
+	unsigned int i, head, found = 0;
+	int ret = 0, access;
+
+	head = vhost_get_vq_head(vq, &ret);
+
+	if (ret)
+		return ret;
+
+	if (head == vq->num)
+		return head;
 
 	/* If their number is silly, that's an error. */
-	if (unlikely(head >= vq->num)) {
+	if (unlikely(head > vq->num)) {
 		vq_err(vq, "Guest says index %u > %u is available",
 		       head, vq->num);
 		return -EINVAL;
