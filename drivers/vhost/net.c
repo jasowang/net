@@ -505,10 +505,10 @@ static void handle_tx(struct vhost_net *net)
 		}
 
 		for (i = 0; i < avails; i++) {
-			head = vhost_get_vq_desc2(vq, vq->iov,
-						  ARRAY_SIZE(vq->iov),
-						  &out, &in, NULL, NULL,
-						  indices[i]);
+			head = __vhost_get_vq_desc(vq, vq->iov,
+						   ARRAY_SIZE(vq->iov),
+						   &out, &in, NULL, NULL,
+						vhost16_to_cpu(vq, indices[i]));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for TX: "
 				       "out %d, int %d\n", out, in);
