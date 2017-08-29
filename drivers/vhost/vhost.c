@@ -2178,6 +2178,39 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
 }
 EXPORT_SYMBOL_GPL(vhost_add_used);
 
+int vhost_add_used_idx(struct vhost_virtqueue *vq, int n)
+{
+	u16 old, new;
+
+	old = vq->last_used_idx;
+	new = (vq->last_used_idx += n);
+	/* If the driver never bothers to signal in a very long while,
+	 * used index might wrap around. If that happens, invalidate
+	 * signalled_used index we stored. TODO: make sure driver
+	 * signals at least once in 2^16 and remove this.
+	 */
+	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
+		vq->signalled_used_valid = false;
+
+	/* Make sure buffer is written before we update index. */
+	smp_wmb();
+	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->last_used_idx),
+			   &vq->used->idx)) {
+		vq_err(vq, "Failed to increment used idx");
+		return -EFAULT;
+	}
+	if (unlikely(vq->log_used)) {
+		/* Log used index update. */
+		log_write(vq->log_base,
+			  vq->log_addr + offsetof(struct vring_used, idx),
+			  sizeof(vq->used->idx));
+		if (vq->log_ctx)
+			eventfd_signal(vq->log_ctx, 1);
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vhost_add_used_idx);
+
 static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 			    struct vring_used_elem *heads,
 			    unsigned count)
