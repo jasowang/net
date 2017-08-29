@@ -1,5 +1,5 @@
-Bottom: d79abd587bf833c81bcc29fd81bdefd61359e483
-Top:    c6a79aa5a59271d9fcf29ef6cf3f052b794c2ecc
+Bottom: a53d84ab51d2b659a1e251f99ebafa1ef604a6b9
+Top:    529ccd18fc6dc7da3da219c376cda494cb17bcf8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-29 11:34:09 +0800
 
@@ -222,10 +222,10 @@ index ba08b78..40f23b4 100644
  	}
  out:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 512b3ab..79ad885 100644
+index 06e084f..b7dfab0 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2581,11 +2581,14 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+@@ -2439,11 +2439,14 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
  /* Prefetch descriptor indices */
  int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
@@ -242,7 +242,7 @@ index 512b3ab..79ad885 100644
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
-@@ -2598,16 +2601,44 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2456,16 +2459,44 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	ret = total = min(total, num);
  
  	while (total) {
@@ -294,10 +294,10 @@ index 512b3ab..79ad885 100644
  
  	/* Only get avail ring entries after they have been exposed by guest. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index b91bf6e..61ee712 100644
+index 9c274de..0d8abd1 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -232,6 +232,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+@@ -229,6 +229,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
  			     struct iov_iter *from);
  int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
  int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
