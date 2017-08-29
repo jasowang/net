@@ -1984,7 +1984,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-static __virtio16 vhost_get_vq_head(struct vhost_virtqueue *vq)
+static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq)
 {
 	u16 last_avail_idx = vq->last_avail_idx;
 	__virtio16 avail_idx, ring_head;
@@ -2047,8 +2047,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 
 	head = vhost_get_vq_head(vq);
 
+	if (head == vq->num)
+		return head;
+
 	/* If their number is silly, that's an error. */
-	if (unlikely(head >= vq->num)) {
+	if (unlikely(head > vq->num)) {
 		vq_err(vq, "Guest says index %u > %u is available",
 		       head, vq->num);
 		return -EINVAL;
