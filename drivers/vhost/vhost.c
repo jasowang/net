@@ -2469,6 +2469,36 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
+static int vhost_add_used_elem(struct vhost_virtqueue *vq,
+			       unsigned int head, int len, int offset)
+{
+       struct vring_used_elem __user *used;
+
+       int start = (vq->last_used_idx + offset) & (vq->num - 1);
+       used = vq->used->ring + start;
+
+       if (vhost_put_user(vq, head, &used->id)) {
+               vq_err(vq, "Failed to write used id");
+               return -EFAULT;
+       }
+       if (vhost_put_user(vq, len, &used->len)) {
+               vq_err(vq, "Failed to write used len");
+               return -EFAULT;
+       }
+
+       if (unlikely(vq->log_used)) {
+               /* Make sure data is seen before log. */
+               smp_wmb();
+               /* Log used ring entry write. */
+               log_write(vq->log_base,
+                         vq->log_addr +
+                          ((void __user *)used - (void __user *)vq->used),
+                           sizeof *used);
+       }
+
+       return 0;
+}
+
 /* Prefetch descriptor indices */
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				struct vring_used_elem *heads,
@@ -2508,6 +2538,10 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	if (!heads)
 		return ret;
 
+	for (i = 0; i < ret; i++)
+		vhost_add_used_elem(vq, indices[i], 0, i);
+
+#if 0
 	for (i = 0; i < ret; i++) {
 		heads[i].id = indices[i];
 		heads[i].len = 0;
@@ -2530,6 +2564,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 		last_used_idx += copied;
 	}
+#endif
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
