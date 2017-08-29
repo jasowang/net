@@ -11,6 +11,11 @@ XDP_DROP (without touching skb) on Intel(R) Core(TM) i7-5600U CPU @
 Before: 4.25Mpps
 After:  5.28Mpps (+24%)
 
+REP GOOD:
+Before: 3.01Mpps
+After (no rep): 3.52Mpps
+After:  3.53Mpps
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
