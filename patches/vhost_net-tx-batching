@@ -3,12 +3,13 @@ Top:    12f28d14dd17d7d75cb06424e8fe27bb5fb3f984
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-29 11:34:09 +0800
 
-vhost_net: tx batching
+vhost_net: basic tx batching
 
-XDP_DROP (without touching skb) shows:
+XDP_DROP (without touching skb) on Intel(R) Core(TM) i7-5600U CPU @
+2.60GHz (ERMS) shows:
 
 Before: 4.25Mpps
-After:  4.90Mpps (+15.3%)
+After:  5.28Mpps (+24%)
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
