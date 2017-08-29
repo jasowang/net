@@ -5,6 +5,8 @@ Date:   2017-08-29 15:18:56 +0800
 
 vhost: introduce vhost_add_used_idx()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
