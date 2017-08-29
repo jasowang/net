@@ -2583,9 +2583,9 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				__virtio16 *indices, u16 num)
 {
-	int ret = 0;
-	u16 last_avail_idx, last_used_idx, total;
-	__virtio16 avail_idx, *idx = indices;
+	int ret, ret2;
+	u16 last_avail_idx, last_used_idx, total, copied;
+	__virtio16 avail_idx;
 	struct vring_used_elem heads[64];
 	struct vring_used_elem __user *used;
 	int i;
@@ -2601,11 +2601,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	ret = total = min(total, num);
 
 	while (total) {
-		u16 copied = vq->num - (last_avail_idx & (vq->num - 1));
-		int ret2;
-
+		copied = vq->num - (last_avail_idx & (vq->num - 1));
 		copied = min(copied, total);
-		ret2 = vhost_copy_from_user(vq, idx,
+		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
 			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
 					copied * sizeof *indices);
 		if (unlikely(ret2)) {
@@ -2614,7 +2612,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 
 		last_avail_idx += copied;
-		idx += copied;
 		total -= copied;
 	}
 
@@ -2626,9 +2623,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	total = ret;
 	last_used_idx = vq->last_used_idx;
 	while (total) {
-		int ret2;
-		u16 copied = vq->num - (last_used_idx & (vq->num - 1));
-
+		copied = vq->num - (last_used_idx & (vq->num - 1));
 		copied = min(copied, total);
 		ret2 = vhost_copy_to_user(vq,
 				&vq->used->ring[last_used_idx & (vq->num - 1)],
