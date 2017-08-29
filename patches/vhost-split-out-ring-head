@@ -5,6 +5,8 @@ Date:   2017-08-29 11:48:16 +0800
 
 vhost: split out ring head fetching logic
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
