@@ -1,0 +1,80 @@
+Bottom: 591940998b2311fd941e9d63c1378fa2ab4dc290
+Top:    c6a79aa5a59271d9fcf29ef6cf3f052b794c2ecc
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-29 11:21:26 +0800
+
+Refresh of vhost_net-tx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 3742d1d..40f23b4 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -488,8 +488,10 @@ static void handle_tx(struct vhost_net *net)
+ 		if (unlikely(vhost_exceeds_maxpend(net)))
+ 			break;
+ 
+-		avails = vhost_prefetch_desc_indices(vq, indices,
+-						    VHOST_RX_BATCH);
++		avails = vhost_prefetch_desc_indices(vq,
++						zcopy ? NULL: vq->heads,
++						indices,
++						VHOST_RX_BATCH);
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(avails < 0))
+ 			break;
+@@ -575,9 +577,12 @@ static void handle_tx(struct vhost_net *net)
+ 			if (err != len)
+ 				pr_debug("Truncated TX packet: "
+ 					" len %d != %zd\n", err, len);
+-			if (!zcopy_used) {
++			if (!zcopy) {
+ 				vhost_update_used_idx(vq, 1);
+ 				vhost_signal(&net->dev, vq);
++			} else if (!zcopy_used) {
++				vhost_add_used_and_signal(&net->dev,
++							  vq, head, 0);
+ 			} else
+ 				vhost_zerocopy_signal_used(net, vq);
+ 			vhost_net_tx_packet(net);
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 46c5bd6..79ad885 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2581,12 +2581,12 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
+ /* Prefetch descriptor indices */
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				struct vring_used_elem *heads,
+ 				__virtio16 *indices, u16 num)
+ {
+ 	int ret, ret2;
+ 	u16 last_avail_idx, last_used_idx, total, copied;
+ 	__virtio16 avail_idx;
+-	struct vring_used_elem heads[64];
+ 	struct vring_used_elem __user *used;
+ 	int i;
+ 
+@@ -2615,6 +2615,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		total -= copied;
+ 	}
+ 
++	if (!heads)
++		return ret;
++
+ 	for (i = 0; i < ret; i++) {
+ 		heads[i].id = indices[i];
+ 		heads[i].len = 0;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index b91bf6e..61ee712 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -232,6 +232,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++                                struct vring_used_elem *heads,
+ 				__virtio16 *indices, u16 num);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
