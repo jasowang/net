@@ -2039,22 +2039,15 @@ err:
  * This function returns the descriptor number found, or vq->num (which is
  * never a valid descriptor number) if none was found.  A negative code is
  * returned on error. */
-int vhost_get_vq_desc(struct vhost_virtqueue *vq,
-		      struct iovec iov[], unsigned int iov_size,
-		      unsigned int *out_num, unsigned int *in_num,
-		      struct vhost_log *log, unsigned int *log_num)
+int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+			struct iovec iov[], unsigned int iov_size,
+			unsigned int *out_num, unsigned int *in_num,
+			struct vhost_log *log, unsigned int *log_num,
+			__virtio16 head)
 {
 	struct vring_desc desc;
-	unsigned int i, head, found = 0;
+	unsigned int i, found = 0;
 	int ret = 0, access;
-
-	head = vhost_get_vq_head(vq, &ret);
-
-	if (ret)
-		return ret;
-
-	if (head == vq->num)
-		return head;
 
 	/* If their number is silly, that's an error. */
 	if (unlikely(head > vq->num)) {
@@ -2143,6 +2136,25 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 	 * if they aren't we would need to update avail_event index. */
 	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
 	return head;
+}
+EXPORT_SYMBOL_GPL(__vhost_get_vq_desc);
+
+int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+		      struct iovec iov[], unsigned int iov_size,
+		      unsigned int *out_num, unsigned int *in_num,
+		      struct vhost_log *log, unsigned int *log_num)
+{
+	int ret = 0;
+	unsigned int head = vhost_get_vq_head(vq, &ret);
+
+	if (ret)
+		return ret;
+
+	if (head == vq->num)
+		return head;
+
+	return __vhost_get_vq_desc(vq, iov, iov_size, out_num, in_num,
+				   log, log_num, head);
 }
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 
