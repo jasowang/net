@@ -1,5 +1,5 @@
 Bottom: b52636337b720d71c3f04bfec72bfe19cdd4ee91
-Top:    a12bb95f781758fc7529b220b0381641d1ed0079
+Top:    b2fb1d5e19c33f4126a95d0eaccb575e17b8b075
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-29 11:48:16 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 9cb3f72..bf6a5b5 100644
+index 9cb3f72..15605cc 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1984,28 +1984,10 @@ static int get_indirect(struct vhost_virtqueue *vq,
@@ -30,7 +30,7 @@ index 9cb3f72..bf6a5b5 100644
 -		      struct iovec iov[], unsigned int iov_size,
 -		      unsigned int *out_num, unsigned int *in_num,
 -		      struct vhost_log *log, unsigned int *log_num)
-+static __virtio16 vhost_get_vq_head(struct vhost_virtqueue *vq)
++static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq)
  {
 -	struct vring_desc desc;
 -	unsigned int i, head, found = 0;
@@ -46,7 +46,7 @@ index 9cb3f72..bf6a5b5 100644
  
  	if (vq->avail_idx == vq->last_avail_idx) {
  		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-@@ -2043,7 +2025,27 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2043,10 +2025,33 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		return -EFAULT;
  	}
  
@@ -72,6 +72,13 @@ index 9cb3f72..bf6a5b5 100644
 +	int ret, access;
 +
 +	head = vhost_get_vq_head(vq);
++
++	if (head == vq->num)
++		return head;
  
  	/* If their number is silly, that's an error. */
- 	if (unlikely(head >= vq->num)) {
+-	if (unlikely(head >= vq->num)) {
++	if (unlikely(head > vq->num)) {
+ 		vq_err(vq, "Guest says index %u > %u is available",
+ 		       head, vq->num);
+ 		return -EINVAL;
