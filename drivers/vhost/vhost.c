@@ -1984,7 +1984,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq)
+static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq, int *err)
 {
 	u16 last_avail_idx = vq->last_avail_idx;
 	__virtio16 avail_idx, ring_head;
@@ -1993,14 +1993,14 @@ static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq)
 		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 			vq_err(vq, "Failed to access avail idx at %p\n",
 				&vq->avail->idx);
-			return -EFAULT;
+			goto err;
 		}
 		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
 
 		if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
 			vq_err(vq, "Guest moved used index from %u to %u",
 				last_avail_idx, vq->avail_idx);
-			return -EFAULT;
+			goto err;
 		}
 
 		/* If there's nothing new since last we looked, return
@@ -2022,10 +2022,13 @@ static unsigned int vhost_get_vq_head(struct vhost_virtqueue *vq)
 		vq_err(vq, "Failed to read head: idx %d address %p\n",
 		       last_avail_idx,
 		       &vq->avail->ring[last_avail_idx % vq->num]);
-		return -EFAULT;
+		goto err;
 	}
 
 	return vhost16_to_cpu(vq, ring_head);
+err:
+	*err = -EFAULT;
+	return 0;
 }
 
 /* This looks in the virtqueue and for the first available buffer, and converts
@@ -2043,9 +2046,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 {
 	struct vring_desc desc;
 	unsigned int i, head, found = 0;
-	int ret, access;
+	int ret = 0, access;
 
-	head = vhost_get_vq_head(vq);
+	head = vhost_get_vq_head(vq, &ret);
+
+	if (ret)
+		return ret;
 
 	if (head == vq->num)
 		return head;
