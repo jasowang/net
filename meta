@@ -1,9 +1,8 @@
 Version: 1
-Previous: 55e93d2c1f0b6f8da57e5b4c5364d4dfdae91535
-Head: e93ec171ee618cacf0c713c3b2f04498227c9c45
+Previous: 65b0e36ba02ebce423fc5425eda2a8cbe2a6a1b1
+Head: 7f84db547ce34db95fa335f2b6d25a8789a1901b
 Applied:
-  vhost-split-out-ring-head: b901c9ce2c6b35e808e22e13ae6eea62f584dad1
-  refresh-temp: e93ec171ee618cacf0c713c3b2f04498227c9c45
+  vhost-split-out-ring-head: 7f84db547ce34db95fa335f2b6d25a8789a1901b
 Unapplied:
   vhost-introduce-used-ring: 0bca7e1ceef3fc28ed15bd40b4bb228fbd8c1749
   vhost-introduce-helper-to: 8337a2f6c874d9165124030ae4a4c667faee06bc
