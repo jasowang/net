@@ -7,10 +7,11 @@ vhost_net: tx batching
 
 XDP_DROP (without touching skb) shows:
 
-Before: 3.44Mpps
-After:  4.18Mpps (+21%)
+Before: 4.25Mpps
+After:  4.90Mpps (+15.3%)
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
