@@ -1,0 +1,66 @@
+Bottom: 22fd40760f2b21da226041d6c89a56506f04565f
+Top:    a12bb95f781758fc7529b220b0381641d1ed0079
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-29 11:49:59 +0800
+
+Refresh of vhost-split-out-ring-head
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index dbc5e23..bf6a5b5 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2043,51 +2043,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ {
+ 	struct vring_desc desc;
+ 	unsigned int i, head, found = 0;
+-	u16 last_avail_idx;
+-	__virtio16 avail_idx;
+-	__virtio16 ring_head;
+ 	int ret, access;
+ 
+-	/* Check it isn't doing very strange things with descriptor numbers. */
+-	last_avail_idx = vq->last_avail_idx;
+-
+-	if (vq->avail_idx == vq->last_avail_idx) {
+-		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+-			vq_err(vq, "Failed to access avail idx at %p\n",
+-				&vq->avail->idx);
+-			return -EFAULT;
+-		}
+-		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+-
+-		if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
+-			vq_err(vq, "Guest moved used index from %u to %u",
+-				last_avail_idx, vq->avail_idx);
+-			return -EFAULT;
+-		}
+-
+-		/* If there's nothing new since last we looked, return
+-		 * invalid.
+-		 */
+-		if (vq->avail_idx == last_avail_idx)
+-			return vq->num;
+-
+-		/* Only get avail ring entries after they have been
+-		 * exposed by guest.
+-		 */
+-		smp_rmb();
+-	}
+-
+-	/* Grab the next descriptor number they're advertising, and increment
+-	 * the index we've seen. */
+-	if (unlikely(vhost_get_avail(vq, ring_head,
+-		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
+-		vq_err(vq, "Failed to read head: idx %d address %p\n",
+-		       last_avail_idx,
+-		       &vq->avail->ring[last_avail_idx % vq->num]);
+-		return -EFAULT;
+-	}
+-
+-	head = vhost16_to_cpu(vq, ring_head);
++	head = vhost_get_vq_head(vq);
+ 
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head >= vq->num)) {
