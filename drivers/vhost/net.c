@@ -488,8 +488,10 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avails = vhost_prefetch_desc_indices(vq, indices,
-						    VHOST_RX_BATCH);
+		avails = vhost_prefetch_desc_indices(vq,
+						zcopy ? NULL: vq->heads,
+						indices,
+						VHOST_RX_BATCH);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
 			break;
@@ -575,9 +577,12 @@ static void handle_tx(struct vhost_net *net)
 			if (err != len)
 				pr_debug("Truncated TX packet: "
 					" len %d != %zd\n", err, len);
-			if (!zcopy_used) {
+			if (!zcopy) {
 				vhost_update_used_idx(vq, 1);
 				vhost_signal(&net->dev, vq);
+			} else if (!zcopy_used) {
+				vhost_add_used_and_signal(&net->dev,
+							  vq, head, 0);
 			} else
 				vhost_zerocopy_signal_used(net, vq);
 			vhost_net_tx_packet(net);

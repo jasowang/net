@@ -2581,12 +2581,12 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
 /* Prefetch descriptor indices */
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+				struct vring_used_elem *heads,
 				__virtio16 *indices, u16 num)
 {
 	int ret, ret2;
 	u16 last_avail_idx, last_used_idx, total, copied;
 	__virtio16 avail_idx;
-	struct vring_used_elem heads[64];
 	struct vring_used_elem __user *used;
 	int i;
 
@@ -2614,6 +2614,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		last_avail_idx += copied;
 		total -= copied;
 	}
+
+	if (!heads)
+		return ret;
 
 	for (i = 0; i < ret; i++) {
 		heads[i].id = indices[i];
