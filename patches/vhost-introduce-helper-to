@@ -1,5 +1,5 @@
-Bottom: 64a9c35d81513d4f5f86dac85925f085610fdc29
-Top:    d79abd587bf833c81bcc29fd81bdefd61359e483
+Bottom: 81a31fa55fac914f20772baf821b3f5dfe8366c4
+Top:    a53d84ab51d2b659a1e251f99ebafa1ef604a6b9
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index b6ff7cf..512b3ab 100644
+index 8c8890a..06e084f 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2579,6 +2579,43 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+@@ -2437,6 +2437,43 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
  }
  EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
@@ -59,10 +59,10 @@ index b6ff7cf..512b3ab 100644
  static int __init vhost_init(void)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index a46ae9d..b91bf6e 100644
+index f41ad64..9c274de 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -231,6 +231,8 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+@@ -228,6 +228,8 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
  ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
  			     struct iov_iter *from);
  int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
