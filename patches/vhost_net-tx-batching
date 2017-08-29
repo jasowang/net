@@ -3,7 +3,7 @@ Top:    12f28d14dd17d7d75cb06424e8fe27bb5fb3f984
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-29 11:34:09 +0800
 
-vhost_net: basic tx batching
+vhost_net: basic batch processing of vring
 
 XDP_DROP (without touching skb) on Intel(R) Core(TM) i7-5600U CPU @
 2.60GHz (ERMS) shows:
