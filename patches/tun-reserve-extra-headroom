@@ -1,28 +1,28 @@
 Bottom: b52636337b720d71c3f04bfec72bfe19cdd4ee91
-Top:    de4395089e314e3ba58b0e71490317b8d73981de
+Top:    055316ed5568218a824ca5794f102824f4a8bb36
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-08-17 16:59:20 +0800
+Date:   2017-08-30 11:17:26 +0800
 
 tun: reserve extra headroom only when XDP is set
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 06e8f0b..0f53f19 100644
+index 06e8f0b..80ac18f 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -108,6 +108,7 @@ do {								\
+@@ -108,7 +108,7 @@ do {								\
  #endif
  
  #define TUN_HEADROOM 256
-+/* FIXME */
- #define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
+-#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
++#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
  
  /* TUN device flags */
-@@ -1272,14 +1273,21 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+@@ -1272,25 +1272,35 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	struct page_frag *alloc_frag = &current->task_frag;
  	struct sk_buff *skb;
  	struct bpf_prog *xdp_prog;
@@ -33,20 +33,24 @@ index 06e8f0b..0f53f19 100644
  	char *buf;
  	size_t copied;
  	bool xdp_xmit = false;
- 	int err;
- 
+-	int err;
++	int err, pad = TUN_RX_PAD;
++
 +	rcu_read_lock();
 +	xdp_prog = rcu_dereference(tun->xdp_prog);
 +	if (xdp_prog)
-+		buflen += SKB_DATA_ALIGN(len + TUN_RX_PAD);
-+	else
-+		buflen += SKB_DATA_ALIGN(len);
++		pad += TUN_HEADROOM;
++	buflen += SKB_DATA_ALIGN(len + pad);
 +	rcu_read_unlock();
-+
+ 
  	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
  		return ERR_PTR(-ENOMEM);
  
-@@ -1290,7 +1298,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
+ 	copied = copy_page_from_iter(alloc_frag->page,
+-				     alloc_frag->offset + TUN_RX_PAD,
++				     alloc_frag->offset + pad,
+ 				     len, from);
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
@@ -59,3 +63,21 @@ index 06e8f0b..0f53f19 100644
  		*generic_xdp = 1;
  	else
  		*generic_xdp = 0;
+@@ -1303,7 +1313,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		u32 act;
+ 
+ 		xdp.data_hard_start = buf;
+-		xdp.data = buf + TUN_RX_PAD;
++		xdp.data = buf + pad;
+ 		xdp.data_end = xdp.data + len;
+ 		orig_data = xdp.data;
+ 		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+@@ -1339,7 +1349,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+-	skb_reserve(skb, TUN_RX_PAD - delta);
++	skb_reserve(skb, pad - delta);
+ 	skb_put(skb, len + delta);
+ 	get_page(alloc_frag->page);
+ 	alloc_frag->offset += buflen;
