@@ -13,8 +13,8 @@ After:  5.28Mpps (+24%)
 
 REP GOOD:
 Before: 3.01Mpps
-After (no rep): 3.52Mpps
-After:  3.53Mpps
+After (no rep): 3.47Mpps
+After:  3.60Mpps
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
