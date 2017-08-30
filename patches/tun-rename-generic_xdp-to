@@ -5,6 +5,9 @@ Date:   2017-08-18 16:09:54 +0800
 
 tun: rename generic_xdp to skb_xdp
 
+Rename "generic_xdp" to "skb_xdp" to avoid confusing it with the
+generic XDP which will be done at netif_receive_skb().
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
