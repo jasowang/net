@@ -508,7 +508,7 @@ static void handle_tx(struct vhost_net *net)
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
 						   &out, &in, NULL, NULL,
-						vhost16_to_cpu(vq, indices[i]));
+				     vhost16_to_cpu(vq, vq->heads[i].id));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for TX: "
 				       "out %d, int %d\n", out, in);
