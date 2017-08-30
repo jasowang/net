@@ -5,6 +5,8 @@ Date:   2017-08-31 07:57:32 +0800
 
 vhost: don't use extra loop
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
