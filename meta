@@ -1,13 +1,12 @@
 Version: 1
-Previous: bd1d4a16382ebd2bd4a139a614c52011a2a341f5
-Head: 7c72cc93d094f40bdf8e1711bba8d0d86ae92f5e
+Previous: 63aef6e636a5852fb970a3cea07beede5f7dad9d
+Head: a36676b31afe9f954a8afd4b497a5b0c3d1d2f6c
 Applied:
   vhost-split-out-ring-head: b69a2c636aad5e50756021a6b2a518d9447ffbd7
   vhost-introduce-helper-to: 2b2a2931278df5682b476a15d953a5eb0aef2388
   vhost-introduce: d98c6dd20b6513ab41a96bce993e86a5104dc2e6
   vhost_net-tx-batching: 2e37909d2fe8856273c19224071dc884f476b680
-  vhost-minor-tweak: 949a198c91195f1cff1838a300a208ff7ff76a80
-  refresh-temp: 7c72cc93d094f40bdf8e1711bba8d0d86ae92f5e
+  vhost-minor-tweak: a36676b31afe9f954a8afd4b497a5b0c3d1d2f6c
 Unapplied:
   vhost-revert-to-vhost_put_user: 33f15674e8a3433bdc437c94d4e698c53476a7cf
   vhost-introduce-used-ring: 0bca7e1ceef3fc28ed15bd40b4bb228fbd8c1749
