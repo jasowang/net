@@ -108,8 +108,7 @@ do {								\
 #endif
 
 #define TUN_HEADROOM 256
-/* FIXME */
-#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD + TUN_HEADROOM)
+#define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
 
 /* TUN device flags */
 
@@ -1278,14 +1277,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	char *buf;
 	size_t copied;
 	bool xdp_xmit = false;
-	int err;
+	int err, pad = TUN_RX_PAD;
 
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog)
-		buflen += SKB_DATA_ALIGN(len + TUN_RX_PAD);
-	else
-		buflen += SKB_DATA_ALIGN(len);
+		pad += TUN_HEADROOM;
+	buflen += SKB_DATA_ALIGN(len + pad);
 	rcu_read_unlock();
 
 	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
@@ -1293,7 +1291,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset + TUN_RX_PAD,
+				     alloc_frag->offset + pad,
 				     len, from);
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
@@ -1315,7 +1313,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		u32 act;
 
 		xdp.data_hard_start = buf;
-		xdp.data = buf + TUN_RX_PAD;
+		xdp.data = buf + pad;
 		xdp.data_end = xdp.data + len;
 		orig_data = xdp.data;
 		act = bpf_prog_run_xdp(xdp_prog, &xdp);
@@ -1351,7 +1349,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		return ERR_PTR(-ENOMEM);
 	}
 
-	skb_reserve(skb, TUN_RX_PAD - delta);
+	skb_reserve(skb, pad - delta);
 	skb_put(skb, len + delta);
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
