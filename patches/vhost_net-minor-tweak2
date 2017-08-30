@@ -1,5 +1,5 @@
 Bottom: 9f368cc539454751580371a2cfa48458ab41fc1e
-Top:    9f368cc539454751580371a2cfa48458ab41fc1e
+Top:    07725cd71cb09b2ec69f005346969c06a50da291
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-30 21:42:08 +0800
 
@@ -10,4 +10,57 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index d00322f..9f1d796 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2485,14 +2485,14 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		       &vq->avail->idx);
+ 		return -EFAULT;
+ 	}
+-	last_avail_idx = vq->last_avail_idx;
++	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+ 	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 	total = vq->avail_idx - vq->last_avail_idx;
+ 	ret = total = min(total, num);
+ 
+ 	while (total) {
+-		copied = vq->num - (last_avail_idx & (vq->num - 1));
+-		copied = min(copied, total);
++		/* FIXME: use u16 for vq->num */
++		copied = min((u16)(vq->num - last_avail_idx), total);
+ 		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
+ 			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
+ 					copied * sizeof *indices);
+@@ -2501,7 +2501,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 
+-		last_avail_idx += copied;
++		last_avail_idx = 0;
+ 		total -= copied;
+ 	}
+ 
+@@ -2512,10 +2512,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		heads[i].id = indices[i];
+ 
+ 	total = ret;
+-	last_used_idx = vq->last_used_idx;
++	last_used_idx = vq->last_used_idx & (vq->num - 1);
+ 	while (total) {
+-		copied = vq->num - (last_used_idx & (vq->num - 1));
+-		copied = min(copied, total);
++		copied = min((u16)(vq->num - last_used_idx), total);
+ 		ret2 = vhost_copy_to_user(vq,
+ 				&vq->used->ring[last_used_idx & (vq->num - 1)],
+ 				&heads[ret - total], copied * sizeof *used);
+@@ -2525,8 +2524,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 
++		last_used_idx = 0;
+ 		total -= copied;
+-		last_used_idx += copied;
+ 	}
+ 
+ 	/* Only get avail ring entries after they have been exposed by guest. */
