@@ -1,5 +1,5 @@
-Bottom: 0a7024b7ae9a9367a5076b9de237cd5b3626804c
-Top:    3364fe6dd47894ba374351c71bd944e8d8b76eae
+Bottom: 055316ed5568218a824ca5794f102824f4a8bb36
+Top:    a765ac94b2d374f374a888f88e2fe5cbc63b5c55
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-18 16:09:54 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 674a8e2..54be759 100644
+index 80ac18f..3c9985f 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1267,7 +1267,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
@@ -23,7 +23,7 @@ index 674a8e2..54be759 100644
  {
  	struct page_frag *alloc_frag = &current->task_frag;
  	struct sk_buff *skb;
-@@ -1302,13 +1302,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1301,13 +1301,13 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	 * we do XDP on skb in case the headroom is not enough.
  	 */
  	if (hdr->gso_type || !xdp_prog)
@@ -40,7 +40,7 @@ index 674a8e2..54be759 100644
  		struct xdp_buff xdp;
  		void *orig_data;
  		u32 act;
-@@ -1390,7 +1390,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1389,7 +1389,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	bool zerocopy = false;
  	int err;
  	u32 rxhash;
@@ -49,7 +49,7 @@ index 674a8e2..54be759 100644
  
  	if (!(tun->dev->flags & IFF_UP))
  		return -EIO;
-@@ -1449,7 +1449,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1448,7 +1448,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	}
  
  	if (tun_can_build_skb(tun, tfile, len, noblock, zerocopy)) {
@@ -62,7 +62,7 @@ index 674a8e2..54be759 100644
  		if (IS_ERR(skb)) {
  			this_cpu_inc(tun->pcpu_stats->rx_dropped);
  			return PTR_ERR(skb);
-@@ -1529,7 +1533,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1528,7 +1532,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	skb_reset_network_header(skb);
  	skb_probe_transport_header(skb, 0);
  
