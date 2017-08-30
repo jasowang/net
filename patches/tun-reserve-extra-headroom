@@ -5,7 +5,12 @@ Date:   2017-08-30 11:17:26 +0800
 
 tun: reserve extra headroom only when XDP is set
 
+We reserve headroom unconditionally which could cause unnecessary
+stress on socket memory accounting because of increased trusesize. Fix
+this by only reserve extra headroom when XDP is set.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
