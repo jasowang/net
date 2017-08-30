@@ -1,9 +1,10 @@
 Version: 1
-Previous: bb7181a3bd0acd9765db5de8aceb353cf5f449a6
-Head: 4c821efe6bd0da155e5e4ca1327c38f9efdfb78d
+Previous: c777c638b9081b962041b1747b37f0382b1fe53a
+Head: 674fd8a4ed4a16fd05effd5645b1a5a32fb01e9e
 Applied:
   tun-reserve-extra-headroom: 74ecf5163127a241d7e7a24cd22d2a5022758b88
   added: 4c821efe6bd0da155e5e4ca1327c38f9efdfb78d
+  brute-forcing-xdp-tx-test: 674fd8a4ed4a16fd05effd5645b1a5a32fb01e9e
 Unapplied:
   vhost-introduce-used-ring: 0bca7e1ceef3fc28ed15bd40b4bb228fbd8c1749
   vhost-introduce-helper-to: 8337a2f6c874d9165124030ae4a4c667faee06bc
@@ -13,7 +14,6 @@ Unapplied:
   refresh-temp: 24bd0d078ae6c6e26ef6bc9e3de86d6f811a3490
   tun-rename-generic_xdp-to: 4904cecc00185a9bacdf1977b997d58ddb4263f8
   vhost_net-use: 5597a4fea55fd87f026ecfbc7fad16e7597d8120
-  brute-forcing-xdp-tx-test: c332ccfe360cb857ee529e9911f9cb7e15d4fead
   small: 057a2ab57d1a53f65a1636120678b0aa58ee5750
   vhost_net-honor-exported-skb: 3bd7ff79bb69da7f1eb3c962d30728c22471538d
   vhost-reduce-rx-kick: 58b78b6ee7626a47282acb88782b09333fa93fcd
