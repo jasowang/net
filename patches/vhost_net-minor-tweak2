@@ -1,5 +1,5 @@
 Bottom: 9f368cc539454751580371a2cfa48458ab41fc1e
-Top:    07725cd71cb09b2ec69f005346969c06a50da291
+Top:    3d12b4c775d154f3958c5ecbb0a8fdc3f4362330
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-30 21:42:08 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index d00322f..9f1d796 100644
+index d00322f..0e6d43e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2485,14 +2485,14 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2485,53 +2485,53 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		       &vq->avail->idx);
  		return -EFAULT;
  	}
@@ -30,9 +30,12 @@ index d00322f..9f1d796 100644
 +		/* FIXME: use u16 for vq->num */
 +		copied = min((u16)(vq->num - last_avail_idx), total);
  		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
- 			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
- 					copied * sizeof *indices);
-@@ -2501,7 +2501,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+-			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
+-					copied * sizeof *indices);
++					    &vq->avail->ring[last_avail_idx],
++					    copied * sizeof *indices);
+ 		if (unlikely(ret2)) {
+ 			vq_err(vq, "Failed to get descriptors\n");
  			return -EFAULT;
  		}
  
@@ -41,7 +44,11 @@ index d00322f..9f1d796 100644
  		total -= copied;
  	}
  
-@@ -2512,10 +2512,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	if (!heads)
+-		return ret;
++		goto out;
+ 
+ 	for (i = 0; i < ret; i++)
  		heads[i].id = indices[i];
  
  	total = ret;
@@ -52,9 +59,14 @@ index d00322f..9f1d796 100644
 -		copied = min(copied, total);
 +		copied = min((u16)(vq->num - last_used_idx), total);
  		ret2 = vhost_copy_to_user(vq,
- 				&vq->used->ring[last_used_idx & (vq->num - 1)],
- 				&heads[ret - total], copied * sizeof *used);
-@@ -2525,8 +2524,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+-				&vq->used->ring[last_used_idx & (vq->num - 1)],
+-				&heads[ret - total], copied * sizeof *used);
++					  &vq->used->ring[last_used_idx],
++					  &heads[ret - total],
++					  copied * sizeof *used);
+ 
+ 		if (unlikely(ret2)) {
+ 			vq_err(vq, "Failed to update used ring!\n");
  			return -EFAULT;
  		}
  
@@ -63,4 +75,10 @@ index d00322f..9f1d796 100644
 -		last_used_idx += copied;
  	}
  
++out:
  	/* Only get avail ring entries after they have been exposed by guest. */
+ 	smp_rmb();
+-
+ 	return ret;
+ }
+ EXPORT_SYMBOL(vhost_prefetch_desc_indices);
