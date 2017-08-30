@@ -1,0 +1,34 @@
+Bottom: 12f28d14dd17d7d75cb06424e8fe27bb5fb3f984
+Top:    9f368cc539454751580371a2cfa48458ab41fc1e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-30 20:51:47 +0800
+
+Refresh of vhost-minor-tweak
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index a908095..d00322f 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -392,7 +392,7 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)
+ 		vq->indirect = kmalloc(sizeof *vq->indirect * UIO_MAXIOV,
+ 				       GFP_KERNEL);
+ 		vq->log = kmalloc(sizeof *vq->log * UIO_MAXIOV, GFP_KERNEL);
+-		vq->heads = kmalloc(sizeof *vq->heads * UIO_MAXIOV, GFP_KERNEL);
++		vq->heads = kzalloc(sizeof *vq->heads * UIO_MAXIOV, GFP_KERNEL);
+ 		if (!vq->indirect || !vq->log || !vq->heads)
+ 			goto err_nomem;
+ 	}
+@@ -2508,10 +2508,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	if (!heads)
+ 		return ret;
+ 
+-	for (i = 0; i < ret; i++) {
++	for (i = 0; i < ret; i++)
+ 		heads[i].id = indices[i];
+-		heads[i].len = 0;
+-	}
+ 
+ 	total = ret;
+ 	last_used_idx = vq->last_used_idx;
