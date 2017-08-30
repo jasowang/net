@@ -1,0 +1,11 @@
+Bottom: 3d12b4c775d154f3958c5ecbb0a8fdc3f4362330
+Top:    3d12b4c775d154f3958c5ecbb0a8fdc3f4362330
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-31 07:57:32 +0800
+
+vhost: don't use extra loop
+
+
+---
+
+
