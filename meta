@@ -1,10 +1,9 @@
 Version: 1
-Previous: 9e1e30fec992c5d330d61bc260f768bbe83726cd
-Head: 62a0bd232a48a33562539ac089b0b3312f104659
+Previous: 2861c8ed0104051e1c7306b833450876ec9b01b7
+Head: 4c821efe6bd0da155e5e4ca1327c38f9efdfb78d
 Applied:
   tun-reserve-extra-headroom: 74ecf5163127a241d7e7a24cd22d2a5022758b88
-  added: a29777174ba082e26f3aba3bcf2cd50ac085898c
-  refresh-temp-0: 62a0bd232a48a33562539ac089b0b3312f104659
+  added: 4c821efe6bd0da155e5e4ca1327c38f9efdfb78d
 Unapplied:
   vhost-introduce-used-ring: 0bca7e1ceef3fc28ed15bd40b4bb228fbd8c1749
   vhost-introduce-helper-to: 8337a2f6c874d9165124030ae4a4c667faee06bc
