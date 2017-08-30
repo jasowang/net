@@ -5,6 +5,8 @@ Date:   2017-08-30 20:51:44 +0800
 
 vhost: minor tweak
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
