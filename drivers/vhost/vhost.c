@@ -2494,8 +2494,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		/* FIXME: use u16 for vq->num */
 		copied = min((u16)(vq->num - last_avail_idx), total);
 		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
-			 &vq->avail->ring[last_avail_idx & (vq->num - 1)],
-					copied * sizeof *indices);
+					    &vq->avail->ring[last_avail_idx],
+					    copied * sizeof *indices);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
@@ -2506,7 +2506,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	}
 
 	if (!heads)
-		return ret;
+		goto out;
 
 	for (i = 0; i < ret; i++)
 		heads[i].id = indices[i];
@@ -2516,8 +2516,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	while (total) {
 		copied = min((u16)(vq->num - last_used_idx), total);
 		ret2 = vhost_copy_to_user(vq,
-				&vq->used->ring[last_used_idx & (vq->num - 1)],
-				&heads[ret - total], copied * sizeof *used);
+					  &vq->used->ring[last_used_idx],
+					  &heads[ret - total],
+					  copied * sizeof *used);
 
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to update used ring!\n");
@@ -2528,9 +2529,9 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 	}
 
+out:
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
-
 	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);
