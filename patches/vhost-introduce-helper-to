@@ -1,5 +1,5 @@
 Bottom: 81a31fa55fac914f20772baf821b3f5dfe8366c4
-Top:    c379f670a3ea943e8b7352245547f92a4986bad4
+Top:    b40079828860aa9f2c2781ef2fa534dca65ffa47
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -74,7 +74,7 @@ index 8c8890a..cdf0121 100644
  static int __init vhost_init(void)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index f41ad64..ec21473 100644
+index f41ad64..8e968dc 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -228,6 +228,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
@@ -83,7 +83,7 @@ index f41ad64..ec21473 100644
  int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
 +int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 +                                struct vring_used_elem *heads,
-+				u16 num);
++			        u16 num);
  
  #define vq_err(vq, fmt, ...) do {                                  \
  		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
