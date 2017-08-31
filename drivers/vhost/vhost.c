@@ -2472,7 +2472,7 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 /* Prefetch descriptor indices */
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				struct vring_used_elem *heads,
-				__virtio16 *indices, u16 num)
+				u16 num)
 {
 	int ret, ret2;
 	u16 last_avail_idx, last_used_idx, total, copied;

@@ -461,7 +461,6 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
-	__virtio16 indices[VHOST_RX_BATCH];
 	int i;
 
 	mutex_lock(&vq->mutex);
@@ -490,7 +489,6 @@ static void handle_tx(struct vhost_net *net)
 
 		avails = vhost_prefetch_desc_indices(vq,
 						zcopy ? NULL: vq->heads,
-						indices,
 						VHOST_RX_BATCH);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
