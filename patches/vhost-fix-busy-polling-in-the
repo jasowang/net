@@ -5,6 +5,8 @@ Date:   2017-08-31 17:33:55 +0800
 
 vhost: fix busy polling in the case of batch
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
