@@ -1,5 +1,5 @@
 Bottom: f9130e809ba60809e75956bca19c3bbec48ebace
-Top:    f9130e809ba60809e75956bca19c3bbec48ebace
+Top:    93d662df816b39cad3d733f7b6601f6235a5cf16
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-31 17:33:55 +0800
 
@@ -8,4 +8,64 @@ vhost: fix busy polling in the case of batch
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index fab9103..c69da67 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -408,27 +408,26 @@ static int vhost_net_enable_vq(struct vhost_net *n,
+ 	return vhost_poll_start(poll, sock->file);
+ }
+ 
+-static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+-				    struct vhost_virtqueue *vq,
+-				    struct iovec iov[], unsigned int iov_size,
+-				    unsigned int *out_num, unsigned int *in_num)
++static bool vhost_net_tx_avail(struct vhost_net *net,
++			       struct vhost_virtqueue *vq)
+ {
+ 	unsigned long uninitialized_var(endtime);
+-	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+-				  out_num, in_num, NULL, NULL);
+ 
+-	if (r == vq->num && vq->busyloop_timeout) {
+-		preempt_disable();
+-		endtime = busy_clock() + vq->busyloop_timeout;
+-		while (vhost_can_busy_poll(vq->dev, endtime) &&
+-		       vhost_vq_avail_empty(vq->dev, vq))
+-			cpu_relax();
+-		preempt_enable();
+-		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+-				      out_num, in_num, NULL, NULL);
+-	}
++	if (!vq->busyloop_timeout)
++		return false;
+ 
+-	return r;
++	if (!vhost_vq_avail_empty(vq->dev, vq))
++		return true;
++
++	preempt_disable();
++	endtime = busy_clock() + vq->busyloop_timeout;
++	while (vhost_can_busy_poll(vq->dev, endtime) &&
++		vhost_vq_avail_empty(vq->dev, vq))
++		cpu_relax();
++	preempt_enable();
++
++	printk("vq avail %d\n", vhost_vq_avail_empty(vq->dev, vq));
++	return !vhost_vq_avail_empty(vq->dev, vq);
+ }
+ 
+ static bool vhost_exceeds_maxpend(struct vhost_net *net)
+@@ -498,8 +497,11 @@ static void handle_tx(struct vhost_net *net)
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(avails < 0))
+ 			break;
+-		/* Nothing new?  Wait for eventfd to tell us they refilled. */
++		/* Nothing new?  Busy poll for a while or wait for
++		 * eventfd to tell us they refilled. */
+ 		if (!avails) {
++			if (vhost_net_tx_avail(net, vq))
++				continue;
+ 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+ 				vhost_disable_notify(&net->dev, vq);
+ 				continue;
