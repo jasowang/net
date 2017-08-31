@@ -2490,27 +2490,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	total = vq->avail_idx - vq->last_avail_idx;
 	ret = total = min(total, num);
 
-#if 0
-	/* FIXME: into heads directly */
-	while (total) {
-		/* FIXME: use u16 for vq->num */
-		copied = min((u16)(vq->num - last_avail_idx), total);
-		ret2 = vhost_copy_from_user(vq, &indices[ret - total],
-					    &vq->avail->ring[last_avail_idx],
-					    copied * sizeof *indices);
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to get descriptors\n");
-			return -EFAULT;
-		}
-
-		last_avail_idx = 0;
-		total -= copied;
-	}
-
-	if (!heads)
-		goto out;
-#endif
-
 	for (i = 0; i < ret; i++) {
 		ret2 = vhost_get_avail(vq, heads[i].id,
 				      &vq->avail->ring[last_avail_idx]);
