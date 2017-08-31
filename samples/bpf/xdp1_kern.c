@@ -51,8 +51,6 @@ int xdp_prog1(struct xdp_md *ctx)
 	u64 nh_off;
 	u32 ipproto;
 
-	return rc;
-
 	nh_off = sizeof(*eth);
 	if (data + nh_off > data_end)
 		return rc;
