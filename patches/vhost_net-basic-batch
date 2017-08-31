@@ -1,5 +1,5 @@
 Bottom: 3ba89040e8f9dc5c68653cb5f9debf5e07e9e470
-Top:    0b3373d787027a124aa23ea01f8b1d011e3023da
+Top:    b0268e10139f2503f831c8ecd9ffbbafca4da522
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-31 11:09:03 +0800
 
@@ -228,7 +228,7 @@ index ba08b78..aa8a2ef 100644
  	}
  out:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a908095..daeec47 100644
+index a908095..4ca89b3 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -392,7 +392,7 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)
@@ -240,7 +240,7 @@ index a908095..daeec47 100644
  		if (!vq->indirect || !vq->log || !vq->heads)
  			goto err_nomem;
  	}
-@@ -2485,55 +2485,42 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2485,55 +2485,40 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		       &vq->avail->idx);
  		return -EFAULT;
  	}
@@ -277,7 +277,7 @@ index a908095..daeec47 100644
 +		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
  	}
  
- 	total = ret;
+-	total = ret;
 -	last_used_idx = vq->last_used_idx;
 +	last_used_idx = vq->last_used_idx & (vq->num - 1);
  	while (total) {
@@ -301,7 +301,6 @@ index a908095..daeec47 100644
 -		last_used_idx += copied;
  	}
  
-+out:
  	/* Only get avail ring entries after they have been exposed by guest. */
  	smp_rmb();
 -
