@@ -2500,7 +2500,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
 	}
 
-	total = ret;
 	last_used_idx = vq->last_used_idx & (vq->num - 1);
 	while (total) {
 		copied = min((u16)(vq->num - last_used_idx), total);
@@ -2518,7 +2517,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 	}
 
-out:
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
 	return ret;
