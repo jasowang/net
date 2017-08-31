@@ -446,6 +446,7 @@ static void handle_tx(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vring_used_elem used, *heads = vq->heads;
 	unsigned out, in;
 	int avails, head;
 	struct msghdr msg = {
@@ -461,7 +462,7 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
-	int i;
+	int i, batched = VHOST_RX_BATCH;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -476,6 +477,12 @@ static void handle_tx(struct vhost_net *net)
 	hdr_size = nvq->vhost_hlen;
 	zcopy = nvq->ubufs;
 
+	/* Disable zerocopy batched fetching for simplicity */
+	if (zcopy) {
+		heads = &used;
+		batched = 1;
+	}
+
 	for (;;) {
 		/* Release DMAs done buffers first */
 		if (zcopy)
@@ -487,9 +494,7 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avails = vhost_prefetch_desc_indices(vq,
-						zcopy ? NULL: vq->heads,
-						VHOST_RX_BATCH);
+		avails = vhost_prefetch_desc_indices(vq, heads, batched);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
 			break;
@@ -506,7 +511,7 @@ static void handle_tx(struct vhost_net *net)
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
 						   &out, &in, NULL, NULL,
-				     vhost16_to_cpu(vq, vq->heads[i].id));
+					       vhost16_to_cpu(vq, heads[i].id));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for TX: "
 				       "out %d, int %d\n", out, in);
