@@ -1,0 +1,55 @@
+Bottom: b0268e10139f2503f831c8ecd9ffbbafca4da522
+Top:    0a21a9f1e9ad54eb32e2a6e375f1e16896b87748
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-31 11:31:43 +0800
+
+Refresh of vhost_net-basic-batch
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index aa8a2ef..71b63ef 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -461,7 +461,6 @@ static void handle_tx(struct vhost_net *net)
+ 	struct socket *sock;
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	bool zcopy, zcopy_used;
+-	__virtio16 indices[VHOST_RX_BATCH];
+ 	int i;
+ 
+ 	mutex_lock(&vq->mutex);
+@@ -490,7 +489,6 @@ static void handle_tx(struct vhost_net *net)
+ 
+ 		avails = vhost_prefetch_desc_indices(vq,
+ 						zcopy ? NULL: vq->heads,
+-						indices,
+ 						VHOST_RX_BATCH);
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(avails < 0))
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 4ca89b3..155a276 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2472,7 +2472,7 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ /* Prefetch descriptor indices */
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				struct vring_used_elem *heads,
+-				__virtio16 *indices, u16 num)
++				u16 num)
+ {
+ 	int ret, ret2;
+ 	u16 last_avail_idx, last_used_idx, total, copied;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index abe7007..1943783 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -231,7 +231,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+                                 struct vring_used_elem *heads,
+-				__virtio16 *indices, u16 num);
++				u16 num);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
