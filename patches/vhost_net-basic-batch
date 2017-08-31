@@ -1,5 +1,5 @@
 Bottom: 3ba89040e8f9dc5c68653cb5f9debf5e07e9e470
-Top:    0a21a9f1e9ad54eb32e2a6e375f1e16896b87748
+Top:    30b6852de4312fafcd149d6affabe8716881a271
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-31 11:09:03 +0800
 
@@ -21,36 +21,49 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ba08b78..71b63ef 100644
+index ba08b78..fab9103 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -447,7 +447,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -446,8 +446,9 @@ static void handle_tx(struct vhost_net *net)
+ {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
++	struct vring_used_elem used, *heads = vq->heads;
  	unsigned out, in;
 -	int head;
 +	int avails, head;
  	struct msghdr msg = {
  		.msg_name = NULL,
  		.msg_namelen = 0,
-@@ -461,6 +461,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -461,6 +462,7 @@ static void handle_tx(struct vhost_net *net)
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	bool zcopy, zcopy_used;
-+	int i;
++	int i, batched = VHOST_RX_BATCH;
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -486,95 +487,107 @@ static void handle_tx(struct vhost_net *net)
+@@ -475,6 +477,12 @@ static void handle_tx(struct vhost_net *net)
+ 	hdr_size = nvq->vhost_hlen;
+ 	zcopy = nvq->ubufs;
+ 
++	/* Disable zerocopy batched fetching for simplicity */
++	if (zcopy) {
++		heads = &used;
++		batched = 1;
++	}
++
+ 	for (;;) {
+ 		/* Release DMAs done buffers first */
+ 		if (zcopy)
+@@ -486,95 +494,105 @@ static void handle_tx(struct vhost_net *net)
  		if (unlikely(vhost_exceeds_maxpend(net)))
  			break;
  
 -		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
 -						ARRAY_SIZE(vq->iov),
 -						&out, &in);
-+		avails = vhost_prefetch_desc_indices(vq,
-+						zcopy ? NULL: vq->heads,
-+						VHOST_RX_BATCH);
++		avails = vhost_prefetch_desc_indices(vq, heads, batched);
  		/* On error, stop handling until the next kick. */
 -		if (unlikely(head < 0))
 +		if (unlikely(avails < 0))
@@ -120,7 +133,7 @@ index ba08b78..71b63ef 100644
 +			head = __vhost_get_vq_desc(vq, vq->iov,
 +						   ARRAY_SIZE(vq->iov),
 +						   &out, &in, NULL, NULL,
-+				     vhost16_to_cpu(vq, vq->heads[i].id));
++					       vhost16_to_cpu(vq, heads[i].id));
 +			if (in) {
 +				vq_err(vq, "Unexpected descriptor format for TX: "
 +				       "out %d, int %d\n", out, in);
