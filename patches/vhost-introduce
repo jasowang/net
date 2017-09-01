@@ -5,6 +5,10 @@ Date:   2017-08-29 15:18:56 +0800
 
 vhost: introduce vhost_add_used_idx()
 
+This patch introduces a helper which just increase the used idx. This
+will be used in pair with vhost_prefetch_desc_indices() by batching
+code.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
