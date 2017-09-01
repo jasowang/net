@@ -3,7 +3,14 @@ Top:    88dc8dec6590a977ab1737e8fff672705f27d651
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-01 18:25:26 +0800
 
-vhost_net: basic batch processing of vring
+vhost_net: basic batched processing of vring
+
+This patches implementing basic batched processing of vring by
+prefetchig desc indices and update used ring in a batch. For
+non-zerocopy case, vq->heads were used for storing the prefetched
+indices and updating used ring. For zerocopy case and for simplicity,
+batched processing were simply disabled by only fetch and process one
+descriptor at a time.
 
 XDP_DROP (without touching skb) on Intel(R) Core(TM) i7-5600U CPU @
 2.60GHz (ERMS) shows:
@@ -16,7 +23,10 @@ Before: 3.00Mpps
 After (no rep): 3.42Mpps (+14%)
 After:  3.70Mpps (+23%)
 
+Batched descriptor fetching and translation could be done on top.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
