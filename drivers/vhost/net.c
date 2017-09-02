@@ -511,7 +511,7 @@ static void handle_tx(struct vhost_net *net)
 		for (i = 0; i < avails; i++) {
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
-						   &out, &in, NULL, NULL,
+						   &out, &in, NULL, NULL, NULL,
 					       vhost16_to_cpu(vq, heads[i].id));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for "
