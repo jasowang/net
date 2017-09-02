@@ -1,5 +1,5 @@
-Bottom: 88dc8dec6590a977ab1737e8fff672705f27d651
-Top:    f9042e21e847cdf46c8daae5a3c80d2aa5d83777
+Bottom: 3ff4aafab7bc51058ad5262731cfa7b9c7138957
+Top:    2fdfce83f9ec9cc3a3d1d716e73ce1e0066bc607
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index afd0480..1988e3e 100644
+index 4f24b10..e7581f9 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -459,7 +459,8 @@ static void handle_tx(struct vhost_net *net)
@@ -43,10 +43,10 @@ index afd0480..1988e3e 100644
  			head = __vhost_get_vq_desc(vq, vq->iov,
  						   ARRAY_SIZE(vq->iov),
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 2ab4c16..be0336c 100644
+index 4a5d1a9..15675de 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2477,6 +2477,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2481,6 +2481,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	u16 last_avail_idx, last_used_idx, total, copied;
  	__virtio16 avail_idx;
  	struct vring_used_elem __user *used;
@@ -54,7 +54,7 @@ index 2ab4c16..be0336c 100644
  	int i;
  
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-@@ -2497,6 +2498,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2501,6 +2502,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  			return -EFAULT;
  		}
  		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
@@ -63,7 +63,7 @@ index 2ab4c16..be0336c 100644
  	}
  
  	last_used_idx = vq->last_used_idx & (vq->num - 1);
-@@ -2516,6 +2519,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2520,6 +2523,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		total -= copied;
  	}
  
