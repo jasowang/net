@@ -1,5 +1,5 @@
 Bottom: 3ff4aafab7bc51058ad5262731cfa7b9c7138957
-Top:    19649da1d8a5e31f9ff46d40fbe2faaa6e67cfb3
+Top:    23d5b707519e721112ee61898d8bfa06065815f7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -57,7 +57,7 @@ index 4f24b10..bf1ddef 100644
  				vq_err(vq, "Unexpected descriptor format for TX: "
  				       "out %d, int %d\n", out, in);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4a5d1a9..227fcad 100644
+index 4a5d1a9..5aa93b5 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2475,7 +2475,8 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
@@ -88,15 +88,16 @@ index 4a5d1a9..227fcad 100644
  	}
  
  	last_used_idx = vq->last_used_idx & (vq->num - 1);
-@@ -2520,6 +2525,17 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2520,6 +2525,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		total -= copied;
  	}
  
-+	if (cont) {
++
++	if (*cont) {
 +		__virtio16 ring_head = vhost16_to_cpu(vq, heads[0].id);
 +		ret2 = vhost_copy_from_user(vq, descs,
 +					    vq->desc + ring_head,
-+					    sizeof descs[0]);
++					    ret * sizeof descs[0]);
 +		if (unlikely(ret2)) {
 +			vq_err(vq, "Failed to get descriptor\n");
 +			return -EFAULT;
