@@ -5,6 +5,8 @@ Date:   2017-09-02 11:22:21 +0800
 
 vhost: prefetch vring descriptors
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
