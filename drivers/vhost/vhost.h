@@ -151,6 +151,7 @@ struct vhost_virtqueue {
 	u32 busyloop_timeout;
 	struct page *page_desc;
 	struct vring_desc *desc_vaddr;
+	struct vring_desc descs[64];
 };
 
 struct vhost_msg_node {
@@ -233,7 +234,8 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				struct vring_used_elem *heads,
-				u16 num);
+				struct vring_desc *desc,
+				u16 num, bool *cont);
 
 #define vq_err(vq, fmt, ...) do {                                  \
 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
