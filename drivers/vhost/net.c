@@ -482,6 +482,8 @@ static void handle_tx(struct vhost_net *net)
 	}
 
 	for (;;) {
+		bool cont = false;
+
 		/* Release DMAs done buffers first */
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
@@ -492,7 +494,8 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avails = vhost_prefetch_desc_indices(vq, heads, batched);
+		avails = vhost_prefetch_desc_indices(vq, heads, vq->descs,
+						     batched, &cont);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
 			break;
@@ -509,10 +512,12 @@ static void handle_tx(struct vhost_net *net)
 		}
 
 		for (i = 0; i < avails; i++) {
+			struct vring_desc *d = cont ? &vq->descs[i] : NULL;
+
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
-						   &out, &in, NULL, NULL, NULL,
-					       vhost16_to_cpu(vq, heads[i].id));
+						   &out, &in, NULL, NULL, d,
+						   vhost16_to_cpu(vq, heads[i].id));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for "
 					   "TX: out %d, int %d\n", out, in);
