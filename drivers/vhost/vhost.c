@@ -2476,13 +2476,16 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
 int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				struct vring_used_elem *heads,
-				u16 num)
+				struct vring_desc *descs,
+				u16 num, bool *cont)
 {
 	int ret, ret2;
 	u16 last_avail_idx, last_used_idx, total, copied;
 	__virtio16 avail_idx;
 	struct vring_used_elem __user *used;
 	int i;
+
+	*cont = true;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -2502,6 +2505,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
+		if (i > 0 && *cont && heads[i].id != heads[i - 1].id + 1)
+			*cont = false;
 	}
 
 	last_used_idx = vq->last_used_idx & (vq->num - 1);
@@ -2519,6 +2524,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 
 		last_used_idx = 0;
 		total -= copied;
+	}
+
+
+	if (*cont) {
+		__virtio16 ring_head = vhost16_to_cpu(vq, heads[0].id);
+		ret2 = vhost_copy_from_user(vq, descs,
+					    vq->desc + ring_head,
+					    ret * sizeof descs[0]);
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to get descriptor\n");
+			return -EFAULT;
+		}
 	}
 
 	/* Only get avail ring entries after they have been exposed by guest. */
