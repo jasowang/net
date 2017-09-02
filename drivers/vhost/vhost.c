@@ -2481,6 +2481,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	u16 last_avail_idx, last_used_idx, total, copied;
 	__virtio16 avail_idx;
 	struct vring_used_elem __user *used;
+	bool contigious = true;
 	int i;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
@@ -2501,6 +2502,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
+		if (i > 0 && contigious && heads[i].id != heads[i - 1].id + 1)
+			contigious = false;
 	}
 
 	last_used_idx = vq->last_used_idx & (vq->num - 1);
@@ -2519,6 +2522,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		last_used_idx = 0;
 		total -= copied;
 	}
+
+	printk("contigious %d\n", contigious);
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();

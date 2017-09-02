@@ -459,7 +459,8 @@ static void handle_tx(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
-	bool zcopy, zcopy_used;
+	bool zcopy, zcopy_used, cont;
+	struct vring_desc descs[VHOST_RX_BATCH];
 	int i, batched = VHOST_RX_BATCH;
 
 	mutex_lock(&vq->mutex);
@@ -506,6 +507,17 @@ static void handle_tx(struct vhost_net *net)
 				continue;
 			}
 			break;
+		}
+
+		if (cont) {
+			__virito16 ring_head = vhost16_to_cpu(vq, heads[0].id);
+			ret = vhost_copy_from_user(vq, descs,
+						   vq->desc + ring_head,
+						   sizeof descs[0]);
+			if (unlikely(ret)) {
+				vq_err(vq, "Failed to get descriptor\n");
+				break;
+			}
 		}
 
 		for (i = 0; i < avails; i++) {
