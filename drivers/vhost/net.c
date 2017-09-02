@@ -459,7 +459,7 @@ static void handle_tx(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
-	bool zcopy, zcopy_used, cont;
+	bool zcopy, zcopy_used;
 	struct vring_desc descs[VHOST_RX_BATCH];
 	int i, batched = VHOST_RX_BATCH;
 
@@ -483,6 +483,8 @@ static void handle_tx(struct vhost_net *net)
 	}
 
 	for (;;) {
+		bool cont = false;
+
 		/* Release DMAs done buffers first */
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
@@ -493,7 +495,8 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avails = vhost_prefetch_desc_indices(vq, heads, batched);
+		avails = vhost_prefetch_desc_indices(vq, heads, descs,
+						     batched, &cont);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
 			break;
@@ -509,22 +512,13 @@ static void handle_tx(struct vhost_net *net)
 			break;
 		}
 
-		if (cont) {
-			__virito16 ring_head = vhost16_to_cpu(vq, heads[0].id);
-			ret = vhost_copy_from_user(vq, descs,
-						   vq->desc + ring_head,
-						   sizeof descs[0]);
-			if (unlikely(ret)) {
-				vq_err(vq, "Failed to get descriptor\n");
-				break;
-			}
-		}
-
 		for (i = 0; i < avails; i++) {
+			struct vring_desc *d = cont ? &descs[i] : NULL;
+
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
-						   &out, &in, NULL, NULL, NULL,
-					       vhost16_to_cpu(vq, heads[i].id));
+						   &out, &in, NULL, NULL, d,
+						   vhost16_to_cpu(vq, heads[i].id));
 			if (in) {
 				vq_err(vq, "Unexpected descriptor format for TX: "
 				       "out %d, int %d\n", out, in);
