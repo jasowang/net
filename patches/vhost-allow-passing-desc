@@ -1,0 +1,11 @@
+Bottom: 88dc8dec6590a977ab1737e8fff672705f27d651
+Top:    88dc8dec6590a977ab1737e8fff672705f27d651
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-02 11:47:27 +0800
+
+vhost: allow passing desc
+
+
+---
+
+
