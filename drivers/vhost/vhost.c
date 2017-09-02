@@ -2525,11 +2525,12 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 	}
 
-	if (cont) {
+
+	if (*cont) {
 		__virtio16 ring_head = vhost16_to_cpu(vq, heads[0].id);
 		ret2 = vhost_copy_from_user(vq, descs,
 					    vq->desc + ring_head,
-					    sizeof descs[0]);
+					    ret * sizeof descs[0]);
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to get descriptor\n");
 			return -EFAULT;
