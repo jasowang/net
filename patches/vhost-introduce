@@ -1,5 +1,5 @@
-Bottom: ab9f2a6c3b48dfffe67a83894e8ff778c48d8b3f
-Top:    3408319f4ed3c6a496102daa8ea44cf839ba9cb1
+Bottom: 1f3977ff5c4b04c4923d8223152bfc57dddf3403
+Top:    fb8ae09fbcda4641bd74831a8d9cdbdc594cf733
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-29 15:18:56 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index cdf0121..4b83fa5 100644
+index 8f2cd84..72040ccd 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2178,6 +2178,38 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
@@ -58,10 +58,10 @@ index cdf0121..4b83fa5 100644
  			    struct vring_used_elem *heads,
  			    unsigned count)
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 8e968dc..877815e 100644
+index 87ead85..a351820 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -199,6 +199,7 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *,
+@@ -199,6 +199,7 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
  void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
  
  int vhost_vq_init_access(struct vhost_virtqueue *);
