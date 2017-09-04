@@ -534,7 +534,7 @@ static void handle_tx(struct vhost_net *net)
 
 			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
-				         nvq->done_idx
+					nvq->done_idx
 				     && vhost_net_tx_select_zcopy(net);
 
 			/* use msg_control to pass vhost zerocopy ubuf info to skb */
