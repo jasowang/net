@@ -1,0 +1,37 @@
+Bottom: 690d96495e47c71b7bb4e2a11f6a5843b866c58d
+Top:    1f3977ff5c4b04c4923d8223152bfc57dddf3403
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-04 16:46:41 +0800
+
+Refresh of vhost-introduce-helper-to
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index cdf0121..8f2cd84 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2473,7 +2473,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		ret2 = vhost_copy_to_user(vq,
+ 					  &vq->used->ring[last_used_idx],
+ 					  &heads[ret - total],
+-					  copied * sizeof *used);
++					  copied * sizeof(*used));
+ 
+ 		if (unlikely(ret2)) {
+ 			vq_err(vq, "Failed to update used ring!\n");
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index d16bb0b..87ead85 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -229,8 +229,8 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+-                                struct vring_used_elem *heads,
+-			        u16 num);
++				struct vring_used_elem *heads,
++				u16 num);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
