@@ -2187,7 +2187,8 @@ int vhost_add_used_idx(struct vhost_virtqueue *vq, int n)
 	/* If the driver never bothers to signal in a very long while,
 	 * used index might wrap around. If that happens, invalidate
 	 * signalled_used index we stored. TODO: make sure driver
-	 * signals at least once in 2^16 and remove this. */
+	 * signals at least once in 2^16 and remove this.
+	 */
 	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
 		vq->signalled_used_valid = false;
 
@@ -2202,7 +2203,7 @@ int vhost_add_used_idx(struct vhost_virtqueue *vq, int n)
 		/* Log used index update. */
 		log_write(vq->log_base,
 			  vq->log_addr + offsetof(struct vring_used, idx),
-			  sizeof vq->used->idx);
+			  sizeof(vq->used->idx));
 		if (vq->log_ctx)
 			eventfd_signal(vq->log_ctx, 1);
 	}
