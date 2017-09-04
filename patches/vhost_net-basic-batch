@@ -1,5 +1,5 @@
-Bottom: 3408319f4ed3c6a496102daa8ea44cf839ba9cb1
-Top:    d90f821e5aa74536b6fcc23757fd72c63268ec8f
+Bottom: 92530eef371dfb2a8f7d7520e8aa76cd63e00551
+Top:    9d6c66cb15c181e3f632faf74d76debb5f07eb7c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-01 18:25:26 +0800
 
@@ -304,7 +304,7 @@ index 8d2bcae..ac0a914 100644
  		mutex_unlock(&vq->mutex);
  
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 4b83fa5..2ab4c16 100644
+index bc3f8bc..43f571e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -392,7 +392,7 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)
