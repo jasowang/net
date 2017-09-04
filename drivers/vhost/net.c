@@ -514,8 +514,8 @@ static void handle_tx(struct vhost_net *net)
 						   &out, &in, NULL, NULL,
 					       vhost16_to_cpu(vq, heads[i].id));
 			if (in) {
-				vq_err(vq, "Unexpected descriptor format for TX: "
-				       "out %d, int %d\n", out, in);
+				vq_err(vq, "Unexpected descriptor format for "
+					   "TX: out %d, int %d\n", out, in);
 				goto out;
 			}
 
@@ -537,13 +537,17 @@ static void handle_tx(struct vhost_net *net)
 					nvq->done_idx
 				     && vhost_net_tx_select_zcopy(net);
 
-			/* use msg_control to pass vhost zerocopy ubuf info to skb */
+			/* use msg_control to pass vhost zerocopy ubuf
+			 * info to skb
+			 */
 			if (zcopy_used) {
 				struct ubuf_info *ubuf;
 				ubuf = nvq->ubuf_info + nvq->upend_idx;
 
-				vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
-				vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+				vq->heads[nvq->upend_idx].id =
+					cpu_to_vhost32(vq, head);
+				vq->heads[nvq->upend_idx].len =
+					VHOST_DMA_IN_PROGRESS;
 				ubuf->callback = vhost_zerocopy_callback;
 				ubuf->ctx = nvq->ubufs;
 				ubuf->desc = nvq->upend_idx;
@@ -552,7 +556,8 @@ static void handle_tx(struct vhost_net *net)
 				msg.msg_controllen = sizeof(ubuf);
 				ubufs = nvq->ubufs;
 				atomic_inc(&ubufs->refcount);
-				nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+				nvq->upend_idx =
+					(nvq->upend_idx + 1) % UIO_MAXIOV;
 			} else {
 				msg.msg_control = NULL;
 				ubufs = NULL;
@@ -567,13 +572,15 @@ static void handle_tx(struct vhost_net *net)
 				msg.msg_flags &= ~MSG_MORE;
 			}
 
-			/* TODO: Check specific error and bomb out unless ENOBUFS? */
+			/* TODO: Check specific error and bomb out
+			 * unless ENOBUFS?
+			 */
 			err = sock->ops->sendmsg(sock, &msg, len);
 			if (unlikely(err < 0)) {
 				if (zcopy_used) {
 					vhost_net_ubuf_put(ubufs);
-					nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
-						         % UIO_MAXIOV;
+					nvq->upend_idx =
+				   ((unsigned)nvq->upend_idx - 1) % UIO_MAXIOV;
 				}
 				vhost_discard_vq_desc(vq, 1);
 				goto out;
