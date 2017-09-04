@@ -2473,7 +2473,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		ret2 = vhost_copy_to_user(vq,
 					  &vq->used->ring[last_used_idx],
 					  &heads[ret - total],
-					  copied * sizeof *used);
+					  copied * sizeof(*used));
 
 		if (unlikely(ret2)) {
 			vq_err(vq, "Failed to update used ring!\n");
