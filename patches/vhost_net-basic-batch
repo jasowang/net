@@ -12,13 +12,13 @@ indices and updating used ring. For zerocopy case and for simplicity,
 batched processing were simply disabled by only fetch and process one
 descriptor at a time.
 
-XDP_DROP (without touching skb) on Intel(R) Core(TM) i7-5600U CPU @
-2.60GHz (ERMS) shows:
+XDP_DROP (without touching skb) on tun:
 
-Before: 4.25Mpps
-After:  5.28Mpps (+24%)
+On Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz (ERMS):
+Before: 4.50Mpps
+After:  5.53Mpps (+22%)
 
-REP GOOD:
+Intel(R) Xeon(R) CPU E5-2650 0 @ 2.00GHz (REP GOOD):
 Before: 3.00Mpps
 After:  3.70Mpps (+23%)
 
