@@ -392,7 +392,7 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)
 		vq->indirect = kmalloc(sizeof *vq->indirect * UIO_MAXIOV,
 				       GFP_KERNEL);
 		vq->log = kmalloc(sizeof *vq->log * UIO_MAXIOV, GFP_KERNEL);
-		vq->heads = kmalloc(sizeof *vq->heads * UIO_MAXIOV, GFP_KERNEL);
+		vq->heads = kzalloc(sizeof *vq->heads * UIO_MAXIOV, GFP_KERNEL);
 		if (!vq->indirect || !vq->log || !vq->heads)
 			goto err_nomem;
 	}
