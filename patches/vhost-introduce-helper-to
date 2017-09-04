@@ -1,5 +1,5 @@
-Bottom: 50581eac42ebf825d2b40044c5bd4f51aea3d5f1
-Top:    ab9f2a6c3b48dfffe67a83894e8ff778c48d8b3f
+Bottom: cbd0049615c44215ff4ed0e8f36f5f6055cbcb65
+Top:    690d96495e47c71b7bb4e2a11f6a5843b866c58d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -79,7 +79,7 @@ index 8c8890a..cdf0121 100644
  static int __init vhost_init(void)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index f41ad64..8e968dc 100644
+index d587e0f..d16bb0b 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -228,6 +228,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
