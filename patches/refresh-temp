@@ -1,0 +1,32 @@
+Bottom: 5ec089482700914fdff67904899703fd3aaa92dd
+Top:    92530eef371dfb2a8f7d7520e8aa76cd63e00551
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-04 16:49:53 +0800
+
+Refresh of vhost-introduce
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index e11ff14..bc3f8bc 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2187,7 +2187,8 @@ int vhost_add_used_idx(struct vhost_virtqueue *vq, int n)
+ 	/* If the driver never bothers to signal in a very long while,
+ 	 * used index might wrap around. If that happens, invalidate
+ 	 * signalled_used index we stored. TODO: make sure driver
+-	 * signals at least once in 2^16 and remove this. */
++	 * signals at least once in 2^16 and remove this.
++	 */
+ 	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
+ 		vq->signalled_used_valid = false;
+ 
+@@ -2202,7 +2203,7 @@ int vhost_add_used_idx(struct vhost_virtqueue *vq, int n)
+ 		/* Log used index update. */
+ 		log_write(vq->log_base,
+ 			  vq->log_addr + offsetof(struct vring_used, idx),
+-			  sizeof vq->used->idx);
++			  sizeof(vq->used->idx));
+ 		if (vq->log_ctx)
+ 			eventfd_signal(vq->log_ctx, 1);
+ 	}
