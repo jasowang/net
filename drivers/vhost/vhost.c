@@ -2511,8 +2511,10 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
-		if (i > 0 && *cont && heads[i].id != heads[i - 1].id + 1)
+		if (i > 0 && *cont && heads[i].id !=
+			((heads[i - 1].id + 1) & (vq->num - 1))) {
 			*cont = false;
+		}
 	}
 
 	last_used_idx = vq->last_used_idx & (vq->num - 1);
@@ -2534,13 +2536,20 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 
 
 	if (*cont) {
-		__virtio16 ring_head = vhost16_to_cpu(vq, heads[0].id);
-		ret2 = vhost_copy_from_user(vq, descs,
+		total = ret;
+		while (total) {
+			int i = ret - total;
+			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
+
+			copied = min((u16)(vq->num - ring_head), total);
+			ret2 = vhost_copy_from_user(vq, &descs[i],
 					    vq->desc + ring_head,
-					    ret * sizeof descs[0]);
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to get descriptor\n");
-			return -EFAULT;
+					    copied * sizeof descs[0]);
+			if (unlikely(ret2)) {
+				vq_err(vq, "Failed to get descriptor\n");
+				return -EFAULT;
+			}
+			total -= copied;
 		}
 	}
 
