@@ -1,0 +1,132 @@
+Bottom: c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
+Top:    245155038f8cbef23a6b6f8db48e09769bfb1e43
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-05 10:22:54 +0800
+
+Refresh of vhost-allow-passing-desc
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b304659..e610685 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -511,7 +511,7 @@ static void handle_tx(struct vhost_net *net)
+ 		for (i = 0; i < avails; i++) {
+ 			head = __vhost_get_vq_desc(vq, vq->iov,
+ 						   ARRAY_SIZE(vq->iov),
+-						   &out, &in, NULL, NULL,
++						   &out, &in, NULL, NULL, NULL,
+ 					       vhost16_to_cpu(vq, heads[i].id));
+ 			if (in) {
+ 				vq_err(vq, "Unexpected descriptor format for "
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 43f571e..fb7ef91 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2043,12 +2043,16 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct iovec iov[], unsigned int iov_size,
+ 			unsigned int *out_num, unsigned int *in_num,
+ 			struct vhost_log *log, unsigned int *log_num,
++			struct vring_desc *desc,
+ 			__virtio16 head)
+ {
+-	struct vring_desc desc;
++	struct vring_desc d;
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
++	if (!desc)
++		desc = &d;
++
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head > vq->num)) {
+ 		vq_err(vq, "Guest says index %u > %u is available",
+@@ -2075,17 +2079,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
+-					   sizeof desc);
++		ret = vhost_copy_from_user(vq, desc, vq->desc + i,
++					   sizeof desc[0]);
+ 		if (unlikely(ret)) {
+ 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+ 			       i, vq->desc + i);
+ 			return -EFAULT;
+ 		}
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+-					   log, log_num, &desc);
++					   log, log_num, desc);
+ 			if (unlikely(ret < 0)) {
+ 				if (ret != -EAGAIN)
+ 					vq_err(vq, "Failure detected "
+@@ -2095,12 +2099,12 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			continue;
+ 		}
+ 
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+ 			access = VHOST_ACCESS_WO;
+ 		else
+ 			access = VHOST_ACCESS_RO;
+-		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+-				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
++		ret = translate_desc(vq, vhost64_to_cpu(vq, desc->addr),
++				     vhost32_to_cpu(vq, desc->len), iov + iov_count,
+ 				     iov_size - iov_count, access);
+ 		if (unlikely(ret < 0)) {
+ 			if (ret != -EAGAIN)
+@@ -2113,8 +2117,8 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			 * increment that count. */
+ 			*in_num += ret;
+ 			if (unlikely(log)) {
+-				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
+-				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
++				log[*log_num].addr = vhost64_to_cpu(vq, desc->addr);
++				log[*log_num].len = vhost32_to_cpu(vq, desc->len);
+ 				++*log_num;
+ 			}
+ 		} else {
+@@ -2127,7 +2131,7 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			}
+ 			*out_num += ret;
+ 		}
+-	} while ((i = next_desc(vq, &desc)) != -1);
++	} while ((i = next_desc(vq, desc)) != -1);
+ 
+ 	/* On success, increment avail index. */
+ 	vq->last_avail_idx++;
+@@ -2154,7 +2158,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 		return head;
+ 
+ 	return __vhost_get_vq_desc(vq, iov, iov_size, out_num, in_num,
+-				   log, log_num, head);
++				   log, log_num, NULL, head);
+ }
+ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+ 
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index a351820..d4646e7 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -191,11 +191,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num);
+-int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+-			struct iovec iov[], unsigned int iov_count,
+-			unsigned int *out_num, unsigned int *in_num,
+-			struct vhost_log *log, unsigned int *log_num,
+-			__virtio16 ring_head);
++int __vhost_get_vq_desc(struct vhost_virtqueue *,
++                        struct iovec iov[], unsigned int iov_count,
++                        unsigned int *out_num, unsigned int *in_num,
++                        struct vhost_log *log, unsigned int *log_num,
++                        struct vring_desc *desc, __virtio16 ring_head);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
