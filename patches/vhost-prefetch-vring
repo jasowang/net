@@ -1,5 +1,5 @@
 Bottom: 245155038f8cbef23a6b6f8db48e09769bfb1e43
-Top:    245155038f8cbef23a6b6f8db48e09769bfb1e43
+Top:    cfcf7952fffaa38aea2f5e3ad873fd41b58ac647
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -10,4 +10,114 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e610685..c437a2c 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -460,6 +460,7 @@ static void handle_tx(struct vhost_net *net)
+ 	struct socket *sock;
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	bool zcopy, zcopy_used;
++	struct vring_desc descs[VHOST_RX_BATCH];
+ 	int i, batched = VHOST_RX_BATCH;
+ 
+ 	mutex_lock(&vq->mutex);
+@@ -482,6 +483,8 @@ static void handle_tx(struct vhost_net *net)
+ 	}
+ 
+ 	for (;;) {
++		bool cont = false;
++
+ 		/* Release DMAs done buffers first */
+ 		if (zcopy)
+ 			vhost_zerocopy_signal_used(net, vq);
+@@ -492,7 +495,8 @@ static void handle_tx(struct vhost_net *net)
+ 		if (unlikely(vhost_exceeds_maxpend(net)))
+ 			break;
+ 
+-		avails = vhost_prefetch_desc_indices(vq, heads, batched);
++		avails = vhost_prefetch_desc_indices(vq, heads, descs,
++						     batched, &cont);
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(avails < 0))
+ 			break;
+@@ -509,10 +513,12 @@ static void handle_tx(struct vhost_net *net)
+ 		}
+ 
+ 		for (i = 0; i < avails; i++) {
++			struct vring_desc *d = cont ? &descs[i] : NULL;
++
+ 			head = __vhost_get_vq_desc(vq, vq->iov,
+ 						   ARRAY_SIZE(vq->iov),
+-						   &out, &in, NULL, NULL, NULL,
+-					       vhost16_to_cpu(vq, heads[i].id));
++						   &out, &in, NULL, NULL, d,
++						   vhost16_to_cpu(vq, heads[i].id));
+ 			if (in) {
+ 				vq_err(vq, "Unexpected descriptor format for "
+ 					   "TX: out %d, int %d\n", out, in);
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index fb7ef91..e3869ad 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2476,7 +2476,8 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				struct vring_used_elem *heads,
+-				u16 num)
++				struct vring_desc *descs,
++				u16 num, bool *cont)
+ {
+ 	int ret, ret2;
+ 	u16 last_avail_idx, last_used_idx, total, copied;
+@@ -2484,6 +2485,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	struct vring_used_elem __user *used;
+ 	int i;
+ 
++	*cont = true;
++
+ 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+ 		vq_err(vq, "Failed to access avail idx at %p\n",
+ 		       &vq->avail->idx);
+@@ -2502,6 +2505,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
++		if (i > 0 && *cont && heads[i].id != heads[i - 1].id + 1)
++			*cont = false;
+ 	}
+ 
+ 	last_used_idx = vq->last_used_idx & (vq->num - 1);
+@@ -2521,6 +2526,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		total -= copied;
+ 	}
+ 
++
++	if (*cont) {
++		__virtio16 ring_head = vhost16_to_cpu(vq, heads[0].id);
++		ret2 = vhost_copy_from_user(vq, descs,
++					    vq->desc + ring_head,
++					    ret * sizeof descs[0]);
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to get descriptor\n");
++			return -EFAULT;
++		}
++	}
++
+ 	/* Only get avail ring entries after they have been exposed by guest. */
+ 	smp_rmb();
+ 	return ret;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index d4646e7..9ea0b55 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -231,7 +231,8 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				struct vring_used_elem *heads,
+-				u16 num);
++				struct vring_desc *desc,
++				u16 num, bool *cont);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
