@@ -1,0 +1,30 @@
+Bottom: 6d568218b73580a6ddd5883d6c6f52a5279ecc90
+Top:    356f33f3c593f1a18af5fa0b9c4028b8124d03fb
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-05 15:11:19 +0800
+
+Refresh of vhost-batch-signalling
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index c437a2c..9e8d1f3 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -596,7 +596,6 @@ static void handle_tx(struct vhost_net *net)
+ 					" len %d != %zd\n", err, len);
+ 			if (!zcopy) {
+ 				vhost_add_used_idx(vq, 1);
+-				vhost_signal(&net->dev, vq);
+ 			} else if (!zcopy_used) {
+ 				vhost_add_used_and_signal(&net->dev,
+ 							  vq, head, 0);
+@@ -608,6 +607,8 @@ static void handle_tx(struct vhost_net *net)
+ 				goto out;
+ 			}
+ 		}
++		if (!zcopy)
++			vhost_signal(&net->dev, vq);
+ 	}
+ out:
+ 	mutex_unlock(&vq->mutex);
