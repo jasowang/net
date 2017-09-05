@@ -596,7 +596,6 @@ static void handle_tx(struct vhost_net *net)
 					" len %d != %zd\n", err, len);
 			if (!zcopy) {
 				vhost_add_used_idx(vq, 1);
-				vhost_signal(&net->dev, vq);
 			} else if (!zcopy_used) {
 				vhost_add_used_and_signal(&net->dev,
 							  vq, head, 0);
@@ -608,6 +607,8 @@ static void handle_tx(struct vhost_net *net)
 				goto out;
 			}
 		}
+		if (!zcopy)
+			vhost_signal(&net->dev, vq);
 	}
 out:
 	mutex_unlock(&vq->mutex);
