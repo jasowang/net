@@ -5,6 +5,8 @@ Date:   2017-09-05 15:11:14 +0800
 
 vhost: batch signalling
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
