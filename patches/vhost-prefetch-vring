@@ -1,5 +1,5 @@
 Bottom: 245155038f8cbef23a6b6f8db48e09769bfb1e43
-Top:    cfcf7952fffaa38aea2f5e3ad873fd41b58ac647
+Top:    3b21fbd54d4b3f98b9248eb2f0247a00d61a0176
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -57,10 +57,57 @@ index e610685..c437a2c 100644
  				vq_err(vq, "Unexpected descriptor format for "
  					   "TX: out %d, int %d\n", out, in);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index fb7ef91..e3869ad 100644
+index fb7ef91..df603de 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2476,7 +2476,8 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+@@ -2043,15 +2043,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct iovec iov[], unsigned int iov_size,
+ 			unsigned int *out_num, unsigned int *in_num,
+ 			struct vhost_log *log, unsigned int *log_num,
+-			struct vring_desc *desc,
++			struct vring_desc *d,
+ 			__virtio16 head)
+ {
+-	struct vring_desc d;
++	struct vring_desc vring_desc, *desc = &vring_desc;
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
+-	if (!desc)
+-		desc = &d;
++	if (!d)
++		desc = &vring_desc;
++	else
++		desc = d;
+ 
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head > vq->num)) {
+@@ -2079,13 +2081,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, desc, vq->desc + i,
+-					   sizeof desc[0]);
+-		if (unlikely(ret)) {
+-			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+-			       i, vq->desc + i);
+-			return -EFAULT;
+-		}
++		if (!d) {
++			ret = vhost_copy_from_user(vq, desc, vq->desc + i,
++						   sizeof desc[0]);
++			if (unlikely(ret)) {
++				vq_err(vq, "Failed to get descriptor: "
++	                                   "idx %d addr %p\n",
++					i, vq->desc + i);
++				return -EFAULT;
++			}
++		} else
++			d = NULL;
+ 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+@@ -2476,7 +2482,8 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
  int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  				struct vring_used_elem *heads,
@@ -70,7 +117,7 @@ index fb7ef91..e3869ad 100644
  {
  	int ret, ret2;
  	u16 last_avail_idx, last_used_idx, total, copied;
-@@ -2484,6 +2485,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2484,6 +2491,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  	struct vring_used_elem __user *used;
  	int i;
  
@@ -79,7 +126,7 @@ index fb7ef91..e3869ad 100644
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
  		       &vq->avail->idx);
-@@ -2502,6 +2505,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2502,6 +2511,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  			return -EFAULT;
  		}
  		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
@@ -88,7 +135,7 @@ index fb7ef91..e3869ad 100644
  	}
  
  	last_used_idx = vq->last_used_idx & (vq->num - 1);
-@@ -2521,6 +2526,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2521,6 +2532,18 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		total -= copied;
  	}
  
@@ -121,3 +168,16 @@ index d4646e7..9ea0b55 100644
  
  #define vq_err(vq, fmt, ...) do {                                  \
  		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
+diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
+index 2197421..a4b89d3 100644
+--- a/samples/bpf/xdp1_kern.c
++++ b/samples/bpf/xdp1_kern.c
+@@ -51,6 +51,8 @@ int xdp_prog1(struct xdp_md *ctx)
+ 	u64 nh_off;
+ 	u32 ipproto;
+ 
++	return rc;
++
+ 	nh_off = sizeof(*eth);
+ 	if (data + nh_off > data_end)
+ 		return rc;
