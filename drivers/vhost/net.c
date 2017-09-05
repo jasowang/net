@@ -521,16 +521,18 @@ static void handle_tx(struct vhost_net *net)
 
 			/* Skip header. TODO: support TSO. */
 			len = iov_length(vq->iov, out);
-			iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
-			iov_iter_advance(&msg.msg_iter, hdr_size);
-			/* Sanity check */
-			if (!msg_data_left(&msg)) {
-				vq_err(vq, "Unexpected header len for TX: "
-					"%zd expected %zd\n",
-					len, hdr_size);
-				goto out;
+			iov_iter_init(&msg.msg_iter, WRITE,  vq->iov, out, len);
+			if (unlikely(hdr_size)) {
+				iov_iter_advance(&msg.msg_iter, hdr_size);
+				/* Sanity check */
+				if (!msg_data_left(&msg)) {
+					vq_err(vq, "Unexpected header len for "
+						   "TX: %zd expected %zd\n",
+						len, hdr_size);
+					goto out;
+				}
+				len = msg_data_left(&msg);
 			}
-			len = msg_data_left(&msg);
 
 			zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				     && (nvq->upend_idx + 1) % UIO_MAXIOV !=
