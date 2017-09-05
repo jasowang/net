@@ -5,6 +5,8 @@ Date:   2017-09-05 15:17:46 +0800
 
 vhost: avoid unnecessary iov iter operation
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
