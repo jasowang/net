@@ -1,5 +1,5 @@
 Bottom: 245155038f8cbef23a6b6f8db48e09769bfb1e43
-Top:    3b21fbd54d4b3f98b9248eb2f0247a00d61a0176
+Top:    6d568218b73580a6ddd5883d6c6f52a5279ecc90
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -168,16 +168,3 @@ index d4646e7..9ea0b55 100644
  
  #define vq_err(vq, fmt, ...) do {                                  \
  		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
-diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
-index 2197421..a4b89d3 100644
---- a/samples/bpf/xdp1_kern.c
-+++ b/samples/bpf/xdp1_kern.c
-@@ -51,6 +51,8 @@ int xdp_prog1(struct xdp_md *ctx)
- 	u64 nh_off;
- 	u32 ipproto;
- 
-+	return rc;
-+
- 	nh_off = sizeof(*eth);
- 	if (data + nh_off > data_end)
- 		return rc;
