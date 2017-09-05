@@ -1,6 +1,6 @@
 Version: 1
-Previous: 00c57b1ea0fb17b5afc0112e4355b0be26b01715
-Head: 7ee2bb645c939fdb0e1e0e0f20f7eacc12499cd2
+Previous: 27dc05fa56bf4c37d26b71aecbeb943aad092a47
+Head: 6c805d98cec870a15dbc403eaa0710bd4b5f5633
 Applied:
   vhost-split-out-ring-head: f45cbf0cbc0e374b2709d9614cd01a09fa7e7604
   vhost-introduce-helper-to: 7cd0507a44a5925d2bd9c2df3d6ecb9c497fd0e7
@@ -8,5 +8,6 @@ Applied:
   vhost_net-basic-batch: d15b023395faa454e0922d135b9012f7e2ca623a
   vhost-allow-passing-desc: 587e538c898b02a2ee6cdf9f59bd3d5fd5b1a1d1
   vhost-prefetch-vring: 7ee2bb645c939fdb0e1e0e0f20f7eacc12499cd2
+  refresh-temp: 6c805d98cec870a15dbc403eaa0710bd4b5f5633
 Unapplied:
 Hidden:
