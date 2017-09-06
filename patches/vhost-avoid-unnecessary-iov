@@ -1,5 +1,5 @@
-Bottom: 356f33f3c593f1a18af5fa0b9c4028b8124d03fb
-Top:    b6ec0d911e018e1904617006d1f312fc46dd91a8
+Bottom: 1173e5d2663168e64dbf28bed9a753a5ae060e71
+Top:    9a718dd35260d8858d8e63b473a520634bda4a01
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-05 15:17:46 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9e8d1f3..d6d27c6 100644
+index be7472a..dcc5395 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -527,16 +527,18 @@ static void handle_tx(struct vhost_net *net)
+@@ -521,16 +521,18 @@ static void handle_tx(struct vhost_net *net)
  
  			/* Skip header. TODO: support TSO. */
  			len = iov_length(vq->iov, out);
