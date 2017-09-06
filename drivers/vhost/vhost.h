@@ -150,6 +150,7 @@ struct vhost_virtqueue {
 #endif
 	u32 busyloop_timeout;
 	struct vring_desc descs[64];
+        struct vhost_umem_node *cache;
 };
 
 struct vhost_msg_node {
