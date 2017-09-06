@@ -1,0 +1,98 @@
+Bottom: 1f4f528788cab5d644bd344dd2456e0a2b3bd963
+Top:    b951b67ee5cc4ac549ed506fd6e0126a7f0dfb0a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-06 20:40:57 +0800
+
+Refresh of vhost-batch-iov-translation
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index acca816..a593dee 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -513,20 +513,28 @@ static void handle_tx(struct vhost_net *net)
+ 
+ 		for (i = 0; i < avails; i++) {
+ 			struct vring_desc *d = cont ? &vq->descs[i] : NULL;
+-
+-			head = __vhost_get_vq_desc(vq, vq->iov,
+-						   ARRAY_SIZE(vq->iov),
+-						   &out, &in, NULL, NULL, d,
+-						   vhost16_to_cpu(vq, heads[i].id));
+-			if (in) {
+-				vq_err(vq, "Unexpected descriptor format for "
+-					   "TX: out %d, int %d\n", out, in);
+-				goto out;
++			__virtio16 head = vhost16_to_cpu(vq, heads[i].id);
++			int offset = 0;
++
++			if (!cont) {
++				head = __vhost_get_vq_desc(vq, vq->iov,
++							ARRAY_SIZE(vq->iov),
++							&out, &in, NULL, NULL,
++							d, head);
++
++				if (in) {
++					vq_err(vq, "Unexpected descriptor format for "
++						"TX: out %d, int %d\n", out, in);
++					goto out;
++				}
++			} else {
++				out = 1;
++				offset = i;
+ 			}
+ 
+ 			/* Skip header. TODO: support TSO. */
+-			len = iov_length(vq->iov, out);
+-			iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
++			len = iov_length(vq->iov + offset, out);
++			iov_iter_init(&msg.msg_iter, WRITE, vq->iov + offset, out, len);
+ 			iov_iter_advance(&msg.msg_iter, hdr_size);
+ 			/* Sanity check */
+ 			if (!msg_data_left(&msg)) {
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 808469e..096203c 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2534,6 +2534,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		total -= copied;
+ 	}
+ 
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
+ 
+ 	if (*cont) {
+ 		total = ret;
+@@ -2553,8 +2555,29 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		}
+ 	}
+ 
+-	/* Only get avail ring entries after they have been exposed by guest. */
+-	smp_rmb();
++	if (cont) {
++		for (i = 0; i < ret; i++) {
++			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
++			u64 len = vhost64_to_cpu(vq, descs[i].len);
++
++			if (next_desc(vq, &descs[i]) != -1) {
++				*cont = false;
++				break;
++			}
++			ret = translate_desc(vq, addr, len,
++					     vq->iov + i, UIO_MAXIOV - i,
++					     VHOST_ACCESS_RO);
++			if (unlikely(ret < 0)) {
++				vq_err(vq, "Translation failure\n");
++				return -EFAULT;
++			}
++			if (unlikely(ret != 1)) {
++				*cont = false;
++				break;
++			}
++		}
++	}
++
+ 	return ret;
+ }
+ EXPORT_SYMBOL(vhost_prefetch_desc_indices);
