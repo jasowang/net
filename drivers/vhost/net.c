@@ -460,7 +460,6 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
-	struct vring_desc descs[VHOST_RX_BATCH];
 	int i, batched = VHOST_RX_BATCH;
 
 	mutex_lock(&vq->mutex);
@@ -495,7 +494,7 @@ static void handle_tx(struct vhost_net *net)
 		if (unlikely(vhost_exceeds_maxpend(net)))
 			break;
 
-		avails = vhost_prefetch_desc_indices(vq, heads, descs,
+		avails = vhost_prefetch_desc_indices(vq, heads, vq->descs,
 						     batched, &cont);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(avails < 0))
@@ -513,7 +512,7 @@ static void handle_tx(struct vhost_net *net)
 		}
 
 		for (i = 0; i < avails; i++) {
-			struct vring_desc *d = cont ? &descs[i] : NULL;
+			struct vring_desc *d = cont ? &vq->descs[i] : NULL;
 
 			head = __vhost_get_vq_desc(vq, vq->iov,
 						   ARRAY_SIZE(vq->iov),
