@@ -2534,6 +2534,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 	}
 
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
 
 	if (*cont) {
 		total = ret;
@@ -2553,8 +2555,31 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 	}
 
-	/* Only get avail ring entries after they have been exposed by guest. */
-	smp_rmb();
+	if (*cont) {
+		for (i = 0; i < ret; i++) {
+			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
+			u64 len = vhost64_to_cpu(vq, descs[i].len);
+
+			if (next_desc(vq, &descs[i]) != -1 ||
+			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+				*cont = false;
+				break;
+			}
+			ret = translate_desc(vq, addr, len,
+					     vq->iov + i, UIO_MAXIOV - i,
+					     VHOST_ACCESS_RO);
+			if (unlikely(ret < 0)) {
+				vq_err(vq, "Translation failure\n");
+				return -EFAULT;
+			}
+			if (unlikely(ret != 1)) {
+				*cont = false;
+				break;
+			}
+			vq->last_avail_idx ++;
+		}
+	}
+
 	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);
