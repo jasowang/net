@@ -2514,6 +2514,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		if (i > 0 && *cont && heads[i].id !=
 			((heads[i - 1].id + 1) & (vq->num - 1))) {
 			*cont = false;
+			printk("this %d prev %d\n", heads[i].id,
+				heads[i - 1].id);
 		}
 	}
 
@@ -2534,6 +2536,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		total -= copied;
 	}
 
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
 
 	if (*cont) {
 		total = ret;
@@ -2553,8 +2557,35 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 	}
 
-	/* Only get avail ring entries after they have been exposed by guest. */
-	smp_rmb();
+	if (*cont) {
+		for (i = 0; i < ret; i++) {
+			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
+			u64 len = vhost64_to_cpu(vq, descs[i].len);
+
+			if (next_desc(vq, &descs[i]) != -1 ||
+			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+				*cont = false;
+				printk("indir!\n");
+				break;
+			}
+			ret2 = translate_desc(vq, addr, len,
+					      vq->iov + i, UIO_MAXIOV - i,
+					      VHOST_ACCESS_RO);
+			if (unlikely(ret2 < 0)) {
+				vq_err(vq, "Translation failure\n");
+				return -EFAULT;
+			}
+			if (unlikely(ret2 != 1)) {
+				*cont = false;
+				printk("not one but %d\n", ret2);
+				break;
+			}
+			vq->last_avail_idx ++;
+		}
+	}
+
+	printk(" cont %d\n", *cont);
+
 	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);

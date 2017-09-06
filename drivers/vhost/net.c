@@ -446,7 +446,7 @@ static void handle_tx(struct vhost_net *net)
 	struct vhost_virtqueue *vq = &nvq->vq;
 	struct vring_used_elem used, *heads = vq->heads;
 	unsigned out, in;
-	int avails, head;
+	int avails;
 	struct msghdr msg = {
 		.msg_name = NULL,
 		.msg_namelen = 0,
@@ -513,20 +513,29 @@ static void handle_tx(struct vhost_net *net)
 
 		for (i = 0; i < avails; i++) {
 			struct vring_desc *d = cont ? &vq->descs[i] : NULL;
+			__virtio16 head = vhost16_to_cpu(vq, heads[i].id);
+			int offset = 0;
 
-			head = __vhost_get_vq_desc(vq, vq->iov,
-						   ARRAY_SIZE(vq->iov),
-						   &out, &in, NULL, NULL, d,
-						   vhost16_to_cpu(vq, heads[i].id));
-			if (in) {
-				vq_err(vq, "Unexpected descriptor format for "
-					   "TX: out %d, int %d\n", out, in);
-				goto out;
+			if (!cont) {
+				head = __vhost_get_vq_desc(vq, vq->iov,
+							ARRAY_SIZE(vq->iov),
+							&out, &in, NULL, NULL,
+							d, head);
+
+				if (in) {
+					vq_err(vq, "Unexpected descriptor format for "
+						"TX: out %d, int %d\n", out, in);
+					goto out;
+				}
+			} else {
+				out = 1;
+				in = 0;
+				offset = i;
 			}
 
 			/* Skip header. TODO: support TSO. */
-			len = iov_length(vq->iov, out);
-			iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
+			len = iov_length(vq->iov + offset, out);
+			iov_iter_init(&msg.msg_iter, WRITE, vq->iov + offset, out, len);
 			iov_iter_advance(&msg.msg_iter, hdr_size);
 			/* Sanity check */
 			if (!msg_data_left(&msg)) {
