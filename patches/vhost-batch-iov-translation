@@ -1,5 +1,5 @@
 Bottom: 1f4f528788cab5d644bd344dd2456e0a2b3bd963
-Top:    62c8efa5541a7d9794b4045e41a887725a90a09a
+Top:    d174862042ed25e2a638693317ed2054f9d0c96c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-06 20:40:08 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index acca816..4a86ee2 100644
+index acca816..9aef066 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -446,7 +446,7 @@ static void handle_tx(struct vhost_net *net)
@@ -51,8 +51,8 @@ index acca816..4a86ee2 100644
 +					goto out;
 +				}
 +			} else {
-+				printk("cont!\n");
 +				out = 1;
++				in = 0;
 +				offset = i;
  			}
  
@@ -65,7 +65,7 @@ index acca816..4a86ee2 100644
  			/* Sanity check */
  			if (!msg_data_left(&msg)) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 808469e..096203c 100644
+index 808469e..06aa897 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2534,6 +2534,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
@@ -77,18 +77,19 @@ index 808469e..096203c 100644
  
  	if (*cont) {
  		total = ret;
-@@ -2553,8 +2555,29 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2553,8 +2555,31 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		}
  	}
  
 -	/* Only get avail ring entries after they have been exposed by guest. */
 -	smp_rmb();
-+	if (cont) {
++	if (*cont) {
 +		for (i = 0; i < ret; i++) {
 +			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
 +			u64 len = vhost64_to_cpu(vq, descs[i].len);
 +
-+			if (next_desc(vq, &descs[i]) != -1) {
++			if (next_desc(vq, &descs[i]) != -1 ||
++			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 +				*cont = false;
 +				break;
 +			}
@@ -103,6 +104,7 @@ index 808469e..096203c 100644
 +				*cont = false;
 +				break;
 +			}
++			vq->last_avail_idx ++;
 +		}
 +	}
 +
