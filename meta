@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5e5549959fa7b3ae406e27649e9f8b96a2058532
-Head: 780d2ded353f1e5a50252f3f2439aafd2e2a81e5
+Previous: be00f282aee9dc553ef2feaec10f53d6a3f70adb
+Head: 7581508a4471dba2405d6ef0063d5f0645f5bc75
 Applied:
   vhost-split-out-ring-head: f45cbf0cbc0e374b2709d9614cd01a09fa7e7604
   vhost-introduce-helper-to: 7cd0507a44a5925d2bd9c2df3d6ecb9c497fd0e7
