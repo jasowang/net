@@ -1,5 +1,5 @@
 Bottom: 1f4f528788cab5d644bd344dd2456e0a2b3bd963
-Top:    d174862042ed25e2a638693317ed2054f9d0c96c
+Top:    a7fa65dfb85c580263257d8c0108073ab6eac788
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-06 20:40:08 +0800
 
@@ -65,10 +65,19 @@ index acca816..9aef066 100644
  			/* Sanity check */
  			if (!msg_data_left(&msg)) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 808469e..06aa897 100644
+index 808469e..4f4c5aa 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2534,6 +2534,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2514,6 +2514,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		if (i > 0 && *cont && heads[i].id !=
+ 			((heads[i - 1].id + 1) & (vq->num - 1))) {
+ 			*cont = false;
++			printk("this %d prev %d\n", heads[i].id,
++				heads[i - 1].id);
+ 		}
+ 	}
+ 
+@@ -2534,6 +2536,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		total -= copied;
  	}
  
@@ -77,7 +86,7 @@ index 808469e..06aa897 100644
  
  	if (*cont) {
  		total = ret;
-@@ -2553,8 +2555,31 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+@@ -2553,8 +2557,35 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
  		}
  	}
  
@@ -91,22 +100,26 @@ index 808469e..06aa897 100644
 +			if (next_desc(vq, &descs[i]) != -1 ||
 +			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 +				*cont = false;
++				printk("indir!\n");
 +				break;
 +			}
-+			ret = translate_desc(vq, addr, len,
-+					     vq->iov + i, UIO_MAXIOV - i,
-+					     VHOST_ACCESS_RO);
-+			if (unlikely(ret < 0)) {
++			ret2 = translate_desc(vq, addr, len,
++					      vq->iov + i, UIO_MAXIOV - i,
++					      VHOST_ACCESS_RO);
++			if (unlikely(ret2 < 0)) {
 +				vq_err(vq, "Translation failure\n");
 +				return -EFAULT;
 +			}
-+			if (unlikely(ret != 1)) {
++			if (unlikely(ret2 != 1)) {
 +				*cont = false;
++				printk("not one but %d\n", ret2);
 +				break;
 +			}
 +			vq->last_avail_idx ++;
 +		}
 +	}
++
++	printk(" cont %d\n", *cont);
 +
  	return ret;
  }
