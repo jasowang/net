@@ -5,6 +5,8 @@ Date:   2017-09-07 20:50:42 +0800
 
 vhost: only fetch avail_idx when necessary
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
