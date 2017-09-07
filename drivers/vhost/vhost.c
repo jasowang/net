@@ -2514,8 +2514,6 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		if (i > 0 && *cont && heads[i].id !=
 			((heads[i - 1].id + 1) & (vq->num - 1))) {
 			*cont = false;
-			printk("this %d prev %d\n", heads[i].id,
-				heads[i - 1].id);
 		}
 	}
 
@@ -2539,6 +2537,46 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
 
+	if (*cont) {
+		struct vring_desc desc;
+
+		for (i = 0; i < ret; i++) {
+			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
+
+			ret2 = vhost_copy_from_user(vq, &desc,
+						    vq->desc + ring_head,
+						    sizeof desc);
+			if (unlikely(ret2)) {
+				vq_err(vq, "Failed to get descriptor\n");
+				return -EFAULT;
+			}
+
+			if (next_desc(vq, &desc) != -1 ||
+			    desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+				*cont = false;
+				break;
+			}
+
+			ret2 = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+					      vhost64_to_cpu(vq, desc.len),
+					      vq->iov + i, UIO_MAXIOV - i,
+					      VHOST_ACCESS_RO);
+			if (unlikely(ret2 < 0)) {
+				vq_err(vq, "Translation failure\n");
+				return -EFAULT;
+			}
+			if (unlikely(ret2 != 1)) {
+				*cont = false;
+				printk("not one but %d\n", ret2);
+				break;
+			}
+			vq->last_avail_idx ++;
+		}
+	}
+
+
+
+#if 0
 	if (*cont) {
 		total = ret;
 		while (total) {
@@ -2584,8 +2622,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 	}
 
-	printk(" cont %d\n", *cont);
-
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(vhost_prefetch_desc_indices);
