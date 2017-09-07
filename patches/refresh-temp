@@ -1,0 +1,50 @@
+Bottom: 62c8efa5541a7d9794b4045e41a887725a90a09a
+Top:    d174862042ed25e2a638693317ed2054f9d0c96c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-07 11:32:31 +0800
+
+Refresh of vhost-batch-iov-translation
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 4a86ee2..9aef066 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -528,8 +528,8 @@ static void handle_tx(struct vhost_net *net)
+ 					goto out;
+ 				}
+ 			} else {
+-				printk("cont!\n");
+ 				out = 1;
++				in = 0;
+ 				offset = i;
+ 			}
+ 
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 096203c..06aa897 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2555,12 +2555,13 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		}
+ 	}
+ 
+-	if (cont) {
++	if (*cont) {
+ 		for (i = 0; i < ret; i++) {
+ 			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
+ 			u64 len = vhost64_to_cpu(vq, descs[i].len);
+ 
+-			if (next_desc(vq, &descs[i]) != -1) {
++			if (next_desc(vq, &descs[i]) != -1 ||
++			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 				*cont = false;
+ 				break;
+ 			}
+@@ -2575,6 +2576,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				*cont = false;
+ 				break;
+ 			}
++			vq->last_avail_idx ++;
+ 		}
+ 	}
