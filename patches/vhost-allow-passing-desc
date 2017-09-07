@@ -1,5 +1,5 @@
-Bottom: c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
-Top:    245155038f8cbef23a6b6f8db48e09769bfb1e43
+Bottom: 36065ebdaa57c306cbc39b5931b1c18f0e4197df
+Top:    b78f6183a02c21873f8bd428c701ce910b8c6bf5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:47:27 +0800
 
@@ -24,7 +24,7 @@ index b304659..e610685 100644
  			if (in) {
  				vq_err(vq, "Unexpected descriptor format for "
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 43f571e..fb7ef91 100644
+index f595789..96e20ba 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2043,12 +2043,16 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
