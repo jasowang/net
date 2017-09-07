@@ -446,7 +446,7 @@ static void handle_tx(struct vhost_net *net)
 	struct vhost_virtqueue *vq = &nvq->vq;
 	struct vring_used_elem used, *heads = vq->heads;
 	unsigned out, in;
-	int avails, head;
+	int avails;
 	struct msghdr msg = {
 		.msg_name = NULL,
 		.msg_namelen = 0,
@@ -528,6 +528,7 @@ static void handle_tx(struct vhost_net *net)
 					goto out;
 				}
 			} else {
+				printk("cont!\n");
 				out = 1;
 				offset = i;
 			}
