@@ -1,0 +1,55 @@
+Bottom: d174862042ed25e2a638693317ed2054f9d0c96c
+Top:    a7fa65dfb85c580263257d8c0108073ab6eac788
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-07 12:08:05 +0800
+
+Refresh of vhost-batch-iov-translation
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 06aa897..4f4c5aa 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2514,6 +2514,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		if (i > 0 && *cont && heads[i].id !=
+ 			((heads[i - 1].id + 1) & (vq->num - 1))) {
+ 			*cont = false;
++			printk("this %d prev %d\n", heads[i].id,
++				heads[i - 1].id);
+ 		}
+ 	}
+ 
+@@ -2563,23 +2565,27 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			if (next_desc(vq, &descs[i]) != -1 ||
+ 			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 				*cont = false;
++				printk("indir!\n");
+ 				break;
+ 			}
+-			ret = translate_desc(vq, addr, len,
+-					     vq->iov + i, UIO_MAXIOV - i,
+-					     VHOST_ACCESS_RO);
+-			if (unlikely(ret < 0)) {
++			ret2 = translate_desc(vq, addr, len,
++					      vq->iov + i, UIO_MAXIOV - i,
++					      VHOST_ACCESS_RO);
++			if (unlikely(ret2 < 0)) {
+ 				vq_err(vq, "Translation failure\n");
+ 				return -EFAULT;
+ 			}
+-			if (unlikely(ret != 1)) {
++			if (unlikely(ret2 != 1)) {
+ 				*cont = false;
++				printk("not one but %d\n", ret2);
+ 				break;
+ 			}
+ 			vq->last_avail_idx ++;
+ 		}
+ 	}
+ 
++	printk(" cont %d\n", *cont);
++
+ 	return ret;
+ }
+ EXPORT_SYMBOL(vhost_prefetch_desc_indices);
