@@ -1,14 +1,14 @@
 Version: 1
-Previous: ea1b7d069634c49c54d6198cd94b1edd0f8999d3
-Head: 04629df88f80f8869dc72ce932d0b2d27edca1e0
+Previous: 7b654c7583bf7f93f82660a56f8873099719efce
+Head: 587e538c898b02a2ee6cdf9f59bd3d5fd5b1a1d1
 Applied:
   vhost-split-out-ring-head: f45cbf0cbc0e374b2709d9614cd01a09fa7e7604
   vhost-introduce-helper-to: 7cd0507a44a5925d2bd9c2df3d6ecb9c497fd0e7
   vhost-introduce: 81054494d95d14cb2bced300b54b3037285ff72d
   vhost_net-basic-batch: d15b023395faa454e0922d135b9012f7e2ca623a
   vhost-allow-passing-desc: 587e538c898b02a2ee6cdf9f59bd3d5fd5b1a1d1
-  vhost-prefetch-vring: 04629df88f80f8869dc72ce932d0b2d27edca1e0
 Unapplied:
+  vhost-prefetch-vring: 04629df88f80f8869dc72ce932d0b2d27edca1e0
   vhost-batch-iov-translation: 3a27472f9aa9181e962ed44dff01f65ffb75185b
   m2: d3faee335382aaea08735f99782d2ef495595689
   vhost-batch-signalling: a0cc769fda74fab9b8507be1f6834c8fb794ff94
