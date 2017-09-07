@@ -1,0 +1,28 @@
+Bottom: c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
+Top:    08a899470613be237688434365f487b47f301741
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-07 15:15:41 +0800
+
+Refresh of improement
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b304659..81b864ef 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -597,10 +597,10 @@ static void handle_tx(struct vhost_net *net)
+ 			} else
+ 				vhost_zerocopy_signal_used(net, vq);
+ 			vhost_net_tx_packet(net);
+-			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+-				vhost_poll_queue(&vq->poll);
+-				goto out;
+-			}
++		}
++		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
++			vhost_poll_queue(&vq->poll);
++			goto out;
+ 		}
+ 	}
+ out:
