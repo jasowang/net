@@ -597,10 +597,10 @@ static void handle_tx(struct vhost_net *net)
 			} else
 				vhost_zerocopy_signal_used(net, vq);
 			vhost_net_tx_packet(net);
-			if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
-				vhost_poll_queue(&vq->poll);
-				goto out;
-			}
+		}
+		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+			vhost_poll_queue(&vq->poll);
+			goto out;
 		}
 	}
 out:
