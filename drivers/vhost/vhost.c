@@ -2492,13 +2492,15 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	struct vring_used_elem __user *used;
 	int i;
 
-	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-		vq_err(vq, "Failed to access avail idx at %p\n",
-		       &vq->avail->idx);
-		return -EFAULT;
+	if (vq->avail_idx == vq->last_avail_idx) {
+		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+			vq_err(vq, "Failed to access avail idx at %p\n",
+				&vq->avail->idx);
+			return -EFAULT;
+		}
+		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
 	}
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
 	total = vq->avail_idx - vq->last_avail_idx;
 	ret = total = min(total, num);
 
