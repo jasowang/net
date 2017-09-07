@@ -1,0 +1,30 @@
+Bottom: b951b67ee5cc4ac549ed506fd6e0126a7f0dfb0a
+Top:    62c8efa5541a7d9794b4045e41a887725a90a09a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-07 10:15:49 +0800
+
+Refresh of vhost-batch-iov-translation
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index a593dee..4a86ee2 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -446,7 +446,7 @@ static void handle_tx(struct vhost_net *net)
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+ 	struct vring_used_elem used, *heads = vq->heads;
+ 	unsigned out, in;
+-	int avails, head;
++	int avails;
+ 	struct msghdr msg = {
+ 		.msg_name = NULL,
+ 		.msg_namelen = 0,
+@@ -528,6 +528,7 @@ static void handle_tx(struct vhost_net *net)
+ 					goto out;
+ 				}
+ 			} else {
++				printk("cont!\n");
+ 				out = 1;
+ 				offset = i;
+ 			}
