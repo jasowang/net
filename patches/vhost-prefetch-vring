@@ -1,5 +1,5 @@
 Bottom: b78f6183a02c21873f8bd428c701ce910b8c6bf5
-Top:    b78f6183a02c21873f8bd428c701ce910b8c6bf5
+Top:    40b2b981063d82376b68cb3dd3d27ceba4e71d81
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-02 11:22:21 +0800
 
@@ -10,4 +10,175 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e610685..acca816 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -482,6 +482,8 @@ static void handle_tx(struct vhost_net *net)
+ 	}
+ 
+ 	for (;;) {
++		bool cont = false;
++
+ 		/* Release DMAs done buffers first */
+ 		if (zcopy)
+ 			vhost_zerocopy_signal_used(net, vq);
+@@ -492,7 +494,8 @@ static void handle_tx(struct vhost_net *net)
+ 		if (unlikely(vhost_exceeds_maxpend(net)))
+ 			break;
+ 
+-		avails = vhost_prefetch_desc_indices(vq, heads, batched);
++		avails = vhost_prefetch_desc_indices(vq, heads, vq->descs,
++						     batched, &cont);
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(avails < 0))
+ 			break;
+@@ -509,10 +512,12 @@ static void handle_tx(struct vhost_net *net)
+ 		}
+ 
+ 		for (i = 0; i < avails; i++) {
++			struct vring_desc *d = cont ? &vq->descs[i] : NULL;
++
+ 			head = __vhost_get_vq_desc(vq, vq->iov,
+ 						   ARRAY_SIZE(vq->iov),
+-						   &out, &in, NULL, NULL, NULL,
+-					       vhost16_to_cpu(vq, heads[i].id));
++						   &out, &in, NULL, NULL, d,
++						   vhost16_to_cpu(vq, heads[i].id));
+ 			if (in) {
+ 				vq_err(vq, "Unexpected descriptor format for "
+ 					   "TX: out %d, int %d\n", out, in);
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 96e20ba..25e16ea 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2043,15 +2043,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct iovec iov[], unsigned int iov_size,
+ 			unsigned int *out_num, unsigned int *in_num,
+ 			struct vhost_log *log, unsigned int *log_num,
+-			struct vring_desc *desc,
++			struct vring_desc *d,
+ 			__virtio16 head)
+ {
+-	struct vring_desc d;
++	struct vring_desc vring_desc, *desc = &vring_desc;
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
+-	if (!desc)
+-		desc = &d;
++	if (!d)
++		desc = &vring_desc;
++	else
++		desc = d;
+ 
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head > vq->num)) {
+@@ -2079,13 +2081,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, desc, vq->desc + i,
+-					   sizeof desc[0]);
+-		if (unlikely(ret)) {
+-			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+-			       i, vq->desc + i);
+-			return -EFAULT;
+-		}
++		if (!d) {
++			ret = vhost_copy_from_user(vq, desc, vq->desc + i,
++						   sizeof desc[0]);
++			if (unlikely(ret)) {
++				vq_err(vq, "Failed to get descriptor: "
++	                                   "idx %d addr %p\n",
++					i, vq->desc + i);
++				return -EFAULT;
++			}
++		} else
++			d = NULL;
+ 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+@@ -2476,7 +2482,8 @@ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				struct vring_used_elem *heads,
+-				u16 num)
++				struct vring_desc *descs,
++				u16 num, bool *cont)
+ {
+ 	int ret, ret2;
+ 	u16 last_avail_idx, last_used_idx, total, copied;
+@@ -2492,10 +2499,13 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		}
+ 		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 	}
++
+ 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+ 	total = vq->avail_idx - vq->last_avail_idx;
+ 	ret = total = min(total, num);
+ 
++	*cont = true;
++
+ 	for (i = 0; i < ret; i++) {
+ 		ret2 = vhost_get_avail(vq, heads[i].id,
+ 				      &vq->avail->ring[last_avail_idx]);
+@@ -2504,6 +2514,10 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
++		if (i > 0 && *cont && heads[i].id !=
++			((heads[i - 1].id + 1) & (vq->num - 1))) {
++			*cont = false;
++		}
+ 	}
+ 
+ 	last_used_idx = vq->last_used_idx & (vq->num - 1);
+@@ -2523,6 +2537,25 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 		total -= copied;
+ 	}
+ 
++
++	if (*cont) {
++		total = ret;
++		while (total) {
++			int i = ret - total;
++			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
++
++			copied = min((u16)(vq->num - ring_head), total);
++			ret2 = vhost_copy_from_user(vq, &descs[i],
++					    vq->desc + ring_head,
++					    copied * sizeof descs[0]);
++			if (unlikely(ret2)) {
++				vq_err(vq, "Failed to get descriptor\n");
++				return -EFAULT;
++			}
++			total -= copied;
++		}
++	}
++
+ 	/* Only get avail ring entries after they have been exposed by guest. */
+ 	smp_rmb();
+ 	return ret;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index d4646e7..ca06fe2 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -149,6 +149,7 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++	struct vring_desc descs[64];
+ };
+ 
+ struct vhost_msg_node {
+@@ -231,7 +232,8 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 				struct vring_used_elem *heads,
+-				u16 num);
++				struct vring_desc *desc,
++				u16 num, bool *cont);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
