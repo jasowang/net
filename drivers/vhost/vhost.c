@@ -2555,12 +2555,13 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 		}
 	}
 
-	if (cont) {
+	if (*cont) {
 		for (i = 0; i < ret; i++) {
 			u64 addr = vhost64_to_cpu(vq, descs[i].addr);
 			u64 len = vhost64_to_cpu(vq, descs[i].len);
 
-			if (next_desc(vq, &descs[i]) != -1) {
+			if (next_desc(vq, &descs[i]) != -1 ||
+			    descs[i].flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 				*cont = false;
 				break;
 			}
@@ -2575,6 +2576,7 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 				*cont = false;
 				break;
 			}
+			vq->last_avail_idx ++;
 		}
 	}
 

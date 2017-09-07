@@ -528,8 +528,8 @@ static void handle_tx(struct vhost_net *net)
 					goto out;
 				}
 			} else {
-				printk("cont!\n");
 				out = 1;
+				in = 0;
 				offset = i;
 			}
 
