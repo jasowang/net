@@ -1,0 +1,41 @@
+Bottom: 36065ebdaa57c306cbc39b5931b1c18f0e4197df
+Top:    96a9ecad3ef06838657550486b9f9bb6240e9ff3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-08 13:26:15 +0800
+
+Refresh of vhost-speed-up-descriptor-ring
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index f595789..59e2e1f 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1466,6 +1466,14 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+ 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
+ 		vq->log_addr = a.log_guest_addr;
+ 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
++
++		int r = get_user_pages_fast((unsigned long)a.desc_user_addr, 1, 1, &vq->page_desc);
++		if (r < 0)
++			return -EFAULT;
++		BUG_ON(r != 1);
++		vq->desc_uaddr = (unsigned long)kmap_atomic(vq->page_desc) +
++			         (unsigned long)vq->desc & (PAGE_SIZE - 1);
++
+ 		break;
+ 	case VHOST_SET_VRING_KICK:
+ 		if (copy_from_user(&f, argp, sizeof f)) {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index a351820..f89378d8 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -149,6 +149,8 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++	struct page *page_desc;
++	void *desc_uaddr;
+ };
+ 
+ struct vhost_msg_node {
