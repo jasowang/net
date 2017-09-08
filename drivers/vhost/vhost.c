@@ -1467,12 +1467,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
 
-		int r = get_user_pages_fast((unsigned long)a.desc_user_addr, 1, 1, &vq->page_desc);
+		r = get_user_pages_fast((unsigned long)a.desc_user_addr,
+					1, 1, &vq->page_desc);
 		if (r < 0)
 			return -EFAULT;
 		BUG_ON(r != 1);
-		vq->desc_uaddr = (unsigned long)kmap_atomic(vq->page_desc) +
-			         (unsigned long)vq->desc & (PAGE_SIZE - 1);
+		vq->desc_vaddr = vmap(&vq->page_desc, 1, VM_MAP, PAGE_KERNEL);
 
 		break;
 	case VHOST_SET_VRING_KICK:
