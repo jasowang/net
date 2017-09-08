@@ -193,11 +193,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
 		      struct iovec iov[], unsigned int iov_count,
 		      unsigned int *out_num, unsigned int *in_num,
 		      struct vhost_log *log, unsigned int *log_num);
-int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
-			struct iovec iov[], unsigned int iov_count,
-			unsigned int *out_num, unsigned int *in_num,
-			struct vhost_log *log, unsigned int *log_num,
-			__virtio16 ring_head);
+int __vhost_get_vq_desc(struct vhost_virtqueue *,
+                        struct iovec iov[], unsigned int iov_count,
+                        unsigned int *out_num, unsigned int *in_num,
+                        struct vhost_log *log, unsigned int *log_num,
+                        struct vring_desc *desc, __virtio16 ring_head);
 void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
 
 int vhost_vq_init_access(struct vhost_virtqueue *);

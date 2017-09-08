@@ -2051,12 +2051,17 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			struct iovec iov[], unsigned int iov_size,
 			unsigned int *out_num, unsigned int *in_num,
 			struct vhost_log *log, unsigned int *log_num,
+			struct vring_desc *descs,
 			__virtio16 head)
 {
-	struct vring_desc *desc;
-	struct vring_desc desc2;
+	struct vring_desc *desc = descs;
+	struct vring_desc d;
+
 	unsigned int i, found = 0;
 	int ret = 0, access;
+
+	if (!desc)
+		desc = &d;
 
 	/* If their number is silly, that's an error. */
 	if (unlikely(head > vq->num)) {
@@ -2084,16 +2089,9 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
-#if 0
-		ret = vhost_copy_from_user(vq, &desc2, vq->desc + i,
-					   sizeof desc);
-		if (unlikely(ret)) {
-			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
-			       i, vq->desc + i);
-			return -EFAULT;
-		}
-#endif
-		desc = vq->desc_vaddr + i;
+
+		if (!desc)
+			desc = vq->desc_vaddr + i;
 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 			ret = get_indirect(vq, iov, iov_size,
 					   out_num, in_num,
@@ -2166,7 +2164,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		return head;
 
 	return __vhost_get_vq_desc(vq, iov, iov_size, out_num, in_num,
-				   log, log_num, head);
+				   log, log_num, NULL, head);
 }
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 
