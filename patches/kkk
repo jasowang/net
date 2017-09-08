@@ -5,6 +5,9 @@ Date:   2017-09-08 13:47:25 +0800
 
 
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
