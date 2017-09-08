@@ -1,6 +1,6 @@
 Version: 1
-Previous: 98362709cabf0b661ef011c6be76a297d7c58158
-Head: 413080164598743307b872c08b8501df6176fbfd
+Previous: b1de3ac9f47c3a23f8f5fd09c54389a153c32879
+Head: 5d159ddbf23b7fa22524f7574bfd8c71570ec441
 Applied:
   vhost-split-out-ring-head: f45cbf0cbc0e374b2709d9614cd01a09fa7e7604
   vhost-introduce-helper-to: 7cd0507a44a5925d2bd9c2df3d6ecb9c497fd0e7
@@ -8,8 +8,7 @@ Applied:
   vhost_net-basic-batch: 7581508a4471dba2405d6ef0063d5f0645f5bc75
   vhost-only-fetch-avail_idx: a87c0093f0833739b7c861891d22856c35c4dc43
   vhost-speed-up-descriptor-ring: d9867b7754a70e4da449aba049d04b8754d24f36
-  kkk: 48c9f9c28d2460a7fc805311fa29a40c1b073c02
-  refresh-temp: 413080164598743307b872c08b8501df6176fbfd
+  kkk: 5d159ddbf23b7fa22524f7574bfd8c71570ec441
 Unapplied:
   vhost-allow-passing-desc: a7d6e57b80bdd58ebdec8242c3980357d1c1b974
   vhost-prefetch-vring: 4dedd551c69127ef34a9532e072728bce812f10b
