@@ -1,0 +1,36 @@
+Bottom: c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
+Top:    36065ebdaa57c306cbc39b5931b1c18f0e4197df
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-07 20:50:42 +0800
+
+vhost: only fetch avail_idx when necessary
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 43f571e..f595789 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2480,13 +2480,15 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 	struct vring_used_elem __user *used;
+ 	int i;
+ 
+-	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+-		vq_err(vq, "Failed to access avail idx at %p\n",
+-		       &vq->avail->idx);
+-		return -EFAULT;
++	if (vq->avail_idx == vq->last_avail_idx) {
++		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
++			vq_err(vq, "Failed to access avail idx at %p\n",
++				&vq->avail->idx);
++			return -EFAULT;
++		}
++		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 	}
+ 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+ 	total = vq->avail_idx - vq->last_avail_idx;
+ 	ret = total = min(total, num);
