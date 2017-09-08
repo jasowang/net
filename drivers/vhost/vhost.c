@@ -1467,13 +1467,16 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
 
-		int r = get_user_pages_fast((unsigned long)a.desc_user_addr, 1, 1, &vq->page_desc);
-		if (r < 0)
+		r = get_user_pages_fast((unsigned long)a.desc_user_addr,
+					1, 1, &vq->page_desc);
+		if (r < 0) {
+			printk("FAULT!\n");
 			return -EFAULT;
+		}
 		BUG_ON(r != 1);
-		vq->desc_uaddr = (unsigned long)kmap_atomic(vq->page_desc) +
-			         (unsigned long)vq->desc & (PAGE_SIZE - 1);
-
+		vq->desc_vaddr = (unsigned long)kmap_atomic(vq->page_desc) +
+			         ((unsigned long)vq->desc & (PAGE_SIZE - 1));
+		printk("vaddr is %p\n", vq->desc_vaddr);
 		break;
 	case VHOST_SET_VRING_KICK:
 		if (copy_from_user(&f, argp, sizeof f)) {
@@ -2083,6 +2086,7 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
+//		desc = vq->desc_vaddr + i;
 		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
 					   sizeof desc);
 		if (unlikely(ret)) {
