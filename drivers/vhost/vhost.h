@@ -150,6 +150,8 @@ struct vhost_virtqueue {
 #endif
 	u32 busyloop_timeout;
 	struct vring_desc descs[64];
+	struct page *page_desc;
+	struct vring_desc *desc_vaddr;
 };
 
 struct vhost_msg_node {
