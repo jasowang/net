@@ -2543,13 +2543,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
 
 			copied = min((u16)(vq->num - ring_head), total);
-			ret2 = vhost_copy_from_user(vq, &descs[i],
-					    vq->desc + ring_head,
-					    copied * sizeof descs[0]);
-			if (unlikely(ret2)) {
-				vq_err(vq, "Failed to get descriptor\n");
-				return -EFAULT;
-			}
+			memcpy(&descs[i], vq->desc_vaddr + ring_head,
+			       copied * sizeof descs[0]);
 			total -= copied;
 		}
 	}
