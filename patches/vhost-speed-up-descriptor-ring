@@ -5,6 +5,8 @@ Date:   2017-09-08 13:26:11 +0800
 
 vhost: speed up descriptor ring access
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
