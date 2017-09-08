@@ -1466,6 +1466,14 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
+
+		r = get_user_pages_fast((unsigned long)a.desc_user_addr,
+					1, 1, &vq->page_desc);
+		if (r < 0)
+			return -EFAULT;
+		BUG_ON(r != 1);
+		vq->desc_vaddr = vmap(&vq->page_desc, 1, VM_MAP, PAGE_KERNEL);
+
 		break;
 	case VHOST_SET_VRING_KICK:
 		if (copy_from_user(&f, argp, sizeof f)) {
@@ -2046,14 +2054,9 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			struct vring_desc *d,
 			__virtio16 head)
 {
-	struct vring_desc vring_desc, *desc = &vring_desc;
+	struct vring_desc *desc = d;
 	unsigned int i, found = 0;
 	int ret = 0, access;
-
-	if (!d)
-		desc = &vring_desc;
-	else
-		desc = d;
 
 	/* If their number is silly, that's an error. */
 	if (unlikely(head > vq->num)) {
@@ -2081,17 +2084,12 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			       i, vq->num, head);
 			return -EINVAL;
 		}
+
 		if (!d) {
-			ret = vhost_copy_from_user(vq, desc, vq->desc + i,
-						   sizeof desc[0]);
-			if (unlikely(ret)) {
-				vq_err(vq, "Failed to get descriptor: "
-	                                   "idx %d addr %p\n",
-					i, vq->desc + i);
-				return -EFAULT;
-			}
+			desc = vq->desc_vaddr + i;
 		} else
 			d = NULL;
+
 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
 			ret = get_indirect(vq, iov, iov_size,
 					   out_num, in_num,
@@ -2545,13 +2543,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
 
 			copied = min((u16)(vq->num - ring_head), total);
-			ret2 = vhost_copy_from_user(vq, &descs[i],
-					    vq->desc + ring_head,
-					    copied * sizeof descs[0]);
-			if (unlikely(ret2)) {
-				vq_err(vq, "Failed to get descriptor\n");
-				return -EFAULT;
-			}
+			memcpy(&descs[i], vq->desc_vaddr + ring_head,
+			       copied * sizeof descs[0]);
 			total -= copied;
 		}
 	}
