@@ -1,0 +1,96 @@
+Bottom: c269563104dd8f32f395863cc56021a5b5fe4ae3
+Top:    c60b6d50cf4943dfece48059fefc90720891f8bd
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-08 16:35:59 +0800
+
+Refresh of vhost-speed-up-descriptor-ring
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index be056fc..426eb7d 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2053,7 +2053,8 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct vhost_log *log, unsigned int *log_num,
+ 			__virtio16 head)
+ {
+-	struct vring_desc desc;
++	struct vring_desc *desc;
++	struct vring_desc desc2;
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
+@@ -2083,17 +2084,20 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
++#if 0
++		ret = vhost_copy_from_user(vq, &desc2, vq->desc + i,
+ 					   sizeof desc);
+ 		if (unlikely(ret)) {
+ 			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+ 			       i, vq->desc + i);
+ 			return -EFAULT;
+ 		}
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
++#endif
++		desc = vq->desc_vaddr + i;
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+-					   log, log_num, &desc);
++					   log, log_num, desc);
+ 			if (unlikely(ret < 0)) {
+ 				if (ret != -EAGAIN)
+ 					vq_err(vq, "Failure detected "
+@@ -2103,12 +2107,12 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			continue;
+ 		}
+ 
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+ 			access = VHOST_ACCESS_WO;
+ 		else
+ 			access = VHOST_ACCESS_RO;
+-		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+-				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
++		ret = translate_desc(vq, vhost64_to_cpu(vq, desc->addr),
++				     vhost32_to_cpu(vq, desc->len), iov + iov_count,
+ 				     iov_size - iov_count, access);
+ 		if (unlikely(ret < 0)) {
+ 			if (ret != -EAGAIN)
+@@ -2121,8 +2125,8 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			 * increment that count. */
+ 			*in_num += ret;
+ 			if (unlikely(log)) {
+-				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
+-				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
++				log[*log_num].addr = vhost64_to_cpu(vq, desc->addr);
++				log[*log_num].len = vhost32_to_cpu(vq, desc->len);
+ 				++*log_num;
+ 			}
+ 		} else {
+@@ -2135,7 +2139,7 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			}
+ 			*out_num += ret;
+ 		}
+-	} while ((i = next_desc(vq, &desc)) != -1);
++	} while ((i = next_desc(vq, desc)) != -1);
+ 
+ 	/* On success, increment avail index. */
+ 	vq->last_avail_idx++;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 7c2d6e6..b358802 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -150,7 +150,7 @@ struct vhost_virtqueue {
+ #endif
+ 	u32 busyloop_timeout;
+ 	struct page *page_desc;
+-	void *desc_vaddr;
++	struct vring_desc *desc_vaddr;
+ };
+ 
+ struct vhost_msg_node {
