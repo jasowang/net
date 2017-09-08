@@ -1,5 +1,5 @@
 Bottom: c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
-Top:    c6b8acb4c91fe4fb0fafca5cfd73b71b3b474710
+Top:    67f810b69c35e2738e69501bf1b79fa5e025fcd5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-06 16:07:11 +0800
 
@@ -10,4 +10,66 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 43f571e..8e48a94 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -330,6 +330,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vq->umem = NULL;
+ 	vq->iotlb = NULL;
+ 	__vhost_vq_meta_reset(vq);
++	vq->cache = NULL;
+ }
+ 
+ static int vhost_worker(void *data)
+@@ -1309,6 +1310,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
+ 		return -ENOMEM;
+ 	}
+ 
++	printk("regions %d\n", mem.nregions);
++
+ 	for (region = newmem->regions;
+ 	     region < newmem->regions + mem.nregions;
+ 	     region++) {
+@@ -1823,6 +1826,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 			  struct iovec iov[], int iov_size, int access)
+ {
+ 	const struct vhost_umem_node *node;
++	static struct vhost_umem_node *cache;
+ 	struct vhost_dev *dev = vq->dev;
+ 	struct vhost_umem *umem = dev->iotlb ? dev->iotlb : dev->umem;
+ 	struct iovec *_iov;
+@@ -1836,6 +1840,12 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 			break;
+ 		}
+ 
++		if (cache && cache->start < addr && cache->start +
++			cache->size > addr) {
++			node = cache;
++			goto fast;
++		}
++
+ 		node = vhost_umem_interval_tree_iter_first(&umem->umem_tree,
+ 							addr, addr + len - 1);
+ 		if (node == NULL || node->start > addr) {
+@@ -1850,6 +1860,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+ 			break;
+ 		}
+ 
++		cache = node;
++	fast:
+ 		_iov = iov + ret;
+ 		size = node->size - addr + node->start;
+ 		_iov->iov_len = min((u64)len - s, size);
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index a351820..10565af 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -149,6 +149,7 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++        struct vhost_umem_node *cache;
+ };
+ 
+ struct vhost_msg_node {
