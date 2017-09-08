@@ -1,0 +1,97 @@
+Bottom: 91e680e3edc39fd7db0484c715f591fe8ac91687
+Top:    806b2b6d775a96b97944b13d68e7261b1c8e135b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-08 17:12:46 +0800
+
+Refresh of vhost-allow-passing-desc
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index b304659..e610685 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -511,7 +511,7 @@ static void handle_tx(struct vhost_net *net)
+ 		for (i = 0; i < avails; i++) {
+ 			head = __vhost_get_vq_desc(vq, vq->iov,
+ 						   ARRAY_SIZE(vq->iov),
+-						   &out, &in, NULL, NULL,
++						   &out, &in, NULL, NULL, NULL,
+ 					       vhost16_to_cpu(vq, heads[i].id));
+ 			if (in) {
+ 				vq_err(vq, "Unexpected descriptor format for "
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 6887b89..bb61859 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2051,13 +2051,18 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct iovec iov[], unsigned int iov_size,
+ 			unsigned int *out_num, unsigned int *in_num,
+ 			struct vhost_log *log, unsigned int *log_num,
++			struct vring_desc *descs,
+ 			__virtio16 head)
+ {
+-	struct vring_desc *desc;
+-	struct vring_desc desc2;
++	struct vring_desc *desc = descs;
++	struct vring_desc d;
++
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
++	if (!desc)
++		desc = &d;
++
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head > vq->num)) {
+ 		vq_err(vq, "Guest says index %u > %u is available",
+@@ -2084,16 +2089,9 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
+-#if 0
+-		ret = vhost_copy_from_user(vq, &desc2, vq->desc + i,
+-					   sizeof desc);
+-		if (unlikely(ret)) {
+-			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+-			       i, vq->desc + i);
+-			return -EFAULT;
+-		}
+-#endif
+-		desc = vq->desc_vaddr + i;
++
++		if (!desc)
++			desc = vq->desc_vaddr + i;
+ 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+@@ -2166,7 +2164,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 		return head;
+ 
+ 	return __vhost_get_vq_desc(vq, iov, iov_size, out_num, in_num,
+-				   log, log_num, head);
++				   log, log_num, NULL, head);
+ }
+ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+ 
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index b358802..c387ee8 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -193,11 +193,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *,
+ 		      struct iovec iov[], unsigned int iov_count,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num);
+-int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+-			struct iovec iov[], unsigned int iov_count,
+-			unsigned int *out_num, unsigned int *in_num,
+-			struct vhost_log *log, unsigned int *log_num,
+-			__virtio16 ring_head);
++int __vhost_get_vq_desc(struct vhost_virtqueue *,
++                        struct iovec iov[], unsigned int iov_count,
++                        unsigned int *out_num, unsigned int *in_num,
++                        struct vhost_log *log, unsigned int *log_num,
++                        struct vring_desc *desc, __virtio16 ring_head);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
