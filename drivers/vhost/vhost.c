@@ -330,6 +330,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
+	vq->cache = NULL;
 }
 
 static int vhost_worker(void *data)
@@ -1309,6 +1310,8 @@ static long vhost_set_memory(struct vhost_dev *d, struct vhost_memory __user *m)
 		return -ENOMEM;
 	}
 
+	printk("regions %d\n", mem.nregions);
+
 	for (region = newmem->regions;
 	     region < newmem->regions + mem.nregions;
 	     region++) {
@@ -1823,6 +1826,7 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 			  struct iovec iov[], int iov_size, int access)
 {
 	const struct vhost_umem_node *node;
+	static struct vhost_umem_node *cache;
 	struct vhost_dev *dev = vq->dev;
 	struct vhost_umem *umem = dev->iotlb ? dev->iotlb : dev->umem;
 	struct iovec *_iov;
@@ -1834,6 +1838,12 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 		if (unlikely(ret >= iov_size)) {
 			ret = -ENOBUFS;
 			break;
+		}
+
+		if (cache && cache->start < addr && cache->start +
+			cache->size > addr) {
+			node = cache;
+			goto fast;
 		}
 
 		node = vhost_umem_interval_tree_iter_first(&umem->umem_tree,
@@ -1850,6 +1860,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
 			break;
 		}
 
+		cache = node;
+	fast:
 		_iov = iov + ret;
 		size = node->size - addr + node->start;
 		_iov->iov_len = min((u64)len - s, size);
