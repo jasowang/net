@@ -1,0 +1,79 @@
+Bottom: 40b2b981063d82376b68cb3dd3d27ceba4e71d81
+Top:    4eb67f1358cba1c45b68c625d5d72919080daafc
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-08 20:36:47 +0800
+
+Refresh of vhost-speed-up-descriptor-ring
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 25e16ea..949aef6 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1466,6 +1466,14 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+ 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
+ 		vq->log_addr = a.log_guest_addr;
+ 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
++
++		r = get_user_pages_fast((unsigned long)a.desc_user_addr,
++					1, 1, &vq->page_desc);
++		if (r < 0)
++			return -EFAULT;
++		BUG_ON(r != 1);
++		vq->desc_vaddr = vmap(&vq->page_desc, 1, VM_MAP, PAGE_KERNEL);
++
+ 		break;
+ 	case VHOST_SET_VRING_KICK:
+ 		if (copy_from_user(&f, argp, sizeof f)) {
+@@ -2046,15 +2054,10 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			struct vring_desc *d,
+ 			__virtio16 head)
+ {
+-	struct vring_desc vring_desc, *desc = &vring_desc;
++	struct vring_desc *desc = d;
+ 	unsigned int i, found = 0;
+ 	int ret = 0, access;
+ 
+-	if (!d)
+-		desc = &vring_desc;
+-	else
+-		desc = d;
+-
+ 	/* If their number is silly, that's an error. */
+ 	if (unlikely(head > vq->num)) {
+ 		vq_err(vq, "Guest says index %u > %u is available",
+@@ -2081,17 +2084,12 @@ int __vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			       i, vq->num, head);
+ 			return -EINVAL;
+ 		}
++
+ 		if (!d) {
+-			ret = vhost_copy_from_user(vq, desc, vq->desc + i,
+-						   sizeof desc[0]);
+-			if (unlikely(ret)) {
+-				vq_err(vq, "Failed to get descriptor: "
+-	                                   "idx %d addr %p\n",
+-					i, vq->desc + i);
+-				return -EFAULT;
+-			}
++			desc = vq->desc_vaddr + i;
+ 		} else
+ 			d = NULL;
++
+ 		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index ca06fe2..4f6d70d 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -150,6 +150,8 @@ struct vhost_virtqueue {
+ #endif
+ 	u32 busyloop_timeout;
+ 	struct vring_desc descs[64];
++	struct page *page_desc;
++	struct vring_desc *desc_vaddr;
+ };
+ 
+ struct vhost_msg_node {
