@@ -1,0 +1,29 @@
+Bottom: 4eb67f1358cba1c45b68c625d5d72919080daafc
+Top:    380caa5923f08b21691ee96655ef37fe8febf3cc
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-08 20:40:32 +0800
+
+Refresh of vhost-speed-up-descriptor-ring
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 949aef6..8230823 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2543,13 +2543,8 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
+ 			__virtio16 ring_head = vhost16_to_cpu(vq, heads[i].id);
+ 
+ 			copied = min((u16)(vq->num - ring_head), total);
+-			ret2 = vhost_copy_from_user(vq, &descs[i],
+-					    vq->desc + ring_head,
+-					    copied * sizeof descs[0]);
+-			if (unlikely(ret2)) {
+-				vq_err(vq, "Failed to get descriptor\n");
+-				return -EFAULT;
+-			}
++			memcpy(&descs[i], vq->desc_vaddr + ring_head,
++			       copied * sizeof descs[0]);
+ 			total -= copied;
+ 		}
+ 	}
