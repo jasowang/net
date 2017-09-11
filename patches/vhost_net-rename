@@ -5,6 +5,8 @@ Date:   2017-09-11 09:50:45 +0800
 
 vhost_net: rename VHOST_RX_BATCH to VHOST_NET_BATCH
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
