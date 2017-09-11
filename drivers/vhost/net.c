@@ -460,7 +460,7 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
-	int i, batched = VHOST_RX_BATCH;
+	int i, batched = VHOST_NET_BATCH;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
