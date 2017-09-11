@@ -1,0 +1,22 @@
+Bottom: b009ff8cdd5583c4d17b80df969b594a60e1eabc
+Top:    f8d415ea1b9cf048fc4a842ffb3dce6c50878141
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-11 09:51:10 +0800
+
+Refresh of vhost_net-basic-batch
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 7fad0ac..d55e64b 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -460,7 +460,7 @@ static void handle_tx(struct vhost_net *net)
+ 	struct socket *sock;
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	bool zcopy, zcopy_used;
+-	int i, batched = VHOST_RX_BATCH;
++	int i, batched = VHOST_NET_BATCH;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
