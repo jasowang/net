@@ -1,0 +1,40 @@
+Bottom: 92530eef371dfb2a8f7d7520e8aa76cd63e00551
+Top:    52b5072bedd34d4025eaf65b1850cfcd37195103
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-11 09:50:49 +0800
+
+Refresh of vhost_net-rename
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 8d2bcae..b46f349 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -87,7 +87,7 @@ struct vhost_net_ubuf_ref {
+ 	struct vhost_virtqueue *vq;
+ };
+ 
+-#define VHOST_RX_BATCH 64
++#define VHOST_NET_BATCH 64
+ struct vhost_net_buf {
+ 	struct sk_buff **queue;
+ 	int tail;
+@@ -159,7 +159,7 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
+ 
+ 	rxq->head = 0;
+ 	rxq->tail = skb_array_consume_batched(nvq->rx_array, rxq->queue,
+-					      VHOST_RX_BATCH);
++					      VHOST_NET_BATCH);
+ 	return rxq->tail;
+ }
+ 
+@@ -907,7 +907,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 		return -ENOMEM;
+ 	}
+ 
+-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(struct sk_buff *),
++	queue = kmalloc_array(VHOST_NET_BATCH, sizeof(struct sk_buff *),
+ 			      GFP_KERNEL);
+ 	if (!queue) {
+ 		kfree(vqs);
