@@ -87,7 +87,7 @@ struct vhost_net_ubuf_ref {
 	struct vhost_virtqueue *vq;
 };
 
-#define VHOST_RX_BATCH 64
+#define VHOST_NET_BATCH 64
 struct vhost_net_buf {
 	struct sk_buff **queue;
 	int tail;
@@ -159,7 +159,7 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
 
 	rxq->head = 0;
 	rxq->tail = skb_array_consume_batched(nvq->rx_array, rxq->queue,
-					      VHOST_RX_BATCH);
+					      VHOST_NET_BATCH);
 	return rxq->tail;
 }
 
@@ -912,7 +912,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		return -ENOMEM;
 	}
 
-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(struct sk_buff *),
+	queue = kmalloc_array(VHOST_NET_BATCH, sizeof(struct sk_buff *),
 			      GFP_KERNEL);
 	if (!queue) {
 		kfree(vqs);
