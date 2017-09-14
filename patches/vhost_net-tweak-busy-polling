@@ -5,6 +5,7 @@ Date:   2017-09-14 17:09:09 +0800
 
 vhost_net: tweak busy polling loop logic
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
