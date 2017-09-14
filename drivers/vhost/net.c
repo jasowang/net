@@ -368,15 +368,6 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
 	rcu_read_unlock_bh();
 }
 
-static bool vhost_can_busy_poll(struct vhost_dev *dev,
-				unsigned long long endtime)
-{
-	return likely(!need_resched()) &&
-	       likely(!time_after64(local_clock(), endtime)) &&
-	       likely(!signal_pending(current)) &&
-	       !vhost_has_work(dev);
-}
-
 static void vhost_net_disable_vq(struct vhost_net *n,
 				 struct vhost_virtqueue *vq)
 {
@@ -416,7 +407,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 		preempt_disable();
 		endtime = local_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq))
+		       vhost_vq_avail_empty(vq->dev, vq) &&
+		       !vhost_has_work(&net->dev))
 			cpu_relax();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
@@ -625,7 +617,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
 		       !sk_has_rx_data(sk) &&
-		       vhost_vq_avail_empty(&net->dev, vq))
+		       vhost_vq_avail_empty(&net->dev, vq) &&
+		       !vhost_has_work(&net->dev))
 			cpu_relax();
 
 		preempt_enable();

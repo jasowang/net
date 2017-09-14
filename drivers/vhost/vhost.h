@@ -244,6 +244,8 @@ static inline bool vhost_has_feature(struct vhost_virtqueue *vq, int bit)
 	return vq->acked_features & (1ULL << bit);
 }
 
+bool vhost_can_busy_poll(struct vhost_dev *dev, unsigned long long endtime);
+
 #ifdef CONFIG_VHOST_CROSS_ENDIAN_LEGACY
 static inline bool vhost_is_little_endian(struct vhost_virtqueue *vq)
 {
