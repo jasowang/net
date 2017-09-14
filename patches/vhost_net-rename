@@ -5,6 +5,8 @@ Date:   2017-09-14 16:54:01 +0800
 
 vhost_net: rename vhost_can_busy_poll() to vhost_net_can_busy_poll()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
