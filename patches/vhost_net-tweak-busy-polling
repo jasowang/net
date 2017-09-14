@@ -1,0 +1,12 @@
+Bottom: 85ee0b6d1d77a6f10e76d4279e969a719b3ea428
+Top:    85ee0b6d1d77a6f10e76d4279e969a719b3ea428
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-14 17:09:09 +0800
+
+vhost_net: tweak busy polling loop logic
+
+
+
+---
+
+
