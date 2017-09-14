@@ -149,6 +149,7 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u64 busyloop_timeout;
+	u64 curr_busyloop_timeout;
 };
 
 struct vhost_msg_node {

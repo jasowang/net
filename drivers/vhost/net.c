@@ -110,6 +110,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
 	struct vhost_net_buf rxq;
+	u64 last_sleep;
 };
 
 struct vhost_net {
@@ -406,10 +407,12 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 	if (r == vq->num && vq->busyloop_timeout) {
 		preempt_disable();
 		endtime = local_clock() + vq->busyloop_timeout;
-		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq) &&
-		       !vhost_has_work(&net->dev))
+		do {
+			if (!vhost_vq_avail_empty(vq->dev, vq) ||
+			    vhost_has_work(&net->dev))
+				break;
 			cpu_relax();
+		} while (vhost_can_busy_poll(vq->dev, endtime));
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				      out_num, in_num, NULL, NULL);
@@ -599,6 +602,37 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
+static void vhost_net_adjust_poll_ns(struct vhost_net_virtqueue *nvq,
+				     bool has_buffer)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	u64 gap;
+
+	if (!vq->busyloop_timeout)
+		return;
+
+	if (!has_buffer) {
+		vq->curr_busyloop_timeout /= 2;
+		return;
+	}
+
+	gap = ktime_get_ns() - nvq->last_sleep;
+	if (gap < vq->curr_busyloop_timeout)
+		return;
+	if (gap > vq->busyloop_timeout)
+		vq->curr_busyloop_timeout /= 2;
+	else if (gap > vq->curr_busyloop_timeout) {
+		if (vq->curr_busyloop_timeout == 0) {
+			vq->curr_busyloop_timeout = 1000;
+			return;
+		}
+		vq->curr_busyloop_timeout *= 2;
+		if (vq->curr_busyloop_timeout > vq->busyloop_timeout)
+			vq->curr_busyloop_timeout = vq->busyloop_timeout;
+	}
+
+}
+
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 {
 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
@@ -613,13 +647,15 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
-		endtime = local_clock() + vq->busyloop_timeout;
+		endtime = local_clock() + vq->curr_busyloop_timeout;
 
-		while (vhost_can_busy_poll(&net->dev, endtime) &&
-		       !sk_has_rx_data(sk) &&
-		       vhost_vq_avail_empty(&net->dev, vq) &&
-		       !vhost_has_work(&net->dev))
+		do {
+			if (sk_has_rx_data(sk) ||
+			    !vhost_vq_avail_empty(&net->dev, vq) ||
+			    vhost_has_work(&net->dev))
+				break;
 			cpu_relax();
+		} while (vhost_can_busy_poll(&net->dev, endtime));
 
 		preempt_enable();
 
@@ -634,6 +670,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 
 		len = peek_head_len(rvq, sk);
 	}
+
+	vhost_net_adjust_poll_ns(rvq, len != 0);
 
 	return len;
 }
@@ -847,6 +885,8 @@ static void handle_rx(struct vhost_net *net)
 		}
 	}
 	vhost_net_enable_vq(net, vq);
+	if (!sock_len)
+		nvq->last_sleep = ktime_get_ns();
 out:
 	mutex_unlock(&vq->mutex);
 }
