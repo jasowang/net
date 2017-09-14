@@ -1,8 +1,8 @@
 Version: 1
-Previous: 67b91b9e250b52603d46fa5b3af0edb4ae734218
+Previous: b12045a9de2973a5d914a83a87dd7272d8352634
 Head: eb095449e5e86bb44455b94f37504bcba3ca5305
 Applied:
   vhost-let-busy-polling-work-at: eb095449e5e86bb44455b94f37504bcba3ca5305
-  vhost_net-rename: 9e1180596395025764a775c60253f1dd7ed31f1e
 Unapplied:
+  vhost_net-rename: 9e1180596395025764a775c60253f1dd7ed31f1e
 Hidden:
