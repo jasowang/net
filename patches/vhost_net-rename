@@ -1,5 +1,5 @@
 Bottom: f5614bcbe3a960d108b70f15e49a8364e8d124f1
-Top:    f5614bcbe3a960d108b70f15e49a8364e8d124f1
+Top:    5f9e623849e7612fc047f9368afde9cafa9916b8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-14 16:54:01 +0800
 
@@ -10,4 +10,36 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index bc0708d..eeba6ca 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -368,8 +368,8 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
+ 	rcu_read_unlock_bh();
+ }
+ 
+-static bool vhost_can_busy_poll(struct vhost_dev *dev,
+-				unsigned long long endtime)
++static bool vhost_net_can_busy_poll(struct vhost_dev *dev,
++				    unsigned long long endtime)
+ {
+ 	return likely(!need_resched()) &&
+ 	       likely(!time_after64(local_clock(), endtime)) &&
+@@ -415,7 +415,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 	if (r == vq->num && vq->busyloop_timeout) {
+ 		preempt_disable();
+ 		endtime = local_clock() + vq->busyloop_timeout;
+-		while (vhost_can_busy_poll(vq->dev, endtime) &&
++		while (vhost_net_can_busy_poll(vq->dev, endtime) &&
+ 		       vhost_vq_avail_empty(vq->dev, vq))
+ 			cpu_relax();
+ 		preempt_enable();
+@@ -623,7 +623,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 		preempt_disable();
+ 		endtime = local_clock() + vq->busyloop_timeout;
+ 
+-		while (vhost_can_busy_poll(&net->dev, endtime) &&
++		while (vhost_net_can_busy_poll(&net->dev, endtime) &&
+ 		       !sk_has_rx_data(sk) &&
+ 		       vhost_vq_avail_empty(&net->dev, vq))
+ 			cpu_relax();

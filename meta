@@ -1,9 +1,8 @@
 Version: 1
-Previous: 01dc211cfc721352f9a31eb8019c8007f7b67aed
-Head: 67d6c252d675e181443872673c50e68836b5ce6a
+Previous: a0fc163c8071dc80c0701a7c467f6b5ed85ccafd
+Head: 9e1180596395025764a775c60253f1dd7ed31f1e
 Applied:
   vhost-let-busy-polling-work-at: eb095449e5e86bb44455b94f37504bcba3ca5305
-  vhost_net-rename: e20ffb50574f538e93bf943aa533e02fc54da3d9
-  refresh-temp: 67d6c252d675e181443872673c50e68836b5ce6a
+  vhost_net-rename: 9e1180596395025764a775c60253f1dd7ed31f1e
 Unapplied:
 Hidden:
