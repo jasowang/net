@@ -27,6 +27,7 @@
 #include <linux/cgroup.h>
 #include <linux/module.h>
 #include <linux/sort.h>
+#include <linux/sched/clock.h>
 #include <linux/sched/mm.h>
 #include <linux/sched/signal.h>
 #include <linux/interval_tree_generic.h>
@@ -2414,6 +2415,13 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
+bool vhost_can_busy_poll(struct vhost_dev *dev, unsigned long long endtime)
+{
+	return likely(!need_resched()) &&
+	       likely(!time_after64(local_clock(), endtime)) &&
+	       likely(!signal_pending(current));
+}
+EXPORT_SYMBOL_GPL(vhost_can_busy_poll);
 
 static int __init vhost_init(void)
 {
