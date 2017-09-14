@@ -1,0 +1,11 @@
+Bottom: f5614bcbe3a960d108b70f15e49a8364e8d124f1
+Top:    f5614bcbe3a960d108b70f15e49a8364e8d124f1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-14 16:59:53 +0800
+
+vhost: move core vhost_can_busy_poll() logic to vhost.c
+
+
+---
+
+
