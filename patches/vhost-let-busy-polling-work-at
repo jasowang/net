@@ -5,6 +5,8 @@ Date:   2017-09-14 16:43:26 +0800
 
 vhost: let busy polling work at ns granularity
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
