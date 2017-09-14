@@ -368,16 +368,11 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
 	rcu_read_unlock_bh();
 }
 
-static inline unsigned long busy_clock(void)
-{
-	return local_clock() >> 10;
-}
-
 static bool vhost_can_busy_poll(struct vhost_dev *dev,
-				unsigned long endtime)
+				unsigned long long endtime)
 {
 	return likely(!need_resched()) &&
-	       likely(!time_after(busy_clock(), endtime)) &&
+	       likely(!time_after64(local_clock(), endtime)) &&
 	       likely(!signal_pending(current)) &&
 	       !vhost_has_work(dev);
 }
@@ -413,13 +408,13 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    struct iovec iov[], unsigned int iov_size,
 				    unsigned int *out_num, unsigned int *in_num)
 {
-	unsigned long uninitialized_var(endtime);
+	unsigned long long uninitialized_var(endtime);
 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
 		preempt_disable();
-		endtime = busy_clock() + vq->busyloop_timeout;
+		endtime = local_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
 		       vhost_vq_avail_empty(vq->dev, vq))
 			cpu_relax();
@@ -617,7 +612,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	unsigned long uninitialized_var(endtime);
+	unsigned long long uninitialized_var(endtime);
 	int len = peek_head_len(rvq, sk);
 
 	if (!len && vq->busyloop_timeout) {
@@ -626,7 +621,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
-		endtime = busy_clock() + vq->busyloop_timeout;
+		endtime = local_clock() + vq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
 		       !sk_has_rx_data(sk) &&
