@@ -368,8 +368,8 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
 	rcu_read_unlock_bh();
 }
 
-static bool vhost_can_busy_poll(struct vhost_dev *dev,
-				unsigned long long endtime)
+static bool vhost_net_can_busy_poll(struct vhost_dev *dev,
+				    unsigned long long endtime)
 {
 	return likely(!need_resched()) &&
 	       likely(!time_after64(local_clock(), endtime)) &&
@@ -415,7 +415,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 	if (r == vq->num && vq->busyloop_timeout) {
 		preempt_disable();
 		endtime = local_clock() + vq->busyloop_timeout;
-		while (vhost_can_busy_poll(vq->dev, endtime) &&
+		while (vhost_net_can_busy_poll(vq->dev, endtime) &&
 		       vhost_vq_avail_empty(vq->dev, vq))
 			cpu_relax();
 		preempt_enable();
@@ -623,7 +623,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		preempt_disable();
 		endtime = local_clock() + vq->busyloop_timeout;
 
-		while (vhost_can_busy_poll(&net->dev, endtime) &&
+		while (vhost_net_can_busy_poll(&net->dev, endtime) &&
 		       !sk_has_rx_data(sk) &&
 		       vhost_vq_avail_empty(&net->dev, vq))
 			cpu_relax();
