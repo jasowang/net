@@ -1,5 +1,5 @@
 Bottom: f5614bcbe3a960d108b70f15e49a8364e8d124f1
-Top:    f5614bcbe3a960d108b70f15e49a8364e8d124f1
+Top:    85ee0b6d1d77a6f10e76d4279e969a719b3ea428
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-14 16:59:53 +0800
 
@@ -10,4 +10,82 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index bc0708d..b2509ab 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -368,15 +368,6 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
+ 	rcu_read_unlock_bh();
+ }
+ 
+-static bool vhost_can_busy_poll(struct vhost_dev *dev,
+-				unsigned long long endtime)
+-{
+-	return likely(!need_resched()) &&
+-	       likely(!time_after64(local_clock(), endtime)) &&
+-	       likely(!signal_pending(current)) &&
+-	       !vhost_has_work(dev);
+-}
+-
+ static void vhost_net_disable_vq(struct vhost_net *n,
+ 				 struct vhost_virtqueue *vq)
+ {
+@@ -416,7 +407,8 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 		preempt_disable();
+ 		endtime = local_clock() + vq->busyloop_timeout;
+ 		while (vhost_can_busy_poll(vq->dev, endtime) &&
+-		       vhost_vq_avail_empty(vq->dev, vq))
++		       vhost_vq_avail_empty(vq->dev, vq) &&
++		       !vhost_has_work(&net->dev))
+ 			cpu_relax();
+ 		preempt_enable();
+ 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+@@ -625,7 +617,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 
+ 		while (vhost_can_busy_poll(&net->dev, endtime) &&
+ 		       !sk_has_rx_data(sk) &&
+-		       vhost_vq_avail_empty(&net->dev, vq))
++		       vhost_vq_avail_empty(&net->dev, vq) &&
++		       !vhost_has_work(&net->dev))
+ 			cpu_relax();
+ 
+ 		preempt_enable();
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index f54d9f7..8098085 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -27,6 +27,7 @@
+ #include <linux/cgroup.h>
+ #include <linux/module.h>
+ #include <linux/sort.h>
++#include <linux/sched/clock.h>
+ #include <linux/sched/mm.h>
+ #include <linux/sched/signal.h>
+ #include <linux/interval_tree_generic.h>
+@@ -2414,6 +2415,13 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+ }
+ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
++bool vhost_can_busy_poll(struct vhost_dev *dev, unsigned long long endtime)
++{
++	return likely(!need_resched()) &&
++	       likely(!time_after64(local_clock(), endtime)) &&
++	       likely(!signal_pending(current));
++}
++EXPORT_SYMBOL_GPL(vhost_can_busy_poll);
+ 
+ static int __init vhost_init(void)
+ {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 3fbff72..c6a29f3 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -244,6 +244,8 @@ static inline bool vhost_has_feature(struct vhost_virtqueue *vq, int bit)
+ 	return vq->acked_features & (1ULL << bit);
+ }
+ 
++bool vhost_can_busy_poll(struct vhost_dev *dev, unsigned long long endtime);
++
+ #ifdef CONFIG_VHOST_CROSS_ENDIAN_LEGACY
+ static inline bool vhost_is_little_endian(struct vhost_virtqueue *vq)
+ {
