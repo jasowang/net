@@ -404,15 +404,36 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
+		unsigned long long poll_ns;
+		ktime_t start, end;
+		bool valid = false;
+
 		preempt_disable();
-		endtime = local_clock() + vq->busyloop_timeout;
+		endtime = local_clock();
+		start = ns_to_ktime(endtime);
+		endtime += vq->curr_busyloop_timeout;
+
 		do {
 			if (!vhost_vq_avail_empty(vq->dev, vq) ||
-			    vhost_has_work(&net->dev))
+			    vhost_has_work(&net->dev)) {
+				valid = true;
 				break;
+			}
 			cpu_relax();
 		} while (vhost_can_busy_poll(vq->dev, endtime));
+
+		end = ns_to_ktime(local_clock());
+		poll_ns = ktim_to_ns(ktime_del(end, start));
 		preempt_enable();
+
+		if (!valid) {
+			/* shrink */;
+			vq->curr_busyloop_timeout /= 2;
+		} else if (poll_ns <= vq->curr_busyloop_timeout) {
+			/* hit everything is fine */;
+		} else if (poll_ns > vq->curr_busyloop_timeout) {
+			/* grow */;
+		}
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				      out_num, in_num, NULL, NULL);
 	}
