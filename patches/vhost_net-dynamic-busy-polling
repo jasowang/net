@@ -5,6 +5,8 @@ Date:   2017-09-15 11:44:00 +0800
 
 vhost_net: dynamic busy polling
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
