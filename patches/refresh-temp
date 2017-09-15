@@ -1,0 +1,76 @@
+Bottom: 947601849fbe471f52bd489382aa9a2b8e6ea3c0
+Top:    78b7a890687adf92339194df580f777d0e1f0bde
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-15 11:44:05 +0800
+
+Refresh of vhost_net-dynamic-busy-polling
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e29150a..ea92602 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -404,15 +404,36 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 				  out_num, in_num, NULL, NULL);
+ 
+ 	if (r == vq->num && vq->busyloop_timeout) {
++		unsigned long long poll_ns;
++		ktime_t start, end;
++		bool valid = false;
++
+ 		preempt_disable();
+-		endtime = local_clock() + vq->busyloop_timeout;
++		endtime = local_clock();
++		start = ns_to_ktime(endtime);
++		endtime += vq->curr_busyloop_timeout;
++
+ 		do {
+ 			if (!vhost_vq_avail_empty(vq->dev, vq) ||
+-			    vhost_has_work(&net->dev))
++			    vhost_has_work(&net->dev)) {
++				valid = true;
+ 				break;
++			}
+ 			cpu_relax();
+ 		} while (vhost_can_busy_poll(vq->dev, endtime));
++
++		end = ns_to_ktime(local_clock());
++		poll_ns = ktim_to_ns(ktime_del(end, start));
+ 		preempt_enable();
++
++		if (!valid) {
++			/* shrink */;
++			vq->curr_busyloop_timeout /= 2;
++		} else if (poll_ns <= vq->curr_busyloop_timeout) {
++			/* hit everything is fine */;
++		} else if (poll_ns > vq->curr_busyloop_timeout) {
++			/* grow */;
++		}
+ 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+ 				      out_num, in_num, NULL, NULL);
+ 	}
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 8098085..64c3a8b 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1534,6 +1534,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
+ 			break;
+ 		}
+ 		vq->busyloop_timeout = s.num * NSEC_PER_MSEC;
++		vq->curr_busyloop_timeout= vq->busyloop_timeout;
+ 		break;
+ 	case VHOST_GET_VRING_BUSYLOOP_TIMEOUT:
+ 		s.index = idx;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index c6a29f3..006600a 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -149,6 +149,7 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u64 busyloop_timeout;
++        u64 curr_busyloop_timeout;
+ };
+ 
+ struct vhost_msg_node {
