@@ -1,11 +1,10 @@
 Version: 1
-Previous: 088c040805eb1db66b7eba5b6d84eacdee7ec5af
-Head: 40306833ef9c7692cd8e52a61537fec41557ba05
+Previous: 52e3637d94e8d1f2b7dbd046c0fb2908c1c9f06d
+Head: c75b133e5806f625f63c218fb199a74a9e83acc0
 Applied:
   vhost-let-busy-polling-work-at: eb095449e5e86bb44455b94f37504bcba3ca5305
   vhost-move-core: 349d09c2f05e31365e5dce7216981051d0c1f1e5
   vhost_net-tweak-busy-polling: 05e292bd64ecc4c260ee772ffeebe99166abb565
-  vhost_net-dynamic-busy-polling: 6726cba97c40319ef59504b73db04bedd249d5e4
-  refresh-temp: 40306833ef9c7692cd8e52a61537fec41557ba05
+  vhost_net-dynamic-busy-polling: c75b133e5806f625f63c218fb199a74a9e83acc0
 Unapplied:
 Hidden:
