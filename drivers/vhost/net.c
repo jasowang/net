@@ -110,8 +110,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
 	struct vhost_net_buf rxq;
-	u64 sleep;
-	u64 wakeup;
+	u64 last_sleep;
 };
 
 struct vhost_net {
@@ -489,7 +488,6 @@ static void handle_tx(struct vhost_net *net)
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
-			nvq->sleep = ktime_get_ns();
 			break;
 		}
 		if (in) {
@@ -604,23 +602,35 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static vhost_net_adjust_poll_ns(struct vhost_net_virtqueue *vq, bool has_buffer)
+static void vhost_net_adjust_poll_ns(struct vhost_net_virtqueue *nvq,
+				     bool has_buffer)
 {
+	struct vhost_virtqueue *vq = &nvq->vq;
+	u64 gap;
+
 	if (!vq->busyloop_timeout)
 		return;
 
-	if (has_buffer) {
-		u64 gap = ktime_get_ns() - vq->last_sleep;
-		if (gap < vq->curr_busy_loop_timeout)
-			return;
-		if (gap > vq->busyloop_timeout)
-			vq->curr_busy_loop_timeout /= 2;
-		else if (gap > vq->curr_busyloop_timeout) {
-			vq->curr_busyloop_timeout *= 2;
-			if (vq->curr_busy_loop_timeout > vq->busyloop_timeout)
-				vq->curr_busyloop_timeout = vq->busyloop_timeout;
-		}
+	if (!has_buffer) {
+		vq->curr_busyloop_timeout /= 2;
+		return;
 	}
+
+	gap = ktime_get_ns() - nvq->last_sleep;
+	if (gap < vq->curr_busyloop_timeout)
+		return;
+	if (gap > vq->busyloop_timeout)
+		vq->curr_busyloop_timeout /= 2;
+	else if (gap > vq->curr_busyloop_timeout) {
+		if (vq->curr_busyloop_timeout == 0) {
+			vq->curr_busyloop_timeout = 1000;
+			return;
+		}
+		vq->curr_busyloop_timeout *= 2;
+		if (vq->curr_busyloop_timeout > vq->busyloop_timeout)
+			vq->curr_busyloop_timeout = vq->busyloop_timeout;
+	}
+
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
@@ -637,7 +647,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
-		endtime = local_clock() + vq->busyloop_timeout;
+		endtime = local_clock() + vq->curr_busyloop_timeout;
 
 		do {
 			if (sk_has_rx_data(sk) ||
@@ -661,21 +671,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		len = peek_head_len(rvq, sk);
 	}
 
-	if (vq->busyloop_timeout) {
-		if (len) {
-			u64 gap = ktime_get_ns() - nvq->sleep;
-			if (gap < vq->curr_busyloop_timeout)
-				;
-			else if (gap > vq->busyloop_timeout)
-				/* shirnk */;
-			else if (gap < vq->busyloop_timeout &&
-				gap > vq->curr_busyloop_tiemout) {
-				/* grow */;
-			}
-		}
-		else
-			nvq->sleep = ktime_get_ns();
-	}
+	vhost_net_adjust_poll_ns(rvq, len != 0);
 
 	return len;
 }
@@ -889,6 +885,8 @@ static void handle_rx(struct vhost_net *net)
 		}
 	}
 	vhost_net_enable_vq(net, vq);
+	if (!sock_len)
+		nvq->last_sleep = ktime_get_ns();
 out:
 	mutex_unlock(&vq->mutex);
 }

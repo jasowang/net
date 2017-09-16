@@ -1534,6 +1534,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 			break;
 		}
 		vq->busyloop_timeout = s.num * NSEC_PER_MSEC;
+		vq->curr_busyloop_timeout = vq->busyloop_timeout;
 		break;
 	case VHOST_GET_VRING_BUSYLOOP_TIMEOUT:
 		s.index = idx;
