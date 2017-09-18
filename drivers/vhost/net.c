@@ -20,6 +20,7 @@
 #include <linux/sched/clock.h>
 #include <linux/sched/signal.h>
 #include <linux/vmalloc.h>
+#include <linux/timer.h>
 
 #include <linux/net.h>
 #include <linux/if_packet.h>
@@ -76,6 +77,13 @@ enum {
 	VHOST_NET_VQ_MAX = 2,
 };
 
+enum {
+	VHOST_NET_BUSY_START = 0,
+	VHOST_NET_BUSY_SLEEP = 1,
+	VHOST_NET_BUSY_WAKEUP = 2,
+	VHOST_NET_BUSY_POLL = 3,
+};
+
 struct vhost_net_ubuf_ref {
 	/* refcount follows semantics similar to kref:
 	 *  0: object is released
@@ -110,6 +118,10 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct skb_array *rx_array;
 	struct vhost_net_buf rxq;
+	struct hrtimer early_timer;
+	u64 poll_ns;
+	u64 last_start;
+	int busy_state;
 };
 
 struct vhost_net {
@@ -413,19 +425,39 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    struct iovec iov[], unsigned int iov_size,
 				    unsigned int *out_num, unsigned int *in_num)
 {
+	struct vhost_net_virtqueue *tvq = &net->vqs[VHOST_NET_VQ_TX];
 	unsigned long uninitialized_var(endtime);
 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				  out_num, in_num, NULL, NULL);
+	u64 end;
 
 	if (r == vq->num && vq->busyloop_timeout) {
+		tvq->last_start = ktime_get_ns();
+		if (tvq->busy_state == VHOST_NET_BUSY_POLL &&
+		    tvq->poll_ns < vq->busyloop_timeout << 10 &&
+		    tvq->poll_ns >> 10) {
+			tvq->busy_state = VHOST_NET_BUSY_SLEEP;
+			hrtimer_start(&tvq->early_timer,
+				      tvq->poll_ns / 4,
+				      HRTIMER_MODE_REL);
+			return vq->num;
+		}
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
+		if (hrtimer_active(&tvq->early_timer))
+			endtime -= tvq->poll_ns >> 10;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
 		       vhost_vq_avail_empty(vq->dev, vq))
 			cpu_relax();
 		preempt_enable();
 		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				      out_num, in_num, NULL, NULL);
+	}
+
+	if (vq->busyloop_timeout) {
+		tvq->busy_state = VHOST_NET_BUSY_POLL;
+		end = ktime_get_ns();
+		tvq->poll_ns = ktime_to_ns(ktime_sub(end, tvq->last_start));
 	}
 
 	return r;
@@ -460,6 +492,7 @@ static void handle_tx(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+	static unsigned long hit, nhit;
 	bool zcopy, zcopy_used;
 
 	mutex_lock(&vq->mutex);
@@ -469,6 +502,9 @@ static void handle_tx(struct vhost_net *net)
 
 	if (!vq_iotlb_prefetch(vq))
 		goto out;
+
+	if (vq->busyloop_timeout)
+		hrtimer_try_to_cancel(&nvq->early_timer);
 
 	vhost_disable_notify(&net->dev, vq);
 
@@ -619,14 +655,28 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int len = peek_head_len(rvq, sk);
+	u64 end;
 
 	if (!len && vq->busyloop_timeout) {
+		rvq->last_start = ktime_get_ns();
+		if (rvq->busy_state == VHOST_NET_BUSY_POLL &&
+		    rvq->poll_ns < vq->busyloop_timeout << 10 &&
+		    rvq->poll_ns >> 10) {
+			rvq->busy_state = VHOST_NET_BUSY_SLEEP;
+			hrtimer_start(&rvq->early_timer,
+				      rvq->poll_ns / 4,
+				      HRTIMER_MODE_REL);
+			return 0;
+		}
+
 		/* Both tx vq and rx socket were polled here */
 		mutex_lock(&vq->mutex);
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
+		if (!hrtimer_active(&rvq->early_timer))
+			endtime -= rvq->poll_ns >> 10;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
 		       !sk_has_rx_data(sk) &&
@@ -645,6 +695,12 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		mutex_unlock(&vq->mutex);
 
 		len = peek_head_len(rvq, sk);
+	}
+
+	if (vq->busyloop_timeout) {
+		rvq->busy_state = VHOST_NET_BUSY_POLL;
+		end = ktime_get_ns();
+		rvq->poll_ns = ktime_to_ns(ktime_sub(end, rvq->last_start));
 	}
 
 	return len;
@@ -763,6 +819,9 @@ static void handle_rx(struct vhost_net *net)
 	if (!vq_iotlb_prefetch(vq))
 		goto out;
 
+	if (vq->busyloop_timeout)
+		hrtimer_try_to_cancel(&nvq->early_timer);
+
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
@@ -859,6 +918,7 @@ static void handle_rx(struct vhost_net *net)
 		}
 	}
 	vhost_net_enable_vq(net, vq);
+
 out:
 	mutex_unlock(&vq->mutex);
 }
@@ -892,7 +952,26 @@ static void handle_rx_net(struct vhost_work *work)
 {
 	struct vhost_net *net = container_of(work, struct vhost_net,
 					     poll[VHOST_NET_VQ_RX].work);
+	struct vhost_net_virtqueue *vq = &net->vqs[VHOST_NET_VQ_RX];
+#if 0
+	printk("rx net! gap %llu timeout %llu state %d\n",
+		ktime_get_ns() - vq->last_start,
+		vq->poll_ns / 2, vq->busy_state);
+#endif
 	handle_rx(net);
+}
+
+static enum hrtimer_restart vhost_net_early_wakeup(struct hrtimer *timer)
+{
+	struct vhost_net_virtqueue *nvq = container_of(timer,
+						struct vhost_net_virtqueue,
+						early_timer);
+	struct vhost_virtqueue *vq = &nvq->vq;
+
+//	printk("wakeup %llu\n", ktime_get_ns() - nvq->last_start);
+	vhost_poll_queue(&vq->poll);
+
+	return HRTIMER_NORESTART;
 }
 
 static int vhost_net_open(struct inode *inode, struct file *f)
@@ -934,6 +1013,11 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
 		vhost_net_buf_init(&n->vqs[i].rxq);
+		hrtimer_init(&n->vqs[i].early_timer, CLOCK_MONOTONIC,
+			     HRTIMER_MODE_REL);
+		n->vqs[i].early_timer.function = vhost_net_early_wakeup;
+		n->vqs[i].busy_state = VHOST_NET_BUSY_SLEEP;
+		n->vqs[i].poll_ns = 0;
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
