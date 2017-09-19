@@ -1,7 +1,8 @@
 Version: 1
-Previous: ddd0706574c118a462af53196811b2b93b26ffb0
+Previous: e495f6a4a44ea89292e9307cdbafcf393a2b79ed
 Head: 8be3edfcd415ba6157ab34d250127c6f2b21ff5d
 Applied:
+  vhost_net-conditionally-enable: 8be3edfcd415ba6157ab34d250127c6f2b21ff5d
 Unapplied:
   dynamic: 867d7ff481341edce549dd6602d1c7ca536be6d3
   vhost-let-busy-polling-work-at: eb095449e5e86bb44455b94f37504bcba3ca5305
