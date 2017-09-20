@@ -1,5 +1,5 @@
-Bottom: 52b5072bedd34d4025eaf65b1850cfcd37195103
-Top:    f8d415ea1b9cf048fc4a842ffb3dce6c50878141
+Bottom: 92ac7ae2966b753819236c2a0966848d7babeed4
+Top:    0eab73075b3d8c9229981590ac7b74334c5f8825
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-01 18:25:26 +0800
 
@@ -28,7 +28,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index b46f349..d55e64b 100644
+index c89640e..020590e 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -408,27 +408,25 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -299,17 +299,8 @@ index b46f349..d55e64b 100644
  		}
  	}
  out:
-@@ -635,7 +661,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
- 
- 		preempt_enable();
- 
--		if (vhost_enable_notify(&net->dev, vq))
-+		if (!vhost_vq_avail_empty(&net->dev, vq))
- 			vhost_poll_queue(&vq->poll);
- 		mutex_unlock(&vq->mutex);
- 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index bc3f8bc..43f571e 100644
+index ac37d20..8ba267b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -392,7 +392,7 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)

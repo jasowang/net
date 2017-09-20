@@ -1,13 +1,13 @@
 Version: 1
-Previous: 181057f23f01798f6ee565dbe685a70f3fceafc6
-Head: bca2911ad583f708ec14c099341741e691880bc3
+Previous: 5afe146bb8526999f0c76ca6b915d8b6f29e5972
+Head: 496f3646eabd3ff37b493564f26f467da1ee62eb
 Applied:
   vhost-split-out-ring-head: 7e93fb530c8ae7d3108514e2a7d9caf3e4fb5546
   vhost-introduce-helper-to: 72d176acbaa4c7031f69adfffc44dc030978defb
   vhost-introduce: 2b08b21a62dc96cc51ea510d54b771770982d595
   vhost_net-rename: bca2911ad583f708ec14c099341741e691880bc3
+  vhost_net-basic-batch: 496f3646eabd3ff37b493564f26f467da1ee62eb
 Unapplied:
-  vhost_net-basic-batch: 062c07af60f4c7242f87e78684886f2134412b2e
   vhost-only-fetch-avail_idx-0: b2fefb8f2ebcf39e7265ad21e5d193569bac5600
   vhost-batch-signalling: 92e2aa9ac641ef1ed04512a0d9498a33f1f73518
   vhost-avoid-unnecessary-iov: df3f89df7ebf7958a9f433331f9ca87cf1c63f44
