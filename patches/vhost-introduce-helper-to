@@ -1,5 +1,5 @@
-Bottom: cbd0049615c44215ff4ed0e8f36f5f6055cbcb65
-Top:    1f3977ff5c4b04c4923d8223152bfc57dddf3403
+Bottom: 5446c592a85861f1b61f051d0335c6c77a7b28c6
+Top:    e39308474bd60e807c7347fb3ce3c5a0322e8cc6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -16,7 +16,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 8c8890a..8f2cd84 100644
+index f87ec75..b5d5e92 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2437,6 +2437,58 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
@@ -79,7 +79,7 @@ index 8c8890a..8f2cd84 100644
  static int __init vhost_init(void)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index d587e0f..87ead85 100644
+index 39ff897..3b99402 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -228,6 +228,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
