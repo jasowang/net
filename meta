@@ -1,9 +1,8 @@
 Version: 1
-Previous: d8164a98ecd15bd578ae4627c184a17ca8410d15
-Head: 948eca6162b699e5f91b9d59c8328c1de0bc1e8c
+Previous: c56daed74c5f5c54aba89c0a6277ad72300bb770
+Head: 33613f79b5ce08bd9ec90fd9988aa0a2ee8a6112
 Applied:
-  introduce-core-ring: 071855832466fa238529a9cd215452cece6d6f5f
-  refresh-temp-0: 948eca6162b699e5f91b9d59c8328c1de0bc1e8c
+  introduce-core-ring: 33613f79b5ce08bd9ec90fd9988aa0a2ee8a6112
 Unapplied:
   brute-forcing-xdp-tx-test: 64252f277accfbfb00513207973b6b035ff63814
   vhost-introduce-used-ring: 165a3acc686686290dad95a1bfa95784906118ba

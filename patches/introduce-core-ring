@@ -1,5 +1,5 @@
 Bottom: 17411b6cd879cb10624a7ba03db6c82a3b01036b
-Top:    f63a7ed7fb6eb42ae5cdf212c385e95bfd12893d
+Top:    69994ca0e0088cb4cfbe494aa3f97facabd505e2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
@@ -12,7 +12,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 diff --git a/include/linux/core_ring.h b/include/linux/core_ring.h
 new file mode 100644
-index 0000000..25224c7
+index 0000000..5a53d2d
 --- /dev/null
 +++ b/include/linux/core_ring.h
 @@ -0,0 +1,441 @@
@@ -194,7 +194,7 @@ index 0000000..25224c7
 +
 +/* Note: callers invoking this in a loop must use a compiler barrier,
 + * for example cpu_relax(). Callers must take consumer_lock
-+ * if they dereference the pointer - see e.g. PTR_RING_PEEK_CALL.
++ * if they dereference the pointer - see e.g. CORE_RING_PEEK_CALL.
 + * If ring is never resized, and if the pointer is merely
 + * tested, there's no need to take the lock - see e.g.  __core_ring_empty.
 + */
@@ -393,43 +393,43 @@ index 0000000..25224c7
 + * Function must return a value.
 + * Callers must take consumer_lock.
 + */
-+#define __PTR_RING_PEEK_CALL(r, f) ((f)(__core_ring_peek(r)))
++#define __CORE_RING_PEEK_CALL(r, f) ((f)(__core_ring_peek(r)))
 +
-+#define PTR_RING_PEEK_CALL(r, f) ({ \
-+	typeof((f)(NULL)) __PTR_RING_PEEK_CALL_v; \
++#define CORE_RING_PEEK_CALL(r, f) ({ \
++	typeof((f)(NULL)) __CORE_RING_PEEK_CALL_v; \
 +	\
 +	spin_lock(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v = __PTR_RING_PEEK_CALL(r, f); \
++	__CORE_RING_PEEK_CALL_v = __CORE_RING_PEEK_CALL(r, f); \
 +	spin_unlock(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v; \
++	__CORE_RING_PEEK_CALL_v; \
 +})
 +
-+#define PTR_RING_PEEK_CALL_IRQ(r, f) ({ \
-+	typeof((f)(NULL)) __PTR_RING_PEEK_CALL_v; \
++#define CORE_RING_PEEK_CALL_IRQ(r, f) ({ \
++	typeof((f)(NULL)) __CORE_RING_PEEK_CALL_v; \
 +	\
 +	spin_lock_irq(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v = __PTR_RING_PEEK_CALL(r, f); \
++	__CORE_RING_PEEK_CALL_v = __CORE_RING_PEEK_CALL(r, f); \
 +	spin_unlock_irq(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v; \
++	__CORE_RING_PEEK_CALL_v; \
 +})
 +
-+#define PTR_RING_PEEK_CALL_BH(r, f) ({ \
-+	typeof((f)(NULL)) __PTR_RING_PEEK_CALL_v; \
++#define CORE_RING_PEEK_CALL_BH(r, f) ({ \
++	typeof((f)(NULL)) __CORE_RING_PEEK_CALL_v; \
 +	\
 +	spin_lock_bh(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v = __PTR_RING_PEEK_CALL(r, f); \
++	__CORE_RING_PEEK_CALL_v = __CORE_RING_PEEK_CALL(r, f); \
 +	spin_unlock_bh(&(r)->consumer_lock); \
-+	__PTR_RING_PEEK_CALL_v; \
++	__CORE_RING_PEEK_CALL_v; \
 +})
 +
-+#define PTR_RING_PEEK_CALL_ANY(r, f) ({ \
-+	typeof((f)(NULL)) __PTR_RING_PEEK_CALL_v; \
-+	unsigned long __PTR_RING_PEEK_CALL_f;\
++#define CORE_RING_PEEK_CALL_ANY(r, f) ({ \
++	typeof((f)(NULL)) __CORE_RING_PEEK_CALL_v; \
++	unsigned long __CORE_RING_PEEK_CALL_f;\
 +	\
-+	spin_lock_irqsave(&(r)->consumer_lock, __PTR_RING_PEEK_CALL_f); \
-+	__PTR_RING_PEEK_CALL_v = __PTR_RING_PEEK_CALL(r, f); \
-+	spin_unlock_irqrestore(&(r)->consumer_lock, __PTR_RING_PEEK_CALL_f); \
-+	__PTR_RING_PEEK_CALL_v; \
++	spin_lock_irqsave(&(r)->consumer_lock, __CORE_RING_PEEK_CALL_f); \
++	__CORE_RING_PEEK_CALL_v = __CORE_RING_PEEK_CALL(r, f); \
++	spin_unlock_irqrestore(&(r)->consumer_lock, __CORE_RING_PEEK_CALL_f); \
++	__CORE_RING_PEEK_CALL_v; \
 +})
 +
 +static inline void __core_ring_set_size(struct core_ring *r, int size)
