@@ -394,7 +394,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
 }
 
 static int vhost_net_enable_vq(struct vhost_net *n,
-				struct vhost_virtqueue *vq)
+			       struct vhost_virtqueue *vq)
 {
 	struct vhost_net_virtqueue *nvq =
 		container_of(vq, struct vhost_net_virtqueue, vq);
@@ -586,6 +586,10 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	struct sk_buff *head;
 	int len = 0;
 	unsigned long flags;
+	struct socket *sock = sk->sk_socket;
+
+	if (sock->ops->peek_len)
+		return sock->ops->peek_len(sock);
 
 	if (rvq->rx_array)
 		return vhost_net_buf_peek(rvq);
@@ -1147,7 +1151,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 		vq->private_data = sock;
 		vhost_net_buf_unproduce(nvq);
 		if (index == VHOST_NET_VQ_RX)
-			nvq->rx_array = get_tap_skb_array(fd);
+			nvq->rx_array = NULL;
 		r = vhost_vq_init_access(vq);
 		if (r)
 			goto err_used;

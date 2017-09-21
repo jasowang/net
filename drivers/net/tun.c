@@ -151,6 +151,8 @@ struct tun_pcpu_stats {
 	u32 rx_frame_errors;
 };
 
+#define TUN_XDP_RING_SIZE 256
+
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
  * to serve as one transmit queue for tuntap device. The sock_fprog and
@@ -179,6 +181,7 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_array tx_array;
+	struct ptr_ring xdp_ring;
 };
 
 struct tun_flow_entry {
@@ -1163,6 +1166,43 @@ static const struct net_device_ops tun_netdev_ops = {
 	.ndo_get_stats64	= tun_net_get_stats64,
 };
 
+static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = tun->tfiles[0];
+	struct ptr_ring *ring = &tfile->xdp_ring;
+	struct xdp_buff *buff = xdp->data;
+	int headroom = xdp->data - xdp->data_hard_start;
+
+	/* Assure headroom is available for storing xdp */
+	if (headroom < sizeof(*xdp))
+		return -ENOSPC;
+
+	*buff = *xdp;
+
+	if (ptr_ring_produce(ring, buff)) {
+		/* Notify and wake up reader process */
+		if (tfile->flags & TUN_FASYNC)
+			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+	}
+
+	return 0;
+}
+
+static void tun_xdp_flush(struct net_device *dev)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = tun->tfiles[0];
+
+	/* Notify and wake up reader process */
+	if (tfile->flags & TUN_FASYNC)
+		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+
+	return;
+}
+
 static const struct net_device_ops tap_netdev_ops = {
 	.ndo_uninit		= tun_net_uninit,
 	.ndo_open		= tun_net_open,
@@ -1180,6 +1220,8 @@ static const struct net_device_ops tap_netdev_ops = {
 	.ndo_set_rx_headroom	= tun_set_headroom,
 	.ndo_get_stats64	= tun_net_get_stats64,
 	.ndo_xdp		= tun_xdp,
+	.ndo_xdp_xmit		= tun_xdp_xmit,
+	.ndo_xdp_flush		= tun_xdp_flush,
 };
 
 static void tun_flow_init(struct tun_struct *tun)
@@ -1258,7 +1300,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_array_empty(&tfile->tx_array))
+	if (!ptr_ring_empty(&tfile->xdp_ring) ||
+	    !skb_array_empty(&tfile->tx_array))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (tun->dev->flags & IFF_UP &&
@@ -1793,6 +1836,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	return result;
 }
 
+static ssize_t tun_put_user_xdp(struct tun_struct *tun,
+				struct tun_file *tfile,
+				struct xdp_buff *xdp,
+				struct iov_iter *iter)
+{
+	int offset, vnet_hdr_sz = 0;
+	struct page *page;
+	size_t size = xdp->data_end - xdp->data;
+	struct tun_pcpu_stats *stats;
+
+	if (tun->flags & IFF_VNET_HDR) {
+		struct virtio_net_hdr gso = { 0 };
+
+		vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
+		if (iov_iter_count(iter) < vnet_hdr_sz)
+			return -EINVAL;
+		if (copy_to_iter(&gso, sizeof(gso), iter) != sizeof(gso))
+			return -EFAULT;
+		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
+	}
+
+	page = virt_to_head_page(xdp->data);
+	offset = xdp->data - page_address(page);
+	if (copy_page_to_iter(page, offset, size, iter) != size)
+		return -EFAULT;
+
+	stats = get_cpu_ptr(tun->pcpu_stats);
+	u64_stats_update_begin(&stats->syncp);
+	stats->tx_packets++;
+	stats->tx_bytes += size;
+	u64_stats_update_end(&stats->syncp);
+	put_cpu_ptr(tun->pcpu_stats);
+
+	return 0;
+}
+
 /* Put packet to the user space buffer */
 static ssize_t tun_put_user(struct tun_struct *tun,
 			    struct tun_file *tfile,
@@ -1936,6 +2015,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock, struct sk_buff *skb)
 {
+	struct xdp_buff *xdp;
 	ssize_t ret;
 	int err;
 
@@ -1945,6 +2025,11 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return 0;
 
 	if (!skb) {
+		xdp = ptr_ring_consume(&tfile->xdp_ring);
+		if (xdp) {
+			ret = tun_put_user_xdp(tun, tfile, xdp, to);
+			goto xdp_out;
+		}
 		/* Read frames from ring */
 		skb = tun_ring_recv(tfile, noblock, &err);
 		if (!skb)
@@ -1957,6 +2042,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	else
 		consume_skb(skb);
 
+	return ret;
+
+xdp_out:
+	put_page(virt_to_head_page(xdp->data));
 	return ret;
 }
 
@@ -2083,6 +2172,14 @@ out:
 	return ret;
 }
 
+static int tun_xdp_peek_len(struct xdp_buff *xdp)
+{
+	if (likely(xdp))
+		return xdp->data_end - xdp->data;
+	else
+		return 0;
+}
+
 static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
@@ -2093,7 +2190,7 @@ static int tun_peek_len(struct socket *sock)
 	if (!tun)
 		return 0;
 
-	ret = skb_array_peek_len(&tfile->tx_array);
+	ret = PTR_RING_PEEK_CALL(&tfile->xdp_ring, tun_xdp_peek_len);
 	tun_put(tun);
 
 	return ret;
@@ -2799,6 +2896,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
+
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -2818,6 +2916,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+
+	ptr_ring_init(&tfile->xdp_ring, TUN_XDP_RING_SIZE, GFP_KERNEL);
 
 	return 0;
 }
