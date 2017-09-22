@@ -52,6 +52,7 @@ struct core_ring {
 	ring_zero_fn_t zero_fn;
 	ring_valid_fn_t valid_fn;
 	ring_copy_fn_t copy_fn;
+	ring_destroy_fn_t destroy_fn;
 };
 
 /* Note: callers invoking this in a loop must use a compiler barrier,
@@ -419,12 +420,23 @@ static inline void __core_ring_set_size(struct core_ring *r, int size)
 	r->size = size;
 }
 
-static inline int core_ring_init(struct core_ring *r, int size, gfp_t gfp)
+static inline int core_ring_init(struct core_ring *r, int size, int entry_size,
+				gfp_t gfp, ring_seek_fn_t seek_fn,
+				ring_zero_fn_t zero_fn,
+				ring_valid_fn_t valid_fn,
+				ring_copy_fn_t copy_fn,
+				ring_destroy_fn_t destroy_fn)
 {
 	__core_ring_set_size(r, size);
+	r->entry_size = entry_size;
 	r->producer = r->consumer = 0;
 	spin_lock_init(&r->producer_lock);
 	spin_lock_init(&r->consumer_lock);
+	r->seek_fn = seek_fn;
+	r->zero_fn = zero_fn;
+	r->valid_fn = valid_fn;
+	r->copy_fn = copy_fn;
+	r->destroy_fn = destroy_fn;
 
 	return 0;
 }
