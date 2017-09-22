@@ -1,5 +1,5 @@
 Bottom: 17411b6cd879cb10624a7ba03db6c82a3b01036b
-Top:    a55b081d03bca57d70c4c66dbda7edd2777dbf05
+Top:    bebbb235cd4415f124610333696382b3b9ad9ab0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
@@ -11,10 +11,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3c9985f..f6d09f3 100644
+index 3c9985f..131bf05 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -149,6 +149,13 @@ struct tun_pcpu_stats {
+@@ -75,6 +75,7 @@
+ #include <linux/skb_array.h>
+ #include <linux/bpf.h>
+ #include <linux/bpf_trace.h>
++#include <linux/core_ring.h>
+ 
+ #include <linux/uaccess.h>
+ 
+@@ -149,6 +150,13 @@ struct tun_pcpu_stats {
  	u32 rx_frame_errors;
  };
  
@@ -28,7 +36,7 @@ index 3c9985f..f6d09f3 100644
  /* A tun_file connects an open character device to a tuntap netdevice. It
   * also contains all socket related structures (except sock_fprog and tap_filter)
   * to serve as one transmit queue for tuntap device. The sock_fprog and
-@@ -175,6 +182,7 @@ struct tun_file {
+@@ -175,6 +183,7 @@ struct tun_file {
  	struct list_head next;
  	struct tun_struct *detached;
  	struct skb_array tx_array;
@@ -36,7 +44,7 @@ index 3c9985f..f6d09f3 100644
  };
  
  struct tun_flow_entry {
-@@ -1084,6 +1092,8 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1084,6 +1093,8 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
  	.ndo_xdp		= tun_xdp,
@@ -45,7 +53,7 @@ index 3c9985f..f6d09f3 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1312,7 +1322,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1312,7 +1323,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  		void *orig_data;
  		u32 act;
  
@@ -54,7 +62,7 @@ index 3c9985f..f6d09f3 100644
  		xdp.data = buf + pad;
  		xdp.data_end = xdp.data + len;
  		orig_data = xdp.data;
-@@ -1583,6 +1593,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1583,6 +1594,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -97,7 +105,7 @@ index 3c9985f..f6d09f3 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1680,6 +1726,45 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1680,6 +1727,45 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	return total;
  }
  
@@ -143,7 +151,7 @@ index 3c9985f..f6d09f3 100644
  static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  				     int *err)
  {
-@@ -1726,6 +1811,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1726,6 +1812,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock, struct sk_buff *skb)
  {
@@ -151,7 +159,7 @@ index 3c9985f..f6d09f3 100644
  	ssize_t ret;
  	int err;
  
-@@ -1735,6 +1821,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1735,6 +1822,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  		return 0;
  
  	if (!skb) {
@@ -162,7 +170,7 @@ index 3c9985f..f6d09f3 100644
  		/* Read frames from ring */
  		skb = tun_ring_recv(tfile, noblock, &err);
  		if (!skb)
-@@ -1748,6 +1838,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1748,6 +1839,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  		consume_skb(skb);
  
  	return ret;
@@ -173,7 +181,7 @@ index 3c9985f..f6d09f3 100644
  }
  
  static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
-@@ -2568,6 +2662,74 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
+@@ -2568,6 +2663,74 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
  	return ret;
  }
  
@@ -248,7 +256,7 @@ index 3c9985f..f6d09f3 100644
  static int tun_chr_open(struct inode *inode, struct file * file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -2575,10 +2737,16 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2575,10 +2738,16 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
  
@@ -266,7 +274,7 @@ index 3c9985f..f6d09f3 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2599,6 +2767,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2599,6 +2768,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
@@ -280,7 +288,7 @@ index 3c9985f..f6d09f3 100644
  
 diff --git a/include/linux/core_ring.h b/include/linux/core_ring.h
 new file mode 100644
-index 0000000..45c9d35
+index 0000000..6ff0d0d
 --- /dev/null
 +++ b/include/linux/core_ring.h
 @@ -0,0 +1,453 @@
@@ -334,7 +342,7 @@ index 0000000..45c9d35
 +	/* Read-only by both the producer and the consumer */
 +	int size ____cacheline_aligned_in_smp; /* max entries in queue */
 +	int entry_size; /* size of entry */
-+	ring_addr_fn_t seek_fn;
++	ring_seek_fn_t seek_fn;
 +	ring_zero_fn_t zero_fn;
 +	ring_valid_fn_t valid_fn;
 +	ring_copy_fn_t copy_fn;
@@ -348,7 +356,7 @@ index 0000000..45c9d35
 + */
 +static inline bool __core_ring_full(struct core_ring *r)
 +{
-+	return r->valid_fn(r, producer);
++	return r->valid_fn(r, r->producer);
 +}
 +
 +static inline bool core_ring_full(struct core_ring *r)
@@ -404,7 +412,7 @@ index 0000000..45c9d35
 +	if (unlikely(!r->size) || r->valid_fn(r, r->producer))
 +		return -ENOSPC;
 +
-+	r->copy_fn(r, r->seek_fn(r, producer), ptr);
++	r->copy_fn(r, r->seek_fn(r, r->producer), ptr);
 +	r->producer++;
 +	if (unlikely(r->producer >= r->size))
 +		r->producer = 0;
