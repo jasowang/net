@@ -48,7 +48,7 @@ struct core_ring {
 	/* Read-only by both the producer and the consumer */
 	int size ____cacheline_aligned_in_smp; /* max entries in queue */
 	int entry_size; /* size of entry */
-	ring_addr_fn_t seek_fn;
+	ring_seek_fn_t seek_fn;
 	ring_zero_fn_t zero_fn;
 	ring_valid_fn_t valid_fn;
 	ring_copy_fn_t copy_fn;
@@ -62,7 +62,7 @@ struct core_ring {
  */
 static inline bool __core_ring_full(struct core_ring *r)
 {
-	return r->valid_fn(r, producer);
+	return r->valid_fn(r, r->producer);
 }
 
 static inline bool core_ring_full(struct core_ring *r)
@@ -118,7 +118,7 @@ static inline int __core_ring_produce(struct core_ring *r, void *ptr)
 	if (unlikely(!r->size) || r->valid_fn(r, r->producer))
 		return -ENOSPC;
 
-	r->copy_fn(r, r->seek_fn(r, producer), ptr);
+	r->copy_fn(r, r->seek_fn(r, r->producer), ptr);
 	r->producer++;
 	if (unlikely(r->producer >= r->size))
 		r->producer = 0;

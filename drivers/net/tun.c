@@ -75,6 +75,7 @@
 #include <linux/skb_array.h>
 #include <linux/bpf.h>
 #include <linux/bpf_trace.h>
+#include <linux/core_ring.h>
 
 #include <linux/uaccess.h>
 
