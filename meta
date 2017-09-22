@@ -1,9 +1,9 @@
 Version: 1
-Previous: 56241dd291c44570cef1097f1ea2397afcaa2816
-Head: a064682621465be38cbfd533603c8f33167330ea
+Previous: 55decd42aaa58b0c94313427b52c9cf34d50a2fb
+Head: 7e5dd53f6ee81ffa0d1f42f79e6440b6a751ab40
 Applied:
-  introduce-core-ring: a064682621465be38cbfd533603c8f33167330ea
 Unapplied:
+  introduce-core-ring: a064682621465be38cbfd533603c8f33167330ea
   brute-forcing-xdp-tx-test: 64252f277accfbfb00513207973b6b035ff63814
   vhost-introduce-used-ring: 165a3acc686686290dad95a1bfa95784906118ba
   vhost-introduce-helper-to: 8337a2f6c874d9165124030ae4a4c667faee06bc
