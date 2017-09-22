@@ -1,9 +1,8 @@
 Version: 1
-Previous: fc55c45c84936f3b80b1ca623b4ddb0123253c49
-Head: 5da94cecda2b2c3c1517cd0b7ca0de7e24ae7fb8
+Previous: 4b6683294a8965453b6b55df6eee9d1bde345430
+Head: 1dc793ca9e0d3277004f94df054573fbf96e4123
 Applied:
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
-  refresh-temp-0: 5da94cecda2b2c3c1517cd0b7ca0de7e24ae7fb8
 Unapplied:
   introduce-core-ring: a064682621465be38cbfd533603c8f33167330ea
   brute-forcing-xdp-tx-test: 64252f277accfbfb00513207973b6b035ff63814
