@@ -1,14 +1,14 @@
 Version: 1
-Previous: 118f88fbbea9a16a6c1a791f3bcaf6352be4a7b9
-Head: 2ec1a183d8f262296f698da8642d398c71a4c172
+Previous: 25292faf0e224233fdc624f971aace6fd0248348
+Head: 411d788a23f7e20b8fc51b548c7204fdecc9d22e
 Applied:
+Unapplied:
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
   vhost-split-out-ring-head: 5911a2bd19c4ca815f9d78e657f08a82cff9673c
   vhost-introduce-helper-to-0: 2105909664cb5ee5e1c1f87d7633f71fc68df012
   vhost-introduce: 79d6183b4ac6c2a7f3a69f9a4b4de3a96b2f8462
   vhost_net-rename: 8211b32f857a4a825d4cc55770e2647141c7d71b
   vhost_net-basic-tx-batched: 2ec1a183d8f262296f698da8642d398c71a4c172
-Unapplied:
   introduce-core-ring: a064682621465be38cbfd533603c8f33167330ea
   brute-forcing-xdp-tx-test: 64252f277accfbfb00513207973b6b035ff63814
   vhost-introduce-used-ring: 165a3acc686686290dad95a1bfa95784906118ba
