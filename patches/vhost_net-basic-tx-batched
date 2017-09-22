@@ -8,13 +8,10 @@ vhost_net: basic tx virtqueue batched processing
 This patch implements basic batched processing of tx virtqueue by
 prefetching desc indices and updating used ring in a batch. For
 non-zerocopy case, vq->heads were used for storing the prefetched
-indices and updating used ring. This intends to speed up the used ring
-update through copy_to_user() which could benefits from modern CPUs
-and reduce the cache line bounce when the ring is almost full and it
-is also a requirement for doing more batching on top. For zerocopy
-case and for simplicity, batched processing were simply disabled by
-only fetching and processing one descriptor at a time, this could be
-optimized in the future.
+indices and updating used ring. It is also a requirement for doing
+more batching on top. For zerocopy case and for simplicity, batched
+processing were simply disabled by only fetching and processing one
+descriptor at a time, this could be optimized in the future.
 
 XDP_DROP (without touching skb) on tun (with Moongen in guest) with
 zercopy disabled:
