@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4b6683294a8965453b6b55df6eee9d1bde345430
-Head: 1dc793ca9e0d3277004f94df054573fbf96e4123
+Previous: fba1c5365cd30c3faa51fffc91642fa19ea9d879
+Head: c05ae38588cf6725f60a7a3dd4aeac370e063ae1
 Applied:
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
 Unapplied:
