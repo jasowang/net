@@ -7,11 +7,10 @@ vhost: introduce helper to prefetch desc index
 
 This patch introduces vhost_prefetch_desc_indices() which could batch
 descriptor indices fetching and used ring updating. This intends to
-reduce the cache misses during avail ring fetching and used ring
-update and reduce cache line bounce when virtqueue is almost full.
-copy_to_user() was used in order to benefit from modern cpus that
-support fast string copy. Batched virtqueue processing will be the
-first user.
+reduce the cache misses of indices fetching and updating and reduce
+cache line bounce when virtqueue is almost full. copy_to_user() was
+used in order to benefit from modern cpus that support fast string
+copy. Batched virtqueue processing will be the first user.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
