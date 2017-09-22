@@ -7,6 +7,8 @@ virtio-net: correctly set xdp_xmit for mergeable buffer
 
 We should set xdp_xmit only when xdp_do_redirect() succeed.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
