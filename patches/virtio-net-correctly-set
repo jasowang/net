@@ -1,5 +1,5 @@
 Bottom: 624b96ddd83908b56009f0d049c7399c1bbc3d16
-Top:    624b96ddd83908b56009f0d049c7399c1bbc3d16
+Top:    c8acaa29cbf8d90aac5eecc28e20f87a32a15b94
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-22 11:54:19 +0800
 
@@ -12,4 +12,16 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index f6c1f13..dd14a45 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -721,7 +721,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 			goto xdp_xmit;
+ 		case XDP_REDIRECT:
+ 			err = xdp_do_redirect(dev, &xdp, xdp_prog);
+-			if (err)
++			if (!err)
+ 				*xdp_xmit = true;
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
