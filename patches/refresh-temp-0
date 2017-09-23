@@ -1,0 +1,44 @@
+Bottom: 9712af91ae92acf2b2e00f97e6aeae4a83953b22
+Top:    f2f5d6cb0fa1cca40378072c08a7476e73835bf8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-23 17:45:05 +0800
+
+Refresh of introduce-core-ring
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 58585ec..d98420f 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -394,7 +394,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
+ }
+ 
+ static int vhost_net_enable_vq(struct vhost_net *n,
+-				struct vhost_virtqueue *vq)
++			       struct vhost_virtqueue *vq)
+ {
+ 	struct vhost_net_virtqueue *nvq =
+ 		container_of(vq, struct vhost_net_virtqueue, vq);
+diff --git a/include/linux/core_ring.h b/include/linux/core_ring.h
+index 6ff0d0d..469394e 100644
+--- a/include/linux/core_ring.h
++++ b/include/linux/core_ring.h
+@@ -118,7 +118,7 @@ static inline int __core_ring_produce(struct core_ring *r, void *ptr)
+ 	if (unlikely(!r->size) || r->valid_fn(r, r->producer))
+ 		return -ENOSPC;
+ 
+-	r->copy_fn(r, r->seek_fn(r, r->producer), ptr);
++	r->copy_fn(r->seek_fn(r, r->producer), ptr);
+ 	r->producer++;
+ 	if (unlikely(r->producer >= r->size))
+ 		r->producer = 0;
+@@ -256,7 +256,7 @@ static inline void __core_ring_discard_one(struct core_ring *r)
+ static inline void *__core_ring_consume(struct core_ring *r, void *ptr)
+ {
+ 	if (r->valid_fn(r, r->consumer)) {
+-		r->copy_fn(r, ptr, r->seek_fn(r, r->consumer));
++		r->copy_fn(ptr, r->seek_fn(r, r->consumer));
+ 		__core_ring_discard_one(r);
+ 		return ptr;
+ 	}
