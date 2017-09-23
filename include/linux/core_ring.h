@@ -118,7 +118,7 @@ static inline int __core_ring_produce(struct core_ring *r, void *ptr)
 	if (unlikely(!r->size) || r->valid_fn(r, r->producer))
 		return -ENOSPC;
 
-	r->copy_fn(r, r->seek_fn(r, r->producer), ptr);
+	r->copy_fn(r->seek_fn(r, r->producer), ptr);
 	r->producer++;
 	if (unlikely(r->producer >= r->size))
 		r->producer = 0;
@@ -256,7 +256,7 @@ static inline void __core_ring_discard_one(struct core_ring *r)
 static inline void *__core_ring_consume(struct core_ring *r, void *ptr)
 {
 	if (r->valid_fn(r, r->consumer)) {
-		r->copy_fn(r, ptr, r->seek_fn(r, r->consumer));
+		r->copy_fn(ptr, r->seek_fn(r, r->consumer));
 		__core_ring_discard_one(r);
 		return ptr;
 	}
