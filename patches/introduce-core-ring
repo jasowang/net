@@ -1,5 +1,5 @@
 Bottom: 624b96ddd83908b56009f0d049c7399c1bbc3d16
-Top:    5e86b1c18fb8e2c453d139c96d63c0280a90075d
+Top:    24163c229111bc35e7f240157d3d5ae2a8c86fc5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3c9985f..75a146d 100644
+index 3c9985f..ea65e04 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,7 @@
@@ -280,6 +280,26 @@ index 3c9985f..75a146d 100644
  	return 0;
  }
  
+@@ -2862,6 +3037,19 @@ struct skb_array *tun_get_skb_array(struct file *file)
+ }
+ EXPORT_SYMBOL_GPL(tun_get_skb_array);
+ 
++struct skb_array *tun_get_xdp_ring(struct file *file)
++{
++	struct tun_file *tfile;
++
++	if (file->f_op != &tun_fops)
++		return ERR_PTR(-EINVAL);
++	tfile = file->private_data;
++	if (!tfile)
++		return ERR_PTR(-EBADFD);
++	return &tfile->xdp_ring;
++}
++EXPORT_SYMBOL_GPL(tun_get_skb_array);
++
+ module_init(tun_init);
+ module_exit(tun_cleanup);
+ MODULE_DESCRIPTION(DRV_DESCRIPTION);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index 58585ec..d98420f 100644
 --- a/drivers/vhost/net.c
