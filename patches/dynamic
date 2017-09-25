@@ -1,5 +1,5 @@
-Bottom: cba26f32feba6f1d7b2a2a8acc63a3378c41f4ec
-Top:    a2db8cec6c9e7fe8f0d2279b42bf0d795321df9a
+Bottom: 624b96ddd83908b56009f0d049c7399c1bbc3d16
+Top:    0dbc68d44455a1bdbe31b1550bc0ba82b6557107
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-18 15:33:47 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 2b308e0..197b496 100644
+index 58585ec..5ae00db 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -20,6 +20,7 @@
@@ -75,7 +75,7 @@ index 2b308e0..197b496 100644
  	return r;
  }
  
-@@ -622,8 +643,19 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -619,8 +640,19 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  	struct vhost_virtqueue *vq = &nvq->vq;
  	unsigned long uninitialized_var(endtime);
  	int len = peek_head_len(rvq, sk);
@@ -95,7 +95,7 @@ index 2b308e0..197b496 100644
  		/* Both tx vq and rx socket were polled here */
  		mutex_lock(&vq->mutex);
  		vhost_disable_notify(&net->dev, vq);
-@@ -650,6 +682,12 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+@@ -647,6 +679,12 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
  		len = peek_head_len(rvq, sk);
  	}
  
@@ -108,7 +108,7 @@ index 2b308e0..197b496 100644
  	return len;
  }
  
-@@ -862,6 +900,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -859,6 +897,7 @@ static void handle_rx(struct vhost_net *net)
  		}
  	}
  	vhost_net_enable_vq(net, vq);
@@ -116,7 +116,7 @@ index 2b308e0..197b496 100644
  out:
  	mutex_unlock(&vq->mutex);
  }
-@@ -895,9 +934,28 @@ static void handle_rx_net(struct vhost_work *work)
+@@ -892,9 +931,28 @@ static void handle_rx_net(struct vhost_work *work)
  {
  	struct vhost_net *net = container_of(work, struct vhost_net,
  					     poll[VHOST_NET_VQ_RX].work);
@@ -145,7 +145,7 @@ index 2b308e0..197b496 100644
  static int vhost_net_open(struct inode *inode, struct file *f)
  {
  	struct vhost_net *n;
-@@ -937,6 +995,11 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -934,6 +992,11 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		n->vqs[i].vhost_hlen = 0;
  		n->vqs[i].sock_hlen = 0;
  		vhost_net_buf_init(&n->vqs[i].rxq);
