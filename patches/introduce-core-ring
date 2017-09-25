@@ -1,5 +1,5 @@
 Bottom: 624b96ddd83908b56009f0d049c7399c1bbc3d16
-Top:    f2f5d6cb0fa1cca40378072c08a7476e73835bf8
+Top:    5e86b1c18fb8e2c453d139c96d63c0280a90075d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3c9985f..131bf05 100644
+index 3c9985f..75a146d 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -75,6 +75,7 @@
@@ -44,7 +44,44 @@ index 3c9985f..131bf05 100644
  };
  
  struct tun_flow_entry {
-@@ -1084,6 +1093,8 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1067,6 +1076,36 @@ static const struct net_device_ops tun_netdev_ops = {
+ 	.ndo_get_stats64	= tun_net_get_stats64,
+ };
+ 
++static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
++{
++	struct tun_struct *tun = netdev_priv(dev);
++	struct tun_file *tfile = tun->tfiles[0];
++	struct core_ring *ring = &tfile->xdp_ring->ring;
++
++	if (core_ring_produce(ring, xdp)) {
++		/* Notify and wake up reader process */
++		if (tfile->flags & TUN_FASYNC)
++			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
++		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
++		return -ENOSPC;
++	}
++
++	return 0;
++}
++
++static void tun_xdp_flush(struct net_device *dev)
++{
++	struct tun_struct *tun = netdev_priv(dev);
++	struct tun_file *tfile = tun->tfiles[0];
++
++	/* Notify and wake up reader process */
++	if (tfile->flags & TUN_FASYNC)
++		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
++	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
++
++	return;
++}
++
+ static const struct net_device_ops tap_netdev_ops = {
+ 	.ndo_uninit		= tun_net_uninit,
+ 	.ndo_open		= tun_net_open,
+@@ -1084,6 +1123,8 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
  	.ndo_xdp		= tun_xdp,
@@ -53,16 +90,7 @@ index 3c9985f..131bf05 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1312,7 +1323,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 		void *orig_data;
- 		u32 act;
- 
--		xdp.data_hard_start = buf;
-+		xdp.data_havcrd_start = buf;
- 		xdp.data = buf + pad;
- 		xdp.data_end = xdp.data + len;
- 		orig_data = xdp.data;
-@@ -1583,6 +1594,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1583,6 +1624,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -73,7 +101,7 @@ index 3c9985f..131bf05 100644
 +{
 +	int offset, vnet_hdr_sz = 0;
 +	struct page *page;
-+	size_t size = xdp.data_end - xdp.data;
++	size_t size = xdp->data_end - xdp->data;
 +	struct tun_pcpu_stats *stats;
 +
 +	if (tun->flags & IFF_VNET_HDR) {
@@ -87,9 +115,9 @@ index 3c9985f..131bf05 100644
 +		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
 +	}
 +
-+	page = virt_to_head_page(xdp.data);
-+	offset = xdp.data - page_address(page);
-+	if (copy_page_to_iter_iovec(page, offset, size, iter) != size)
++	page = virt_to_head_page(xdp->data);
++	offset = xdp->data - page_address(page);
++	if (copy_page_to_iter(page, offset, size, iter) != size)
 +		return -EFAULT;
 +
 +	stats = get_cpu_ptr(tun->pcpu_stats);
@@ -105,14 +133,14 @@ index 3c9985f..131bf05 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1680,6 +1727,45 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1680,6 +1757,45 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	return total;
  }
  
 +static int tun_ring_recv_xdp(struct tun_file *tfile, int noblock,
 +			     struct xdp_buff *xdp)
 +{
-+	struct core_ring *ring = &tfile->xdp_ring.ring;
++	struct core_ring *ring = &tfile->xdp_ring->ring;
 +	DECLARE_WAITQUEUE(wait, current);
 +	struct xdp_buff *buff;
 +	int err = 0;
@@ -151,7 +179,7 @@ index 3c9985f..131bf05 100644
  static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  				     int *err)
  {
-@@ -1726,6 +1812,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1726,6 +1842,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
  			   int noblock, struct sk_buff *skb)
  {
@@ -159,7 +187,7 @@ index 3c9985f..131bf05 100644
  	ssize_t ret;
  	int err;
  
-@@ -1735,6 +1822,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1735,6 +1852,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  		return 0;
  
  	if (!skb) {
@@ -170,7 +198,7 @@ index 3c9985f..131bf05 100644
  		/* Read frames from ring */
  		skb = tun_ring_recv(tfile, noblock, &err);
  		if (!skb)
-@@ -1748,6 +1839,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1748,6 +1869,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  		consume_skb(skb);
  
  	return ret;
@@ -181,44 +209,14 @@ index 3c9985f..131bf05 100644
  }
  
  static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
-@@ -2568,6 +2663,74 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
+@@ -2568,6 +2693,44 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
  	return ret;
  }
  
-+static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
-+{
-+	struct tun_struct *tun = netdev_priv(dev);
-+	struct tun_file *tfile = tun->tfiles[0];
-+	struct core_ring *ring = &tfile->xdp_ring.ring;
-+
-+	if (core_ring_produce(ring, xdp)) {
-+		/* Notify and wake up reader process */
-+		if (tfile->flags & TUN_FASYNC)
-+			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-+		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-+		return -ENOSPC;
-+	}
-+
-+	return 0;
-+}
-+
-+static void tun_xdp_flush(struct net_device *dev)
-+{
-+	struct tun_struct *tun = netdev_prive(dev);
-+	struct tun_file *tfile = tun->tfiles[0];
-+
-+	/* Notify and wake up reader process */
-+	if (tfile->flags & TUN_FASYNC)
-+		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-+	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-+
-+	return;
-+}
-+
 +static void *tun_xdp_seek(struct core_ring *r, int i)
 +{
 +	struct tun_xdp_ring *ring =
-+		container_of(r, struct tun_xdp_ring, xdp_ring);
++	       container_of(r, struct tun_xdp_ring, ring);
 +
 +	return &ring->buffs[i];
 +}
@@ -226,22 +224,22 @@ index 3c9985f..131bf05 100644
 +static bool tun_xdp_valid(struct core_ring *r, int i)
 +{
 +	struct tun_xdp_ring *ring =
-+		container_of(r, struct tun_xdp_ring, xdp_ring);
++		container_of(r, struct tun_xdp_ring, ring);
 +	struct xdp_buff *buff = &ring->buffs[i];
 +
 +	return buff->data != NULL;
 +}
 +
-+static bool tun_xdp_zero(struct core_ring *r, int i)
++static void tun_xdp_zero(struct core_ring *r, int i)
 +{
 +	struct tun_xdp_ring *ring =
-+	       container_of(r, struct tun_xdp_ring, xdp_ring);
++	       container_of(r, struct tun_xdp_ring, ring);
 +	struct xdp_buff *buff = &ring->buffs[i];
 +
-+	return buff->data = NULL;
++	buff->data = NULL;
 +}
 +
-+static void tun_xdp_destroy(struct core_ring *r, int i)
++static void tun_xdp_destroy(void *ptr)
 +{
 +}
 +
@@ -250,37 +248,33 @@ index 3c9985f..131bf05 100644
 +	struct xdp_buff *dst_buff = dst;
 +	struct xdp_buff *src_buff = src;
 +
-+	*dst = *src;
++	*dst_buff = *src_buff;
 +}
 +
  static int tun_chr_open(struct inode *inode, struct file * file)
  {
  	struct net *net = current->nsproxy->net_ns;
-@@ -2575,10 +2738,16 @@ static int tun_chr_open(struct inode *inode, struct file * file)
- 
- 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
- 
-+	tfile->xdp_ring = kzalloc(sizeof *tfile->xdp_ring, GFP_KERNEL);
-+	if (!tfile)
-+		return -ENOMEM;
-+
- 	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
+@@ -2579,6 +2742,13 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
--	if (!tfile)
-+	if (!tfile) {
-+		kfree(tfile->xdp_ring);
+ 	if (!tfile)
  		return -ENOMEM;
++
++	tfile->xdp_ring = kzalloc(sizeof *tfile->xdp_ring, GFP_KERNEL);
++	if (!tfile) {
++		sock_put(&tfile->sk);
++		return -ENOMEM;
 +	}
++
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2599,6 +2768,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2599,6 +2769,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
-+	core_ring_init(&tfile->xdp_ring.ring, TUN_XDP_RING_SIZE,
-+		       sizeof tfile->xdp_ring.buffs[0],
-+		       tun_xdp_zero, tun_xdp_valid,
++	core_ring_init(&tfile->xdp_ring->ring, TUN_XDP_RING_SIZE,
++		       sizeof tfile->xdp_ring->buffs[0], GFP_KERNEL,
++		       tun_xdp_seek, tun_xdp_zero, tun_xdp_valid,
 +		       tun_xdp_copy, tun_xdp_destroy);
 +
  	return 0;
@@ -301,10 +295,10 @@ index 58585ec..d98420f 100644
  		container_of(vq, struct vhost_net_virtqueue, vq);
 diff --git a/include/linux/core_ring.h b/include/linux/core_ring.h
 new file mode 100644
-index 0000000..469394e
+index 0000000..eae3613
 --- /dev/null
 +++ b/include/linux/core_ring.h
-@@ -0,0 +1,453 @@
+@@ -0,0 +1,454 @@
 +/*
 + *	Definitions for the core ring data structure.
 + *
@@ -484,21 +478,6 @@ index 0000000..469394e
 +
 +/* Note: callers invoking this in a loop must use a compiler barrier,
 + * for example cpu_relax(). Callers must take consumer_lock
-+ * if they dereference the pointer - see e.g. CORE_RING_PEEK_CALL.
-+ * If ring is never resized, and if the pointer is merely
-+ * tested, there's no need to take the lock - see e.g.  __core_ring_empty.
-+ */
-+static inline void *__core_ring_peek(struct genric_ring *r)
-+{
-+	if (likely(r->size) && !__core_ring_empty(r)) {
-+		void **addr = r->seek_fn(r, consumer);
-+		return *addr;
-+	}
-+	return NULL;
-+}
-+
-+/* Note: callers invoking this in a loop must use a compiler barrier,
-+ * for example cpu_relax(). Callers must take consumer_lock
 + * if the ring is ever resized - see e.g. core_ring_empty.
 + */
 +static inline bool __core_ring_empty(struct core_ring *r)
@@ -549,6 +528,21 @@ index 0000000..469394e
 +	spin_unlock_bh(&r->consumer_lock);
 +
 +	return ret;
++}
++
++/* Note: callers invoking this in a loop must use a compiler barrier,
++ * for example cpu_relax(). Callers must take consumer_lock
++ * if they dereference the pointer - see e.g. CORE_RING_PEEK_CALL.
++ * If ring is never resized, and if the pointer is merely
++ * tested, there's no need to take the lock - see e.g.  __core_ring_empty.
++ */
++static inline void *__core_ring_peek(struct core_ring *r)
++{
++	if (likely(r->size) && !__core_ring_empty(r)) {
++		void **addr = r->seek_fn(r, r->consumer);
++		return *addr;
++	}
++	return NULL;
 +}
 +
 +/* Must only be called after __core_ring_peek returned !NULL */
@@ -615,7 +609,7 @@ index 0000000..469394e
 +	unsigned long flags;
 +
 +	spin_lock_irqsave(&r->consumer_lock, flags);
-+	ptr = __core_ring_consume(r);
++	ptr = __core_ring_consume(r, ptr);
 +	spin_unlock_irqrestore(&r->consumer_lock, flags);
 +
 +	return ptr;
@@ -624,7 +618,7 @@ index 0000000..469394e
 +static inline void *core_ring_consume_bh(struct core_ring *r, void *ptr)
 +{
 +	spin_lock_bh(&r->consumer_lock);
-+	ptr = __core_ring_consume(r);
++	ptr = __core_ring_consume(r, ptr);
 +	spin_unlock_bh(&r->consumer_lock);
 +
 +	return ptr;
@@ -728,11 +722,12 @@ index 0000000..469394e
 +}
 +
 +static inline int core_ring_init(struct core_ring *r, int size, int entry_size,
-+				gfp_t gfp, ring_seek_fn_t seek_fn,
-+				ring_zero_fn_t zero_fn,
-+				ring_valid_fn_t valid_fn,
-+				ring_copy_fn_t copy_fn,
-+				ring_destroy_fn_t destroy_fn)
++				 gfp_t gfp,
++                                 ring_seek_fn_t seek_fn,
++				 ring_zero_fn_t zero_fn,
++				 ring_valid_fn_t valid_fn,
++				 ring_copy_fn_t copy_fn,
++				 ring_destroy_fn_t destroy_fn)
 +{
 +	__core_ring_set_size(r, size);
 +	r->entry_size = entry_size;
@@ -752,9 +747,9 @@ index 0000000..469394e
 +{
 +	void *ptr;
 +
-+	if (destroy)
-+		while ((ptr = core_ring_consume(r)))
-+			r->destroy(ptr);
++	if (r->destroy_fn)
++		while ((ptr = core_ring_consume(r, ptr)))
++			r->destroy_fn(ptr);
 +}
 +
 +#endif /* _LINUX_GENERIC_RING_H  */
