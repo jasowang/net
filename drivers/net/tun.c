@@ -3037,7 +3037,7 @@ struct skb_array *tun_get_skb_array(struct file *file)
 }
 EXPORT_SYMBOL_GPL(tun_get_skb_array);
 
-struct skb_array *tun_get_xdp_ring(struct file *file)
+struct core_ring *tun_get_xdp_ring(struct file *file)
 {
 	struct tun_file *tfile;
 
@@ -3046,9 +3046,9 @@ struct skb_array *tun_get_xdp_ring(struct file *file)
 	tfile = file->private_data;
 	if (!tfile)
 		return ERR_PTR(-EBADFD);
-	return &tfile->xdp_ring;
+	return &tfile->xdp_ring->ring;
 }
-EXPORT_SYMBOL_GPL(tun_get_skb_array);
+EXPORT_SYMBOL_GPL(tun_get_xdp_ring);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
