@@ -1,8 +1,9 @@
 Version: 1
-Previous: c1be407b4f6cfac68e411ce4e84865470113aa1a
-Head: dace126d033502aec0d9efdc0fd60d05c38b7d00
+Previous: 91af151018ab9b13ca92d5689f2cb0f85c97061b
+Head: 646955093b73bbea202874d7c18079894756b91f
 Applied:
   introduce-core-ring: dace126d033502aec0d9efdc0fd60d05c38b7d00
+  refresh-temp-0: 646955093b73bbea202874d7c18079894756b91f
 Unapplied:
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
   vhost-split-out-ring-head: 5911a2bd19c4ca815f9d78e657f08a82cff9673c
