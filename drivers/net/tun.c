@@ -1076,6 +1076,36 @@ static const struct net_device_ops tun_netdev_ops = {
 	.ndo_get_stats64	= tun_net_get_stats64,
 };
 
+static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = tun->tfiles[0];
+	struct core_ring *ring = &tfile->xdp_ring->ring;
+
+	if (core_ring_produce(ring, xdp)) {
+		/* Notify and wake up reader process */
+		if (tfile->flags & TUN_FASYNC)
+			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+		return -ENOSPC;
+	}
+
+	return 0;
+}
+
+static void tun_xdp_flush(struct net_device *dev)
+{
+	struct tun_struct *tun = netdev_priv(dev);
+	struct tun_file *tfile = tun->tfiles[0];
+
+	/* Notify and wake up reader process */
+	if (tfile->flags & TUN_FASYNC)
+		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+
+	return;
+}
+
 static const struct net_device_ops tap_netdev_ops = {
 	.ndo_uninit		= tun_net_uninit,
 	.ndo_open		= tun_net_open,
@@ -1323,7 +1353,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		void *orig_data;
 		u32 act;
 
-		xdp.data_havcrd_start = buf;
+		xdp.data_hard_start = buf;
 		xdp.data = buf + pad;
 		xdp.data_end = xdp.data + len;
 		orig_data = xdp.data;
@@ -1601,7 +1631,7 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
 {
 	int offset, vnet_hdr_sz = 0;
 	struct page *page;
-	size_t size = xdp.data_end - xdp.data;
+	size_t size = xdp->data_end - xdp->data;
 	struct tun_pcpu_stats *stats;
 
 	if (tun->flags & IFF_VNET_HDR) {
@@ -1615,9 +1645,9 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
 		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
 	}
 
-	page = virt_to_head_page(xdp.data);
-	offset = xdp.data - page_address(page);
-	if (copy_page_to_iter_iovec(page, offset, size, iter) != size)
+	page = virt_to_head_page(xdp->data);
+	offset = xdp->data - page_address(page);
+	if (copy_page_to_iter(page, offset, size, iter) != size)
 		return -EFAULT;
 
 	stats = get_cpu_ptr(tun->pcpu_stats);
@@ -1730,7 +1760,7 @@ done:
 static int tun_ring_recv_xdp(struct tun_file *tfile, int noblock,
 			     struct xdp_buff *xdp)
 {
-	struct core_ring *ring = &tfile->xdp_ring.ring;
+	struct core_ring *ring = &tfile->xdp_ring->ring;
 	DECLARE_WAITQUEUE(wait, current);
 	struct xdp_buff *buff;
 	int err = 0;
@@ -2663,40 +2693,10 @@ out:
 	return ret;
 }
 
-static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
-{
-	struct tun_struct *tun = netdev_priv(dev);
-	struct tun_file *tfile = tun->tfiles[0];
-	struct core_ring *ring = &tfile->xdp_ring.ring;
-
-	if (core_ring_produce(ring, xdp)) {
-		/* Notify and wake up reader process */
-		if (tfile->flags & TUN_FASYNC)
-			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-		return -ENOSPC;
-	}
-
-	return 0;
-}
-
-static void tun_xdp_flush(struct net_device *dev)
-{
-	struct tun_struct *tun = netdev_prive(dev);
-	struct tun_file *tfile = tun->tfiles[0];
-
-	/* Notify and wake up reader process */
-	if (tfile->flags & TUN_FASYNC)
-		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-
-	return;
-}
-
 static void *tun_xdp_seek(struct core_ring *r, int i)
 {
 	struct tun_xdp_ring *ring =
-		container_of(r, struct tun_xdp_ring, xdp_ring);
+	       container_of(r, struct tun_xdp_ring, ring);
 
 	return &ring->buffs[i];
 }
@@ -2704,22 +2704,22 @@ static void *tun_xdp_seek(struct core_ring *r, int i)
 static bool tun_xdp_valid(struct core_ring *r, int i)
 {
 	struct tun_xdp_ring *ring =
-		container_of(r, struct tun_xdp_ring, xdp_ring);
+		container_of(r, struct tun_xdp_ring, ring);
 	struct xdp_buff *buff = &ring->buffs[i];
 
 	return buff->data != NULL;
 }
 
-static bool tun_xdp_zero(struct core_ring *r, int i)
+static void tun_xdp_zero(struct core_ring *r, int i)
 {
 	struct tun_xdp_ring *ring =
-	       container_of(r, struct tun_xdp_ring, xdp_ring);
+	       container_of(r, struct tun_xdp_ring, ring);
 	struct xdp_buff *buff = &ring->buffs[i];
 
-	return buff->data = NULL;
+	buff->data = NULL;
 }
 
-static void tun_xdp_destroy(struct core_ring *r, int i)
+static void tun_xdp_destroy(void *ptr)
 {
 }
 
@@ -2728,7 +2728,7 @@ static void tun_xdp_copy(void *dst, void *src)
 	struct xdp_buff *dst_buff = dst;
 	struct xdp_buff *src_buff = src;
 
-	*dst = *src;
+	*dst_buff = *src_buff;
 }
 
 static int tun_chr_open(struct inode *inode, struct file * file)
@@ -2738,16 +2738,17 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	DBG1(KERN_INFO, "tunX: tun_chr_open\n");
 
-	tfile->xdp_ring = kzalloc(sizeof *tfile->xdp_ring, GFP_KERNEL);
+	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
+					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
 
-	tfile = (struct tun_file *)sk_alloc(net, AF_UNSPEC, GFP_KERNEL,
-					    &tun_proto, 0);
+	tfile->xdp_ring = kzalloc(sizeof *tfile->xdp_ring, GFP_KERNEL);
 	if (!tfile) {
-		kfree(tfile->xdp_ring);
+		sock_put(&tfile->sk);
 		return -ENOMEM;
 	}
+
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
 	tfile->ifindex = 0;
@@ -2768,9 +2769,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
-	core_ring_init(&tfile->xdp_ring.ring, TUN_XDP_RING_SIZE,
-		       sizeof tfile->xdp_ring.buffs[0],
-		       tun_xdp_zero, tun_xdp_valid,
+	core_ring_init(&tfile->xdp_ring->ring, TUN_XDP_RING_SIZE,
+		       sizeof tfile->xdp_ring->buffs[0], GFP_KERNEL,
+		       tun_xdp_seek, tun_xdp_zero, tun_xdp_valid,
 		       tun_xdp_copy, tun_xdp_destroy);
 
 	return 0;

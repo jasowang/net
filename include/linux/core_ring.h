@@ -177,21 +177,6 @@ static inline int core_ring_produce_bh(struct core_ring *r, void *ptr)
 
 /* Note: callers invoking this in a loop must use a compiler barrier,
  * for example cpu_relax(). Callers must take consumer_lock
- * if they dereference the pointer - see e.g. CORE_RING_PEEK_CALL.
- * If ring is never resized, and if the pointer is merely
- * tested, there's no need to take the lock - see e.g.  __core_ring_empty.
- */
-static inline void *__core_ring_peek(struct genric_ring *r)
-{
-	if (likely(r->size) && !__core_ring_empty(r)) {
-		void **addr = r->seek_fn(r, consumer);
-		return *addr;
-	}
-	return NULL;
-}
-
-/* Note: callers invoking this in a loop must use a compiler barrier,
- * for example cpu_relax(). Callers must take consumer_lock
  * if the ring is ever resized - see e.g. core_ring_empty.
  */
 static inline bool __core_ring_empty(struct core_ring *r)
@@ -242,6 +227,21 @@ static inline bool core_ring_empty_bh(struct core_ring *r)
 	spin_unlock_bh(&r->consumer_lock);
 
 	return ret;
+}
+
+/* Note: callers invoking this in a loop must use a compiler barrier,
+ * for example cpu_relax(). Callers must take consumer_lock
+ * if they dereference the pointer - see e.g. CORE_RING_PEEK_CALL.
+ * If ring is never resized, and if the pointer is merely
+ * tested, there's no need to take the lock - see e.g.  __core_ring_empty.
+ */
+static inline void *__core_ring_peek(struct core_ring *r)
+{
+	if (likely(r->size) && !__core_ring_empty(r)) {
+		void **addr = r->seek_fn(r, r->consumer);
+		return *addr;
+	}
+	return NULL;
 }
 
 /* Must only be called after __core_ring_peek returned !NULL */
@@ -308,7 +308,7 @@ static inline void *core_ring_consume_any(struct core_ring *r, void *ptr)
 	unsigned long flags;
 
 	spin_lock_irqsave(&r->consumer_lock, flags);
-	ptr = __core_ring_consume(r);
+	ptr = __core_ring_consume(r, ptr);
 	spin_unlock_irqrestore(&r->consumer_lock, flags);
 
 	return ptr;
@@ -317,7 +317,7 @@ static inline void *core_ring_consume_any(struct core_ring *r, void *ptr)
 static inline void *core_ring_consume_bh(struct core_ring *r, void *ptr)
 {
 	spin_lock_bh(&r->consumer_lock);
-	ptr = __core_ring_consume(r);
+	ptr = __core_ring_consume(r, ptr);
 	spin_unlock_bh(&r->consumer_lock);
 
 	return ptr;
@@ -421,11 +421,12 @@ static inline void __core_ring_set_size(struct core_ring *r, int size)
 }
 
 static inline int core_ring_init(struct core_ring *r, int size, int entry_size,
-				gfp_t gfp, ring_seek_fn_t seek_fn,
-				ring_zero_fn_t zero_fn,
-				ring_valid_fn_t valid_fn,
-				ring_copy_fn_t copy_fn,
-				ring_destroy_fn_t destroy_fn)
+				 gfp_t gfp,
+                                 ring_seek_fn_t seek_fn,
+				 ring_zero_fn_t zero_fn,
+				 ring_valid_fn_t valid_fn,
+				 ring_copy_fn_t copy_fn,
+				 ring_destroy_fn_t destroy_fn)
 {
 	__core_ring_set_size(r, size);
 	r->entry_size = entry_size;
@@ -445,9 +446,9 @@ static inline void core_ring_cleanup(struct core_ring *r)
 {
 	void *ptr;
 
-	if (destroy)
-		while ((ptr = core_ring_consume(r)))
-			r->destroy(ptr);
+	if (r->destroy_fn)
+		while ((ptr = core_ring_consume(r, ptr)))
+			r->destroy_fn(ptr);
 }
 
 #endif /* _LINUX_GENERIC_RING_H  */
