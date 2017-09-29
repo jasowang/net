@@ -1,7 +1,8 @@
 Version: 1
-Previous: ff769a2e6c89e4402f77f0219f22133820b151e2
-Head: cdcead41b8692b42b440c00e6868b810d9b6566c
+Previous: c446ec2837e6ee789a8ddbbccdb80ed8db559768
+Head: e0bec988ad6df4f1947ad60104b4842c4df2afaa
 Applied:
   mlx4-xdp-redirection-support: cdcead41b8692b42b440c00e6868b810d9b6566c
+  refresh-temp: e0bec988ad6df4f1947ad60104b4842c4df2afaa
 Unapplied:
 Hidden:
