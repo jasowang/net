@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
-Head: 3bd3b9ed1b602c065aa0b1ba109b9622afa6ff98
+Previous: 90eeaa3b89884b2f49fc451803f7e893f41755e1
+Head: c4b8ea0e9ec3bad749b2631c57fac37a6d44624f
 Applied:
+  mlx4-xdp-redirection-support: c4b8ea0e9ec3bad749b2631c57fac37a6d44624f
 Unapplied:
 Hidden:

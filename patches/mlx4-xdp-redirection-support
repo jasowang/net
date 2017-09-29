@@ -1,0 +1,18 @@
+Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Top:    46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-29 11:51:01 +0800
+
+mlx4: XDP redirection support
+
+Main issue is that TX ring is paired with RX, which makes the TXQ
+choosing during xdp_xmit is a little bit hard. Since XDP_TX
+descriptors was realcaimed during NAPI poll, the possible solution is:
+
+- lock to synchronize or
+- per CPU XDP_TX queue
+
+
+---
+
+
