@@ -1299,7 +1299,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_array_empty(&tfile->tx_array))
+	if (!core_ring_empty(&tfile->xdp_ring->ring) ||
+	    !skb_array_empty(&tfile->tx_array))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (tun->dev->flags & IFF_UP &&
