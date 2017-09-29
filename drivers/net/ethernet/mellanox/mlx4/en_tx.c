@@ -1085,6 +1085,13 @@ tx_drop:
 #define MLX4_EN_XDP_TX_REAL_SZ (((CTRL_SIZE + MLX4_EN_XDP_TX_NRTXBB * DS_SIZE) \
 				 / 16) & 0x3f)
 
+static int mlx4_en_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
+{
+	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct mlx4_en_tx_ring *ring = 
+
+}
+
 netdev_tx_t mlx4_en_xmit_frame(struct mlx4_en_rx_ring *rx_ring,
 			       struct mlx4_en_rx_alloc *frame,
 			       struct net_device *dev, unsigned int length,
@@ -1122,7 +1129,7 @@ netdev_tx_t mlx4_en_xmit_frame(struct mlx4_en_rx_ring *rx_ring,
 
 	tx_info->page = frame->page;
 	frame->page = NULL;
-	tx_info->map0_dma = dma;
+	tx_info->map0_dma = dmxa;
 	tx_info->map0_byte_count = PAGE_SIZE;
 	tx_info->nr_txbb = MLX4_EN_XDP_TX_NRTXBB;
 	tx_info->nr_bytes = max_t(unsigned int, length, ETH_ZLEN);
