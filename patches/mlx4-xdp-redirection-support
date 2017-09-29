@@ -12,6 +12,8 @@ descriptors was realcaimed during NAPI poll, the possible solution is:
 - lock to synchronize or
 - per CPU XDP_TX queue
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
