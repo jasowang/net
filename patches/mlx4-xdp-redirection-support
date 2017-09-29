@@ -1,5 +1,5 @@
 Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
-Top:    46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Top:    70fb4a92af1e4723c96b3282201f9c4d91c62056
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-29 11:51:01 +0800
 
@@ -17,4 +17,48 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_rx.c b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+index b97a55c8..89999b9 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_rx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_rx.c
+@@ -786,6 +786,13 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
+ 				}
+ 				trace_xdp_exception(dev, xdp_prog, act);
+ 				goto xdp_drop_no_cnt; /* Drop on xmit failure */
++			case XDP_REDIRECT:
++				if (xdp_do_redirect(dev, &xdp, xdp_prog)) {
++					frags[0].page = NULL;
++					goto next;
++				}
++				trace_xdp_exception(dev, xdp_prog, act);
++				goto xdp_drop_no_cnt;
+ 			default:
+ 				bpf_warn_invalid_xdp_action(act);
+ 			case XDP_ABORTED:
+diff --git a/drivers/net/ethernet/mellanox/mlx4/en_tx.c b/drivers/net/ethernet/mellanox/mlx4/en_tx.c
+index 8a32a8f..3ada4c5 100644
+--- a/drivers/net/ethernet/mellanox/mlx4/en_tx.c
++++ b/drivers/net/ethernet/mellanox/mlx4/en_tx.c
+@@ -1085,6 +1085,13 @@ netdev_tx_t mlx4_en_xmit(struct sk_buff *skb, struct net_device *dev)
+ #define MLX4_EN_XDP_TX_REAL_SZ (((CTRL_SIZE + MLX4_EN_XDP_TX_NRTXBB * DS_SIZE) \
+ 				 / 16) & 0x3f)
+ 
++static int mlx4_en_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
++{
++	struct mlx4_en_priv *priv = netdev_priv(dev);
++	struct mlx4_en_tx_ring *ring = 
++
++}
++
+ netdev_tx_t mlx4_en_xmit_frame(struct mlx4_en_rx_ring *rx_ring,
+ 			       struct mlx4_en_rx_alloc *frame,
+ 			       struct net_device *dev, unsigned int length,
+@@ -1122,7 +1129,7 @@ netdev_tx_t mlx4_en_xmit_frame(struct mlx4_en_rx_ring *rx_ring,
+ 
+ 	tx_info->page = frame->page;
+ 	frame->page = NULL;
+-	tx_info->map0_dma = dma;
++	tx_info->map0_dma = dmxa;
+ 	tx_info->map0_byte_count = PAGE_SIZE;
+ 	tx_info->nr_txbb = MLX4_EN_XDP_TX_NRTXBB;
+ 	tx_info->nr_bytes = max_t(unsigned int, length, ETH_ZLEN);
