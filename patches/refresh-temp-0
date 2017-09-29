@@ -1,0 +1,23 @@
+Bottom: c3c383ff7ee3e696a347bcb735f2d421d8f89a41
+Top:    c93f26953b5b56412613f468ed650c3df7f467c3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-29 12:20:36 +0800
+
+Refresh of introduce-core-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 35f0ef5..7c356f0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1299,7 +1299,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, sk_sleep(sk), wait);
+ 
+-	if (!skb_array_empty(&tfile->tx_array))
++	if (!core_ring_empty(&tfile->xdp_ring->ring) ||
++	    !skb_array_empty(&tfile->tx_array))
+ 		mask |= POLLIN | POLLRDNORM;
+ 
+ 	if (tun->dev->flags & IFF_UP &&
