@@ -786,6 +786,13 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 				}
 				trace_xdp_exception(dev, xdp_prog, act);
 				goto xdp_drop_no_cnt; /* Drop on xmit failure */
+			case XDP_REDIRECT:
+				if (xdp_do_redirect(dev, &xdp, xdp_prog)) {
+					frags[0].page = NULL;
+					goto next;
+				}
+				trace_xdp_exception(dev, xdp_prog, act);
+				goto xdp_drop_no_cnt;
 			default:
 				bpf_warn_invalid_xdp_action(act);
 			case XDP_ABORTED:
