@@ -1,9 +1,9 @@
 Version: 1
-Previous: 70449e1faaa7cb939dc006a724bff9082b0b51f7
-Head: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
+Previous: 612763c7125cda115afa0e60bdc6ba1f2a11fe40
+Head: 3bd3b9ed1b602c065aa0b1ba109b9622afa6ff98
 Applied:
-  introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
 Unapplied:
+  introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
   vhost-split-out-ring-head: 5911a2bd19c4ca815f9d78e657f08a82cff9673c
   vhost-introduce-helper-to-0: 2105909664cb5ee5e1c1f87d7633f71fc68df012
