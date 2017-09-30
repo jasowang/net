@@ -1,8 +1,7 @@
 Version: 1
-Previous: a4b5a53db08489826fc560c7a4358c7c1c4a37ec
-Head: f10a6db76d3819b58c07a1bfd87090b52954ad60
+Previous: c6a5d817def4c9c34eb89992659c0f09fb802855
+Head: 041c9ba590066fe13f7ee4a66e41b21ce7c416b6
 Applied:
-  introduce-core-ring: 48a111707ed8765297d52b17187e4bf71758bfa4
-  refresh-temp: f10a6db76d3819b58c07a1bfd87090b52954ad60
+  introduce-core-ring: 041c9ba590066fe13f7ee4a66e41b21ce7c416b6
 Unapplied:
 Hidden:
