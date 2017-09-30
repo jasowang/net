@@ -1300,8 +1300,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!ptr_ring_empty(&tfile->xdp_ring) ||
-	    !skb_array_empty(&tfile->tx_array))
+	if (!ptr_ring_empty(&tfile->xdp_ring))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (tun->dev->flags & IFF_UP &&
@@ -2013,9 +2012,8 @@ out:
 
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
-			   int noblock, struct sk_buff *skb)
+			   int noblock, struct xdp_buff *xdp)
 {
-	struct xdp_buff *xdp;
 	ssize_t ret;
 	int err;
 
@@ -2024,27 +2022,13 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (!iov_iter_count(to))
 		return 0;
 
-	if (!skb) {
+	if (!xdp) {
 		xdp = ptr_ring_consume(&tfile->xdp_ring);
-		if (xdp) {
-			ret = tun_put_user_xdp(tun, tfile, xdp, to);
-			goto xdp_out;
-		}
-		/* Read frames from ring */
-		skb = tun_ring_recv(tfile, noblock, &err);
-		if (!skb)
-			return err;
+		if (!xdp)
+			return -EAGAIN;
 	}
 
-	ret = tun_put_user(tun, tfile, skb, to);
-	if (unlikely(ret < 0))
-		kfree_skb(skb);
-	else
-		consume_skb(skb);
-
-	return ret;
-
-xdp_out:
+	ret = tun_put_user_xdp(tun, tfile, xdp, to);
 	put_page(virt_to_head_page(xdp->data));
 	return ret;
 }
@@ -3163,8 +3147,7 @@ struct socket *tun_get_socket(struct file *file)
 	struct tun_file *tfile;
 	if (file->f_op != &tun_fops)
 		return ERR_PTR(-EINVAL);
-	tfile = file->private_data;
-	if (!tfile)
+	tfile = file->private_data;	if (!tfile)
 		return ERR_PTR(-EBADFD);
 	return &tfile->socket;
 }
@@ -3182,6 +3165,19 @@ struct skb_array *tun_get_skb_array(struct file *file)
 	return &tfile->tx_array;
 }
 EXPORT_SYMBOL_GPL(tun_get_skb_array);
+
+struct ptr_ring *tun_get_xdp_ring(struct file *file)
+{
+	struct tun_file *tfile;
+
+	if (file->f_op != &tun_fops)
+		return ERR_PTR(-EINVAL);
+	tfile = file->private_data;
+	if (!tfile)
+		return ERR_PTR(-EBADFD);
+	return &tfile->xdp_ring;
+}
+EXPORT_SYMBOL_GPL(tun_get_xdp_ring);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
