@@ -3,7 +3,7 @@ Top:    65222efed21fb80e9f360d3d1b1eb8c5d1ce9346
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
-introduce core ring
+tuntap: ndo_xdp_xmit support
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
