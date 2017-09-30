@@ -1,0 +1,34 @@
+Bottom: e12e2a65768bec2151d832fa45e6139d7e0f0354
+Top:    0127efb585e3bcdf1d82d440b99ec714916e7cec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-30 17:10:02 +0800
+
+Refresh of introduce-core-ring
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 89384ce8..4fbd799 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2029,7 +2029,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ 	}
+ 
+ 	ret = tun_put_user_xdp(tun, tfile, xdp, to);
+-	put_page(virt_to_head_page(xdp->data));
++	page_frag_free(xdp->data);
+ 	return ret;
+ }
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 66c8217..51ce939 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -831,7 +831,6 @@ static void handle_rx(struct vhost_net *net)
+ 			pr_debug("Discarded rx packet: "
+ 				 " len %d, expected %zd\n", err, sock_len);
+ 			vhost_discard_vq_desc(vq, headcount);
+-			printk("err %d sock_len %d\n", err, sock_len);
+ 			continue;
+ 		}
+ 		/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
