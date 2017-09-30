@@ -1868,7 +1868,7 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
 	u64_stats_update_end(&stats->syncp);
 	put_cpu_ptr(tun->pcpu_stats);
 
-	return 0;
+	return size + vnet_hdr_sz;
 }
 
 /* Put packet to the user space buffer */
