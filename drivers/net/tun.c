@@ -2029,7 +2029,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	}
 
 	ret = tun_put_user_xdp(tun, tfile, xdp, to);
-	put_page(virt_to_head_page(xdp->data));
+	page_frag_free(xdp->data);
 	return ret;
 }
 
