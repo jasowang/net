@@ -1,5 +1,5 @@
 Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
-Top:    c86a074bf72081c8dc9fc0985284e9e9759fef39
+Top:    1bd5004fa8dc28957a12ee898146c01475658b33
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-09-21 17:42:13 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2c36f6e..696598c 100644
+index 2c36f6e..3d57e22 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -151,6 +151,8 @@ struct tun_pcpu_stats {
@@ -84,17 +84,16 @@ index 2c36f6e..696598c 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1258,7 +1300,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+@@ -1258,7 +1300,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
  
  	poll_wait(file, sk_sleep(sk), wait);
  
 -	if (!skb_array_empty(&tfile->tx_array))
-+	if (!ptr_ring_empty(&tfile->xdp_ring) ||
-+	    !skb_array_empty(&tfile->tx_array))
++	if (!ptr_ring_empty(&tfile->xdp_ring))
  		mask |= POLLIN | POLLRDNORM;
  
  	if (tun->dev->flags & IFF_UP &&
-@@ -1793,6 +1836,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1793,6 +1835,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -137,38 +136,42 @@ index 2c36f6e..696598c 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1936,6 +2015,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1934,7 +2012,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 
+ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
- 			   int noblock, struct sk_buff *skb)
+-			   int noblock, struct sk_buff *skb)
++			   int noblock, struct xdp_buff *xdp)
  {
-+	struct xdp_buff *xdp;
  	ssize_t ret;
  	int err;
- 
-@@ -1945,6 +2025,11 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1944,19 +2022,14 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (!iov_iter_count(to))
  		return 0;
  
- 	if (!skb) {
+-	if (!skb) {
+-		/* Read frames from ring */
+-		skb = tun_ring_recv(tfile, noblock, &err);
+-		if (!skb)
+-			return err;
++	if (!xdp) {
 +		xdp = ptr_ring_consume(&tfile->xdp_ring);
-+		if (xdp) {
-+			ret = tun_put_user_xdp(tun, tfile, xdp, to);
-+			goto xdp_out;
-+		}
- 		/* Read frames from ring */
- 		skb = tun_ring_recv(tfile, noblock, &err);
- 		if (!skb)
-@@ -1958,6 +2043,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
- 		consume_skb(skb);
++		if (!xdp)
++			return -EAGAIN;
+ 	}
  
- 	return ret;
-+
-+xdp_out:
+-	ret = tun_put_user(tun, tfile, skb, to);
+-	if (unlikely(ret < 0))
+-		kfree_skb(skb);
+-	else
+-		consume_skb(skb);
+-
++	ret = tun_put_user_xdp(tun, tfile, xdp, to);
 +	put_page(virt_to_head_page(xdp->data));
-+	return ret;
+ 	return ret;
  }
  
- static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
-@@ -2083,6 +2172,14 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2083,6 +2156,14 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  	return ret;
  }
  
@@ -183,7 +186,7 @@ index 2c36f6e..696598c 100644
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2093,7 +2190,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2093,7 +2174,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -192,7 +195,7 @@ index 2c36f6e..696598c 100644
  	tun_put(tun);
  
  	return ret;
-@@ -2799,6 +2896,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2799,6 +2880,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -200,7 +203,7 @@ index 2c36f6e..696598c 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2819,6 +2917,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2819,6 +2901,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
@@ -209,11 +212,103 @@ index 2c36f6e..696598c 100644
  	return 0;
  }
  
+@@ -3063,8 +3147,7 @@ struct socket *tun_get_socket(struct file *file)
+ 	struct tun_file *tfile;
+ 	if (file->f_op != &tun_fops)
+ 		return ERR_PTR(-EINVAL);
+-	tfile = file->private_data;
+-	if (!tfile)
++	tfile = file->private_data;	if (!tfile)
+ 		return ERR_PTR(-EBADFD);
+ 	return &tfile->socket;
+ }
+@@ -3083,6 +3166,19 @@ struct skb_array *tun_get_skb_array(struct file *file)
+ }
+ EXPORT_SYMBOL_GPL(tun_get_skb_array);
+ 
++struct ptr_ring *tun_get_xdp_ring(struct file *file)
++{
++	struct tun_file *tfile;
++
++	if (file->f_op != &tun_fops)
++		return ERR_PTR(-EINVAL);
++	tfile = file->private_data;
++	if (!tfile)
++		return ERR_PTR(-EBADFD);
++	return &tfile->xdp_ring;
++}
++EXPORT_SYMBOL_GPL(tun_get_xdp_ring);
++
+ module_init(tun_init);
+ module_exit(tun_cleanup);
+ MODULE_DESCRIPTION(DRV_DESCRIPTION);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 58585ec..6bfd906 100644
+index 58585ec..51ce939 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -394,7 +394,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
+@@ -89,7 +89,7 @@ struct vhost_net_ubuf_ref {
+ 
+ #define VHOST_RX_BATCH 64
+ struct vhost_net_buf {
+-	struct sk_buff **queue;
++	void **queue;
+ 	int tail;
+ 	int head;
+ };
+@@ -109,6 +109,7 @@ struct vhost_net_virtqueue {
+ 	 * Protected by vq mutex. Writers must also take device mutex. */
+ 	struct vhost_net_ubuf_ref *ubufs;
+ 	struct skb_array *rx_array;
++	struct ptr_ring *xdp_ring;
+ 	struct vhost_net_buf rxq;
+ };
+ 
+@@ -158,8 +159,8 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+ 
+ 	rxq->head = 0;
+-	rxq->tail = skb_array_consume_batched(nvq->rx_array, rxq->queue,
+-					      VHOST_RX_BATCH);
++	rxq->tail = ptr_ring_consume_batched(nvq->xdp_ring, rxq->queue,
++					     VHOST_RX_BATCH);
+ 	return rxq->tail;
+ }
+ 
+@@ -167,13 +168,21 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
+ {
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+ 
+-	if (nvq->rx_array && !vhost_net_buf_is_empty(rxq)) {
+-		skb_array_unconsume(nvq->rx_array, rxq->queue + rxq->head,
+-				    vhost_net_buf_get_size(rxq));
++	if (nvq->xdp_ring && !vhost_net_buf_is_empty(rxq)) {
++		ptr_ring_unconsume(nvq->xdp_ring, rxq->queue + rxq->head,
++				   vhost_net_buf_get_size(rxq), NULL);
+ 		rxq->head = rxq->tail = 0;
+ 	}
+ }
+ 
++static int tun_xdp_peek_len(struct xdp_buff *xdp)
++{
++	if (likely(xdp))
++		return xdp->data_end - xdp->data;
++	else
++		return 0;
++}
++
+ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+ {
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+@@ -185,7 +194,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+ 		return 0;
+ 
+ out:
+-	return __skb_array_len_with_tag(vhost_net_buf_get_ptr(rxq));
++	return tun_xdp_peek_len(vhost_net_buf_get_ptr(rxq));
+ }
+ 
+ static void vhost_net_buf_init(struct vhost_net_buf *rxq)
+@@ -394,7 +403,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
  }
  
  static int vhost_net_enable_vq(struct vhost_net *n,
@@ -222,23 +317,98 @@ index 58585ec..6bfd906 100644
  {
  	struct vhost_net_virtqueue *nvq =
  		container_of(vq, struct vhost_net_virtqueue, vq);
-@@ -586,6 +586,10 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
- 	struct sk_buff *head;
+@@ -587,7 +596,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
  	int len = 0;
  	unsigned long flags;
-+	struct socket *sock = sk->sk_socket;
-+
-+	if (sock->ops->peek_len)
-+		return sock->ops->peek_len(sock);
  
- 	if (rvq->rx_array)
+-	if (rvq->rx_array)
++	if (rvq->xdp_ring)
  		return vhost_net_buf_peek(rvq);
-@@ -1147,7 +1151,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+@@ -782,7 +791,7 @@ static void handle_rx(struct vhost_net *net)
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(headcount < 0))
+ 			goto out;
+-		if (nvq->rx_array)
++		if (nvq->xdp_ring)
+ 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
+ 		/* On overrun, truncate and discard */
+ 		if (unlikely(headcount > UIO_MAXIOV)) {
+@@ -900,7 +909,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	struct vhost_net *n;
+ 	struct vhost_dev *dev;
+ 	struct vhost_virtqueue **vqs;
+-	struct sk_buff **queue;
++	void **queue;
+ 	int i;
+ 
+ 	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
+@@ -912,7 +921,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 		return -ENOMEM;
+ 	}
+ 
+-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(struct sk_buff *),
++	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(void *),
+ 			      GFP_KERNEL);
+ 	if (!queue) {
+ 		kfree(vqs);
+@@ -1069,6 +1078,23 @@ static struct skb_array *get_tap_skb_array(int fd)
+ 	return array;
+ }
+ 
++static struct ptr_ring *get_tap_xdp_ring(int fd)
++{
++	struct ptr_ring *ring;
++	struct file *file = fget(fd);
++
++	if (!file)
++		return NULL;
++	ring = tun_get_xdp_ring(file);
++	if (!IS_ERR(ring))
++		goto out;
++	ring = NULL;
++
++out:
++	fput(file);
++	return ring;
++}
++
+ static struct socket *get_tap_socket(int fd)
+ {
+ 	struct file *file = fget(fd);
+@@ -1146,8 +1172,10 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 		vhost_net_disable_vq(n, vq);
  		vq->private_data = sock;
  		vhost_net_buf_unproduce(nvq);
- 		if (index == VHOST_NET_VQ_RX)
+-		if (index == VHOST_NET_VQ_RX)
 -			nvq->rx_array = get_tap_skb_array(fd);
++		if (index == VHOST_NET_VQ_RX) {
 +			nvq->rx_array = NULL;
++			nvq->xdp_ring = get_tap_xdp_ring(fd);
++		}
  		r = vhost_vq_init_access(vq);
  		if (r)
  			goto err_used;
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index bf9bdf4..5665fb5 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -20,6 +20,7 @@
+ #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
+ struct socket *tun_get_socket(struct file *);
+ struct skb_array *tun_get_skb_array(struct file *file);
++struct ptr_ring *tun_get_xdp_ring(struct file *file);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -33,5 +34,9 @@ static inline struct skb_array *tun_get_skb_array(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
++struct ptr_ring *tun_get_xdp_ring(struct file *f);
++{
++	return ERR_PTR(-EINVAL);
++}
+ #endif /* CONFIG_TUN */
+ #endif /* __IF_TUN_H */
