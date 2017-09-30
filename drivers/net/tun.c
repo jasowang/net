@@ -76,7 +76,6 @@
 #include <linux/bpf.h>
 #include <linux/bpf_trace.h>
 #include <linux/mutex.h>
-#include <linux/core_ring.h>
 
 #include <linux/uaccess.h>
 
@@ -154,11 +153,6 @@ struct tun_pcpu_stats {
 
 #define TUN_XDP_RING_SIZE 256
 
-struct tun_xdp_ring {
-	struct core_ring ring;
-	struct xdp_buff buffs[TUN_XDP_RING_SIZE];
-};
-
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
  * to serve as one transmit queue for tuntap device. The sock_fprog and
@@ -187,7 +181,7 @@ struct tun_file {
 	struct list_head next;
 	struct tun_struct *detached;
 	struct skb_array tx_array;
-	struct tun_xdp_ring *xdp_ring;
+	struct ptr_ring xdp_ring;
 };
 
 struct tun_flow_entry {
@@ -1176,14 +1170,21 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_file *tfile = tun->tfiles[0];
-	struct core_ring *ring = &tfile->xdp_ring->ring;
+	struct ptr_ring *ring = &tfile->xdp_ring;
+	struct xdp_buff *buff = xdp->data;
+	int headroom = xdp->data - xdp->data_hard_start;
 
-	if (core_ring_produce(ring, xdp)) {
+	/* Assure headroom is available for storing xdp */
+	if (headroom < sizeof(*xdp))
+		return -ENOSPC;
+
+	*buff = *xdp;
+
+	if (ptr_ring_produce(ring, buff)) {
 		/* Notify and wake up reader process */
 		if (tfile->flags & TUN_FASYNC)
 			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-		return -ENOSPC;
 	}
 
 	return 0;
@@ -1299,7 +1300,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!core_ring_empty(&tfile->xdp_ring->ring) ||
+	if (!ptr_ring_empty(&tfile->xdp_ring) ||
 	    !skb_array_empty(&tfile->tx_array))
 		mask |= POLLIN | POLLRDNORM;
 
@@ -1968,45 +1969,6 @@ done:
 	return total;
 }
 
-static int tun_ring_recv_xdp(struct tun_file *tfile, int noblock,
-			     struct xdp_buff *xdp)
-{
-	struct core_ring *ring = &tfile->xdp_ring->ring;
-	DECLARE_WAITQUEUE(wait, current);
-	struct xdp_buff *buff;
-	int err = 0;
-
-	buff = core_ring_consume(ring, xdp);
-	if (buff)
-		return 0;
-	if (noblock)
-		return -EAGAIN;
-
-	add_wait_queue(&tfile->wq.wait, &wait);
-	current->state = TASK_INTERRUPTIBLE;
-
-	while (1) {
-		buff = core_ring_consume(ring, xdp);
-		if (buff)
-			goto out;
-		if (signal_pending(current)) {
-			err = -ERESTARTSYS;
-			goto out;
-		}
-		if (tfile->socket.sk->sk_shutdown & RCV_SHUTDOWN) {
-			err = -EFAULT;
-			goto out;
-		}
-
-		schedule();
-	}
-
-out:
-	current->state = TASK_RUNNING;
-	remove_wait_queue(&tfile->wq.wait, &wait);
-	return err;
-}
-
 static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 				     int *err)
 {
@@ -2053,7 +2015,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock, struct sk_buff *skb)
 {
-	struct xdp_buff xdp;
+	struct xdp_buff *xdp;
 	ssize_t ret;
 	int err;
 
@@ -2063,8 +2025,9 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		return 0;
 
 	if (!skb) {
-		if (!tun_ring_recv_xdp(tfile, noblock, &xdp)) {
-			ret = tun_put_user_xdp(tun, tfile, &xdp, to);
+		xdp = ptr_ring_consume(&tfile->xdp_ring);
+		if (xdp) {
+			ret = tun_put_user_xdp(tun, tfile, xdp, to);
 			goto xdp_out;
 		}
 		/* Read frames from ring */
@@ -2082,7 +2045,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	return ret;
 
 xdp_out:
-	put_page(virt_to_head_page(xdp.data));
+	put_page(virt_to_head_page(xdp->data));
 	return ret;
 }
 
@@ -2209,6 +2172,14 @@ out:
 	return ret;
 }
 
+static int tun_xdp_peek_len(struct xdp_buff *xdp)
+{
+	if (likely(xdp))
+		return xdp->data_end - xdp->data;
+	else
+		return 0;
+}
+
 static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
@@ -2219,7 +2190,7 @@ static int tun_peek_len(struct socket *sock)
 	if (!tun)
 		return 0;
 
-	ret = skb_array_peek_len(&tfile->tx_array);
+	ret = PTR_RING_PEEK_CALL(&tfile->xdp_ring, tun_xdp_peek_len);
 	tun_put(tun);
 
 	return ret;
@@ -2914,44 +2885,6 @@ out:
 	return ret;
 }
 
-static void *tun_xdp_seek(struct core_ring *r, int i)
-{
-	struct tun_xdp_ring *ring =
-	       container_of(r, struct tun_xdp_ring, ring);
-
-	return &ring->buffs[i];
-}
-
-static bool tun_xdp_valid(struct core_ring *r, int i)
-{
-	struct tun_xdp_ring *ring =
-		container_of(r, struct tun_xdp_ring, ring);
-	struct xdp_buff *buff = &ring->buffs[i];
-
-	return buff->data != NULL;
-}
-
-static void tun_xdp_zero(struct core_ring *r, int i)
-{
-	struct tun_xdp_ring *ring =
-	       container_of(r, struct tun_xdp_ring, ring);
-	struct xdp_buff *buff = &ring->buffs[i];
-
-	buff->data = NULL;
-}
-
-static void tun_xdp_destroy(void *ptr)
-{
-}
-
-static void tun_xdp_copy(void *dst, void *src)
-{
-	struct xdp_buff *dst_buff = dst;
-	struct xdp_buff *src_buff = src;
-
-	*dst_buff = *src_buff;
-}
-
 static int tun_chr_open(struct inode *inode, struct file * file)
 {
 	struct net *net = current->nsproxy->net_ns;
@@ -2963,12 +2896,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 					    &tun_proto, 0);
 	if (!tfile)
 		return -ENOMEM;
-
-	tfile->xdp_ring = kzalloc(sizeof *tfile->xdp_ring, GFP_KERNEL);
-	if (!tfile) {
-		sock_put(&tfile->sk);
-		return -ENOMEM;
-	}
 
 	RCU_INIT_POINTER(tfile->tun, NULL);
 	tfile->flags = 0;
@@ -2990,10 +2917,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
-	core_ring_init(&tfile->xdp_ring->ring, TUN_XDP_RING_SIZE,
-		       sizeof tfile->xdp_ring->buffs[0], GFP_KERNEL,
-		       tun_xdp_seek, tun_xdp_zero, tun_xdp_valid,
-		       tun_xdp_copy, tun_xdp_destroy);
+	ptr_ring_init(&tfile->xdp_ring, TUN_XDP_RING_SIZE, GFP_KERNEL);
 
 	return 0;
 }
@@ -3258,19 +3182,6 @@ struct skb_array *tun_get_skb_array(struct file *file)
 	return &tfile->tx_array;
 }
 EXPORT_SYMBOL_GPL(tun_get_skb_array);
-
-struct core_ring *tun_get_xdp_ring(struct file *file)
-{
-	struct tun_file *tfile;
-
-	if (file->f_op != &tun_fops)
-		return ERR_PTR(-EINVAL);
-	tfile = file->private_data;
-	if (!tfile)
-		return ERR_PTR(-EBADFD);
-	return &tfile->xdp_ring->ring;
-}
-EXPORT_SYMBOL_GPL(tun_get_xdp_ring);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
