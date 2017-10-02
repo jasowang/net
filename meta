@@ -1,7 +1,8 @@
 Version: 1
-Previous: 4b7a3efca3c4be848f8753a5b489246e246d56f5
-Head: 3ab3d711e598af4eb25a170e29c6cef9b565768f
+Previous: 122c8f06de33ca6b68296e95701c647515a23994
+Head: fb08e8f790f32fe36d2d245a1e7bb135eb2ebfc5
 Applied:
   introduce-core-ring: 3ab3d711e598af4eb25a170e29c6cef9b565768f
+  m2: fb08e8f790f32fe36d2d245a1e7bb135eb2ebfc5
 Unapplied:
 Hidden:
