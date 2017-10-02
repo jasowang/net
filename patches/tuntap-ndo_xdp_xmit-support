@@ -1,17 +1,16 @@
 Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
-Top:    3701d3cee693d49621303abd7ba483eeacda363c
+Top:    171c1ac8b619cd500955a08dbc94f5ebc6653eb2
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-09-21 17:42:13 +0800
+Date:   2017-10-02 15:01:49 +0800
 
 tuntap: ndo_xdp_xmit support
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2c36f6e..7728e13 100644
+index 2c36f6e..6f78cfa 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -151,6 +151,8 @@ struct tun_pcpu_stats {
@@ -40,7 +39,7 @@ index 2c36f6e..7728e13 100644
 +	struct tun_struct *tun = netdev_priv(dev);
 +	struct tun_file *tfile = tun->tfiles[0];
 +	struct ptr_ring *ring = &tfile->xdp_ring;
-+	struct xdp_buff *buff = xdp->data;
++	struct xdp_buff *buff = xdp->data_hard_start;
 +	int headroom = xdp->data - xdp->data_hard_start;
 +
 +	/* Assure headroom is available for storing xdp */
@@ -94,7 +93,7 @@ index 2c36f6e..7728e13 100644
  		mask |= POLLIN | POLLRDNORM;
  
  	if (tun->dev->flags & IFF_UP &&
-@@ -1793,6 +1836,42 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1793,6 +1836,39 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -103,10 +102,10 @@ index 2c36f6e..7728e13 100644
 +				struct xdp_buff *xdp,
 +				struct iov_iter *iter)
 +{
-+	int offset, vnet_hdr_sz = 0;
-+	struct page *page;
++	int vnet_hdr_sz = 0;
 +	size_t size = xdp->data_end - xdp->data;
 +	struct tun_pcpu_stats *stats;
++	size_t ret;
 +
 +	if (tun->flags & IFF_VNET_HDR) {
 +		struct virtio_net_hdr gso = { 0 };
@@ -119,25 +118,22 @@ index 2c36f6e..7728e13 100644
 +		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
 +	}
 +
-+	page = virt_to_head_page(xdp->data);
-+	offset = xdp->data - page_address(page);
-+	if (copy_page_to_iter(page, offset, size, iter) != size)
-+		return -EFAULT;
++	ret = copy_to_iter(xdp->data, size, iter) + vnet_hdr_sz;
 +
 +	stats = get_cpu_ptr(tun->pcpu_stats);
 +	u64_stats_update_begin(&stats->syncp);
 +	stats->tx_packets++;
-+	stats->tx_bytes += size;
++	stats->tx_bytes += ret;
 +	u64_stats_update_end(&stats->syncp);
 +	put_cpu_ptr(tun->pcpu_stats);
 +
-+	return size + vnet_hdr_sz;
++	return ret;
 +}
 +
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1934,7 +2013,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1934,7 +2010,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
@@ -146,7 +142,7 @@ index 2c36f6e..7728e13 100644
  {
  	ssize_t ret;
  	int err;
-@@ -1944,19 +2023,14 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1944,19 +2020,14 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -172,7 +168,7 @@ index 2c36f6e..7728e13 100644
  	return ret;
  }
  
-@@ -2083,6 +2157,14 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2083,6 +2154,14 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  	return ret;
  }
  
@@ -187,7 +183,7 @@ index 2c36f6e..7728e13 100644
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2093,7 +2175,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2093,7 +2172,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -196,7 +192,7 @@ index 2c36f6e..7728e13 100644
  	tun_put(tun);
  
  	return ret;
-@@ -2799,6 +2881,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2799,6 +2878,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -204,7 +200,7 @@ index 2c36f6e..7728e13 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2819,6 +2902,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2819,6 +2899,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
@@ -213,7 +209,7 @@ index 2c36f6e..7728e13 100644
  	return 0;
  }
  
-@@ -3063,8 +3148,7 @@ struct socket *tun_get_socket(struct file *file)
+@@ -3063,8 +3145,7 @@ struct socket *tun_get_socket(struct file *file)
  	struct tun_file *tfile;
  	if (file->f_op != &tun_fops)
  		return ERR_PTR(-EINVAL);
@@ -223,7 +219,7 @@ index 2c36f6e..7728e13 100644
  		return ERR_PTR(-EBADFD);
  	return &tfile->socket;
  }
-@@ -3083,6 +3167,19 @@ struct skb_array *tun_get_skb_array(struct file *file)
+@@ -3083,6 +3164,19 @@ struct skb_array *tun_get_skb_array(struct file *file)
  }
  EXPORT_SYMBOL_GPL(tun_get_skb_array);
  

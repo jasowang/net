@@ -1,8 +1,7 @@
 Version: 1
-Previous: ddb9c0f4036709c810ad7571e9d6b0ef818dfebb
-Head: 39ec19cb49cba67a5058fc31e4e2eb56e7c11baa
+Previous: 0ccce4a4e93e77dce214f1537dc5c7bb317b9db0
+Head: 822039099c09601c6222f62ae8b24c59c412adf1
 Applied:
-  introduce-core-ring: 3ab3d711e598af4eb25a170e29c6cef9b565768f
-  m2: 39ec19cb49cba67a5058fc31e4e2eb56e7c11baa
+  tuntap-ndo_xdp_xmit-support: 822039099c09601c6222f62ae8b24c59c412adf1
 Unapplied:
 Hidden:
