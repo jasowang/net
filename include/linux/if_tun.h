@@ -17,6 +17,23 @@
 
 #include <uapi/linux/if_tun.h>
 
+#define TUN_XDP_FLAG 0x1ULL
+
+bool tun_is_xdp_buff(void *ptr)
+{
+	return (unsigned long)ptr & TUN_XDP_FLAG;
+}
+
+void *tun_xdp_to_ptr(void *ptr)
+{
+	return (void *)((unsigned long)ptr | TUN_XDP_FLAG);
+}
+
+void *tun_ptr_to_xdp(void *ptr)
+{
+	return (void *)((unsigned long)ptr & ~TUN_XDP_FLAG);
+}
+
 #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
 struct socket *tun_get_socket(struct file *);
 struct ptr_ring *tun_get_tx_ring(struct file *file);
