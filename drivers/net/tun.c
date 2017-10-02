@@ -1185,6 +1185,7 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 		if (tfile->flags & TUN_FASYNC)
 			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 		tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+		return -ENOSPC;
 	}
 
 	return 0;
