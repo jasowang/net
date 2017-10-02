@@ -1171,7 +1171,7 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_file *tfile = tun->tfiles[0];
 	struct ptr_ring *ring = &tfile->xdp_ring;
-	struct xdp_buff *buff = xdp->data;
+	struct xdp_buff *buff = xdp->data_hard_start;
 	int headroom = xdp->data - xdp->data_hard_start;
 
 	/* Assure headroom is available for storing xdp */
