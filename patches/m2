@@ -1,5 +1,5 @@
 Bottom: 3701d3cee693d49621303abd7ba483eeacda363c
-Top:    3701d3cee693d49621303abd7ba483eeacda363c
+Top:    4c42e349217173baee2dd6659d316dafe506bede
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-02 14:44:32 +0800
 
@@ -7,4 +7,43 @@ Date:   2017-10-02 14:44:32 +0800
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7728e13..79447e3b 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1841,10 +1841,10 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
+ 				struct xdp_buff *xdp,
+ 				struct iov_iter *iter)
+ {
+-	int offset, vnet_hdr_sz = 0;
+-	struct page *page;
++	int vnet_hdr_sz = 0;
+ 	size_t size = xdp->data_end - xdp->data;
+ 	struct tun_pcpu_stats *stats;
++	size_t ret;
+ 
+ 	if (tun->flags & IFF_VNET_HDR) {
+ 		struct virtio_net_hdr gso = { 0 };
+@@ -1857,19 +1857,16 @@ static ssize_t tun_put_user_xdp(struct tun_struct *tun,
+ 		iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
+ 	}
+ 
+-	page = virt_to_head_page(xdp->data);
+-	offset = xdp->data - page_address(page);
+-	if (copy_page_to_iter(page, offset, size, iter) != size)
+-		return -EFAULT;
++	ret = copy_to_iter(xdp->data, size, iter) + vnet_hdr_sz;
+ 
+ 	stats = get_cpu_ptr(tun->pcpu_stats);
+ 	u64_stats_update_begin(&stats->syncp);
+ 	stats->tx_packets++;
+-	stats->tx_bytes += size;
++	stats->tx_bytes += ret;
+ 	u64_stats_update_end(&stats->syncp);
+ 	put_cpu_ptr(tun->pcpu_stats);
+ 
+-	return size + vnet_hdr_sz;
++	return ret;
+ }
+ 
+ /* Put packet to the user space buffer */
