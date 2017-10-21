@@ -1,9 +1,8 @@
 Version: 1
-Previous: 23478f8bbd3bedbd4f9649b304d56c45577e3da7
-Head: 5d7532dce2c7adcfa58efe223520cd57728b9d86
+Previous: 5bf780bd0606f95d947bb91702a03ec27deb35e2
+Head: 2c990d48393e20cd43b94bc753a648af34f45d64
 Applied:
-  vhost_net-vmapped-metadata: 7105104de774f51c5875bdf3ef96b470c0c39104
-  refresh-temp-0: 5d7532dce2c7adcfa58efe223520cd57728b9d86
+  vhost_net-vmapped-metadata: 2c990d48393e20cd43b94bc753a648af34f45d64
 Unapplied:
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
