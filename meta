@@ -1,7 +1,8 @@
 Version: 1
-Previous: dc6c37ac7df9c95b2cdbd03d852382be45739e42
-Head: 833e0e2f24fd0525090878f71e129a8a4cb8bf78
+Previous: 09144809081a3b84930d12ec91b8b17387b1a061
+Head: e95e4db358ff7a2837691f927621a44bd8621027
 Applied:
+  vhost_net-vmapped-metadata: e95e4db358ff7a2837691f927621a44bd8621027
 Unapplied:
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
