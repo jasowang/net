@@ -1,5 +1,5 @@
 Bottom: 169563716e6f404fcdf26aca6a2027c0ba44ad87
-Top:    3bf244200670464f8471701b5581e84f26e43d39
+Top:    957a7f1baea672141b12601bb89475d8421d88f2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-21 22:17:53 +0800
 
@@ -135,19 +135,3 @@ index d59a9cc..212ff0a 100644
  };
  
  struct vhost_msg_node {
-diff --git a/mm/vmalloc.c b/mm/vmalloc.c
-index 8a43db6..3d2d369 100644
---- a/mm/vmalloc.c
-+++ b/mm/vmalloc.c
-@@ -1651,10 +1651,9 @@ void *vmap(struct page **pages, unsigned int count,
- 	if (!area)
- 		return NULL;
- 
--	if (map_vm_area(area, prot, pages)) {
-+	if (map_vm_area(area, prot, pages))
- 		vunmap(area->addr);
- 		return NULL;
--	}
- 
- 	return area->addr;
- }
