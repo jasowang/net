@@ -5,6 +5,8 @@ Date:   2017-10-21 22:17:53 +0800
 
 vhost_net: vmapped metadata accessing
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
