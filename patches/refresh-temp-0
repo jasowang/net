@@ -1,0 +1,40 @@
+Bottom: dd2b12577d0d86fc4e1530bd6c8be2cafbdc20e5
+Top:    3bf244200670464f8471701b5581e84f26e43d39
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-10-21 22:20:52 +0800
+
+Refresh of vhost_net-vmapped-metadata
+
+---
+
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index 7bac8e2..3d2d369 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -1643,23 +1643,17 @@ void *vmap(struct page **pages, unsigned int count,
+ 
+ 	might_sleep();
+ 
+-	if (count > totalram_pages) {
+-		printk("too much!\n");
++	if (count > totalram_pages)
+ 		return NULL;
+-	}
+ 
+ 	size = (unsigned long)count << PAGE_SHIFT;
+ 	area = get_vm_area_caller(size, flags, __builtin_return_address(0));
+-	if (!area) {
+-		printk("no area!\n");
++	if (!area)
+ 		return NULL;
+-	}
+ 
+-	if (map_vm_area(area, prot, pages)) {
+-		printk("map failed!\n");
++	if (map_vm_area(area, prot, pages))
+ 		vunmap(area->addr);
+ 		return NULL;
+-	}
+ 
+ 	return area->addr;
+ }
