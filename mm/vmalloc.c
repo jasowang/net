@@ -1651,10 +1651,9 @@ void *vmap(struct page **pages, unsigned int count,
 	if (!area)
 		return NULL;
 
-	if (map_vm_area(area, prot, pages)) {
+	if (map_vm_area(area, prot, pages))
 		vunmap(area->addr);
 		return NULL;
-	}
 
 	return area->addr;
 }
