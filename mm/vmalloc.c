@@ -1643,15 +1643,20 @@ void *vmap(struct page **pages, unsigned int count,
 
 	might_sleep();
 
-	if (count > totalram_pages)
+	if (count > totalram_pages) {
+		printk("too much!\n");
 		return NULL;
+	}
 
 	size = (unsigned long)count << PAGE_SHIFT;
 	area = get_vm_area_caller(size, flags, __builtin_return_address(0));
-	if (!area)
+	if (!area) {
+		printk("no area!\n");
 		return NULL;
+	}
 
 	if (map_vm_area(area, prot, pages)) {
+		printk("map failed!\n");
 		vunmap(area->addr);
 		return NULL;
 	}
