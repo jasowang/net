@@ -1,0 +1,44 @@
+Bottom: d48c5f0c1caed41af8c2b87c23fc82c4ae238a45
+Top:    5fd6c5e6d376d82a65fab75a7bbdc385701832e2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-10-25 20:57:02 +0800
+
+ptr_ring: speed up through memset()
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 37b4bb2..47ac2ad 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -244,19 +244,26 @@ static inline void __ptr_ring_discard_one(struct ptr_ring *r)
+ 	 * batch of entries has been consumed.
+ 	 */
+ 	int head = r->consumer_head++;
++	int left = r->consumer_head - r->consumer_tail;
+ 
+ 	/* Once we have processed enough entries invalidate them in
+ 	 * the ring all at once so producer can reuse their space in the ring.
+ 	 * We also do this when we reach end of the ring - not mandatory
+ 	 * but helps keep the implementation simple.
+ 	 */
+-	if (unlikely(r->consumer_head - r->consumer_tail >= r->batch ||
++	if (unlikely(left >= 64 ||
+ 		     r->consumer_head >= r->size)) {
+ 		/* Zero out entries in the reverse order: this way we touch the
+ 		 * cache line that producer might currently be reading the last;
+ 		 * producer won't make progress and touch other cache lines
+ 		 * besides the first one until we write out all entries.
+ 		 */
++		left -= r->batch;
++		if (left > 0) {
++			memset(&r->queue[r->consumer_tail + r->batch],
++			       0, left * sizeof(*(r->queue)));
++			head = r->consumer_tail + r->batch - 1;
++		}
+ 		while (likely(head >= r->consumer_tail))
+ 			r->queue[head--] = NULL;
+ 		r->consumer_tail = r->consumer_head;

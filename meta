@@ -1,7 +1,8 @@
 Version: 1
-Previous: 42a7d28cff892667e877beb35ba1a0799b18882c
+Previous: 42ec1351721a296c44f3ad7a2fe8f59c3dc21ecc
 Head: fe1a2dcf9ca30d7120ee68774d8b8e45ec4009b6
 Applied:
+  ptr_ring-speed-up-through: fe1a2dcf9ca30d7120ee68774d8b8e45ec4009b6
 Unapplied:
   vhost_net-vmapped-metadata: 2e6efe80d708d2252f3440abf5f2b4b0953b3d01
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
