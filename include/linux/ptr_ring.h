@@ -244,19 +244,26 @@ static inline void __ptr_ring_discard_one(struct ptr_ring *r)
 	 * batch of entries has been consumed.
 	 */
 	int head = r->consumer_head++;
+	int left = r->consumer_head - r->consumer_tail;
 
 	/* Once we have processed enough entries invalidate them in
 	 * the ring all at once so producer can reuse their space in the ring.
 	 * We also do this when we reach end of the ring - not mandatory
 	 * but helps keep the implementation simple.
 	 */
-	if (unlikely(r->consumer_head - r->consumer_tail >= r->batch ||
+	if (unlikely(left >= 64 ||
 		     r->consumer_head >= r->size)) {
 		/* Zero out entries in the reverse order: this way we touch the
 		 * cache line that producer might currently be reading the last;
 		 * producer won't make progress and touch other cache lines
 		 * besides the first one until we write out all entries.
 		 */
+		left -= r->batch;
+		if (left > 0) {
+			memset(&r->queue[r->consumer_tail + r->batch],
+			       0, left * sizeof(*(r->queue)));
+			head = r->consumer_tail + r->batch - 1;
+		}
 		while (likely(head >= r->consumer_tail))
 			r->queue[head--] = NULL;
 		r->consumer_tail = r->consumer_head;
