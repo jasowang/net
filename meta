@@ -1,9 +1,9 @@
 Version: 1
-Previous: 42ec1351721a296c44f3ad7a2fe8f59c3dc21ecc
-Head: fe1a2dcf9ca30d7120ee68774d8b8e45ec4009b6
+Previous: 65fbc7420e10c756d7b0fdb6a41ccd2fb37abfa8
+Head: 058c8d59124193f46db4efa5abcd9d6d0f04c88e
 Applied:
-  ptr_ring-speed-up-through: fe1a2dcf9ca30d7120ee68774d8b8e45ec4009b6
 Unapplied:
+  ptr_ring-speed-up-through: fe1a2dcf9ca30d7120ee68774d8b8e45ec4009b6
   vhost_net-vmapped-metadata: 2e6efe80d708d2252f3440abf5f2b4b0953b3d01
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
