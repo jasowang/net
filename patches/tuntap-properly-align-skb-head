@@ -8,8 +8,8 @@ tuntap: properly align skb->head before building skb
 An unaligned alloc_frag->offset caused by previous allocation will
 result an unaligned skb->head. This will lead unaligned
 skb_shared_info and then unaligned dataref which requires to be
-aligned during accessing. Fix this by aligning alloc_frag->offset
-before the frag refilling.
+aligned for accessing on some architecture. Fix this by aligning
+alloc_frag->offset before the frag refilling.
 
 Fixes: 0bbd7dad34f8 ("tun: make tun_build_skb() thread safe")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
