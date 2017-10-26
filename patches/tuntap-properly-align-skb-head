@@ -12,7 +12,16 @@ aligned for accessing on some architecture. Fix this by aligning
 alloc_frag->offset before the frag refilling.
 
 Fixes: 0bbd7dad34f8 ("tun: make tun_build_skb() thread safe")
+Cc: Eric Dumazet <edumazet@google.com>
+Cc: Willem de Bruijn <willemdebruijn.kernel@gmail.com>
+Cc: Wei Wei <dotweiba@gmail.com>
+Cc: Dmitry Vyukov <dvyukov@google.com>
+Cc: Mark Rutland <mark.rutland@arm.com>
+Reported-by: Wei Wei <dotweiba@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+- The patch is needed for -stable.
+- Wei, can you try this patch to see if it solves your issue?
 
 
 ---
