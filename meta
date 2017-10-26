@@ -1,9 +1,9 @@
 Version: 1
-Previous: 96db0fc7e594f0e422eb70a7e4724bc918917ffd
-Head: 2ea6424dfc499ef5afd5182d8ceb39e955273c6a
+Previous: f451b11ab4e0ca4e58e915644abc519f8437f205
+Head: c763710c045f622a7c359825137ba6928c23cc9d
 Applied:
   ptr_ring-speed-up-through: 390000df5d450137f9abb5c3e4cfbea845841146
-  tuntap-properly-align-skb-head: 2ea6424dfc499ef5afd5182d8ceb39e955273c6a
+  tuntap-properly-align-skb-head: c763710c045f622a7c359825137ba6928c23cc9d
 Unapplied:
   vhost_net-vmapped-metadata: 2e6efe80d708d2252f3440abf5f2b4b0953b3d01
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
