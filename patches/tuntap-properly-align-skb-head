@@ -10,6 +10,8 @@ result an unaligned. This will lead unaligned skb_shared_info and then
 unaligned dataref which requires to be aligned during accessing. Fix
 this by aligning alloc_frag->offset before the frag refilling.
 
+Fixes: 0bbd7dad34f8 ("tun: make tun_build_skb() thread safe")
+
 
 
 
