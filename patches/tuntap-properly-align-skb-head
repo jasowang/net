@@ -1,0 +1,18 @@
+Bottom: 4b583b4c1596de869b38a56fe612fa3abf9195b8
+Top:    4b583b4c1596de869b38a56fe612fa3abf9195b8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-10-26 11:51:56 +0800
+
+tuntap: properly align skb->head before building skb
+
+An unaligned alloc_frag->offset caused by previous allocation will
+result an unaligned. This will lead unaligned skb_shared_info and then
+unaligned dataref which requires to be aligned during accessing. Fix
+this by aligning alloc_frag->offset before the frag refilling.
+
+
+
+
+---
+
+
