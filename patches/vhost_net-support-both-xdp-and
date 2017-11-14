@@ -1,0 +1,11 @@
+Bottom: 171c1ac8b619cd500955a08dbc94f5ebc6653eb2
+Top:    171c1ac8b619cd500955a08dbc94f5ebc6653eb2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-11-14 12:02:56 +0800
+
+vhost_net: support both xdp and skbuff
+
+
+---
+
+
