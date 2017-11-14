@@ -1,0 +1,469 @@
+Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Top:    c66cd85ccb1f58355ced3f2891b52b518699c7bf
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-11-14 16:18:15 +0800
+
+Refresh of tun-tap-use-ptr_ring-instead
+
+---
+
+diff --git a/drivers/net/tap.c b/drivers/net/tap.c
+index 21b71ae..bae2aaf 100644
+--- a/drivers/net/tap.c
++++ b/drivers/net/tap.c
+@@ -330,7 +330,7 @@ rx_handler_result_t tap_handle_frame(struct sk_buff **pskb)
+ 	if (!q)
+ 		return RX_HANDLER_PASS;
+ 
+-	if (__skb_array_full(&q->skb_array))
++	if (__ptr_ring_full(&q->ring))
+ 		goto drop;
+ 
+ 	skb_push(skb, ETH_HLEN);
+@@ -348,7 +348,7 @@ rx_handler_result_t tap_handle_frame(struct sk_buff **pskb)
+ 			goto drop;
+ 
+ 		if (!segs) {
+-			if (skb_array_produce(&q->skb_array, skb))
++			if (ptr_ring_produce(&q->ring, skb))
+ 				goto drop;
+ 			goto wake_up;
+ 		}
+@@ -358,7 +358,7 @@ rx_handler_result_t tap_handle_frame(struct sk_buff **pskb)
+ 			struct sk_buff *nskb = segs->next;
+ 
+ 			segs->next = NULL;
+-			if (skb_array_produce(&q->skb_array, segs)) {
++			if (ptr_ring_produce(&q->ring, segs)) {
+ 				kfree_skb(segs);
+ 				kfree_skb_list(nskb);
+ 				break;
+@@ -375,7 +375,7 @@ rx_handler_result_t tap_handle_frame(struct sk_buff **pskb)
+ 		    !(features & NETIF_F_CSUM_MASK) &&
+ 		    skb_checksum_help(skb))
+ 			goto drop;
+-		if (skb_array_produce(&q->skb_array, skb))
++		if (ptr_ring_produce(&q->ring, skb))
+ 			goto drop;
+ 	}
+ 
+@@ -497,7 +497,7 @@ static void tap_sock_destruct(struct sock *sk)
+ {
+ 	struct tap_queue *q = container_of(sk, struct tap_queue, sk);
+ 
+-	skb_array_cleanup(&q->skb_array);
++	ptr_ring_cleanup(&q->ring, __skb_array_destroy_skb);
+ }
+ 
+ static int tap_open(struct inode *inode, struct file *file)
+@@ -541,7 +541,7 @@ static int tap_open(struct inode *inode, struct file *file)
+ 		sock_set_flag(&q->sk, SOCK_ZEROCOPY);
+ 
+ 	err = -ENOMEM;
+-	if (skb_array_init(&q->skb_array, tap->dev->tx_queue_len, GFP_KERNEL))
++	if (ptr_ring_init(&q->ring, tap->dev->tx_queue_len, GFP_KERNEL))
+ 		goto err_array;
+ 
+ 	err = tap_set_queue(tap, file, q);
+@@ -554,7 +554,7 @@ static int tap_open(struct inode *inode, struct file *file)
+ 	return err;
+ 
+ err_queue:
+-	skb_array_cleanup(&q->skb_array);
++	ptr_ring_cleanup(&q->ring, __skb_array_destroy_skb);
+ err_array:
+ 	sock_put(&q->sk);
+ err:
+@@ -583,7 +583,7 @@ static unsigned int tap_poll(struct file *file, poll_table *wait)
+ 	mask = 0;
+ 	poll_wait(file, &q->wq.wait, wait);
+ 
+-	if (!skb_array_empty(&q->skb_array))
++	if (!ptr_ring_empty(&q->ring))
+ 		mask |= POLLIN | POLLRDNORM;
+ 
+ 	if (sock_writeable(&q->sk) ||
+@@ -841,7 +841,7 @@ static ssize_t tap_do_read(struct tap_queue *q,
+ 					TASK_INTERRUPTIBLE);
+ 
+ 		/* Read frames from the queue */
+-		skb = skb_array_consume(&q->skb_array);
++		skb = ptr_ring_consume(&q->ring);
+ 		if (skb)
+ 			break;
+ 		if (noblock) {
+@@ -1168,7 +1168,7 @@ static int tap_peek_len(struct socket *sock)
+ {
+ 	struct tap_queue *q = container_of(sock, struct tap_queue,
+ 					       sock);
+-	return skb_array_peek_len(&q->skb_array);
++	return PTR_RING_PEEK_CALL(&q->ring, __skb_array_len_with_tag);
+ }
+ 
+ /* Ops structure to mimic raw sockets with tun */
+@@ -1194,7 +1194,7 @@ struct socket *tap_get_socket(struct file *file)
+ }
+ EXPORT_SYMBOL_GPL(tap_get_socket);
+ 
+-struct skb_array *tap_get_skb_array(struct file *file)
++struct ptr_ring *tap_get_ptr_ring(struct file *file)
+ {
+ 	struct tap_queue *q;
+ 
+@@ -1203,29 +1203,30 @@ struct skb_array *tap_get_skb_array(struct file *file)
+ 	q = file->private_data;
+ 	if (!q)
+ 		return ERR_PTR(-EBADFD);
+-	return &q->skb_array;
++	return &q->ring;
+ }
+-EXPORT_SYMBOL_GPL(tap_get_skb_array);
++EXPORT_SYMBOL_GPL(tap_get_ptr_ring);
+ 
+ int tap_queue_resize(struct tap_dev *tap)
+ {
+ 	struct net_device *dev = tap->dev;
+ 	struct tap_queue *q;
+-	struct skb_array **arrays;
++	struct ptr_ring **rings;
+ 	int n = tap->numqueues;
+ 	int ret, i = 0;
+ 
+-	arrays = kmalloc_array(n, sizeof(*arrays), GFP_KERNEL);
+-	if (!arrays)
++	rings = kmalloc_array(n, sizeof(*rings), GFP_KERNEL);
++	if (!rings)
+ 		return -ENOMEM;
+ 
+ 	list_for_each_entry(q, &tap->queue_list, next)
+-		arrays[i++] = &q->skb_array;
++		rings[i++] = &q->ring;
+ 
+-	ret = skb_array_resize_multiple(arrays, n,
+-					dev->tx_queue_len, GFP_KERNEL);
++	ret = ptr_ring_resize_multiple(rings, n,
++				       dev->tx_queue_len, GFP_KERNEL,
++				       __skb_array_destroy_skb);
+ 
+-	kfree(arrays);
++	kfree(rings);
+ 	return ret;
+ }
+ EXPORT_SYMBOL_GPL(tap_queue_resize);
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 2c36f6e..d1c2117 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -178,7 +178,7 @@ struct tun_file {
+ 	struct mutex napi_mutex;	/* Protects access to the above napi */
+ 	struct list_head next;
+ 	struct tun_struct *detached;
+-	struct skb_array tx_array;
++	struct ptr_ring tx_ring;
+ };
+ 
+ struct tun_flow_entry {
+@@ -599,7 +599,7 @@ static void tun_queue_purge(struct tun_file *tfile)
+ {
+ 	struct sk_buff *skb;
+ 
+-	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
++	while ((skb = ptr_ring_consume(&tfile->tx_ring)) != NULL)
+ 		kfree_skb(skb);
+ 
+ 	skb_queue_purge(&tfile->sk.sk_write_queue);
+@@ -653,7 +653,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+ 				unregister_netdevice(tun->dev);
+ 		}
+ 		if (tun)
+-			skb_array_cleanup(&tfile->tx_array);
++			ptr_ring_cleanup(&tfile->tx_ring,
++					 __skb_array_destroy_skb);
+ 		sock_put(&tfile->sk);
+ 	}
+ }
+@@ -746,7 +747,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
+ 	}
+ 
+ 	if (!tfile->detached &&
+-	    skb_array_init(&tfile->tx_array, dev->tx_queue_len, GFP_KERNEL)) {
++	    ptr_ring_init(&tfile->tx_ring, dev->tx_queue_len, GFP_KERNEL)) {
+ 		err = -ENOMEM;
+ 		goto out;
+ 	}
+@@ -991,7 +992,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	nf_reset(skb);
+ 
+-	if (skb_array_produce(&tfile->tx_array, skb))
++	if (ptr_ring_produce(&tfile->tx_ring, skb))
+ 		goto drop;
+ 
+ 	/* Notify and wake up reader process */
+@@ -1258,7 +1259,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, sk_sleep(sk), wait);
+ 
+-	if (!skb_array_empty(&tfile->tx_array))
++	if (!ptr_ring_empty(&tfile->tx_ring))
+ 		mask |= POLLIN | POLLRDNORM;
+ 
+ 	if (tun->dev->flags & IFF_UP &&
+@@ -1897,7 +1898,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 	struct sk_buff *skb = NULL;
+ 	int error = 0;
+ 
+-	skb = skb_array_consume(&tfile->tx_array);
++	skb = ptr_ring_consume(&tfile->tx_ring);
+ 	if (skb)
+ 		goto out;
+ 	if (noblock) {
+@@ -1909,7 +1910,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+ 	current->state = TASK_INTERRUPTIBLE;
+ 
+ 	while (1) {
+-		skb = skb_array_consume(&tfile->tx_array);
++		skb = ptr_ring_consume(&tfile->tx_ring);
+ 		if (skb)
+ 			break;
+ 		if (signal_pending(current)) {
+@@ -2093,7 +2094,7 @@ static int tun_peek_len(struct socket *sock)
+ 	if (!tun)
+ 		return 0;
+ 
+-	ret = skb_array_peek_len(&tfile->tx_array);
++	ret = PTR_RING_PEEK_CALL(&tfile->tx_ring, __skb_array_len_with_tag);
+ 	tun_put(tun);
+ 
+ 	return ret;
+@@ -2966,25 +2967,26 @@ static int tun_queue_resize(struct tun_struct *tun)
+ {
+ 	struct net_device *dev = tun->dev;
+ 	struct tun_file *tfile;
+-	struct skb_array **arrays;
++	struct ptr_ring **rings;
+ 	int n = tun->numqueues + tun->numdisabled;
+ 	int ret, i;
+ 
+-	arrays = kmalloc_array(n, sizeof(*arrays), GFP_KERNEL);
+-	if (!arrays)
++	rings = kmalloc_array(n, sizeof(*rings), GFP_KERNEL);
++	if (!rings)
+ 		return -ENOMEM;
+ 
+ 	for (i = 0; i < tun->numqueues; i++) {
+ 		tfile = rtnl_dereference(tun->tfiles[i]);
+-		arrays[i] = &tfile->tx_array;
++		rings[i] = &tfile->tx_ring;
+ 	}
+ 	list_for_each_entry(tfile, &tun->disabled, next)
+-		arrays[i++] = &tfile->tx_array;
++		rings[i++] = &tfile->tx_ring;
+ 
+-	ret = skb_array_resize_multiple(arrays, n,
+-					dev->tx_queue_len, GFP_KERNEL);
++	ret = ptr_ring_resize_multiple(rings, n,
++				       dev->tx_queue_len, GFP_KERNEL,
++				       __skb_array_destroy_skb);
+ 
+-	kfree(arrays);
++	kfree(rings);
+ 	return ret;
+ }
+ 
+@@ -3070,7 +3072,7 @@ struct socket *tun_get_socket(struct file *file)
+ }
+ EXPORT_SYMBOL_GPL(tun_get_socket);
+ 
+-struct skb_array *tun_get_skb_array(struct file *file)
++struct ptr_ring *tun_get_tx_ring(struct file *file)
+ {
+ 	struct tun_file *tfile;
+ 
+@@ -3079,9 +3081,9 @@ struct skb_array *tun_get_skb_array(struct file *file)
+ 	tfile = file->private_data;
+ 	if (!tfile)
+ 		return ERR_PTR(-EBADFD);
+-	return &tfile->tx_array;
++	return &tfile->tx_ring;
+ }
+-EXPORT_SYMBOL_GPL(tun_get_skb_array);
++EXPORT_SYMBOL_GPL(tun_get_tx_ring);
+ 
+ module_init(tun_init);
+ module_exit(tun_cleanup);
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 58585ec..ed46f72 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -89,7 +89,7 @@ struct vhost_net_ubuf_ref {
+ 
+ #define VHOST_RX_BATCH 64
+ struct vhost_net_buf {
+-	struct sk_buff **queue;
++	void **queue;
+ 	int tail;
+ 	int head;
+ };
+@@ -108,7 +108,7 @@ struct vhost_net_virtqueue {
+ 	/* Reference counting for outstanding ubufs.
+ 	 * Protected by vq mutex. Writers must also take device mutex. */
+ 	struct vhost_net_ubuf_ref *ubufs;
+-	struct skb_array *rx_array;
++	struct ptr_ring *rx_ring;
+ 	struct vhost_net_buf rxq;
+ };
+ 
+@@ -158,7 +158,7 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+ 
+ 	rxq->head = 0;
+-	rxq->tail = skb_array_consume_batched(nvq->rx_array, rxq->queue,
++	rxq->tail = ptr_ring_consume_batched(nvq->rx_ring, rxq->queue,
+ 					      VHOST_RX_BATCH);
+ 	return rxq->tail;
+ }
+@@ -167,9 +167,10 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
+ {
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
+ 
+-	if (nvq->rx_array && !vhost_net_buf_is_empty(rxq)) {
+-		skb_array_unconsume(nvq->rx_array, rxq->queue + rxq->head,
+-				    vhost_net_buf_get_size(rxq));
++	if (nvq->rx_ring && !vhost_net_buf_is_empty(rxq)) {
++		ptr_ring_unconsume(nvq->rx_ring, rxq->queue + rxq->head,
++				   vhost_net_buf_get_size(rxq),
++				   __skb_array_destroy_skb);
+ 		rxq->head = rxq->tail = 0;
+ 	}
+ }
+@@ -587,7 +588,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
+ 	int len = 0;
+ 	unsigned long flags;
+ 
+-	if (rvq->rx_array)
++	if (rvq->rx_ring)
+ 		return vhost_net_buf_peek(rvq);
+ 
+ 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
+@@ -782,7 +783,7 @@ static void handle_rx(struct vhost_net *net)
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(headcount < 0))
+ 			goto out;
+-		if (nvq->rx_array)
++		if (nvq->rx_ring)
+ 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
+ 		/* On overrun, truncate and discard */
+ 		if (unlikely(headcount > UIO_MAXIOV)) {
+@@ -900,7 +901,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	struct vhost_net *n;
+ 	struct vhost_dev *dev;
+ 	struct vhost_virtqueue **vqs;
+-	struct sk_buff **queue;
++	void **queue;
+ 	int i;
+ 
+ 	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
+@@ -912,7 +913,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 		return -ENOMEM;
+ 	}
+ 
+-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(struct sk_buff *),
++	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(void *),
+ 			      GFP_KERNEL);
+ 	if (!queue) {
+ 		kfree(vqs);
+@@ -1050,23 +1051,23 @@ static struct socket *get_raw_socket(int fd)
+ 	return ERR_PTR(r);
+ }
+ 
+-static struct skb_array *get_tap_skb_array(int fd)
++static struct ptr_ring *get_tap_ptr_ring(int fd)
+ {
+-	struct skb_array *array;
++	struct ptr_ring *ring;
+ 	struct file *file = fget(fd);
+ 
+ 	if (!file)
+ 		return NULL;
+-	array = tun_get_skb_array(file);
+-	if (!IS_ERR(array))
++	ring = tun_get_tx_ring(file);
++	if (!IS_ERR(ring))
+ 		goto out;
+-	array = tap_get_skb_array(file);
+-	if (!IS_ERR(array))
++	ring = tap_get_ptr_ring(file);
++	if (!IS_ERR(ring))
+ 		goto out;
+-	array = NULL;
++	ring = NULL;
+ out:
+ 	fput(file);
+-	return array;
++	return ring;
+ }
+ 
+ static struct socket *get_tap_socket(int fd)
+@@ -1147,7 +1148,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+ 		vq->private_data = sock;
+ 		vhost_net_buf_unproduce(nvq);
+ 		if (index == VHOST_NET_VQ_RX)
+-			nvq->rx_array = get_tap_skb_array(fd);
++			nvq->rx_ring = get_tap_ptr_ring(fd);
+ 		r = vhost_vq_init_access(vq);
+ 		if (r)
+ 			goto err_used;
+diff --git a/include/linux/if_tap.h b/include/linux/if_tap.h
+index 4837157..69bc96c 100644
+--- a/include/linux/if_tap.h
++++ b/include/linux/if_tap.h
+@@ -3,7 +3,7 @@
+ 
+ #if IS_ENABLED(CONFIG_TAP)
+ struct socket *tap_get_socket(struct file *);
+-struct skb_array *tap_get_skb_array(struct file *file);
++struct ptr_ring *tap_get_ptr_ring(struct file *file);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -13,7 +13,7 @@ static inline struct socket *tap_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
+-static inline struct skb_array *tap_get_skb_array(struct file *f)
++static inline struct ptr_ring *tap_get_ptr_ring(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
+@@ -65,7 +65,7 @@ struct tap_queue {
+ 	u16 queue_index;
+ 	bool enabled;
+ 	struct list_head next;
+-	struct skb_array skb_array;
++	struct ptr_ring ring;
+ };
+ 
+ rx_handler_result_t tap_handle_frame(struct sk_buff **pskb);
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index bf9bdf4..bdee9b8 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -19,7 +19,7 @@
+ 
+ #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
+ struct socket *tun_get_socket(struct file *);
+-struct skb_array *tun_get_skb_array(struct file *file);
++struct ptr_ring *tun_get_tx_ring(struct file *file);
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
+@@ -29,7 +29,7 @@ static inline struct socket *tun_get_socket(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
+-static inline struct skb_array *tun_get_skb_array(struct file *f)
++static inline struct ptr_ring *tun_get_tx_ring(struct file *f)
+ {
+ 	return ERR_PTR(-EINVAL);
+ }
