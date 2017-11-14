@@ -1,5 +1,5 @@
 Bottom: c66cd85ccb1f58355ced3f2891b52b518699c7bf
-Top:    7ecd0930049de4f1680657ab47b04462280e1719
+Top:    edbdea4549c701c467994033715965a4c5547615
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-02 15:01:49 +0800
 
@@ -330,7 +330,7 @@ index d1c2117..c3476d4 100644
  module_exit(tun_cleanup);
  MODULE_DESCRIPTION(DRV_DESCRIPTION);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ed46f72..c53d297 100644
+index ed46f72..cee170f 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -186,7 +186,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
@@ -347,7 +347,7 @@ index ed46f72..c53d297 100644
  
  static int vhost_net_enable_vq(struct vhost_net *n,
 -				struct vhost_virtqueue *vq)
-+			       struct vhost_virtqueue *vq)
++			        struct vhost_virtqueue *vq)
  {
  	struct vhost_net_virtqueue *nvq =
  		container_of(vq, struct vhost_net_virtqueue, vq);
