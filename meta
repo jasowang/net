@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
+Previous: e4e4101eeaf25d421a0b24337c7f4f9e2b5c79b7
 Head: 822039099c09601c6222f62ae8b24c59c412adf1
 Applied:
+  tuntap-ndo_xdp_xmit-support: 822039099c09601c6222f62ae8b24c59c412adf1
 Unapplied:
 Hidden:
