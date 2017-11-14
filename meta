@@ -1,8 +1,8 @@
 Version: 1
-Previous: 072510d40f22630a8f163bb3b8b90c9d40b4a83b
-Head: 61192ac505339be4b959e189d018c3873609198f
+Previous: 7f3030ffbb521cd18aecaebb8e7a9af61d8c49c9
+Head: 39f1425b4a76cfbcfab982db579d7451472c84da
 Applied:
   tun-tap-use-ptr_ring-instead: 61192ac505339be4b959e189d018c3873609198f
+  tuntap-ndo_xdp_xmit-support: 39f1425b4a76cfbcfab982db579d7451472c84da
 Unapplied:
-  tuntap-ndo_xdp_xmit-support: 822039099c09601c6222f62ae8b24c59c412adf1
 Hidden:
