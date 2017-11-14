@@ -1,5 +1,5 @@
 Bottom: c66cd85ccb1f58355ced3f2891b52b518699c7bf
-Top:    a80e3d066ca69b8db3c71f5f7c0c3bfd0ec6e0bc
+Top:    7ecd0930049de4f1680657ab47b04462280e1719
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-02 15:01:49 +0800
 
@@ -330,25 +330,10 @@ index d1c2117..c3476d4 100644
  module_exit(tun_cleanup);
  MODULE_DESCRIPTION(DRV_DESCRIPTION);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ed46f72..504bd0c 100644
+index ed46f72..c53d297 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -175,6 +175,14 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
- 	}
- }
- 
-+static int tun_xdp_peek_len(struct xdp_buff *xdp)
-+{
-+	if (likely(xdp))
-+		return xdp->data_end - xdp->data;
-+	else
-+		return 0;
-+}
-+
- static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
- {
- 	struct vhost_net_buf *rxq = &nvq->rxq;
-@@ -186,7 +194,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+@@ -186,7 +186,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
  		return 0;
  
  out:
@@ -357,7 +342,7 @@ index ed46f72..504bd0c 100644
  }
  
  static void vhost_net_buf_init(struct vhost_net_buf *rxq)
-@@ -395,7 +403,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
+@@ -395,7 +395,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
  }
  
  static int vhost_net_enable_vq(struct vhost_net *n,
