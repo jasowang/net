@@ -1,5 +1,5 @@
 Bottom: c66cd85ccb1f58355ced3f2891b52b518699c7bf
-Top:    cc539af963ed2680209dbe85a5404ef2a2fa6e03
+Top:    8bbfd91bac2c1b1ab10dab89b91b51b1a1ba3848
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-02 15:01:49 +0800
 
@@ -10,10 +10,35 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index d1c2117..9c30938c 100644
+index d1c2117..9e34833 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -595,12 +595,21 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -233,6 +233,24 @@ struct tun_struct {
+ 	struct bpf_prog __rcu *xdp_prog;
+ };
+ 
++bool tun_is_xdp_buff(void *ptr)
++{
++	return (unsigned long)ptr & TUN_XDP_FLAG;
++}
++EXPORT_SYMBOL(tun_is_xdp_buff);
++
++void *tun_xdp_to_ptr(void *ptr)
++{
++	return (void *)((unsigned long)ptr | TUN_XDP_FLAG);
++}
++EXPORT_SYMBOL(tun_xdp_to_ptr);
++
++void *tun_ptr_to_xdp(void *ptr)
++{
++	return (void *)((unsigned long)ptr & ~TUN_XDP_FLAG);
++}
++EXPORT_SYMBOL(tun_ptr_to_xdp);
++
+ static int tun_napi_receive(struct napi_struct *napi, int budget)
+ {
+ 	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
+@@ -595,12 +613,21 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  	return tun;
  }
  
@@ -38,7 +63,7 @@ index d1c2117..9c30938c 100644
  
  	skb_queue_purge(&tfile->sk.sk_write_queue);
  	skb_queue_purge(&tfile->sk.sk_error_queue);
-@@ -653,8 +662,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -653,8 +680,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  				unregister_netdevice(tun->dev);
  		}
  		if (tun)
@@ -48,7 +73,7 @@ index d1c2117..9c30938c 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -1164,6 +1172,46 @@ static const struct net_device_ops tun_netdev_ops = {
+@@ -1164,6 +1190,46 @@ static const struct net_device_ops tun_netdev_ops = {
  	.ndo_get_stats64	= tun_net_get_stats64,
  };
  
@@ -95,7 +120,7 @@ index d1c2117..9c30938c 100644
  static const struct net_device_ops tap_netdev_ops = {
  	.ndo_uninit		= tun_net_uninit,
  	.ndo_open		= tun_net_open,
-@@ -1181,6 +1229,8 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1181,6 +1247,8 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
  	.ndo_xdp		= tun_xdp,
@@ -104,7 +129,7 @@ index d1c2117..9c30938c 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1794,6 +1844,39 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1794,6 +1862,39 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -144,14 +169,14 @@ index d1c2117..9c30938c 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1891,15 +1974,15 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1891,15 +1992,15 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	return total;
  }
  
 -static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 -				     int *err)
-+static struct void *tun_ring_recv(struct tun_file *tfile, int noblock,
-+				  int *err)
++static void *tun_ring_recv(struct tun_file *tfile, int noblock,
++			   int *err)
  {
  	DECLARE_WAITQUEUE(wait, current);
 -	struct sk_buff *skb = NULL;
@@ -165,7 +190,7 @@ index d1c2117..9c30938c 100644
  		goto out;
  	if (noblock) {
  		error = -EAGAIN;
-@@ -1910,8 +1993,8 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1910,8 +2011,8 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  	current->state = TASK_INTERRUPTIBLE;
  
  	while (1) {
@@ -176,7 +201,7 @@ index d1c2117..9c30938c 100644
  			break;
  		if (signal_pending(current)) {
  			error = -ERESTARTSYS;
-@@ -1930,12 +2013,12 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1930,12 +2031,12 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  
  out:
  	*err = error;
@@ -191,7 +216,7 @@ index d1c2117..9c30938c 100644
  {
  	ssize_t ret;
  	int err;
-@@ -1945,18 +2028,24 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1945,18 +2046,25 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  	if (!iov_iter_count(to))
  		return 0;
  
@@ -200,7 +225,7 @@ index d1c2117..9c30938c 100644
  		/* Read frames from ring */
 -		skb = tun_ring_recv(tfile, noblock, &err);
 -		if (!skb)
-+		ptr = tun_ring_recv(tfile, noblok, &err);
++		ptr = tun_ring_recv(tfile, noblock, &err);
 +		if (!ptr)
  			return err;
  	}
@@ -215,7 +240,8 @@ index d1c2117..9c30938c 100644
 +		ret = tun_put_user_xdp(tun, tfile, xdp, to);
 +		page_frag_free(xdp->data);
 +	} else {
-+		ret = tun_put_user(tun, tfile, ptr, to);
++		struct sk_buff *skb = ptr;
++		ret = tun_put_user(tun, tfile, skb, to);
 +		if (unlikely(ret < 0))
 +			kfree_skb(skb);
 +		else
@@ -224,7 +250,7 @@ index d1c2117..9c30938c 100644
  
  	return ret;
  }
-@@ -2084,6 +2173,18 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2084,6 +2192,18 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  	return ret;
  }
  
@@ -243,7 +269,7 @@ index d1c2117..9c30938c 100644
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2094,7 +2195,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2094,7 +2214,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -252,7 +278,7 @@ index d1c2117..9c30938c 100644
  	tun_put(tun);
  
  	return ret;
-@@ -2800,6 +2901,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -2800,6 +2920,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -260,7 +286,7 @@ index d1c2117..9c30938c 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -2984,7 +3086,7 @@ static int tun_queue_resize(struct tun_struct *tun)
+@@ -2984,7 +3105,7 @@ static int tun_queue_resize(struct tun_struct *tun)
  
  	ret = ptr_ring_resize_multiple(rings, n,
  				       dev->tx_queue_len, GFP_KERNEL,
@@ -269,7 +295,7 @@ index d1c2117..9c30938c 100644
  
  	kfree(rings);
  	return ret;
-@@ -3065,8 +3167,7 @@ struct socket *tun_get_socket(struct file *file)
+@@ -3065,8 +3186,7 @@ struct socket *tun_get_socket(struct file *file)
  	struct tun_file *tfile;
  	if (file->f_op != &tun_fops)
  		return ERR_PTR(-EINVAL);
@@ -280,7 +306,7 @@ index d1c2117..9c30938c 100644
  	return &tfile->socket;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index ed46f72..6b9140a 100644
+index ed46f72..b15c660 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -175,6 +175,16 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
@@ -289,8 +315,8 @@ index ed46f72..6b9140a 100644
  
 +static int vhost_net_buf_peek_len(void *ptr)
 +{
-+	if (ptr & TUN_XDP_FLAG) {
-+		struct xdp_buff *xdp = ptr & ~TUN_XDP_FLAG;
++	if (tun_is_xdp_buff(ptr)) {
++		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 +		return xdp->data_end - xdp->data;
 +	}
 +
@@ -319,30 +345,22 @@ index ed46f72..6b9140a 100644
  	struct vhost_net_virtqueue *nvq =
  		container_of(vq, struct vhost_net_virtqueue, vq);
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
-index bdee9b8..54b766d 100644
+index bdee9b8..31ce3b0 100644
 --- a/include/linux/if_tun.h
 +++ b/include/linux/if_tun.h
-@@ -17,6 +17,23 @@
+@@ -17,9 +17,15 @@
  
  #include <uapi/linux/if_tun.h>
  
 +#define TUN_XDP_FLAG 0x1ULL
 +
-+bool tun_is_xdp_buff(void *ptr)
-+{
-+	return (unsigned long)ptr & TUN_XDP_FLAG;
-+}
-+
-+void *tun_xdp_to_ptr(void *ptr)
-+{
-+	return (void *)((unsigned long)ptr | TUN_XDP_FLAG);
-+}
-+
-+void *tun_ptr_to_xdp(void *ptr)
-+{
-+	return (void *)((unsigned long)ptr & ~TUN_XDP_FLAG);
-+}
-+
  #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
  struct socket *tun_get_socket(struct file *);
  struct ptr_ring *tun_get_tx_ring(struct file *file);
++bool tun_is_xdp_buff(void *ptr);
++void *tun_xdp_to_ptr(void *ptr);
++void *tun_ptr_to_xdp(void *ptr);
++
+ #else
+ #include <linux/err.h>
+ #include <linux/errno.h>
