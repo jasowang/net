@@ -1,0 +1,28 @@
+Bottom: a80e3d066ca69b8db3c71f5f7c0c3bfd0ec6e0bc
+Top:    7ecd0930049de4f1680657ab47b04462280e1719
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-11-14 16:51:44 +0800
+
+Refresh of tuntap-ndo_xdp_xmit-support
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 504bd0c..c53d297 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -175,14 +175,6 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
+ 	}
+ }
+ 
+-static int tun_xdp_peek_len(struct xdp_buff *xdp)
+-{
+-	if (likely(xdp))
+-		return xdp->data_end - xdp->data;
+-	else
+-		return 0;
+-}
+-
+ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+ {
+ 	struct vhost_net_buf *rxq = &nvq->rxq;
