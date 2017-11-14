@@ -1,5 +1,5 @@
 Bottom: 171c1ac8b619cd500955a08dbc94f5ebc6653eb2
-Top:    dd36ca0f7b404195370e44072ea27a17ed692540
+Top:    02ca33fa304ec095957b9f05dee0f7d6380bbebd
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-14 12:02:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 51ce939..b38aaff 100644
+index 51ce939..9b1a072 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -92,6 +92,7 @@ struct vhost_net_buf {
@@ -129,6 +129,15 @@ index 51ce939..b38aaff 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_rx(struct vhost_net *net)
+@@ -791,7 +837,7 @@ static void handle_rx(struct vhost_net *net)
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(headcount < 0))
+ 			goto out;
+-		if (nvq->xdp_ring)
++		if (nvq->rx_array)
+ 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
+ 		/* On overrun, truncate and discard */
+ 		if (unlikely(headcount > UIO_MAXIOV)) {
 @@ -822,8 +868,11 @@ static void handle_rx(struct vhost_net *net)
  			 */
  			iov_iter_advance(&msg.msg_iter, vhost_hlen);
