@@ -1,8 +1,9 @@
 Version: 1
-Previous: fd4386133a59ad75e6eb21a4fb91fcdd4af8d699
-Head: a320ed7030dfa17a1537b7a2370b72c9571e5f75
+Previous: f34a473e19fc0a50f0d6d04b53c97f5b4f722069
+Head: e8a25eba941ba13a709cd8367155dcbe84f49361
 Applied:
   tuntap-ndo_xdp_xmit-support: 822039099c09601c6222f62ae8b24c59c412adf1
   vhost_net-support-both-xdp-and: a320ed7030dfa17a1537b7a2370b72c9571e5f75
+  refresh-temp: e8a25eba941ba13a709cd8367155dcbe84f49361
 Unapplied:
 Hidden:
