@@ -233,6 +233,24 @@ struct tun_struct {
 	struct bpf_prog __rcu *xdp_prog;
 };
 
+bool tun_is_xdp_buff(void *ptr)
+{
+	return (unsigned long)ptr & TUN_XDP_FLAG;
+}
+EXPORT_SYMBOL(tun_is_xdp_buff);
+
+void *tun_xdp_to_ptr(void *ptr)
+{
+	return (void *)((unsigned long)ptr | TUN_XDP_FLAG);
+}
+EXPORT_SYMBOL(tun_xdp_to_ptr);
+
+void *tun_ptr_to_xdp(void *ptr)
+{
+	return (void *)((unsigned long)ptr & ~TUN_XDP_FLAG);
+}
+EXPORT_SYMBOL(tun_ptr_to_xdp);
+
 static int tun_napi_receive(struct napi_struct *napi, int budget)
 {
 	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
@@ -1974,8 +1992,8 @@ done:
 	return total;
 }
 
-static struct void *tun_ring_recv(struct tun_file *tfile, int noblock,
-				  int *err)
+static void *tun_ring_recv(struct tun_file *tfile, int noblock,
+			   int *err)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	void *ptr = NULL;
@@ -2030,7 +2048,7 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 
 	if (!ptr) {
 		/* Read frames from ring */
-		ptr = tun_ring_recv(tfile, noblok, &err);
+		ptr = tun_ring_recv(tfile, noblock, &err);
 		if (!ptr)
 			return err;
 	}
@@ -2040,7 +2058,8 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 		ret = tun_put_user_xdp(tun, tfile, xdp, to);
 		page_frag_free(xdp->data);
 	} else {
-		ret = tun_put_user(tun, tfile, ptr, to);
+		struct sk_buff *skb = ptr;
+		ret = tun_put_user(tun, tfile, skb, to);
 		if (unlikely(ret < 0))
 			kfree_skb(skb);
 		else

@@ -177,8 +177,8 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
 
 static int vhost_net_buf_peek_len(void *ptr)
 {
-	if (ptr & TUN_XDP_FLAG) {
-		struct xdp_buff *xdp = ptr & ~TUN_XDP_FLAG;
+	if (tun_is_xdp_buff(ptr)) {
+		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 		return xdp->data_end - xdp->data;
 	}
 
