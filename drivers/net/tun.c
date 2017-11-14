@@ -110,7 +110,6 @@ do {								\
 
 #define TUN_HEADROOM 256
 #define TUN_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
-#define TUN_XDP_FLAG 0x1ULL
 
 /* TUN device flags */
 
@@ -151,8 +150,6 @@ struct tun_pcpu_stats {
 	u32 tx_dropped;
 	u32 rx_frame_errors;
 };
-
-#define TUN_XDP_RING_SIZE 256
 
 /* A tun_file connects an open character device to a tuntap netdevice. It
  * also contains all socket related structures (except sock_fprog and tap_filter)
@@ -598,6 +595,15 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
 	return tun;
 }
 
+static void tun_ptr_free(void *ptr)
+{
+	if (tun_is_xdp_buff(ptr)) {
+		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
+		page_frag_free(xdp->data);
+	} else
+		__skb_array_destroy_skb(ptr);
+}
+
 static void tun_queue_purge(struct tun_file *tfile)
 {
 	void * ptr;
@@ -607,15 +613,6 @@ static void tun_queue_purge(struct tun_file *tfile)
 
 	skb_queue_purge(&tfile->sk.sk_write_queue);
 	skb_queue_purge(&tfile->sk.sk_error_queue);
-}
-
-static void tun_ptr_free(void *ptr)
-{
-	if (ptr & TUN_XDP_FLAG) {
-		struct xdp_buff *xdp = ptr & ~TUN_XDP_FLAG;
-		page_frag_free(xdp->data);
-	} else
-		__skb_array_destroy_skb(ptr);
 }
 
 static void __tun_detach(struct tun_file *tfile, bool clean)
@@ -1184,15 +1181,14 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 	int headroom = xdp->data - xdp->data_hard_start;
 
 	/* Assure headroom is available and buff is properly aligned */
-	if (headroom < sizeof(*xdp) || buff & TUN_XDP_FLAG)
+	if (headroom < sizeof(*xdp) || tun_is_xdp_buff(xdp))
 		return -ENOSPC;
 
 	*buff = *xdp;
+
 	/* Encode the XDP flag into lowest bit for consumer to differ
 	 * XDP buffer from sk_buff. */
-	buff |= TUN_XDP_FLAG;
-
-	if (ptr_ring_produce(ring, buff)) {
+	if (ptr_ring_produce(ring, tun_xdp_to_ptr(buff))) {
 		/* Notify and wake up reader process */
 		if (tfile->flags & TUN_FASYNC)
 			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
@@ -2039,8 +2035,8 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			return err;
 	}
 
-	if (ptr & TUN_XDP_FLAG) {
-		struct xdp_buff *xdp = ptr & ~TUN_XDP_FLAG;
+	if (tun_is_xdp_buff(ptr)) {
+		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 		ret = tun_put_user_xdp(tun, tfile, xdp, to);
 		page_frag_free(xdp->data);
 	} else {
@@ -2180,8 +2176,8 @@ out:
 static int tun_ptr_peek_len(void *ptr)
 {
 	if (likely(ptr)) {
-		if (ptr & TUN_XDP_FLAG) {
-			struct xdp_buff *xdp = ptr & ~TUN_XDP_FLAG;
+		if (tun_is_xdp_buff(ptr)) {
+			struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 			return xdp->data_end - xdp->data;
 		}
 		return __skb_array_len_with_tag(ptr);
@@ -2926,8 +2922,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
-	ptr_ring_init(&tfile->xdp_ring, TUN_XDP_RING_SIZE, GFP_KERNEL);
-
 	return 0;
 }
 
@@ -3191,19 +3185,6 @@ struct ptr_ring *tun_get_tx_ring(struct file *file)
 	return &tfile->tx_ring;
 }
 EXPORT_SYMBOL_GPL(tun_get_tx_ring);
-
-struct ptr_ring *tun_get_xdp_ring(struct file *file)
-{
-	struct tun_file *tfile;
-
-	if (file->f_op != &tun_fops)
-		return ERR_PTR(-EINVAL);
-	tfile = file->private_data;
-	if (!tfile)
-		return ERR_PTR(-EBADFD);
-	return &tfile->xdp_ring;
-}
-EXPORT_SYMBOL_GPL(tun_get_xdp_ring);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
