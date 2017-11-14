@@ -395,7 +395,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
 }
 
 static int vhost_net_enable_vq(struct vhost_net *n,
-			       struct vhost_virtqueue *vq)
+			        struct vhost_virtqueue *vq)
 {
 	struct vhost_net_virtqueue *nvq =
 		container_of(vq, struct vhost_net_virtqueue, vq);
