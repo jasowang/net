@@ -92,6 +92,7 @@ struct vhost_net_buf {
 	void **queue;
 	int tail;
 	int head;
+	bool xdp;
 };
 
 struct vhost_net_virtqueue {
@@ -159,8 +160,19 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
 	struct vhost_net_buf *rxq = &nvq->rxq;
 
 	rxq->head = 0;
-	rxq->tail = ptr_ring_consume_batched(nvq->xdp_ring, rxq->queue,
-					     VHOST_RX_BATCH);
+	if (nvq->xdp_ring) {
+		rxq->tail = ptr_ring_consume_batched(nvq->xdp_ring, rxq->queue,
+						     VHOST_RX_BATCH);
+		if (rxq->tail) {
+			rxq->xdp = true;
+			return rxq->tail;
+		}
+	}
+
+	rxq->tail = skb_array_consume_batched(nvq->rx_array,
+					      (struct sk_buff **)rxq->queue,
+					      VHOST_RX_BATCH);
+	rxq->xdp = false;
 	return rxq->tail;
 }
 
@@ -168,14 +180,20 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
 {
 	struct vhost_net_buf *rxq = &nvq->rxq;
 
-	if (nvq->xdp_ring && !vhost_net_buf_is_empty(rxq)) {
-		ptr_ring_unconsume(nvq->xdp_ring, rxq->queue + rxq->head,
-				   vhost_net_buf_get_size(rxq), NULL);
+	if (!vhost_net_buf_is_empty(rxq)) {
+		if (rxq->xdp)
+			ptr_ring_unconsume(nvq->xdp_ring, rxq->queue + rxq->head,
+					   vhost_net_buf_get_size(rxq), NULL);
+		else
+			skb_array_unconsume(nvq->rx_array,
+					    (struct sk_buff **)rxq->queue +
+					                       rxq->head,
+					    vhost_net_buf_get_size(rxq));
 		rxq->head = rxq->tail = 0;
 	}
 }
 
-static int tun_xdp_peek_len(struct xdp_buff *xdp)
+static int vhost_xdp_peek_len(struct xdp_buff *xdp)
 {
 	if (likely(xdp))
 		return xdp->data_end - xdp->data;
@@ -186,6 +204,7 @@ static int tun_xdp_peek_len(struct xdp_buff *xdp)
 static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
 {
 	struct vhost_net_buf *rxq = &nvq->rxq;
+	void *ptr;
 
 	if (!vhost_net_buf_is_empty(rxq))
 		goto out;
@@ -194,7 +213,9 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
 		return 0;
 
 out:
-	return tun_xdp_peek_len(vhost_net_buf_get_ptr(rxq));
+	ptr = vhost_net_buf_get_ptr(rxq);
+	return rxq->xdp ? vhost_xdp_peek_len(ptr) :
+		          __skb_array_len_with_tag(ptr);
 }
 
 static void vhost_net_buf_init(struct vhost_net_buf *rxq)
@@ -596,7 +617,7 @@ static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
 	int len = 0;
 	unsigned long flags;
 
-	if (rvq->xdp_ring)
+	if (rvq->rx_array)
 		return vhost_net_buf_peek(rvq);
 
 	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
@@ -736,6 +757,31 @@ err:
 	return r;
 }
 
+static int vhost_net_rx_xdp(struct iov_iter *iter, struct xdp_buff *xdp)
+{
+        int offset, vnet_hdr_sz = sizeof(struct virtio_net_hdr_mrg_rxbuf);
+        struct page *page;
+        size_t size = xdp->data_end - xdp->data;
+        struct tun_pcpu_stats *stats;
+        struct virtio_net_hdr gso = { 0 };
+
+        if (unlikely(iov_iter_count(iter) < vnet_hdr_sz)) {
+                return -EINVAL;
+        }
+        if (unlikely(copy_to_iter(&gso, sizeof(gso), iter) != sizeof(gso)))
+                return -EFAULT;
+
+        iov_iter_advance(iter, vnet_hdr_sz - sizeof(gso));
+
+        page = virt_to_head_page(xdp->data);
+        offset = xdp->data - page_address(page);
+        if (copy_page_to_iter(page, offset, size, iter) != size)
+                return -EFAULT;
+
+        put_page(page);
+        return size + vnet_hdr_sz;
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_rx(struct vhost_net *net)
@@ -791,7 +837,7 @@ static void handle_rx(struct vhost_net *net)
 		/* On error, stop handling until the next kick. */
 		if (unlikely(headcount < 0))
 			goto out;
-		if (nvq->xdp_ring)
+		if (nvq->rx_array)
 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
@@ -822,8 +868,11 @@ static void handle_rx(struct vhost_net *net)
 			 */
 			iov_iter_advance(&msg.msg_iter, vhost_hlen);
 		}
-		err = sock->ops->recvmsg(sock, &msg,
-					 sock_len, MSG_DONTWAIT | MSG_TRUNC);
+		if (nvq->rxq.xdp)
+			err = vhost_net_rx_xdp(&msg.msg_iter, msg.msg_control);
+		else
+			err = sock->ops->recvmsg(sock, &msg,
+						 sock_len, MSG_DONTWAIT | MSG_TRUNC);
 		/* Userspace might have consumed the packet meanwhile:
 		 * it's not supposed to do this usually, but might be hard
 		 * to prevent. Discard data we got (if any) and keep going. */
@@ -1173,7 +1222,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 		vq->private_data = sock;
 		vhost_net_buf_unproduce(nvq);
 		if (index == VHOST_NET_VQ_RX) {
-			nvq->rx_array = NULL;
+			nvq->rx_array = get_tap_skb_array(fd);
 			nvq->xdp_ring = get_tap_xdp_ring(fd);
 		}
 		r = vhost_vq_init_access(vq);
