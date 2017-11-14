@@ -1301,7 +1301,8 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!ptr_ring_empty(&tfile->xdp_ring))
+	if (!ptr_ring_empty(&tfile->xdp_ring) ||
+	    !skb_array_empty(&tfile->tx_array))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (tun->dev->flags & IFF_UP &&
@@ -1966,13 +1967,19 @@ done:
 	return total;
 }
 
-static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
-				     int *err)
+static struct void *tun_ring_recv(struct tun_file *tfile, int noblock,
+				  int *err, bool &is_xdp)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	struct sk_buff *skb = NULL;
+	struct xdp_buff *xdp;
 	int error = 0;
 
+	xdp = ptr_ring_consume(&tfile->xdp_ring);
+	if (xdp) {
+		*is_xdp = true;
+		goto out;
+	}
 	skb = skb_array_consume(&tfile->tx_array);
 	if (skb)
 		goto out;
@@ -2010,7 +2017,7 @@ out:
 
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
-			   int noblock, struct xdp_buff *xdp)
+			int noblock, struct sk_buff *skb)
 {
 	ssize_t ret;
 	int err;
@@ -2020,14 +2027,27 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 	if (!iov_iter_count(to))
 		return 0;
 
-	if (!xdp) {
-		xdp = ptr_ring_consume(&tfile->xdp_ring);
-		if (!xdp)
-			return -EAGAIN;
+	if (!skb) {
+		/* Try xdp ring first */
+		struct xdp_buff *xdp = ptr_ring_consume(&tfile->xdp_ring);
+		if (xdp) {
+			ret = tun_put_user_xdp(tun, tfile, xdp, to);
+			page_frag_free(xdp->data);
+			return ret;
+		}
+
+		/* Read frames from ring */
+		skb = tun_ring_recv(tfile, noblock, &err);
+		if (!skb)
+			return err;
 	}
 
-	ret = tun_put_user_xdp(tun, tfile, xdp, to);
-	page_frag_free(xdp->data);
+	ret = tun_put_user(tun, tfile, skb, to);
+	if (unlikely(ret < 0))
+		kfree_skb(skb);
+	else
+		consume_skb(skb);
+
 	return ret;
 }
 
