@@ -1,0 +1,14 @@
+Bottom: 46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Top:    46b8da87ebec2a2e22cdf0758d54cdc7adde7c8b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-11-14 16:18:12 +0800
+
+tun/tap: use ptr_ring instead of skb_array
+
+This patch switches to use ptr_ring instead of skb_array. This is
+needed since we may want to queue XDP buffer into the queue.
+
+
+---
+
+
