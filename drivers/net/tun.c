@@ -178,7 +178,7 @@ struct tun_file {
 	struct mutex napi_mutex;	/* Protects access to the above napi */
 	struct list_head next;
 	struct tun_struct *detached;
-	struct skb_array tx_array;
+	struct ptr_ring tx_ring;
 };
 
 struct tun_flow_entry {
@@ -599,7 +599,7 @@ static void tun_queue_purge(struct tun_file *tfile)
 {
 	struct sk_buff *skb;
 
-	while ((skb = skb_array_consume(&tfile->tx_array)) != NULL)
+	while ((skb = ptr_ring_consume(&tfile->tx_ring)) != NULL)
 		kfree_skb(skb);
 
 	skb_queue_purge(&tfile->sk.sk_write_queue);
@@ -653,7 +653,8 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
 				unregister_netdevice(tun->dev);
 		}
 		if (tun)
-			skb_array_cleanup(&tfile->tx_array);
+			ptr_ring_cleanup(&tfile->tx_ring,
+					 __skb_array_destroy_skb);
 		sock_put(&tfile->sk);
 	}
 }
@@ -746,7 +747,7 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
 	}
 
 	if (!tfile->detached &&
-	    skb_array_init(&tfile->tx_array, dev->tx_queue_len, GFP_KERNEL)) {
+	    ptr_ring_init(&tfile->tx_ring, dev->tx_queue_len, GFP_KERNEL)) {
 		err = -ENOMEM;
 		goto out;
 	}
@@ -991,7 +992,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	if (skb_array_produce(&tfile->tx_array, skb))
+	if (ptr_ring_produce(&tfile->tx_ring, skb))
 		goto drop;
 
 	/* Notify and wake up reader process */
@@ -1258,7 +1259,7 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!skb_array_empty(&tfile->tx_array))
+	if (!ptr_ring_empty(&tfile->tx_ring))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (tun->dev->flags & IFF_UP &&
@@ -1897,7 +1898,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 	struct sk_buff *skb = NULL;
 	int error = 0;
 
-	skb = skb_array_consume(&tfile->tx_array);
+	skb = ptr_ring_consume(&tfile->tx_ring);
 	if (skb)
 		goto out;
 	if (noblock) {
@@ -1909,7 +1910,7 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 	current->state = TASK_INTERRUPTIBLE;
 
 	while (1) {
-		skb = skb_array_consume(&tfile->tx_array);
+		skb = ptr_ring_consume(&tfile->tx_ring);
 		if (skb)
 			break;
 		if (signal_pending(current)) {
@@ -2093,7 +2094,7 @@ static int tun_peek_len(struct socket *sock)
 	if (!tun)
 		return 0;
 
-	ret = skb_array_peek_len(&tfile->tx_array);
+	ret = PTR_RING_PEEK_CALL(&tfile->tx_ring, __skb_array_len_with_tag);
 	tun_put(tun);
 
 	return ret;
@@ -2966,25 +2967,26 @@ static int tun_queue_resize(struct tun_struct *tun)
 {
 	struct net_device *dev = tun->dev;
 	struct tun_file *tfile;
-	struct skb_array **arrays;
+	struct ptr_ring **rings;
 	int n = tun->numqueues + tun->numdisabled;
 	int ret, i;
 
-	arrays = kmalloc_array(n, sizeof(*arrays), GFP_KERNEL);
-	if (!arrays)
+	rings = kmalloc_array(n, sizeof(*rings), GFP_KERNEL);
+	if (!rings)
 		return -ENOMEM;
 
 	for (i = 0; i < tun->numqueues; i++) {
 		tfile = rtnl_dereference(tun->tfiles[i]);
-		arrays[i] = &tfile->tx_array;
+		rings[i] = &tfile->tx_ring;
 	}
 	list_for_each_entry(tfile, &tun->disabled, next)
-		arrays[i++] = &tfile->tx_array;
+		rings[i++] = &tfile->tx_ring;
 
-	ret = skb_array_resize_multiple(arrays, n,
-					dev->tx_queue_len, GFP_KERNEL);
+	ret = ptr_ring_resize_multiple(rings, n,
+				       dev->tx_queue_len, GFP_KERNEL,
+				       __skb_array_destroy_skb);
 
-	kfree(arrays);
+	kfree(rings);
 	return ret;
 }
 
@@ -3070,7 +3072,7 @@ struct socket *tun_get_socket(struct file *file)
 }
 EXPORT_SYMBOL_GPL(tun_get_socket);
 
-struct skb_array *tun_get_skb_array(struct file *file)
+struct ptr_ring *tun_get_tx_ring(struct file *file)
 {
 	struct tun_file *tfile;
 
@@ -3079,9 +3081,9 @@ struct skb_array *tun_get_skb_array(struct file *file)
 	tfile = file->private_data;
 	if (!tfile)
 		return ERR_PTR(-EBADFD);
-	return &tfile->tx_array;
+	return &tfile->tx_ring;
 }
-EXPORT_SYMBOL_GPL(tun_get_skb_array);
+EXPORT_SYMBOL_GPL(tun_get_tx_ring);
 
 module_init(tun_init);
 module_exit(tun_cleanup);
