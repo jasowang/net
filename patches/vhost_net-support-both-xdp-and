@@ -5,6 +5,8 @@ Date:   2017-11-14 12:02:56 +0800
 
 vhost_net: support both xdp and skbuff
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
