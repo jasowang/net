@@ -1,5 +1,5 @@
 Bottom: c66cd85ccb1f58355ced3f2891b52b518699c7bf
-Top:    3714a8d9b088e67f4ed134a3b75bd33449f34c0e
+Top:    d03ba9ad43805a0f0e89ef111dcf7a3773dbcaf6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-10-02 15:01:49 +0800
 
@@ -10,7 +10,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index d1c2117..9e34833 100644
+index d1c2117..930b349 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -233,6 +233,24 @@ struct tun_struct {
@@ -73,7 +73,7 @@ index d1c2117..9e34833 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -1164,6 +1190,46 @@ static const struct net_device_ops tun_netdev_ops = {
+@@ -1164,6 +1190,47 @@ static const struct net_device_ops tun_netdev_ops = {
  	.ndo_get_stats64	= tun_net_get_stats64,
  };
  
@@ -94,6 +94,7 @@ index d1c2117..9e34833 100644
 +	/* Encode the XDP flag into lowest bit for consumer to differ
 +	 * XDP buffer from sk_buff. */
 +	if (ptr_ring_produce(ring, tun_xdp_to_ptr(buff))) {
++		/* FIXME: seems unnecessary */
 +		/* Notify and wake up reader process */
 +		if (tfile->flags & TUN_FASYNC)
 +			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
@@ -120,7 +121,7 @@ index d1c2117..9e34833 100644
  static const struct net_device_ops tap_netdev_ops = {
  	.ndo_uninit		= tun_net_uninit,
  	.ndo_open		= tun_net_open,
-@@ -1181,6 +1247,8 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1181,6 +1248,8 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
  	.ndo_xdp		= tun_xdp,
@@ -129,7 +130,7 @@ index d1c2117..9e34833 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1794,6 +1862,39 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1794,6 +1863,39 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -169,14 +170,13 @@ index d1c2117..9e34833 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1891,15 +1992,15 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1891,15 +1993,14 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	return total;
  }
  
 -static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
 -				     int *err)
-+static void *tun_ring_recv(struct tun_file *tfile, int noblock,
-+			   int *err)
++static void *tun_ring_recv(struct tun_file *tfile, int noblock, int *err)
  {
  	DECLARE_WAITQUEUE(wait, current);
 -	struct sk_buff *skb = NULL;
