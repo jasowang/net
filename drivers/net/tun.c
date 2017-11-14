@@ -1207,6 +1207,7 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 	/* Encode the XDP flag into lowest bit for consumer to differ
 	 * XDP buffer from sk_buff. */
 	if (ptr_ring_produce(ring, tun_xdp_to_ptr(buff))) {
+		/* FIXME: seems unnecessary */
 		/* Notify and wake up reader process */
 		if (tfile->flags & TUN_FASYNC)
 			kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
@@ -1992,8 +1993,7 @@ done:
 	return total;
 }
 
-static void *tun_ring_recv(struct tun_file *tfile, int noblock,
-			   int *err)
+static void *tun_ring_recv(struct tun_file *tfile, int noblock, int *err)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	void *ptr = NULL;
