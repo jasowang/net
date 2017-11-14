@@ -175,14 +175,6 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
 	}
 }
 
-static int tun_xdp_peek_len(struct xdp_buff *xdp)
-{
-	if (likely(xdp))
-		return xdp->data_end - xdp->data;
-	else
-		return 0;
-}
-
 static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
 {
 	struct vhost_net_buf *rxq = &nvq->rxq;
