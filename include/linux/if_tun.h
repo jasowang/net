@@ -25,7 +25,6 @@ struct ptr_ring *tun_get_tx_ring(struct file *file);
 bool tun_is_xdp_buff(void *ptr);
 void *tun_xdp_to_ptr(void *ptr);
 void *tun_ptr_to_xdp(void *ptr);
-
 #else
 #include <linux/err.h>
 #include <linux/errno.h>
@@ -38,6 +37,18 @@ static inline struct socket *tun_get_socket(struct file *f)
 static inline struct ptr_ring *tun_get_tx_ring(struct file *f)
 {
 	return ERR_PTR(-EINVAL);
+}
+static inline bool tun_is_xdp_buff(void *ptr)
+{
+	return false;
+}
+void *tun_xdp_to_ptr(void *ptr)
+{
+	return NULL;
+}
+void *tun_ptr_to_xdp(void *ptr)
+{
+	return NULL;
 }
 #endif /* CONFIG_TUN */
 #endif /* __IF_TUN_H */
