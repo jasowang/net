@@ -5,6 +5,8 @@ Date:   2017-12-07 17:28:24 +0800
 
 tuntap: introduce peer mode
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
