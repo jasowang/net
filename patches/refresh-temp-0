@@ -1,0 +1,82 @@
+Bottom: 91f74e51339a36da5305ac9d82bc04061a1495e0
+Top:    c17e99cf2a621b9636320e7884155f4a8e78ce37
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-12-07 17:28:28 +0800
+
+Refresh of tuntap-introduce-peer-mode
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 787cc35..e13e061 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2570,6 +2570,43 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
+ 	return __tun_set_steering_ebpf(tun, prog);
+ }
+ 
++static struct tap_dev *tap_dev_get_rcu(const struct net_device *dev)
++{
++	return rcu_dereference(dev->rx_handler_data);
++}
++
++rx_handler_result_t tun_handle_frame(struct sk_buff **pskb)
++{
++	struct sk_buff *skb = *pskb;
++	struct tun_struct *tun = tun_dev_get_rcu(dev);
++	struct net_device *dev = tun->dev;
++
++	skb->dev = dev;
++	if (!is_skb_forwardable(dev, skb)) {
++		kfree_skb(skb);
++		return RX_HANDLER_CONSUMED;
++	}
++
++	dev_queue_xmit(skb);
++
++	return RX_HANDLER_CONSUMED;
++}
++
++static int tun_attach_peer(struct net *net, struct tun_struct *tun,
++			   struct ifreq *ifr)
++{
++	struct net_device *dev = __dev_get_by_name(net, ifr->ifr_name);
++	int ret;
++
++	if (!dev)
++		return -EFAULT;
++
++	if (dev->netdev_ops != &tap_netdev_ops)
++		return -EFAULT;
++
++	return netdev_rx_handler_register(dev, tun_handle_frame, tun);
++}
++
+ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 			    unsigned long arg, int ifreq_len)
+ {
+@@ -2850,6 +2887,12 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 		ret = tun_set_steering_ebpf(tun, argp);
+ 		break;
+ 
++	case TUNATTACHPEER:
++		ret = -EINVAL;
++		if ((tun->flags & TUN_TYPE_MASK) != IFF_TAP)
++			break;
++		ret = tun_attach_peer(sock_net(&tfile->sk), &ifr);
++		break;
+ 	default:
+ 		ret = -EINVAL;
+ 		break;
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index fb38c17..e08d856 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -58,6 +58,7 @@
+ #define TUNSETVNETBE _IOW('T', 222, int)
+ #define TUNGETVNETBE _IOR('T', 223, int)
+ #define TUNSETSTEERINGEBPF _IOR('T', 224, int)
++#define TUNATTACHPEER _IOR('T', 225, struct ifreq)
+ 
+ /* TUNSETIFF ifr flags */
+ #define IFF_TUN		0x0001
