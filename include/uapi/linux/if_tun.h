@@ -58,6 +58,7 @@
 #define TUNSETVNETBE _IOW('T', 222, int)
 #define TUNGETVNETBE _IOR('T', 223, int)
 #define TUNSETSTEERINGEBPF _IOR('T', 224, int)
+#define TUNATTACHPEER _IOR('T', 225, struct ifreq)
 
 /* TUNSETIFF ifr flags */
 #define IFF_TUN		0x0001
