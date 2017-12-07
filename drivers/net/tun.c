@@ -2570,6 +2570,43 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
 	return __tun_set_steering_ebpf(tun, prog);
 }
 
+static struct tap_dev *tap_dev_get_rcu(const struct net_device *dev)
+{
+	return rcu_dereference(dev->rx_handler_data);
+}
+
+rx_handler_result_t tun_handle_frame(struct sk_buff **pskb)
+{
+	struct sk_buff *skb = *pskb;
+	struct tun_struct *tun = tun_dev_get_rcu(dev);
+	struct net_device *dev = tun->dev;
+
+	skb->dev = dev;
+	if (!is_skb_forwardable(dev, skb)) {
+		kfree_skb(skb);
+		return RX_HANDLER_CONSUMED;
+	}
+
+	dev_queue_xmit(skb);
+
+	return RX_HANDLER_CONSUMED;
+}
+
+static int tun_attach_peer(struct net *net, struct tun_struct *tun,
+			   struct ifreq *ifr)
+{
+	struct net_device *dev = __dev_get_by_name(net, ifr->ifr_name);
+	int ret;
+
+	if (!dev)
+		return -EFAULT;
+
+	if (dev->netdev_ops != &tap_netdev_ops)
+		return -EFAULT;
+
+	return netdev_rx_handler_register(dev, tun_handle_frame, tun);
+}
+
 static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg, int ifreq_len)
 {
@@ -2850,6 +2887,12 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		ret = tun_set_steering_ebpf(tun, argp);
 		break;
 
+	case TUNATTACHPEER:
+		ret = -EINVAL;
+		if ((tun->flags & TUN_TYPE_MASK) != IFF_TAP)
+			break;
+		ret = tun_attach_peer(sock_net(&tfile->sk), &ifr);
+		break;
 	default:
 		ret = -EINVAL;
 		break;
