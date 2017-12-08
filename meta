@@ -1,8 +1,9 @@
 Version: 1
-Previous: e96c0996a69d4a859b72d4e61dc2d3aa0f9a80a6
-Head: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
+Previous: 3797b3b15e41b2d881ec4e91844ca5f2891d09af
+Head: 68386137d39c82a77109becc9c966767c9e18070
 Applied:
   tuntap-introduce-peer-mode: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
+  tuntap-fix-possible-deadlock: 68386137d39c82a77109becc9c966767c9e18070
 Unapplied:
   ptr_ring-speed-up-through: 390000df5d450137f9abb5c3e4cfbea845841146
   tuntap-properly-align-skb-head: 18dbf1b4bf990d5ca8b4626ac38158ebf347bf01

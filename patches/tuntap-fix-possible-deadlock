@@ -1,0 +1,16 @@
+Bottom: 05b9948378226cc5d69e00637101ee61e32bd017
+Top:    05b9948378226cc5d69e00637101ee61e32bd017
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-12-08 10:23:32 +0800
+
+tuntap: fix possible deadlock when fail to register netdev
+
+Private destructor could be called when register_netdev() fail with
+rtnl lock held. This will lead deadlock in tun_free_netdev() who tries
+to hold rtnl_lock. Fixing this by switching to use spinlock to
+synchronize.
+
+
+---
+
+
