@@ -10,7 +10,7 @@ rtnl lock held. This will lead deadlock in tun_free_netdev() who tries
 to hold rtnl_lock. Fixing this by switching to use spinlock to
 synchronize.
 
-
+Fixes: 96f84061620c ("tun: add eBPF based queue selection method")
 Reported-by: Eric Dumazet <eric.dumazet@gmail.com>
 Cc: Eric Dumazet <eric.dumazet@gmail.com>
 Cc: Willem de Bruijn <willemb@google.com>
