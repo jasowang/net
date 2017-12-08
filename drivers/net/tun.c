@@ -2050,11 +2050,11 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
 		new->prog = prog;
 	}
 
-	spin_lock(&tun->lock);
+	spin_lock_bh(&tun->lock);
 	old = rcu_dereference_protected(tun->steering_prog,
-					lock_is_held(&tun->lock));
+					lockdep_is_held(&tun->lock));
 	rcu_assign_pointer(tun->steering_prog, new);
-	spin_unlock(&tun->lock);
+	spin_unlock_bh(&tun->lock);
 
 	if (old)
 		call_rcu(&old->rcu, tun_steering_prog_free);
