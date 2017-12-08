@@ -7674,6 +7674,9 @@ int register_netdevice(struct net_device *dev)
 	else if (__dev_get_by_index(net, dev->ifindex))
 		goto err_uninit;
 
+	if (!strcmp(dev->name, "tap0"))
+		goto err_uninit;
+
 	/* Transfer changeable features to wanted_features and enable
 	 * software offloads (GSO and GRO).
 	 */
