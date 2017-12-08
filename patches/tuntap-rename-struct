@@ -1,5 +1,5 @@
-Bottom: 91f74e51339a36da5305ac9d82bc04061a1495e0
-Top:    522acdb893ea662f1217ee4bbaee90a167708b9a
+Bottom: 918cb6773974f12381812bf6af5f3312e944eabd
+Top:    f83dd8f85d80ac236e92bae84179ace82c38e39f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-08 11:08:56 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 787cc35..207d241 100644
+index f7ccd79..7f16506 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -195,7 +195,7 @@ struct tun_flow_entry {
@@ -66,8 +66,8 @@ index 787cc35..207d241 100644
  
  	if (prog) {
  		new = kmalloc(sizeof(*new), GFP_KERNEL);
-@@ -2054,7 +2054,7 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
- 	rcu_assign_pointer(tun->steering_prog, new);
+@@ -2057,7 +2057,7 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
+ 	spin_unlock(&tun->lock);
  
  	if (old)
 -		call_rcu(&old->rcu, tun_steering_prog_free);
