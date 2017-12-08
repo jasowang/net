@@ -2551,7 +2551,8 @@ unlock:
 	return ret;
 }
 
-static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
+static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+			void __user *data)
 {
 	struct bpf_prog *prog;
 	int fd;
@@ -2567,7 +2568,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
 			return PTR_ERR(prog);
 	}
 
-	return __tun_set_ebpf(tun, &tun->steering_prog, prog);
+	return __tun_set_ebpf(tun, prog_p, prog);
 }
 
 static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
@@ -2847,7 +2848,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case TUNSETSTEERINGEBPF:
-		ret = tun_set_steering_ebpf(tun, argp);
+		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
 		break;
 
 	default:
