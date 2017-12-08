@@ -1,8 +1,8 @@
 Version: 1
-Previous: 04fcb5f0a7dd38e2ad67772533c83e1be81df750
-Head: d77f5472c6484445c35f55ff1fc005a4bdf6154e
+Previous: 59039e593bcda830a7c36e6dba0e012823abb826
+Head: 04f1bb09f57e876e7ca1ead7dae100c82d6d36e6
 Applied:
-  tuntap-rename-struct: d77f5472c6484445c35f55ff1fc005a4bdf6154e
+  tuntap-rename-struct: 04f1bb09f57e876e7ca1ead7dae100c82d6d36e6
 Unapplied:
   tuntap-introduce-peer-mode: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
   tuntap-fix-possible-deadlock: 39cd02ab0b1b7f9e26bcd47e3cdab0242805d224
