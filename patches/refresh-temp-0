@@ -1,0 +1,59 @@
+Bottom: c86ed785d67639eecab30507f3d34b5aec08cc2d
+Top:    b5065925836c586fe1886a7b902cf8e1bb4f0dd0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-12-08 15:37:24 +0800
+
+Refresh of tuntap-rename-struct
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7103283..885e63f 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2031,15 +2031,14 @@ static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ 
+ static void tun_prog_free(struct rcu_head *rcu)
+ {
+-	struct tun_prog *prog = container_of(rcu,
+-					 struct tun_prog, rcu);
++	struct tun_prog *prog = container_of(rcu, struct tun_prog, rcu);
+ 
+ 	bpf_prog_destroy(prog->prog);
+ 	kfree(prog);
+ }
+ 
+-static int __tun_set_steering_ebpf(struct tun_struct *tun,
+-				   struct bpf_prog *prog)
++static int __tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
++			  struct bpf_prog *prog)
+ {
+ 	struct tun_prog *old, *new = NULL;
+ 
+@@ -2051,7 +2050,7 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
+ 	}
+ 
+ 	spin_lock_bh(&tun->lock);
+-	old = rcu_dereference_protected(tun->steering_prog,
++	old = rcu_dereference_protected(*prog_p,
+ 					lockdep_is_held(&tun->lock));
+ 	rcu_assign_pointer(tun->steering_prog, new);
+ 	spin_unlock_bh(&tun->lock);
+@@ -2070,7 +2069,7 @@ static void tun_free_netdev(struct net_device *dev)
+ 	free_percpu(tun->pcpu_stats);
+ 	tun_flow_uninit(tun);
+ 	security_tun_dev_free_security(tun->security);
+-	__tun_set_steering_ebpf(tun, NULL);
++	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
+ }
+ 
+ static void tun_setup(struct net_device *dev)
+@@ -2568,7 +2567,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
+ 			return PTR_ERR(prog);
+ 	}
+ 
+-	return __tun_set_steering_ebpf(tun, prog);
++	return __tun_set_ebpf(tun, &tun->steering_prog, prog);
+ }
+ 
+ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
