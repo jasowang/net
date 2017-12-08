@@ -1,9 +1,9 @@
 Version: 1
-Previous: 5ad8554229b89c303c730a0a8655ff5fd69392d6
-Head: 39cd02ab0b1b7f9e26bcd47e3cdab0242805d224
+Previous: d8f21ec89817b2c245b78e9f2c69437c23d7e976
+Head: b9f242047f2185f762e952d8d773f6d01f3c2d20
 Applied:
-  tuntap-fix-possible-deadlock: 39cd02ab0b1b7f9e26bcd47e3cdab0242805d224
 Unapplied:
+  tuntap-fix-possible-deadlock: 39cd02ab0b1b7f9e26bcd47e3cdab0242805d224
   tuntap-rename-struct: 02c23348561f24b9a537f0de8078291d1829a2bd
   tuntap-introduce-peer-mode: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
   dev-reproducer: 6fdb3889ac061dbc2d23f176556a6df390233617
