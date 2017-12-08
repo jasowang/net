@@ -1,0 +1,13 @@
+Bottom: 91f74e51339a36da5305ac9d82bc04061a1495e0
+Top:    91f74e51339a36da5305ac9d82bc04061a1495e0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-12-08 11:08:56 +0800
+
+tuntap: rename struct tun_steering_prog to struct tun_prog
+
+To be reused by other eBPF program.
+
+
+---
+
+
