@@ -1,5 +1,5 @@
 Bottom: 56220b0d5b0fb7cef709bbce4c51877eb9ece279
-Top:    b5065925836c586fe1886a7b902cf8e1bb4f0dd0
+Top:    b7eecf757098a9b7991293a2470ae16319914dd4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-08 11:08:56 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 8d85163..885e63f 100644
+index 8d85163..3c7da00 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -195,7 +195,7 @@ struct tun_flow_entry {
@@ -93,12 +93,31 @@ index 8d85163..885e63f 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2568,7 +2567,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
+@@ -2552,7 +2551,8 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+ 	return ret;
+ }
+ 
+-static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
++static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
++			void __user *data)
+ {
+ 	struct bpf_prog *prog;
+ 	int fd;
+@@ -2568,7 +2568,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
  			return PTR_ERR(prog);
  	}
  
 -	return __tun_set_steering_ebpf(tun, prog);
-+	return __tun_set_ebpf(tun, &tun->steering_prog, prog);
++	return __tun_set_ebpf(tun, prog_p, prog);
  }
  
  static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2848,7 +2848,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 		break;
+ 
+ 	case TUNSETSTEERINGEBPF:
+-		ret = tun_set_steering_ebpf(tun, argp);
++		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
+ 		break;
+ 
+ 	default:
