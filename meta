@@ -1,10 +1,10 @@
 Version: 1
-Previous: e4a8f3fd9a61326c4bc3db9233721608363dd610
-Head: b9f242047f2185f762e952d8d773f6d01f3c2d20
+Previous: 92fc97771e0cab7bb32181c07612d906aa18b3fc
+Head: 6f917acc986564decafa389b5627ddaf2ccb4306
 Applied:
+  tuntap-fix-possible-deadlock: 6f917acc986564decafa389b5627ddaf2ccb4306
 Unapplied:
   tuntap-introduce-peer-mode: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
-  tuntap-fix-possible-deadlock: 99c6ffc954e207f65f5af8a0950fada44db1c8eb
   ptr_ring-speed-up-through: 390000df5d450137f9abb5c3e4cfbea845841146
   tuntap-properly-align-skb-head: 18dbf1b4bf990d5ca8b4626ac38158ebf347bf01
   vhost_net-vmapped-metadata: 2e6efe80d708d2252f3440abf5f2b4b0953b3d01

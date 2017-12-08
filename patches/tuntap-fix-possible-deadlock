@@ -1,5 +1,5 @@
-Bottom: 05b9948378226cc5d69e00637101ee61e32bd017
-Top:    fdce2c62e37a98faddf3894b5500f6dfc7f00d85
+Bottom: 91f74e51339a36da5305ac9d82bc04061a1495e0
+Top:    918cb6773974f12381812bf6af5f3312e944eabd
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-08 10:23:32 +0800
 
@@ -20,7 +20,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 586b88c..b675fde 100644
+index 787cc35..f7ccd79 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -2050,8 +2050,11 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
