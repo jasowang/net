@@ -238,6 +238,7 @@ struct tun_struct {
 	struct tun_pcpu_stats __percpu *pcpu_stats;
 	struct bpf_prog __rcu *xdp_prog;
 	struct tun_prog __rcu *steering_prog;
+	struct tun_prog __rcu *filter_prog;
 };
 
 static int tun_napi_receive(struct napi_struct *napi, int budget)
@@ -914,6 +915,8 @@ static int run_filter(struct tap_filter *filter, const struct sk_buff *skb)
 
 	return 0;
 }
+
+
 
 /*
  * Checks whether the packet is accepted or not.
@@ -2070,6 +2073,7 @@ static void tun_free_netdev(struct net_device *dev)
 	tun_flow_uninit(tun);
 	security_tun_dev_free_security(tun->security);
 	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
+	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
 }
 
 static void tun_setup(struct net_device *dev)
@@ -2849,6 +2853,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 
 	case TUNSETSTEERINGEBPF:
 		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
+		break;
+
+	case TUNSETFILTEREBPF:
+		ret = tun_set_ebpf(tun, &tun->filter_prog, argp);
 		break;
 
 	default:
