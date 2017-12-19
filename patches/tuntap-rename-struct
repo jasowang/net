@@ -1,14 +1,13 @@
 Bottom: 56220b0d5b0fb7cef709bbce4c51877eb9ece279
 Top:    b7eecf757098a9b7991293a2470ae16319914dd4
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2017-12-08 11:08:56 +0800
+Date:   2017-12-19 16:36:17 +0800
 
 tuntap: rename struct tun_steering_prog to struct tun_prog
 
 To be reused by other eBPF program other than queue selection.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
