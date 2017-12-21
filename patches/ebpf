@@ -3,7 +3,8 @@ Top:    fc7fb2e0e9e7b6acb65874929b3a68da087f26d1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-21 15:22:45 +0800
 
-Refresh of tuntap-rename-struct
+tun: allow attach ebpf filter
+
 
 ---
 
