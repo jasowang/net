@@ -987,12 +987,25 @@ static void tun_automq_xmit(struct tun_struct *tun, struct sk_buff *skb)
 #endif
 }
 
+static unsigned int run_ebpf_filter(struct tun_struct *tun,
+				    struct sk_buff *skb,
+				    unsigned int res)
+{
+	struct tun_prog *prog = rcu_dereference(tun->filter_prog);
+
+	if (prog)
+		res = bpf_prog_run_clear_cb(prog->prog, skb);
+
+	return res;
+}
+
 /* Net device start xmit */
 static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
+	int len = skb->len;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -1018,7 +1031,14 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	    sk_filter(tfile->socket.sk, skb))
 		goto drop;
 
+	len = run_ebpf_filter(tun, skb, len);
+	if (!len)
+		goto drop;
+
 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
+		goto drop;
+
+	if (pskb_trim(skb, len))
 		goto drop;
 
 	skb_tx_timestamp(skb);
