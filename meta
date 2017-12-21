@@ -1,8 +1,9 @@
 Version: 1
-Previous: 84d7c40795a64abac7744f3d466d3fb96ec32497
-Head: 84074b020c7de7a22d658e21de7f4c3da4435b55
+Previous: 6302a3ffaf3a7aa6a5bcd54c27c9846cdcf981de
+Head: 7e0e5aee8c08ef70742c8e2471a13e2f692d089b
 Applied:
   tuntap-rename-struct: 84074b020c7de7a22d658e21de7f4c3da4435b55
+  tun-allow-to-attach-ebpf: 7e0e5aee8c08ef70742c8e2471a13e2f692d089b
 Unapplied:
   dev-reproducer: 6fdb3889ac061dbc2d23f176556a6df390233617
   tuntap-introduce-peer-mode: ae9fbea2c2788e2b478b5f9c86c75d38cb6e6280
