@@ -2052,7 +2052,7 @@ static int __tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
 	spin_lock_bh(&tun->lock);
 	old = rcu_dereference_protected(*prog_p,
 					lockdep_is_held(&tun->lock));
-	rcu_assign_pointer(tun->steering_prog, new);
+	rcu_assign_pointer(*prog_p, new);
 	spin_unlock_bh(&tun->lock);
 
 	if (old)
