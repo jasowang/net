@@ -1,5 +1,5 @@
 Bottom: dbc1fac544316dcdd22b47f0c215e143ffedc3f0
-Top:    e5a2b0024cb142389ac00cc7ac18dc9614b47b33
+Top:    96d6facc0af645b59ca969b351bf842ada25e744
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -27,7 +27,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2c89efe..2808029 100644
+index 2c89efe..19906c8 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -240,6 +240,24 @@ struct tun_struct {
@@ -55,7 +55,7 @@ index 2c89efe..2808029 100644
  static int tun_napi_receive(struct napi_struct *napi, int budget)
  {
  	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
-@@ -630,12 +648,24 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -630,12 +648,25 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  	return tun;
  }
  
@@ -67,8 +67,9 @@ index 2c89efe..2808029 100644
 +		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 +
 +		put_page(virt_to_head_page(xdp->data));
-+	} else
++	} else {
 +		__skb_array_destroy_skb(ptr);
++	}
 +}
 +
  static void tun_queue_purge(struct tun_file *tfile)
@@ -83,7 +84,7 @@ index 2c89efe..2808029 100644
  
  	skb_queue_purge(&tfile->sk.sk_write_queue);
  	skb_queue_purge(&tfile->sk.sk_error_queue);
-@@ -688,8 +718,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -688,8 +719,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  				unregister_netdevice(tun->dev);
  		}
  		if (tun)
@@ -93,7 +94,7 @@ index 2c89efe..2808029 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -1201,6 +1230,54 @@ static const struct net_device_ops tun_netdev_ops = {
+@@ -1201,6 +1231,54 @@ static const struct net_device_ops tun_netdev_ops = {
  	.ndo_get_stats64	= tun_net_get_stats64,
  };
  
@@ -148,7 +149,7 @@ index 2c89efe..2808029 100644
  static const struct net_device_ops tap_netdev_ops = {
  	.ndo_uninit		= tun_net_uninit,
  	.ndo_open		= tun_net_open,
-@@ -1218,6 +1295,8 @@ static const struct net_device_ops tap_netdev_ops = {
+@@ -1218,6 +1296,8 @@ static const struct net_device_ops tap_netdev_ops = {
  	.ndo_set_rx_headroom	= tun_set_headroom,
  	.ndo_get_stats64	= tun_net_get_stats64,
  	.ndo_bpf		= tun_xdp,
@@ -157,7 +158,7 @@ index 2c89efe..2808029 100644
  };
  
  static void tun_flow_init(struct tun_struct *tun)
-@@ -1841,6 +1920,40 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+@@ -1841,6 +1921,40 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	return result;
  }
  
@@ -198,7 +199,7 @@ index 2c89efe..2808029 100644
  /* Put packet to the user space buffer */
  static ssize_t tun_put_user(struct tun_struct *tun,
  			    struct tun_file *tfile,
-@@ -1938,15 +2051,14 @@ static ssize_t tun_put_user(struct tun_struct *tun,
+@@ -1938,15 +2052,14 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  	return total;
  }
  
@@ -218,7 +219,7 @@ index 2c89efe..2808029 100644
  		goto out;
  	if (noblock) {
  		error = -EAGAIN;
-@@ -1957,8 +2069,8 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1957,8 +2070,8 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  	current->state = TASK_INTERRUPTIBLE;
  
  	while (1) {
@@ -229,7 +230,7 @@ index 2c89efe..2808029 100644
  			break;
  		if (signal_pending(current)) {
  			error = -ERESTARTSYS;
-@@ -1977,36 +2089,42 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1977,36 +2090,42 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  
  out:
  	*err = error;
@@ -287,7 +288,7 @@ index 2c89efe..2808029 100644
  
  	return ret;
  }
-@@ -2143,12 +2261,12 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2143,12 +2262,12 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
  	struct tun_struct *tun = tun_get(tfile);
@@ -302,7 +303,7 @@ index 2c89efe..2808029 100644
  	}
  
  	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC|MSG_ERRQUEUE)) {
-@@ -2160,7 +2278,7 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2160,7 +2279,7 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  					 SOL_PACKET, TUN_TX_TIMESTAMP);
  		goto out;
  	}
@@ -311,7 +312,7 @@ index 2c89efe..2808029 100644
  	if (ret > (ssize_t)total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -2171,12 +2289,23 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2171,12 +2290,24 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  
  out_put_tun:
  	tun_put(tun);
@@ -331,14 +332,15 @@ index 2c89efe..2808029 100644
 +			return xdp->data_end - xdp->data;
 +		}
 +		return __skb_array_len_with_tag(ptr);
-+	} else
++	} else {
 +		return 0;
++	}
 +}
 +
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2187,7 +2316,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2187,7 +2318,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -347,7 +349,7 @@ index 2c89efe..2808029 100644
  	tun_put(tun);
  
  	return ret;
-@@ -3110,7 +3239,7 @@ static int tun_queue_resize(struct tun_struct *tun)
+@@ -3110,7 +3241,7 @@ static int tun_queue_resize(struct tun_struct *tun)
  
  	ret = ptr_ring_resize_multiple(rings, n,
  				       dev->tx_queue_len, GFP_KERNEL,
@@ -356,7 +358,7 @@ index 2c89efe..2808029 100644
  
  	kfree(rings);
  	return ret;
-@@ -3191,8 +3320,7 @@ struct socket *tun_get_socket(struct file *file)
+@@ -3191,8 +3322,7 @@ struct socket *tun_get_socket(struct file *file)
  	struct tun_file *tfile;
  	if (file->f_op != &tun_fops)
  		return ERR_PTR(-EINVAL);
