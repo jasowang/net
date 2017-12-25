@@ -1,5 +1,5 @@
 Bottom: dbc1fac544316dcdd22b47f0c215e143ffedc3f0
-Top:    96d6facc0af645b59ca969b351bf842ada25e744
+Top:    be2a0ded75e5cf2b2757f25cc45d21f93ae7fdad
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -27,7 +27,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2c89efe..19906c8 100644
+index 2c89efe..be6d993 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -240,6 +240,24 @@ struct tun_struct {
@@ -312,7 +312,7 @@ index 2c89efe..19906c8 100644
  	if (ret > (ssize_t)total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -2171,12 +2290,24 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2171,12 +2290,25 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  
  out_put_tun:
  	tun_put(tun);
@@ -329,6 +329,7 @@ index 2c89efe..19906c8 100644
 +	if (likely(ptr)) {
 +		if (tun_is_xdp_buff(ptr)) {
 +			struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
++
 +			return xdp->data_end - xdp->data;
 +		}
 +		return __skb_array_len_with_tag(ptr);
@@ -340,7 +341,7 @@ index 2c89efe..19906c8 100644
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2187,7 +2318,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2187,7 +2319,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -349,7 +350,7 @@ index 2c89efe..19906c8 100644
  	tun_put(tun);
  
  	return ret;
-@@ -3110,7 +3241,7 @@ static int tun_queue_resize(struct tun_struct *tun)
+@@ -3110,7 +3242,7 @@ static int tun_queue_resize(struct tun_struct *tun)
  
  	ret = ptr_ring_resize_multiple(rings, n,
  				       dev->tx_queue_len, GFP_KERNEL,
@@ -358,7 +359,7 @@ index 2c89efe..19906c8 100644
  
  	kfree(rings);
  	return ret;
-@@ -3191,8 +3322,7 @@ struct socket *tun_get_socket(struct file *file)
+@@ -3191,8 +3323,7 @@ struct socket *tun_get_socket(struct file *file)
  	struct tun_file *tfile;
  	if (file->f_op != &tun_fops)
  		return ERR_PTR(-EINVAL);
