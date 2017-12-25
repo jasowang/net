@@ -1,10 +1,10 @@
 Version: 1
-Previous: 59a5c9c7ec7d10069b2115bdba31595d33c1c780
-Head: 22f10360daa6b1b05f26e7d3c812334aba44d64b
+Previous: 4523f71d00b2e4afe63538188cf83e8b80b7d838
+Head: 743fc1092c217e3afc73f0ce15c46940e4675a32
 Applied:
   tun-tap-use-ptr_ring-instead: 743fc1092c217e3afc73f0ce15c46940e4675a32
-  tuntap-xdp-transmission: 22f10360daa6b1b05f26e7d3c812334aba44d64b
 Unapplied:
+  tuntap-xdp-transmission: 22f10360daa6b1b05f26e7d3c812334aba44d64b
   tuntap-rename-struct: 8c7f300594ff043a2471634b55049f4f95e01d3f
   ebpf: 33f97662f3b188ab1b126fc0d505d29dc8acbdf8
   dev-reproducer: 6fdb3889ac061dbc2d23f176556a6df390233617
