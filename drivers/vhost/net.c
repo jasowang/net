@@ -779,16 +779,6 @@ static void handle_rx(struct vhost_net *net)
 		/* On error, stop handling until the next kick. */
 		if (unlikely(headcount < 0))
 			goto out;
-		if (nvq->rx_ring)
-			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
-		/* On overrun, truncate and discard */
-		if (unlikely(headcount > UIO_MAXIOV)) {
-			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-			err = sock->ops->recvmsg(sock, &msg,
-						 1, MSG_DONTWAIT | MSG_TRUNC);
-			pr_debug("Discarded rx packet: len %zd\n", sock_len);
-			continue;
-		}
 		/* OK, now we need to know about added descriptors. */
 		if (!headcount) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
