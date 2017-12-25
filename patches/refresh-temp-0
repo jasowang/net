@@ -1,0 +1,21 @@
+Bottom: 96d6facc0af645b59ca969b351bf842ada25e744
+Top:    be2a0ded75e5cf2b2757f25cc45d21f93ae7fdad
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-12-25 15:44:16 +0800
+
+Refresh of tuntap-xdp-transmission
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 19906c8..be6d993 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2300,6 +2300,7 @@ static int tun_ptr_peek_len(void *ptr)
+ 	if (likely(ptr)) {
+ 		if (tun_is_xdp_buff(ptr)) {
+ 			struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
++
+ 			return xdp->data_end - xdp->data;
+ 		}
+ 		return __skb_array_len_with_tag(ptr);
