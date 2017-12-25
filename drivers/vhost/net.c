@@ -179,6 +179,7 @@ static int vhost_net_buf_peek_len(void *ptr)
 {
 	if (tun_is_xdp_buff(ptr)) {
 		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
+
 		return xdp->data_end - xdp->data;
 	}
 
@@ -405,7 +406,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
 }
 
 static int vhost_net_enable_vq(struct vhost_net *n,
-			        struct vhost_virtqueue *vq)
+			       struct vhost_virtqueue *vq)
 {
 	struct vhost_net_virtqueue *nvq =
 		container_of(vq, struct vhost_net_virtqueue, vq);
