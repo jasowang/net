@@ -656,8 +656,9 @@ static void tun_ptr_free(void *ptr)
 		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
 
 		put_page(virt_to_head_page(xdp->data));
-	} else
+	} else {
 		__skb_array_destroy_skb(ptr);
+	}
 }
 
 static void tun_queue_purge(struct tun_file *tfile)
@@ -2302,8 +2303,9 @@ static int tun_ptr_peek_len(void *ptr)
 			return xdp->data_end - xdp->data;
 		}
 		return __skb_array_len_with_tag(ptr);
-	} else
+	} else {
 		return 0;
+	}
 }
 
 static int tun_peek_len(struct socket *sock)
