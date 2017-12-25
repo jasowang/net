@@ -1,5 +1,5 @@
 Bottom: 5180c384b79399c469e0ed88211114e6ab249484
-Top:    073207cf2269dd797942b6393b4e95afcd3fc741
+Top:    dbc1fac544316dcdd22b47f0c215e143ffedc3f0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-14 16:18:12 +0800
 
@@ -299,7 +299,7 @@ index e367d631..2c89efe 100644
  module_init(tun_init);
  module_exit(tun_cleanup);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c7bdeb6..c7fdfe5 100644
+index c7bdeb6..c316555 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -89,7 +89,7 @@ struct vhost_net_ubuf_ref {
@@ -352,24 +352,7 @@ index c7bdeb6..c7fdfe5 100644
  		return vhost_net_buf_peek(rvq);
  
  	spin_lock_irqsave(&sk->sk_receive_queue.lock, flags);
-@@ -778,6 +779,16 @@ static void handle_rx(struct vhost_net *net)
- 		/* On error, stop handling until the next kick. */
- 		if (unlikely(headcount < 0))
- 			goto out;
-+		if (nvq->rx_ring)
-+			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
-+		/* On overrun, truncate and discard */
-+		if (unlikely(headcount > UIO_MAXIOV)) {
-+			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-+			err = sock->ops->recvmsg(sock, &msg,
-+						 1, MSG_DONTWAIT | MSG_TRUNC);
-+			pr_debug("Discarded rx packet: len %zd\n", sock_len);
-+			continue;
-+		}
- 		/* OK, now we need to know about added descriptors. */
- 		if (!headcount) {
- 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
-@@ -790,7 +801,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -790,7 +791,7 @@ static void handle_rx(struct vhost_net *net)
  			 * they refilled. */
  			goto out;
  		}
@@ -378,7 +361,7 @@ index c7bdeb6..c7fdfe5 100644
  			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
  		/* On overrun, truncate and discard */
  		if (unlikely(headcount > UIO_MAXIOV)) {
-@@ -896,7 +907,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -896,7 +897,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  	struct vhost_net *n;
  	struct vhost_dev *dev;
  	struct vhost_virtqueue **vqs;
@@ -387,7 +370,7 @@ index c7bdeb6..c7fdfe5 100644
  	int i;
  
  	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
-@@ -908,7 +919,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -908,7 +909,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		return -ENOMEM;
  	}
  
@@ -396,7 +379,7 @@ index c7bdeb6..c7fdfe5 100644
  			      GFP_KERNEL);
  	if (!queue) {
  		kfree(vqs);
-@@ -1046,23 +1057,23 @@ static struct socket *get_raw_socket(int fd)
+@@ -1046,23 +1047,23 @@ static struct socket *get_raw_socket(int fd)
  	return ERR_PTR(r);
  }
  
@@ -428,7 +411,7 @@ index c7bdeb6..c7fdfe5 100644
  }
  
  static struct socket *get_tap_socket(int fd)
-@@ -1143,7 +1154,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1143,7 +1144,7 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  		vq->private_data = sock;
  		vhost_net_buf_unproduce(nvq);
  		if (index == VHOST_NET_VQ_RX)
