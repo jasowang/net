@@ -1,5 +1,5 @@
-Bottom: 1e2a7fee24f00858385f8556f6f6a4c2b91c20dc
-Top:    6009ead9da341a1bbe6ab0a313f0fa9e89b435f4
+Bottom: dbc1fac544316dcdd22b47f0c215e143ffedc3f0
+Top:    7f0c258b174b2dbd7f5d84172927b66716c7c803
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -366,7 +366,7 @@ index 2c89efe..18d6579 100644
  	return &tfile->socket;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 67f6ebc..b2665f3 100644
+index c316555..206ebed 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -175,6 +175,16 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
@@ -404,15 +404,6 @@ index 67f6ebc..b2665f3 100644
  {
  	struct vhost_net_virtqueue *nvq =
  		container_of(vq, struct vhost_net_virtqueue, vq);
-@@ -801,7 +811,7 @@ static void handle_rx(struct vhost_net *net)
- 			 * they refilled. */
- 			goto out;
- 		}
--		if (nvq->rx_array)
-+		if (nvq->rx_ring)
- 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
- 		/* On overrun, truncate and discard */
- 		if (unlikely(headcount > UIO_MAXIOV)) {
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
 index bdee9b8..1cafdc2 100644
 --- a/include/linux/if_tun.h
