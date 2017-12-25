@@ -1,5 +1,5 @@
 Bottom: dbc1fac544316dcdd22b47f0c215e143ffedc3f0
-Top:    7f0c258b174b2dbd7f5d84172927b66716c7c803
+Top:    e5a2b0024cb142389ac00cc7ac18dc9614b47b33
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -27,7 +27,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2c89efe..18d6579 100644
+index 2c89efe..2808029 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -240,6 +240,24 @@ struct tun_struct {
@@ -55,7 +55,7 @@ index 2c89efe..18d6579 100644
  static int tun_napi_receive(struct napi_struct *napi, int budget)
  {
  	struct tun_file *tfile = container_of(napi, struct tun_file, napi);
-@@ -630,12 +648,23 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
+@@ -630,12 +648,24 @@ static struct tun_struct *tun_enable_queue(struct tun_file *tfile)
  	return tun;
  }
  
@@ -65,6 +65,7 @@ index 2c89efe..18d6579 100644
 +		return;
 +	if (tun_is_xdp_buff(ptr)) {
 +		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
++
 +		put_page(virt_to_head_page(xdp->data));
 +	} else
 +		__skb_array_destroy_skb(ptr);
@@ -73,7 +74,7 @@ index 2c89efe..18d6579 100644
  static void tun_queue_purge(struct tun_file *tfile)
  {
 -	struct sk_buff *skb;
-+	void * ptr;
++	void *ptr;
  
 -	while ((skb = ptr_ring_consume(&tfile->tx_ring)) != NULL)
 -		kfree_skb(skb);
@@ -82,7 +83,7 @@ index 2c89efe..18d6579 100644
  
  	skb_queue_purge(&tfile->sk.sk_write_queue);
  	skb_queue_purge(&tfile->sk.sk_error_queue);
-@@ -688,8 +717,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
+@@ -688,8 +718,7 @@ static void __tun_detach(struct tun_file *tfile, bool clean)
  				unregister_netdevice(tun->dev);
  		}
  		if (tun)
@@ -92,7 +93,7 @@ index 2c89efe..18d6579 100644
  		sock_put(&tfile->sk);
  	}
  }
-@@ -1201,6 +1229,55 @@ static const struct net_device_ops tun_netdev_ops = {
+@@ -1201,6 +1230,54 @@ static const struct net_device_ops tun_netdev_ops = {
  	.ndo_get_stats64	= tun_net_get_stats64,
  };
  
@@ -121,7 +122,8 @@ index 2c89efe..18d6579 100644
 +	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
 +					    numqueues]);
 +	/* Encode the XDP flag into lowest bit for consumer to differ
-+	 * XDP buffer from sk_buff. */
++	 * XDP buffer from sk_buff.
++	 */
 +	if (ptr_ring_produce(&tfile->tx_ring, tun_xdp_to_ptr(buff))) {
 +		this_cpu_inc(tun->pcpu_stats->tx_dropped);
 +		ret = -ENOSPC;
@@ -141,8 +143,6 @@ index 2c89efe..18d6579 100644
 +	if (tfile->flags & TUN_FASYNC)
 +		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 +	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
-+
-+	return;
 +}
 +
  static const struct net_device_ops tap_netdev_ops = {
@@ -229,7 +229,7 @@ index 2c89efe..18d6579 100644
  			break;
  		if (signal_pending(current)) {
  			error = -ERESTARTSYS;
-@@ -1977,36 +2089,41 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
+@@ -1977,36 +2089,42 @@ static struct sk_buff *tun_ring_recv(struct tun_file *tfile, int noblock,
  
  out:
  	*err = error;
@@ -237,7 +237,6 @@ index 2c89efe..18d6579 100644
 +	return ptr;
  }
  
-+
  static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
  			   struct iov_iter *to,
 -			   int noblock, struct sk_buff *skb)
@@ -273,10 +272,12 @@ index 2c89efe..18d6579 100644
 -		consume_skb(skb);
 +	if (tun_is_xdp_buff(ptr)) {
 +		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
++
 +		ret = tun_put_user_xdp(tun, tfile, xdp, to);
 +		put_page(virt_to_head_page(xdp->data));
 +	} else {
 +		struct sk_buff *skb = ptr;
++
 +		ret = tun_put_user(tun, tfile, skb, to);
 +		if (unlikely(ret < 0))
 +			kfree_skb(skb);
@@ -286,7 +287,7 @@ index 2c89efe..18d6579 100644
  
  	return ret;
  }
-@@ -2143,12 +2260,12 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2143,12 +2261,12 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
  	struct tun_struct *tun = tun_get(tfile);
@@ -301,7 +302,7 @@ index 2c89efe..18d6579 100644
  	}
  
  	if (flags & ~(MSG_DONTWAIT|MSG_TRUNC|MSG_ERRQUEUE)) {
-@@ -2160,7 +2277,7 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2160,7 +2278,7 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  					 SOL_PACKET, TUN_TX_TIMESTAMP);
  		goto out;
  	}
@@ -310,7 +311,7 @@ index 2c89efe..18d6579 100644
  	if (ret > (ssize_t)total_len) {
  		m->msg_flags |= MSG_TRUNC;
  		ret = flags & MSG_TRUNC ? ret : total_len;
-@@ -2171,12 +2288,23 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
+@@ -2171,12 +2289,23 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
  
  out_put_tun:
  	tun_put(tun);
@@ -337,7 +338,7 @@ index 2c89efe..18d6579 100644
  static int tun_peek_len(struct socket *sock)
  {
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-@@ -2187,7 +2315,7 @@ static int tun_peek_len(struct socket *sock)
+@@ -2187,7 +2316,7 @@ static int tun_peek_len(struct socket *sock)
  	if (!tun)
  		return 0;
  
@@ -346,7 +347,7 @@ index 2c89efe..18d6579 100644
  	tun_put(tun);
  
  	return ret;
-@@ -3110,7 +3238,7 @@ static int tun_queue_resize(struct tun_struct *tun)
+@@ -3110,7 +3239,7 @@ static int tun_queue_resize(struct tun_struct *tun)
  
  	ret = ptr_ring_resize_multiple(rings, n,
  				       dev->tx_queue_len, GFP_KERNEL,
@@ -355,7 +356,7 @@ index 2c89efe..18d6579 100644
  
  	kfree(rings);
  	return ret;
-@@ -3191,8 +3319,7 @@ struct socket *tun_get_socket(struct file *file)
+@@ -3191,8 +3320,7 @@ struct socket *tun_get_socket(struct file *file)
  	struct tun_file *tfile;
  	if (file->f_op != &tun_fops)
  		return ERR_PTR(-EINVAL);
@@ -366,10 +367,10 @@ index 2c89efe..18d6579 100644
  	return &tfile->socket;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c316555..206ebed 100644
+index c316555..8b0c609 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -175,6 +175,16 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
+@@ -175,6 +175,17 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
  	}
  }
  
@@ -377,6 +378,7 @@ index c316555..206ebed 100644
 +{
 +	if (tun_is_xdp_buff(ptr)) {
 +		struct xdp_buff *xdp = tun_ptr_to_xdp(ptr);
++
 +		return xdp->data_end - xdp->data;
 +	}
 +
@@ -386,7 +388,7 @@ index c316555..206ebed 100644
  static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
  {
  	struct vhost_net_buf *rxq = &nvq->rxq;
-@@ -186,7 +196,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
+@@ -186,7 +197,7 @@ static int vhost_net_buf_peek(struct vhost_net_virtqueue *nvq)
  		return 0;
  
  out:
@@ -395,12 +397,12 @@ index c316555..206ebed 100644
  }
  
  static void vhost_net_buf_init(struct vhost_net_buf *rxq)
-@@ -395,7 +405,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
+@@ -395,7 +406,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
  }
  
  static int vhost_net_enable_vq(struct vhost_net *n,
 -				struct vhost_virtqueue *vq)
-+			        struct vhost_virtqueue *vq)
++			       struct vhost_virtqueue *vq)
  {
  	struct vhost_net_virtqueue *nvq =
  		container_of(vq, struct vhost_net_virtqueue, vq);
