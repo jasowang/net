@@ -99,12 +99,16 @@ static struct bpf_map *find_and_alloc_map(union bpf_attr *attr)
 	struct bpf_map *map;
 
 	if (attr->map_type >= ARRAY_SIZE(bpf_map_types) ||
-	    !bpf_map_types[attr->map_type])
+		!bpf_map_types[attr->map_type]) {
+		printk("map type error !\n");
 		return ERR_PTR(-EINVAL);
+	}
 
 	map = bpf_map_types[attr->map_type]->map_alloc(attr);
-	if (IS_ERR(map))
+	if (IS_ERR(map)) {
+		printk("alloc error\n");
 		return map;
+	}
 	map->ops = bpf_map_types[attr->map_type];
 	map->map_type = attr->map_type;
 	return map;
@@ -388,8 +392,10 @@ static int map_create(union bpf_attr *attr)
 	int err;
 
 	err = CHECK_ATTR(BPF_MAP_CREATE);
-	if (err)
+	if (err) {
+		printk("CHECK ATTR!\n");
 		return -EINVAL;
+	}
 
 	f_flags = bpf_get_file_flag(attr->map_flags);
 	if (f_flags < 0)
@@ -397,32 +403,44 @@ static int map_create(union bpf_attr *attr)
 
 	if (numa_node != NUMA_NO_NODE &&
 	    ((unsigned int)numa_node >= nr_node_ids ||
-	     !node_online(numa_node)))
+		    !node_online(numa_node))) {
+		printk("NUMA NODE!\n");
 		return -EINVAL;
+	}
 
 	/* find map type and init map: hashtable vs rbtree vs bloom vs ... */
 	map = find_and_alloc_map(attr);
-	if (IS_ERR(map))
+	if (IS_ERR(map)) {
+		printk("Find error!\n");
 		return PTR_ERR(map);
+	}
 
 	err = bpf_obj_name_cpy(map->name, attr->map_name);
-	if (err)
+	if (err) {
+		printk("name cpy error!\n");
 		goto free_map_nouncharge;
+	}
 
 	atomic_set(&map->refcnt, 1);
 	atomic_set(&map->usercnt, 1);
 
 	err = security_bpf_map_alloc(map);
-	if (err)
+	if (err) {
+		printk("alloc error!\n");
 		goto free_map_nouncharge;
+	}
 
 	err = bpf_map_charge_memlock(map);
-	if (err)
+	if (err) {
+		printk("memlock error!\n");
 		goto free_map_sec;
+	}
 
 	err = bpf_map_alloc_id(map);
-	if (err)
+	if (err) {
+		printk("id error!\n");
 		goto free_map;
+	}
 
 	err = bpf_map_new_fd(map, f_flags);
 	if (err < 0) {
@@ -432,6 +450,7 @@ static int map_create(union bpf_attr *attr)
 		 * to the userspace and the userspace may
 		 * have refcnt-ed it through BPF_MAP_GET_FD_BY_ID.
 		 */
+		printk("new fd error!\n");
 		bpf_map_put(map);
 		return err;
 	}
@@ -453,8 +472,10 @@ free_map_nouncharge:
  */
 struct bpf_map *__bpf_map_get(struct fd f)
 {
-	if (!f.file)
+	if (!f.file) {
+		printk("no file!\n");
 		return ERR_PTR(-EBADF);
+	}
 	if (f.file->f_op != &bpf_map_fops) {
 		fdput(f);
 		return ERR_PTR(-EINVAL);
@@ -618,13 +639,17 @@ static int map_update_elem(union bpf_attr *attr)
 	struct fd f;
 	int err;
 
-	if (CHECK_ATTR(BPF_MAP_UPDATE_ELEM))
+	if (CHECK_ATTR(BPF_MAP_UPDATE_ELEM)) {
+		printk("ATTR2\n");
 		return -EINVAL;
+	}
 
 	f = fdget(ufd);
 	map = __bpf_map_get(f);
-	if (IS_ERR(map))
+	if (IS_ERR(map)) {
+		printk("map get error!\n");
 		return PTR_ERR(map);
+	}
 
 	if (!(f.file->f_mode & FMODE_CAN_WRITE)) {
 		err = -EPERM;
@@ -1688,31 +1713,44 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	union bpf_attr attr = {};
 	int err;
 
-	if (!capable(CAP_SYS_ADMIN) && sysctl_unprivileged_bpf_disabled)
+	printk("Enter bpf!\n");
+
+	if (!capable(CAP_SYS_ADMIN) &&
+		sysctl_unprivileged_bpf_disabled) {
+		printk("-EPERM!\n");
 		return -EPERM;
+	}
 
 	err = check_uarg_tail_zero(uattr, sizeof(attr), size);
-	if (err)
+	if (err) {
+		printk("tail zero!\n");
 		return err;
+	}
 	size = min_t(u32, size, sizeof(attr));
 
 	/* copy attributes from user space, may be less than sizeof(bpf_attr) */
-	if (copy_from_user(&attr, uattr, size) != 0)
+	if (copy_from_user(&attr, uattr, size) != 0) {
+		printk("-EFAULT!\n");
 		return -EFAULT;
+	}
 
 	err = security_bpf(cmd, &attr, size);
-	if (err < 0)
+	if (err < 0) {
+		printk("security!\n");
 		return err;
+	}
 
 	switch (cmd) {
 	case BPF_MAP_CREATE:
 		err = map_create(&attr);
+		printk("create return %d\n", err);
 		break;
 	case BPF_MAP_LOOKUP_ELEM:
 		err = map_lookup_elem(&attr);
 		break;
 	case BPF_MAP_UPDATE_ELEM:
 		err = map_update_elem(&attr);
+		printk("update elem return %d\n", err);
 		break;
 	case BPF_MAP_DELETE_ELEM:
 		err = map_delete_elem(&attr);
