@@ -1,6 +1,9 @@
 Version: 1
-Previous: None
+Previous: 9f839e6ab972392950ae8db862f9c4d3b0b803c8
 Head: 45ddcc77159f3c5f83c77593d63683f42259e30f
 Applied:
+  tuntap-rename-struct: 01aee8b31882fc2f0071913d65deadf04b10b148
+  tun-allow-attach-ebpf-filter: a2d65c48b99fa588eb6222d856bb576ea440e651
+  bpf-debug: 45ddcc77159f3c5f83c77593d63683f42259e30f
 Unapplied:
 Hidden:
