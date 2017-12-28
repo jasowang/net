@@ -992,11 +992,29 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
 				    int len)
 {
 	struct tun_prog *prog = rcu_dereference(tun->filter_prog);
+	struct vlan_ethhdr *vh = (struct vlan_ethhdr *) skb->data;
+	unsigned char *bytes = (unsigned char *) skb->data;
+	unsigned int ret = len;
+	int i;
+	u32 *ptr = (u32 *) skb->data;
 
-	if (prog)
-		len = bpf_prog_run_clear_cb(prog->prog, skb);
+	if (prog) {
+		printk("vlan proto %x\n", vh->h_vlan_proto);
+		printk("sizeof(*vh) is %d\n", sizeof(*vh));
+		printk("---- dump ----\n");
+		for (i = 0; i < sizeof(*vh); i++) {
+			printk("%02x ", bytes[i]);
+		}
+		printk("--------------\n");
+		ret = bpf_prog_run_clear_cb(prog->prog, skb);
+		printk("len is %x\n", ret);
+		if (ptr[0] == 0xffffffff)
+			printk("skb->data[0] is 0xffffffff\n");
+		else
+			printk("skb->data[0] is not 0xffffffff\n");
+	}
 
-	return len;
+	return ret;
 }
 
 /* Net device start xmit */
@@ -1931,6 +1949,8 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 			__be16 h_vlan_proto;
 			__be16 h_vlan_TCI;
 		} veth;
+
+		printk("vlan accelerated!\n");
 
 		veth.h_vlan_proto = skb->vlan_proto;
 		veth.h_vlan_TCI = htons(skb_vlan_tag_get(skb));

@@ -116,6 +116,14 @@ struct bpf_insn;
 		.off   = 0,					\
 		.imm   = IMM })
 
+#define BPF_LDX_ABS(SIZE, IMM)					\
+	((struct bpf_insn) {					\
+		.code  = BPF_LDX | BPF_SIZE(SIZE) | BPF_ABS,	\
+		.dst_reg = 0,					\
+		.src_reg = 0,					\
+		.off   = 0,					\
+		.imm   = IMM })
+
 /* Memory load, dst_reg = *(uint *) (src_reg + off16) */
 
 #define BPF_LDX_MEM(SIZE, DST, SRC, OFF)			\
