@@ -118,6 +118,8 @@ static void *array_map_lookup_elem(struct bpf_map *map, void *key)
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
 	u32 index = *(u32 *)key;
 
+	printk("index is %d\n", index);
+
 	if (unlikely(index >= array->map.max_entries))
 		return NULL;
 
