@@ -7,7 +7,7 @@ tun: allow to attach ebpf socket filter
 
 This patch allows userspace to attach eBPF filter to tun. This will
 allow to implement VM dataplane filtering in a more efficient way
-compared to the cBPF filter.
+compared to cBPF filter.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
