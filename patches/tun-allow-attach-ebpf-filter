@@ -1,5 +1,5 @@
 Bottom: 02461cfc9c74727290e819ca4332d0fc5d50ccf3
-Top:    80be38578cf732a8bb7a233550deccf5018838d9
+Top:    a0c8a65d0f22056b271bb45c28bc09d8dd7fde77
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-21 15:22:45 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index d29fa81..fdd90f5 100644
+index d29fa81..af85290 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -238,6 +238,7 @@ struct tun_struct {
@@ -26,7 +26,15 @@ index d29fa81..fdd90f5 100644
  };
  
  static int tun_napi_receive(struct napi_struct *napi, int budget)
-@@ -986,12 +987,25 @@ static void tun_automq_xmit(struct tun_struct *tun, struct sk_buff *skb)
+@@ -916,7 +917,6 @@ static int run_filter(struct tap_filter *filter, const struct sk_buff *skb)
+ }
+ 
+ 
+-
+ /*
+  * Checks whether the packet is accepted or not.
+  * Returns: 0 - drop, !=0 - accept
+@@ -986,12 +986,25 @@ static void tun_automq_xmit(struct tun_struct *tun, struct sk_buff *skb)
  #endif
  }
  
@@ -52,7 +60,7 @@ index d29fa81..fdd90f5 100644
  
  	rcu_read_lock();
  	tfile = rcu_dereference(tun->tfiles[txq]);
-@@ -1017,9 +1031,16 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1017,9 +1030,16 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	    sk_filter(tfile->socket.sk, skb))
  		goto drop;
  
@@ -69,7 +77,7 @@ index d29fa81..fdd90f5 100644
  	skb_tx_timestamp(skb);
  
  	/* Orphan the skb - required as we might hang on to it
-@@ -2070,6 +2091,7 @@ static void tun_free_netdev(struct net_device *dev)
+@@ -2070,6 +2090,7 @@ static void tun_free_netdev(struct net_device *dev)
  	tun_flow_uninit(tun);
  	security_tun_dev_free_security(tun->security);
  	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
@@ -77,7 +85,7 @@ index d29fa81..fdd90f5 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2851,6 +2873,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2851,6 +2872,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
  		break;
  
