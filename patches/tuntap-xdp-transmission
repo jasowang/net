@@ -1,5 +1,5 @@
 Bottom: 3d340063dbc09a706789fe042bd55b751edacbf2
-Top:    4e05cf41a02d82ea76178c24c8cdc35b7932a2fc
+Top:    c62a01a0bf616e40a4954ddb9e62ae9c44de5ef6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -370,7 +370,7 @@ index 2c89efe..be6d993 100644
  	return &tfile->socket;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c316555..dd12bfe 100644
+index c316555..a5a1db6 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -175,6 +175,17 @@ static void vhost_net_buf_unproduce(struct vhost_net_virtqueue *nvq)
@@ -400,15 +400,6 @@ index c316555..dd12bfe 100644
  }
  
  static void vhost_net_buf_init(struct vhost_net_buf *rxq)
-@@ -395,7 +406,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
- }
- 
- static int vhost_net_enable_vq(struct vhost_net *n,
--				struct vhost_virtqueue *vq)
-+			        struct vhost_virtqueue *vq)
- {
- 	struct vhost_net_virtqueue *nvq =
- 		container_of(vq, struct vhost_net_virtqueue, vq);
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
 index bdee9b8..1cafdc2 100644
 --- a/include/linux/if_tun.h
