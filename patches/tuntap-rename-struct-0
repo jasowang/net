@@ -1,5 +1,5 @@
 Bottom: 64b20fb4c854fad1e47fdd4e0303943b041b95be
-Top:    02461cfc9c74727290e819ca4332d0fc5d50ccf3
+Top:    0c85af868f0bded0ac09890ebd9a7cd8a5361bfc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-19 16:36:17 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e367d631..d29fa81 100644
+index e367d631..f7d6708 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -195,7 +195,7 @@ struct tun_flow_entry {
@@ -43,16 +43,15 @@ index e367d631..d29fa81 100644
  	u16 ret = 0;
  
  	prog = rcu_dereference(tun->steering_prog);
-@@ -915,6 +915,8 @@ static int run_filter(struct tap_filter *filter, const struct sk_buff *skb)
+@@ -915,6 +915,7 @@ static int run_filter(struct tap_filter *filter, const struct sk_buff *skb)
  	return 0;
  }
  
 +
-+
  /*
   * Checks whether the packet is accepted or not.
   * Returns: 0 - drop, !=0 - accept
-@@ -2027,19 +2029,18 @@ static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
+@@ -2027,19 +2028,18 @@ static ssize_t tun_chr_read_iter(struct kiocb *iocb, struct iov_iter *to)
  	return ret;
  }
  
@@ -77,7 +76,7 @@ index e367d631..d29fa81 100644
  
  	if (prog) {
  		new = kmalloc(sizeof(*new), GFP_KERNEL);
-@@ -2049,13 +2050,13 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
+@@ -2049,13 +2049,13 @@ static int __tun_set_steering_ebpf(struct tun_struct *tun,
  	}
  
  	spin_lock_bh(&tun->lock);
@@ -94,7 +93,7 @@ index e367d631..d29fa81 100644
  
  	return 0;
  }
-@@ -2068,7 +2069,7 @@ static void tun_free_netdev(struct net_device *dev)
+@@ -2068,7 +2068,7 @@ static void tun_free_netdev(struct net_device *dev)
  	free_percpu(tun->pcpu_stats);
  	tun_flow_uninit(tun);
  	security_tun_dev_free_security(tun->security);
@@ -103,7 +102,7 @@ index e367d631..d29fa81 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2550,7 +2551,8 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+@@ -2550,7 +2550,8 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
  	return ret;
  }
  
@@ -113,7 +112,7 @@ index e367d631..d29fa81 100644
  {
  	struct bpf_prog *prog;
  	int fd;
-@@ -2566,7 +2568,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
+@@ -2566,7 +2567,7 @@ static int tun_set_steering_ebpf(struct tun_struct *tun, void __user *data)
  			return PTR_ERR(prog);
  	}
  
@@ -122,7 +121,7 @@ index e367d631..d29fa81 100644
  }
  
  static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
-@@ -2846,7 +2848,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2846,7 +2847,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
  	case TUNSETSTEERINGEBPF:
