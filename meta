@@ -1,8 +1,8 @@
 Version: 1
-Previous: 111d5688a3a59804fce871c3fae8ab2ccea59d46
-Head: 772683183cce6b8ad7b1fcfb7871808dd9829730
+Previous: e220af5b128189f8efd9baed14490137215b6573
+Head: a4f3abd14f9691221a70ea683150bc1e1e8bf706
 Applied:
-  tun-tap-use-ptr_ring-instead: 772683183cce6b8ad7b1fcfb7871808dd9829730
+  tun-tap-use-ptr_ring-instead: a4f3abd14f9691221a70ea683150bc1e1e8bf706
 Unapplied:
   tuntap-xdp-transmission: 234d8b928a0a1dbdcd7161c0b9346e50f070221b
   tuntap-introduce-peer-mode: 2fdc7e8e12cf7eb66e8c45c156ac169fa1c7bc46

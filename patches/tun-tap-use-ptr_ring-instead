@@ -5,8 +5,9 @@ Date:   2017-11-14 16:18:12 +0800
 
 tun/tap: use ptr_ring instead of skb_array
 
-This patch switches to use ptr_ring instead of skb_array. This is
-needed since we may want to queue XDP buffer into the queue.
+This patch switches to use ptr_ring instead of skb_array. This will be
+used to enqueue different types of pointers by encoding type into
+lower bits.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
