@@ -915,7 +915,6 @@ static int run_filter(struct tap_filter *filter, const struct sk_buff *skb)
 	return 0;
 }
 
-
 /*
  * Checks whether the packet is accepted or not.
  * Returns: 0 - drop, !=0 - accept
