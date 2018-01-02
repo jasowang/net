@@ -5,6 +5,8 @@ Date:   2018-01-02 15:01:59 +0800
 
 vhost-net: batch used ring updating
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
