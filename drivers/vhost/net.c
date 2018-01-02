@@ -762,6 +762,7 @@ static void handle_rx(struct vhost_net *net)
 	struct socket *sock;
 	struct iov_iter fixup;
 	__virtio16 num_buffers;
+	int num_heads = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -784,7 +785,7 @@ static void handle_rx(struct vhost_net *net)
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		sock_len += sock_hlen;
 		vhost_len = sock_len + vhost_hlen;
-		headcount = get_rx_bufs(vq, vq->heads, vhost_len,
+		headcount = get_rx_bufs(vq, vq->heads + num_heads, vhost_len,
 					&in, vq_log, &log,
 					likely(mergeable) ? UIO_MAXIOV : 1);
 		/* On error, stop handling until the next kick. */
@@ -856,8 +857,13 @@ static void handle_rx(struct vhost_net *net)
 			vhost_discard_vq_desc(vq, headcount);
 			goto out;
 		}
-		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-					    headcount);
+
+		num_heads += headcount;
+		if (unlikely(num_heads > UIO_MAXIOV)) {
+			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+						    num_heads);
+			num_heads = 0;
+		}
 		if (unlikely(vq_log))
 			vhost_log_write(vq, vq_log, log, vhost_len);
 		total_len += vhost_len;
@@ -868,6 +874,8 @@ static void handle_rx(struct vhost_net *net)
 	}
 	vhost_net_enable_vq(net, vq);
 out:
+	if (num_heads)
+		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads, num_heads);
 	mutex_unlock(&vq->mutex);
 }
 
