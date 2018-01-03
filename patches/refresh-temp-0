@@ -1,0 +1,40 @@
+Bottom: eee8302d7c5c690df7a239d32166dd9ef1fa3e2d
+Top:    c0924c006f639c2743d912e3077037bd7f9fb346
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-03 17:47:14 +0800
+
+Refresh of tuntap-xdp-transmission
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index aff4d0e..c277dc6 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1254,6 +1254,7 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
+ 		ret = -ENOSPC;
+ 		goto out;
+ 	}
++
+ 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
+ 					    numqueues]);
+ 	/* Encode the XDP flag into lowest bit for consumer to differ
+@@ -1278,15 +1279,17 @@ static void tun_xdp_flush(struct net_device *dev)
+ 	rcu_read_lock();
+ 
+ 	numqueues = READ_ONCE(tun->numqueues);
+-	BUG_ON(!numqueues);
++	if (!numqueues)
++		goto out;
++
+ 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
+ 					    numqueues]);
+-
+ 	/* Notify and wake up reader process */
+ 	if (tfile->flags & TUN_FASYNC)
+ 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
+ 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+ 
++out:
+ 	rcu_read_unlock();
+ }
