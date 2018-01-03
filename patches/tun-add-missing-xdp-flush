@@ -5,6 +5,8 @@ Date:   2018-01-03 16:22:59 +0800
 
 tun: add missing xdp flush
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
