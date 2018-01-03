@@ -2102,8 +2102,10 @@ static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 
 	tun_debug(KERN_INFO, tun, "tun_do_read\n");
 
-	if (!iov_iter_count(to))
+	if (!iov_iter_count(to)) {
 		tun_ptr_free(ptr);
+		return 0;
+	}
 
 	if (!ptr) {
 		/* Read frames from ring */
