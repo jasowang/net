@@ -8,7 +8,7 @@ tuntap: XDP transmission
 This patch implements XDP transmission for TAP. Since we can't create
 new queues for TAP during XDP set, exist ptr_ring was reused for
 queuing XDP buffers. To differ xdp_buff from sk_buff, TUN_XDP_FLAG
-(0x1ULL) was encoded into lowest bit of xpd_buff pointer during
+(0x1UL) was encoded into lowest bit of xpd_buff pointer during
 ptr_ring_produce, and was decoded during consuming. XDP metadata was
 stored in the headroom of the packet which should work in most of
 cases since driver usually reserve enough headroom. Very minor changes
@@ -17,8 +17,9 @@ the type of pointer.
 
 Tests was done on two Intel E5-2630 2.40GHz machines connected back to
 back through two 82599ES. Traffic were generated through MoonGen and
-testpmd(rxonly) in guest reports 2.97Mpps when xdp_redirect_map is
-doing redirection from ixgbe to TAP.
+testpmd(rxonly) in guest reports ~20% improvements when when
+xdp_redirect_map is doing redirection from ixgbe to TAP (from 2.50Mpps
+to 3.05Mpps)
 
 Cc: Jesper Dangaard Brouer <brouer@redhat.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
