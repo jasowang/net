@@ -17,7 +17,7 @@
 
 #include <uapi/linux/if_tun.h>
 
-#define TUN_XDP_FLAG 0x1ULL
+#define TUN_XDP_FLAG 0x1UL
 
 #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
 struct socket *tun_get_socket(struct file *);
