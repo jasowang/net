@@ -1,5 +1,5 @@
 Bottom: 3d340063dbc09a706789fe042bd55b751edacbf2
-Top:    c62a01a0bf616e40a4954ddb9e62ae9c44de5ef6
+Top:    211afc2443ea9c1462f3e0b909def1f5a27af6be
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-11-15 07:51:02 -0500
 
@@ -401,14 +401,14 @@ index c316555..a5a1db6 100644
  
  static void vhost_net_buf_init(struct vhost_net_buf *rxq)
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
-index bdee9b8..1cafdc2 100644
+index bdee9b8..08e6682 100644
 --- a/include/linux/if_tun.h
 +++ b/include/linux/if_tun.h
 @@ -17,9 +17,14 @@
  
  #include <uapi/linux/if_tun.h>
  
-+#define TUN_XDP_FLAG 0x1ULL
++#define TUN_XDP_FLAG 0x1UL
 +
  #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
  struct socket *tun_get_socket(struct file *);
