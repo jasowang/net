@@ -1254,6 +1254,7 @@ static int tun_xdp_xmit(struct net_device *dev, struct xdp_buff *xdp)
 		ret = -ENOSPC;
 		goto out;
 	}
+
 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
 					    numqueues]);
 	/* Encode the XDP flag into lowest bit for consumer to differ
@@ -1278,15 +1279,17 @@ static void tun_xdp_flush(struct net_device *dev)
 	rcu_read_lock();
 
 	numqueues = READ_ONCE(tun->numqueues);
-	BUG_ON(!numqueues);
+	if (!numqueues)
+		goto out;
+
 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
 					    numqueues]);
-
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 
+out:
 	rcu_read_unlock();
 }
 
