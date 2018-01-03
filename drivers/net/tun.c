@@ -1271,12 +1271,22 @@ out:
 static void tun_xdp_flush(struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
-	struct tun_file *tfile = tun->tfiles[0];
+	struct tun_file *tfile;
+	u32 numqueues;
+
+	rcu_read_lock();
+
+	numqueues = READ_ONCE(tun->numqueues);
+	BUG_ON(!numqueues);
+	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
+					    numqueues]);
 
 	/* Notify and wake up reader process */
 	if (tfile->flags & TUN_FASYNC)
 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+
+	rcu_read_unlock();
 }
 
 static const struct net_device_ops tap_netdev_ops = {
