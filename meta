@@ -1,10 +1,10 @@
 Version: 1
-Previous: 9a113a9b01e9e97c7d9b538d966ba04a7e61f72e
-Head: 063288764ce269e1980140280120dedeee9c396e
+Previous: 1d93a2e23e9025544351f6a947e5df3c930deb18
+Head: 230026c7781d2c37342d302ffa21ccf137102525
 Applied:
   tun-add-missing-xdp-flush: a4a31ed11958b7840abc8f5142eeb4b0ce0e7b42
   tun-tap-use-ptr_ring-instead: 9e39c76dd44e3098bbc8bd767bff3eacdee4b252
-  tuntap-xdp-transmission: 063288764ce269e1980140280120dedeee9c396e
+  tuntap-xdp-transmission: 230026c7781d2c37342d302ffa21ccf137102525
 Unapplied:
   vhost-net-batch-used-ring: 12b17680efd1c9f4a190ec92fd3fac751425d551
   tuntap-introduce-peer-mode: 2fdc7e8e12cf7eb66e8c45c156ac169fa1c7bc46
