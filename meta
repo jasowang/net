@@ -1,10 +1,9 @@
 Version: 1
-Previous: 903108b52cca9ccd47f5910db94b4285c668081b
-Head: fb22bac6e20ff71cfbe7a3c382ac5579fd53adc8
+Previous: 823fea4786b2e606af329f724a362fa752bc6140
+Head: d67fd2b16029b43393834c142c0e8e901fd333d9
 Applied:
   tun-tap-use-ptr_ring-instead: a4f3abd14f9691221a70ea683150bc1e1e8bf706
-  tuntap-xdp-transmission: cfaec27eee2f29884697df1fc27752d9950b7f4d
-  refresh-temp-0: fb22bac6e20ff71cfbe7a3c382ac5579fd53adc8
+  tuntap-xdp-transmission: d67fd2b16029b43393834c142c0e8e901fd333d9
 Unapplied:
   vhost-net-batch-used-ring: 12b17680efd1c9f4a190ec92fd3fac751425d551
   tuntap-introduce-peer-mode: 2fdc7e8e12cf7eb66e8c45c156ac169fa1c7bc46
