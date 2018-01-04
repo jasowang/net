@@ -1,9 +1,8 @@
 Version: 1
-Previous: be3dddbd5ffb886140d1d1d9d4ade7a8d48777bf
-Head: 872227ab9f7f95a7e89493286df8e4e6c7726b8c
+Previous: b5d4f803208e8fd68390ee5113f5e970b7b31139
+Head: fb9f2a1734f55ff5e4a82360ff70b7c66f2165e4
 Applied:
-  tun-tap-use-ptr_ring-instead: 00c45513a8d1ac3dbef4d915abe80f0d9368b5db
-  refresh-temp: 872227ab9f7f95a7e89493286df8e4e6c7726b8c
+  tun-tap-use-ptr_ring-instead: fb9f2a1734f55ff5e4a82360ff70b7c66f2165e4
 Unapplied:
   tun-add-missing-xdp-flush: a4a31ed11958b7840abc8f5142eeb4b0ce0e7b42
   tuntap-xdp-transmission: 230026c7781d2c37342d302ffa21ccf137102525
