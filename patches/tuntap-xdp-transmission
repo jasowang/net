@@ -15,9 +15,9 @@ cases since driver usually reserve enough headroom. Very minor changes
 were done for vhost_net: it just need to peek the length depends on
 the type of pointer.
 
-Tests was done on two Intel E5-2630 2.40GHz machines connected back to
-back through two 82599ES. Traffic were generated and received through
-MoonGen and testpmd(rxonly). It reports ~20% improvements when
+Tests were done on two Intel E5-2630 2.40GHz machines connected back
+to back through two 82599ES. Traffic were generated/received through
+MoonGen/testpmd(rxonly). It reports ~20% improvements when
 xdp_redirect_map is doing redirection from ixgbe to TAP (from 2.50Mpps
 to 3.05Mpps)
 
