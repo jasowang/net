@@ -1,5 +1,5 @@
-Bottom: c62a01a0bf616e40a4954ddb9e62ae9c44de5ef6
-Top:    a4a2fa76d5fe691c3e2f3b5e0da28397305bfcf3
+Bottom: a2deb7cf0ffc083566b6db6d7cef91c79198134b
+Top:    0a52388546310c33b68732c98e2dd9b2441a138c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-02 15:01:59 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index a5a1db6..c4ecaaa 100644
+index c7bdeb6..04f1a89 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -762,6 +762,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -750,6 +750,7 @@ static void handle_rx(struct vhost_net *net)
  	struct socket *sock;
  	struct iov_iter fixup;
  	__virtio16 num_buffers;
@@ -22,7 +22,7 @@ index a5a1db6..c4ecaaa 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -784,7 +785,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -772,7 +773,7 @@ static void handle_rx(struct vhost_net *net)
  	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
  		sock_len += sock_hlen;
  		vhost_len = sock_len + vhost_hlen;
@@ -31,7 +31,7 @@ index a5a1db6..c4ecaaa 100644
  					&in, vq_log, &log,
  					likely(mergeable) ? UIO_MAXIOV : 1);
  		/* On error, stop handling until the next kick. */
-@@ -856,8 +857,13 @@ static void handle_rx(struct vhost_net *net)
+@@ -844,8 +845,13 @@ static void handle_rx(struct vhost_net *net)
  			vhost_discard_vq_desc(vq, headcount);
  			goto out;
  		}
@@ -47,7 +47,7 @@ index a5a1db6..c4ecaaa 100644
  		if (unlikely(vq_log))
  			vhost_log_write(vq, vq_log, log, vhost_len);
  		total_len += vhost_len;
-@@ -868,6 +874,8 @@ static void handle_rx(struct vhost_net *net)
+@@ -856,6 +862,8 @@ static void handle_rx(struct vhost_net *net)
  	}
  	vhost_net_enable_vq(net, vq);
  out:
