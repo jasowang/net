@@ -1,5 +1,5 @@
 Bottom: 6a7a8be2ae7814fb0a44ccc253cf0545c0899978
-Top:    29df4345a0ed6ff13e96c33432579abcc1af3637
+Top:    76871285f259692765aacfd8cf7b84cb63af2fc1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-12-21 15:22:45 +0800
 
@@ -16,18 +16,23 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0853829..6e9452b 100644
+index 0853829..9fc8b70 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -238,6 +238,7 @@ struct tun_struct {
+@@ -238,6 +238,12 @@ struct tun_struct {
  	struct tun_pcpu_stats __percpu *pcpu_stats;
  	struct bpf_prog __rcu *xdp_prog;
  	struct tun_prog __rcu *steering_prog;
 +	struct tun_prog __rcu *filter_prog;
++};
++
++struct veth {
++	__be16 h_vlan_proto;
++	__be16 h_vlan_TCI;
  };
  
  static int tun_napi_receive(struct napi_struct *napi, int budget)
-@@ -984,12 +985,25 @@ static void tun_automq_xmit(struct tun_struct *tun, struct sk_buff *skb)
+@@ -984,12 +990,25 @@ static void tun_automq_xmit(struct tun_struct *tun, struct sk_buff *skb)
  #endif
  }
  
@@ -53,24 +58,36 @@ index 0853829..6e9452b 100644
  
  	rcu_read_lock();
  	tfile = rcu_dereference(tun->tfiles[txq]);
-@@ -1015,9 +1029,16 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1015,6 +1034,16 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	    sk_filter(tfile->socket.sk, skb))
  		goto drop;
  
 +	len = run_ebpf_filter(tun, skb, len);
-+	if (!len)
++
++	/* Trim extra bytes since we may inster vlan proto & TCI
++	 * in tun_put_user().
++	 */
++	if (skb_vlan_tag_present(skb))
++		len -= skb_vlan_tag_present(skb) ? sizeof(struct veth) : 0;
++	if (len <= 0 || pskb_trim(skb, len))
 +		goto drop;
 +
  	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
  		goto drop;
  
-+	if (pskb_trim(skb, len))
-+		goto drop;
-+
- 	skb_tx_timestamp(skb);
+@@ -1904,10 +1933,7 @@ static ssize_t tun_put_user(struct tun_struct *tun,
  
- 	/* Orphan the skb - required as we might hang on to it
-@@ -2068,6 +2089,7 @@ static void tun_free_netdev(struct net_device *dev)
+ 	if (vlan_hlen) {
+ 		int ret;
+-		struct {
+-			__be16 h_vlan_proto;
+-			__be16 h_vlan_TCI;
+-		} veth;
++		struct veth veth;
+ 
+ 		veth.h_vlan_proto = skb->vlan_proto;
+ 		veth.h_vlan_TCI = htons(skb_vlan_tag_get(skb));
+@@ -2068,6 +2094,7 @@ static void tun_free_netdev(struct net_device *dev)
  	tun_flow_uninit(tun);
  	security_tun_dev_free_security(tun->security);
  	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
@@ -78,7 +95,7 @@ index 0853829..6e9452b 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2849,6 +2871,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -2849,6 +2876,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
  		break;
  
