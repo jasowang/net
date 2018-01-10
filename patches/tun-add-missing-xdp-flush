@@ -1,5 +1,5 @@
 Bottom: 46d34ba391ffe226686525343fa2d688870d332b
-Top:    50c1c5b31d11a28609eb411d803662c3b6fabd80
+Top:    540a6bed84d78ccd4e70c6cf7dd7860556aca532
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-03 16:22:59 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2fba3be..538b818 100644
+index 2fba3be..6d75106 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -181,6 +181,7 @@ struct tun_file {
@@ -22,14 +22,14 @@ index 2fba3be..538b818 100644
  };
  
  struct tun_flow_entry {
-@@ -1634,6 +1635,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
- 			if (err)
- 				goto err_redirect;
+@@ -1629,6 +1630,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+ 		switch (act) {
+ 		case XDP_REDIRECT:
 +			tfile->xdp_flush_needed = true;
- 			rcu_read_unlock();
- 			return NULL;
- 		case XDP_TX:
+ 			get_page(alloc_frag->page);
+ 			alloc_frag->offset += buflen;
+ 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
 @@ -1952,6 +1954,11 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
  	result = tun_get_user(tun, tfile, NULL, from,
  			      file->f_flags & O_NONBLOCK, false);
