@@ -1,0 +1,62 @@
+Bottom: 46d34ba391ffe226686525343fa2d688870d332b
+Top:    50c1c5b31d11a28609eb411d803662c3b6fabd80
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-10 15:25:36 +0800
+
+Refresh of tun-add-missing-xdp-flush
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 2fba3be..538b818 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -181,6 +181,7 @@ struct tun_file {
+ 	struct tun_struct *detached;
+ 	struct ptr_ring tx_ring;
+ 	struct xdp_rxq_info xdp_rxq;
++	bool xdp_flush_needed;
+ };
+ 
+ struct tun_flow_entry {
+@@ -1634,6 +1635,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
+ 			if (err)
+ 				goto err_redirect;
++			tfile->xdp_flush_needed = true;
+ 			rcu_read_unlock();
+ 			return NULL;
+ 		case XDP_TX:
+@@ -1952,6 +1954,11 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
+ 	result = tun_get_user(tun, tfile, NULL, from,
+ 			      file->f_flags & O_NONBLOCK, false);
+ 
++	if (tfile->xdp_flush_needed) {
++		tfile->xdp_flush_needed = false;
++		xdp_do_flush_map();
++	}
++
+ 	tun_put(tun);
+ 	return result;
+ }
+@@ -2290,6 +2297,12 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+ 			   m->msg_flags & MSG_DONTWAIT,
+ 			   m->msg_flags & MSG_MORE);
++
++	if (tfile->xdp_flush_needed && !(m->msg_flags & MSG_MORE)) {
++		tfile->xdp_flush_needed = false;
++		xdp_do_flush_map();
++	}
++
+ 	tun_put(tun);
+ 	return ret;
+ }
+@@ -3115,6 +3128,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+ 
++	tfile->xdp_flush_needed = false;
++
+ 	return 0;
+ }
