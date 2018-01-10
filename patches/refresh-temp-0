@@ -1,0 +1,27 @@
+Bottom: 50c1c5b31d11a28609eb411d803662c3b6fabd80
+Top:    540a6bed84d78ccd4e70c6cf7dd7860556aca532
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-10 15:47:18 +0800
+
+Refresh of tun-add-missing-xdp-flush
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 538b818..6d75106 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1630,12 +1630,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+ 		switch (act) {
+ 		case XDP_REDIRECT:
++			tfile->xdp_flush_needed = true;
+ 			get_page(alloc_frag->page);
+ 			alloc_frag->offset += buflen;
+ 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
+ 			if (err)
+ 				goto err_redirect;
+-			tfile->xdp_flush_needed = true;
+ 			rcu_read_unlock();
+ 			return NULL;
+ 		case XDP_TX:
