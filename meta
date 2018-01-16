@@ -1,13 +1,11 @@
 Version: 1
-Previous: 852f7729e39b246b2a07a193e0d45e8bb493b4bf
+Previous: ea04ed57c1869fabf79f6b34147cacfe780cedbd
 Head: 007316dce7cae2b358cd67bfedcedbc26435aced
 Applied:
   tun-add-missing-xdp-flush: 007316dce7cae2b358cd67bfedcedbc26435aced
 Unapplied:
   tuntap-rename-struct-0: f16f125a42e0ef8ab26e813f53e6ba39cfff785c
   tun-allow-attach-ebpf-filter: a4588bdd02970b966c8a3ced3e5aa5212f40cc47
-  tun-tap-use-ptr_ring-instead: 9e39c76dd44e3098bbc8bd767bff3eacdee4b252
-  tuntap-xdp-transmission: 230026c7781d2c37342d302ffa21ccf137102525
   tuntap-introduce-peer-mode: 2fdc7e8e12cf7eb66e8c45c156ac169fa1c7bc46
   bpf-debug-0: 99acf6aea5fd4e30852ec9f872a04b02b3b870b7
   tuntap-rename-struct: 01aee8b31882fc2f0071913d65deadf04b10b148
