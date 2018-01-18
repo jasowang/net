@@ -163,7 +163,7 @@ struct tun_pcpu_stats {
  * other can only be read while rcu_read_lock or rtnl_lock is held.
  */
 struct tun_file {
-	struct sock sk;
+	  struct sock sk;
 	struct socket socket;
 	struct socket_wq wq;
 	struct tun_struct __rcu *tun;
