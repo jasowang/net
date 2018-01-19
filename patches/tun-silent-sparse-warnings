@@ -5,6 +5,11 @@ Date:   2018-01-19 10:55:26 +0800
 
 tun: silent sparse warnings
 
+This patch silents the following warnings:
+
+
+
+Cc: Daniel Borkmann <daniel@iogearbox.net>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
