@@ -1,8 +1,9 @@
 Version: 1
-Previous: 7e2e70d4c623c1a361351722a872025b2ecf4243
-Head: f297e6b30e13071b74dfbb0c90ccfb5334465049
+Previous: 2fb859f64d053041ca03c91ed184881e1fcc1a7f
+Head: 17fb491fe7f9f791f9b862fc96a1a1d6411241c3
 Applied:
   change: f297e6b30e13071b74dfbb0c90ccfb5334465049
+  tun-silent-sparse-warnings: 17fb491fe7f9f791f9b862fc96a1a1d6411241c3
 Unapplied:
   tun-add-missing-xdp-flush: 007316dce7cae2b358cd67bfedcedbc26435aced
   tuntap-rename-struct-0: f16f125a42e0ef8ab26e813f53e6ba39cfff785c
