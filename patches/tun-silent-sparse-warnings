@@ -5,6 +5,8 @@ Date:   2018-01-19 10:55:26 +0800
 
 tun: silent sparse warnings
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
