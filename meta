@@ -1,9 +1,8 @@
 Version: 1
-Previous: d2c5fe3916e0700003e09ec7beab784f87a84b8b
-Head: ec4847a38aec01a378585d1521ceba321402ea01
+Previous: 3e34c365374b97956e8e5bf08014cb05c2074043
+Head: 0ea2907e1eb20c0f827ce9b52ba138fd3f7bec39
 Applied:
-  vhost-introduce-helper-to: 40864d5268592bafa901537cbfb1f50ecdea5cd1
-  helper-fix: ec4847a38aec01a378585d1521ceba321402ea01
+  vhost-introduce-helper-to: 0ea2907e1eb20c0f827ce9b52ba138fd3f7bec39
 Unapplied:
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
 Hidden:
