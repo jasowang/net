@@ -1,7 +1,7 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    f0373dc0cad41c9ddc737b43e98ceaabe0c77de8
+Top:    8b213b3f73746490d49b3684d41a13fe3da251b0
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-01-22 18:42:33 +0800
+Date:   2018-01-22 18:45:23 +0800
 
 vhost: introduce helper to prefetch desc index
 
@@ -15,10 +15,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..3322b82 100644
+index 33ac2b1..f0d9765 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2414,6 +2414,39 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+@@ -440,6 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
+ 		vq->indirect = NULL;
+ 		vq->heads = NULL;
+ 		vq->dev = dev;
++		vq->descq.head = vq->descq.tail = 0;
+ 		mutex_init(&vq->mutex);
+ 		vhost_vq_reset(dev, vq);
+ 		if (vq->handle_kick)
+@@ -2414,6 +2415,39 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
  }
  EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
@@ -58,3 +66,30 @@ index 33ac2b1..3322b82 100644
  
  static int __init vhost_init(void)
  {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 79c6e7a..9a188fe 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -84,6 +84,13 @@ enum vhost_uaddr_type {
+ 	VHOST_NUM_ADDRS = 3,
+ };
+ 
++struct vhost_vring_desc {
++	struct vring_desc descs[64];
++	__virtio16 indices[64];
++	int head;
++	int tail;
++};
++
+ /* The virtqueue structure describes a queue attached to a device. */
+ struct vhost_virtqueue {
+ 	struct vhost_dev *dev;
+@@ -150,6 +157,8 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++
++	struct vhost_vring_desc descq;
+ };
+ 
+ struct vhost_msg_node {
