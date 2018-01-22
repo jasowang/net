@@ -5,6 +5,8 @@ Date:   2018-01-22 17:58:22 +0800
 
 vhost_net: descriptor batch dequeueing
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
