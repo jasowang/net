@@ -1,12 +1,12 @@
 Version: 1
-Previous: 56d280dca1e1debd6d6c347c71f59419b0de6608
-Head: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
+Previous: 24541d6acd52ca1afb0f5f3221fe7ddca13c0ff4
+Head: ebdd7b491b8a65d65936e07004caabca4a3c94a0
 Applied:
+Unapplied:
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
   tun-add-missing-xdp-flush: 6ece119110c04cdc6f9c912d2d6e8ba44eeed5a4
   virtio-net-add-missing: 50ad053396450d5017be57f6e36d0846f6bd847e
   tuntap-xdp_tx-can-use-native: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
-Unapplied:
   vhost-descriptor-batch: 2b89a97d3e251b4d473ee1f0f8784818bb1ca43b
   vhost-introduce-helper-to-1: 6d95c2637dfa165f9f5f3c3ba4bfb0e8b23d6a56
   vhost_net-descriptor-batch: bdb255ec17ebeb1a4f72f764cb521a9f5334da82
