@@ -3,7 +3,7 @@ Top:    fc06a8968b7fb49657ca8d0fc1f7a87243cd4d54
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 10:25:52 +0800
 
-tun: slient sparse warning about missing rcu annotations
+tun: slient sparse warning about missing rcu annotation
 
 This patch fixes the following sparse warnings:
 
