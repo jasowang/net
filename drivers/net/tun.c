@@ -1678,7 +1678,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			err = tun_xdp_xmit(tun->dev, &xdp);
 			if (err)
 				goto err_redirect;
-			rcu_read_unock();
+			rcu_read_unlock();
 			tfile->xdp_flush_needed = true;
 			return NULL;
 		case XDP_PASS:
