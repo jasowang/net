@@ -1,11 +1,10 @@
 Version: 1
-Previous: 48b5a37d01aaffdab85d1d6c56dda594aee9229c
-Head: 19ae4da271a20f310b514ea5912b808fd36d4240
+Previous: 88a9afc055b228abb209de582ca9ce896f952f5b
+Head: 50ad053396450d5017be57f6e36d0846f6bd847e
 Applied:
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
   tun-add-missing-xdp-flush: 6ece119110c04cdc6f9c912d2d6e8ba44eeed5a4
-  virtio-net-add-missing: 2db28a46ffb598c8c6d6bcdf0389497eda5c5e0b
-  refresh-temp-0: 19ae4da271a20f310b514ea5912b808fd36d4240
+  virtio-net-add-missing: 50ad053396450d5017be57f6e36d0846f6bd847e
 Unapplied:
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
   tun-silent-sparse-warnings: 24d58e019205145cb52104210bee6670a77d5e71
