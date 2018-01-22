@@ -1,5 +1,5 @@
 Version: 1
-Previous: 52ffa6221ca43ff93039a0bb01c64bb419e94179
+Previous: 9065a16b6f920c95c11dc93d262c24298794fb11
 Head: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
 Applied:
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
@@ -9,8 +9,6 @@ Applied:
 Unapplied:
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
   tun-silent-sparse-warnings: 24d58e019205145cb52104210bee6670a77d5e71
-  tuntap-rename-struct-0: f16f125a42e0ef8ab26e813f53e6ba39cfff785c
-  tun-allow-attach-ebpf-filter: a4588bdd02970b966c8a3ced3e5aa5212f40cc47
   tuntap-introduce-peer-mode: 2fdc7e8e12cf7eb66e8c45c156ac169fa1c7bc46
   bpf-debug-0: 99acf6aea5fd4e30852ec9f872a04b02b3b870b7
   tuntap-rename-struct: 01aee8b31882fc2f0071913d65deadf04b10b148
