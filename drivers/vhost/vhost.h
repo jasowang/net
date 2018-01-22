@@ -84,6 +84,13 @@ enum vhost_uaddr_type {
 	VHOST_NUM_ADDRS = 3,
 };
 
+struct vhost_descs {
+	struct vring_desc descs[64];
+	__virtio32 indices[64];
+	int head;
+	int tail;
+};
+
 /* The virtqueue structure describes a queue attached to a device. */
 struct vhost_virtqueue {
 	struct vhost_dev *dev;
@@ -150,6 +157,8 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
+
+	struct vhost_descs descs;
 };
 
 struct vhost_msg_node {
