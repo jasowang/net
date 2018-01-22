@@ -1,5 +1,5 @@
 Bottom: 821fa02d28ae39e1811861253577aa3867197b6f
-Top:    821fa02d28ae39e1811861253577aa3867197b6f
+Top:    bf70d66b180246030ab13fa7e96ebe3a23ac8734
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 17:58:22 +0800
 
@@ -8,4 +8,40 @@ vhost_net: descriptor batch dequeueing
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 7baa90a..4b11b90 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -110,6 +110,7 @@ struct vhost_net_virtqueue {
+ 	struct vhost_net_ubuf_ref *ubufs;
+ 	struct ptr_ring *rx_ring;
+ 	struct vhost_net_buf rxq;
++	struct vhost_net_buf descq;
+ };
+ 
+ struct vhost_net {
+@@ -915,6 +916,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	struct vhost_net *n;
+ 	struct vhost_dev *dev;
+ 	struct vhost_virtqueue **vqs;
++	struct vring_desc *descq;
+ 	void **queue;
+ 	int i;
+ 
+@@ -936,6 +938,16 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	}
+ 	n->vqs[VHOST_NET_VQ_RX].rxq.queue = queue;
+ 
++	descq = kmalloc_array(VHOST_RX_BATCH, sizeof(struct vring_desc),
++			      GFP_KERNEL);
++	if (!descq) {
++		kfree(vqs);
++		kvfree(n);
++		kfree(queue);
++		return -ENOMEM;
++	}
++	n->vqs[VHOST_NET_VQ_RX].descq.queue = (void **)descq;
++
+ 	dev = &n->dev;
+ 	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX].vq;
+ 	vqs[VHOST_NET_VQ_RX] = &n->vqs[VHOST_NET_VQ_RX].vq;
