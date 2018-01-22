@@ -1243,8 +1243,10 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
 	if (received < budget)
 		virtqueue_napi_complete(napi, rq->vq, received);
 
-	if (xdp_xmit)
+	if (xdp_xmit) {
+		virtqueue_kick(rq->vq);
 		xdp_do_flush_map();
+	}
 
 	return received;
 }
