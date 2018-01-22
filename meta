@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2e3390565aa9fe9178691166d181c7e0bd71a967
-Head: e00881376ab30d03e327afa167d213fbd222481c
+Previous: b2489a963e1497ab707bf9ed80a7dfb69e28a2e7
+Head: b6967fbe76940803b0921a8cc4d66d326b91c5c5
 Applied:
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
   tun-add-missing-xdp-flush: 6ece119110c04cdc6f9c912d2d6e8ba44eeed5a4
@@ -8,6 +8,7 @@ Applied:
   tuntap-xdp_tx-can-use-native: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
   vhost_net-descriptor-batch: bdb255ec17ebeb1a4f72f764cb521a9f5334da82
   vhost-descriptor-batch: e00881376ab30d03e327afa167d213fbd222481c
+  refresh-temp-0: b6967fbe76940803b0921a8cc4d66d326b91c5c5
 Unapplied:
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
   tun-silent-sparse-warnings: 24d58e019205145cb52104210bee6670a77d5e71
