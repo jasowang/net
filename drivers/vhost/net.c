@@ -110,6 +110,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
+	struct vhost_net_buf descq;
 };
 
 struct vhost_net {
@@ -915,6 +916,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	struct vhost_net *n;
 	struct vhost_dev *dev;
 	struct vhost_virtqueue **vqs;
+	struct vring_desc *descq;
 	void **queue;
 	int i;
 
@@ -935,6 +937,16 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		return -ENOMEM;
 	}
 	n->vqs[VHOST_NET_VQ_RX].rxq.queue = queue;
+
+	descq = kmalloc_array(VHOST_RX_BATCH, sizeof(struct vring_desc),
+			      GFP_KERNEL);
+	if (!descq) {
+		kfree(vqs);
+		kvfree(n);
+		kfree(queue);
+		return -ENOMEM;
+	}
+	n->vqs[VHOST_NET_VQ_RX].descq.queue = (void **)descq;
 
 	dev = &n->dev;
 	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX].vq;
