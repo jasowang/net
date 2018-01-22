@@ -1,0 +1,17 @@
+Bottom: c2cb5827d5058d1c60153dfc5585a8f00476bbc3
+Top:    c2cb5827d5058d1c60153dfc5585a8f00476bbc3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-22 17:07:03 +0800
+
+virtio-net: add missing virtqueue kick when flushing packets
+
+We tends to batch submitting packets during XDP_TX. This requires to
+kick virtqueue after a batch, we tried to do it through
+xdp_do_flush_map() which only makes sense for the case of redirection
+not XDP_TX. So explicit kick the virtqueue in this case.
+
+
+
+---
+
+
