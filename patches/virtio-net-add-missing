@@ -10,6 +10,7 @@ kick virtqueue after a batch, we tried to do it through
 xdp_do_flush_map() which only makes sense for the case of redirection
 not XDP_TX. So explicit kick the virtqueue in this case.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
