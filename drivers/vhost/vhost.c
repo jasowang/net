@@ -440,6 +440,9 @@ void vhost_dev_init(struct vhost_dev *dev,
 		vq->indirect = NULL;
 		vq->heads = NULL;
 		vq->dev = dev;
+		vq->descs.head = vq->descs.tail = 0;
+		vq->indices.head = vq->indices.tail = 0;
+		memset(&vq->descs.last_desc, 0, sizeof(vq->descs.last_desc));
 		mutex_init(&vq->mutex);
 		vhost_vq_reset(dev, vq);
 		if (vq->handle_kick)
@@ -1982,6 +1985,110 @@ static int get_indirect(struct vhost_virtqueue *vq,
 		}
 	} while ((i = next_desc(vq, &desc)) != -1);
 	return 0;
+}
+
+static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+{
+	struct vhost_indices *indices = &vq->indices;
+	u16 last_avail_idx, total;
+	__virtio16 avail_idx;
+	__virtio32 *heads = indices->indices;
+	int ret, ret2;
+	int i;
+
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
+
+	for (i = 0; i < ret; i++) {
+		ret2 = vhost_get_avail(vq, heads[i],
+				      &vq->avail->ring[last_avail_idx]);
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
+	}
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
+	indices->head = ret;
+	indices->tail = 0;
+	return ret;
+}
+
+static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+{
+	struct vhost_indices *indices = &vq->indices;
+	struct vhost_descs *descs = &vq->descs;
+	struct vring_desc *desc = &descs->last_desc;
+	__virtio16 head;
+	int ret;
+
+	descs->head = descs->tail = 0;
+
+	while ((head = next_desc(vq, desc)) != -1 && descs->head < num) {
+		desc = &descs->descs[descs->head];
+		ret = vhost_copy_from_user(vq, desc,
+					   vq->desc + head,
+					   sizeof *desc);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to get descriptor: "
+				"idx %d addr %p\n",
+				head, vq->desc + head);
+			goto err;
+		}
+		descs->head++;
+	}
+
+	if (unlikely(descs->head == num)) {
+		descs->last_desc = descs->descs[num - 1];
+		return descs->head;
+	}
+
+	if (unlikely(indices->head == indices->tail) ||
+	    unlikely(vhost_read_indices(vq, num) < 0))
+		goto err;
+
+	descs->last_desc.flags = 0;
+	while (indices->tail < indices->head) {
+		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
+		while(1) {
+			desc = &descs->descs[descs->head];
+			ret = vhost_copy_from_user(vq, desc,
+						   vq->desc + head,
+						   sizeof *desc);
+			if (unlikely(ret)) {
+				vq_err(vq, "Failed to get descriptor: "
+					   "idx %d addr %p\n",
+					   head, vq->desc + head);
+				goto err;
+			}
+
+			descs->head++;
+			if (descs->head == num) {
+				descs->last_desc = *desc;
+				goto done;
+			}
+
+			head = next_desc(vq, desc);
+			if (head == -1)
+				goto done;
+		}
+	}
+
+done:
+	return descs->head;
+
+err:
+	descs->last_desc.flags = 0;
+	return ret;
 }
 
 /* This looks in the virtqueue and for the first available buffer, and converts
