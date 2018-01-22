@@ -2419,9 +2419,8 @@ static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
 				   u16 num)
 {
 	int ret, ret2;
-	u16 last_avail_idx, last_used_idx, total, copied;
+	u16 last_avail_idx, total;
 	__virtio16 avail_idx;
-	struct vring_used_elem __user *used;
 	int i;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
