@@ -86,6 +86,7 @@ enum vhost_uaddr_type {
 
 struct vhost_vring_desc {
 	struct vring_desc descs[64];
+	__virtio16 indices[64];
 	int head;
 	int tail;
 };
