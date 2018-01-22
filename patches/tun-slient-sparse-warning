@@ -7,8 +7,9 @@ tun: slient sparse warning about missing rcu annotation
 
 This patch fixes the following sparse warnings:
 
+drivers/net/tun.c:2241:15: error: incompatible types in comparison expression (different address spaces)
 
-
+Cc: Daniel Borkmann <daniel@iogearbox.net>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
