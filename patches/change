@@ -1,5 +1,5 @@
-Bottom: 850780b7e5b6a563c727f6d45d891c1d550d83c7
-Top:    daf0bf9a68aacfb0c0608e4768cc407d06d8f336
+Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
+Top:    807796f8409e6e6378a24397624ca63fd2c2b33a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-18 17:58:03 +0800
 
@@ -9,7 +9,7 @@ change
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 170a3e8..a87bfe1 100644
+index 6988746..79a62ae 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -163,7 +163,7 @@ struct tun_pcpu_stats {
