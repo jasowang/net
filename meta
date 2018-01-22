@@ -1,8 +1,9 @@
 Version: 1
-Previous: 3e34c365374b97956e8e5bf08014cb05c2074043
-Head: 0ea2907e1eb20c0f827ce9b52ba138fd3f7bec39
+Previous: 582683c286aefc02290a0f9693f0071bf7837ca2
+Head: 3122226d3e2a6a99fb32a1f42193a90f378ded8f
 Applied:
   vhost-introduce-helper-to: 0ea2907e1eb20c0f827ce9b52ba138fd3f7bec39
+  refresh-temp: 3122226d3e2a6a99fb32a1f42193a90f378ded8f
 Unapplied:
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
 Hidden:
