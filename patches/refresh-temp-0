@@ -1,0 +1,23 @@
+Bottom: daf0bf9a68aacfb0c0608e4768cc407d06d8f336
+Top:    ddb3110f2faf977af210d2cd3ea92dcb8cac2f28
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-22 10:25:59 +0800
+
+Refresh of tun-slient-sparse-warning
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index a87bfe1..155a437 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2217,7 +2217,8 @@ static void tun_prog_free(struct rcu_head *rcu)
+ 	kfree(prog);
+ }
+ 
+-static int __tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
++static int __tun_set_ebpf(struct tun_struct *tun,
++			  struct tun_prog __rcu **prog_p,
+ 			  struct bpf_prog *prog)
+ {
+ 	struct tun_prog *old, *new = NULL;
