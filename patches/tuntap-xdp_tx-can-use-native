@@ -11,6 +11,8 @@ were implemented. So switch to use native XDP transmission routine to
 do this and reuse the xdp_flush_needed to implement some kind of
 batching by delay the notification after several packets.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

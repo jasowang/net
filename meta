@@ -1,11 +1,11 @@
 Version: 1
-Previous: bafe2ed3e6664b41a533f7e6f43fea216d889714
-Head: a69c3a305ab65b2abb9607f9291bc1f9b1a86cec
+Previous: 69a29197c25a0ed19372368c6859e6a60cc23b8b
+Head: 7a249ec6913a5759e5ed81feda15fcf337e0b234
 Applied:
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
   tun-add-missing-xdp-flush: 6ece119110c04cdc6f9c912d2d6e8ba44eeed5a4
   virtio-net-add-missing: 50ad053396450d5017be57f6e36d0846f6bd847e
-  tuntap-xdp_tx-can-use-native: a69c3a305ab65b2abb9607f9291bc1f9b1a86cec
+  tuntap-xdp_tx-can-use-native: 7a249ec6913a5759e5ed81feda15fcf337e0b234
 Unapplied:
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
   tun-silent-sparse-warnings: 24d58e019205145cb52104210bee6670a77d5e71
