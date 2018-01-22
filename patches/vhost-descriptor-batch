@@ -1,0 +1,51 @@
+Bottom: 416dfe20fb5b032eaa93cf78cb48fb9feab202ac
+Top:    b632ea184cc95d6279cd5724d92fb0d3c12b0ef8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-22 18:09:38 +0800
+
+vhost: descriptor batch dequeuing
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 088afe5..c6cc8a4 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -440,6 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
+ 		vq->indirect = NULL;
+ 		vq->heads = NULL;
+ 		vq->dev = dev;
++		vq->descq.head = vq->descq.tail = 0;
+ 		mutex_init(&vq->mutex);
+ 		vhost_vq_reset(dev, vq);
+ 		if (vq->handle_kick)
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 1527f5c..fda748c 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -84,6 +84,13 @@ enum vhost_uaddr_type {
+ 	VHOST_NUM_ADDRS = 3,
+ };
+ 
++struct vhost_vring_desc {
++	struct vring_desc descs[64];
++	__virtio16 indices[64];
++	int head;
++	int tail;
++};
++
+ /* The virtqueue structure describes a queue attached to a device. */
+ struct vhost_virtqueue {
+ 	struct vhost_dev *dev;
+@@ -150,6 +157,8 @@ struct vhost_virtqueue {
+ 	bool user_be;
+ #endif
+ 	u32 busyloop_timeout;
++
++	struct vhost_vring_desc descq;
+ };
+ 
+ struct vhost_msg_node {
