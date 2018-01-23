@@ -1,8 +1,9 @@
 Version: 1
-Previous: 2967c29db224085ad7c09caf4cd5c78364eafc59
-Head: 5d24a61b5adf455dc43a95f33cc49037337c2593
+Previous: af87c8350e8e14bfe5eb2b874cbceddd85c286dd
+Head: 791b954fe75cf7c5cdff4e840c49b942cd60f99b
 Applied:
   vhost: 5d24a61b5adf455dc43a95f33cc49037337c2593
+  refresh-temp: 791b954fe75cf7c5cdff4e840c49b942cd60f99b
 Unapplied:
   vhost-introduce-helper-to: f1fb6a6ff0cf5eb0e0ba6a03378dcf26f952fee7
 Hidden:

@@ -1,0 +1,22 @@
+Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
+Top:    291b56b86162d2d58bb2863f2a1f33aec6c9ce22
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-23 16:39:46 +0800
+
+Refresh of vhost
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 33ac2b1..549771a 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -904,7 +904,7 @@ static void vhost_dev_lock_vqs(struct vhost_dev *d)
+ {
+ 	int i = 0;
+ 	for (i = 0; i < d->nvqs; ++i)
+-		mutex_lock(&d->vqs[i]->mutex);
++		mutex_lock_nested(&d->vqs[i]->mutex, i);
+ }
+ 
+ static void vhost_dev_unlock_vqs(struct vhost_dev *d)
