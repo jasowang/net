@@ -440,7 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
 		vq->indirect = NULL;
 		vq->heads = NULL;
 		vq->dev = dev;
-		vq->descq.head = vq->descq.tail = 0;
+		vq->descs.head = vq->descs.tail = 0;
 		mutex_init(&vq->mutex);
 		vhost_vq_reset(dev, vq);
 		if (vq->handle_kick)
@@ -1985,6 +1985,47 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
+static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
+				   __virtio32 *heads,
+				   u16 num)
+{
+	int ret, ret2;
+	u16 last_avail_idx, total;
+	__virtio16 avail_idx;
+	int i;
+
+	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+		vq_err(vq, "Failed to access avail idx at %p\n",
+		       &vq->avail->idx);
+		return -EFAULT;
+	}
+	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
+	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+	total = vq->avail_idx - vq->last_avail_idx;
+	ret = total = min(total, num);
+
+	for (i = 0; i < ret; i++) {
+		ret2 = vhost_get_avail(vq, heads[i],
+				      &vq->avail->ring[last_avail_idx]);
+		if (unlikely(ret2)) {
+			vq_err(vq, "Failed to get descriptors\n");
+			return -EFAULT;
+		}
+		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
+	}
+
+	/* Only get avail ring entries after they have been exposed by guest. */
+	smp_rmb();
+	return ret;
+}
+
+static vhost_read_descs(struct vhost_virtqueue *vq)
+{
+	struct vhost_descs *descs = vq->descs;
+	int ret = vhost_read_desc_indices(vq
+	
+}
+
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two
@@ -2414,40 +2455,6 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 	return node;
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
-
-static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
-				   struct vring_used_elem *heads,
-				   u16 num)
-{
-	int ret, ret2;
-	u16 last_avail_idx, total;
-	__virtio16 avail_idx;
-	int i;
-
-	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
-		vq_err(vq, "Failed to access avail idx at %p\n",
-		       &vq->avail->idx);
-		return -EFAULT;
-	}
-	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
-	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
-	total = vq->avail_idx - vq->last_avail_idx;
-	ret = total = min(total, num);
-
-	for (i = 0; i < ret; i++) {
-		ret2 = vhost_get_avail(vq, heads[i].id,
-				      &vq->avail->ring[last_avail_idx]);
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to get descriptors\n");
-			return -EFAULT;
-		}
-		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
-	}
-
-	/* Only get avail ring entries after they have been exposed by guest. */
-	smp_rmb();
-	return ret;
-}
 
 static int __init vhost_init(void)
 {

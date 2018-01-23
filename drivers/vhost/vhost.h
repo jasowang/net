@@ -84,9 +84,9 @@ enum vhost_uaddr_type {
 	VHOST_NUM_ADDRS = 3,
 };
 
-struct vhost_vring_desc {
+struct vhost_descs {
 	struct vring_desc descs[64];
-	__virtio16 indices[64];
+	__virtio32 indices[64];
 	int head;
 	int tail;
 };
@@ -158,7 +158,7 @@ struct vhost_virtqueue {
 #endif
 	u32 busyloop_timeout;
 
-	struct vhost_vring_desc descq;
+	struct vhost_descs descs;
 };
 
 struct vhost_msg_node {
