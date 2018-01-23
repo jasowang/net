@@ -1,0 +1,24 @@
+Bottom: 291b56b86162d2d58bb2863f2a1f33aec6c9ce22
+Top:    8662d07eea81a7ed6ced3fc4d87bfcb29aacb2c4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-23 16:45:19 +0800
+
+Refresh of vhost-do-not-try-to-access
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 549771a..5727b18 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1015,6 +1015,10 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ 		vhost_iotlb_notify_vq(dev, msg);
+ 		break;
+ 	case VHOST_IOTLB_INVALIDATE:
++		if (!dev->iotlb) {
++			ret = -EFAULT;
++			break;
++		}
+ 		vhost_vq_meta_reset(dev);
+ 		vhost_del_umem_range(dev->iotlb, msg->iova,
+ 				     msg->iova + msg->size - 1);
