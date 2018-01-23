@@ -7,7 +7,10 @@ vhost: use mutex_lock_nested() in vhost_dev_lock_vqs()
 
 We used to call mutex_lock() in vhost_dev_lock_vqs() which tries to
 hold mutexes of all virtqueues. This may confuse lockdep to report a
-possible deadlock because of same lock class. Switch to use mutex_lock_nested()
+possible deadlock because of same lock class. Switch to use
+mutex_lock_nested() to avoid false positive.
+
+
 
 
 ---
