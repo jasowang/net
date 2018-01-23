@@ -6,7 +6,10 @@ Date:   2018-01-23 16:44:09 +0800
 vhost: do not try to access device IOTLB when not initialized
 
 The code will try to access dev->iotlb when processing
-VHOST_IOTLB_INVALIDATE even if it was not initialized.
+VHOST_IOTLB_INVALIDATE even if it was not initialized which may lead
+to NULL pointer dereference. Fixes this by check dev->iotlb before.
+
+Fixes:
 
 
 ---
