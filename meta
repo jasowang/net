@@ -1,8 +1,9 @@
 Version: 1
-Previous: 86b7789574a4c45d7313935037aa36ec83dc050d
-Head: 73c7eee0bfa36def063de5458f54674a844dfc0a
+Previous: d4fd4a7f1045e583b9f60fccacb9efdd18a97fd4
+Head: 76a745ac13c9ce0796db9e00b3d06c2758cd5112
 Applied:
   vhost: 73c7eee0bfa36def063de5458f54674a844dfc0a
+  vhost-do-not-try-to-access: 76a745ac13c9ce0796db9e00b3d06c2758cd5112
 Unapplied:
   vhost-introduce-helper-to: f1fb6a6ff0cf5eb0e0ba6a03378dcf26f952fee7
 Hidden:

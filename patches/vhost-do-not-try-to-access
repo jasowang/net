@@ -1,0 +1,14 @@
+Bottom: 291b56b86162d2d58bb2863f2a1f33aec6c9ce22
+Top:    291b56b86162d2d58bb2863f2a1f33aec6c9ce22
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-23 16:44:09 +0800
+
+vhost: do not try to access device IOTLB when not initialized
+
+The code will try to access dev->iotlb when processing
+VHOST_IOTLB_INVALIDATE even if it was not initialized.
+
+
+---
+
+
