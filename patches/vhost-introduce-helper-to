@@ -1,5 +1,5 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    8b213b3f73746490d49b3684d41a13fe3da251b0
+Top:    cfb25c0514733885e27dcb031bfb6d12abc8f4f4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 18:45:23 +0800
 
@@ -15,23 +15,23 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..f0d9765 100644
+index 33ac2b1..130bebc 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -440,6 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
  		vq->indirect = NULL;
  		vq->heads = NULL;
  		vq->dev = dev;
-+		vq->descq.head = vq->descq.tail = 0;
++		vq->descs.head = vq->descs.tail = 0;
  		mutex_init(&vq->mutex);
  		vhost_vq_reset(dev, vq);
  		if (vq->handle_kick)
-@@ -2414,6 +2415,39 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+@@ -1984,6 +1985,47 @@ static int get_indirect(struct vhost_virtqueue *vq,
+ 	return 0;
  }
- EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
 +static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
-+				   struct vring_used_elem *heads,
++				   __virtio32 *heads,
 +				   u16 num)
 +{
 +	int ret, ret2;
@@ -50,7 +50,7 @@ index 33ac2b1..f0d9765 100644
 +	ret = total = min(total, num);
 +
 +	for (i = 0; i < ret; i++) {
-+		ret2 = vhost_get_avail(vq, heads[i].id,
++		ret2 = vhost_get_avail(vq, heads[i],
 +				      &vq->avail->ring[last_avail_idx]);
 +		if (unlikely(ret2)) {
 +			vq_err(vq, "Failed to get descriptors\n");
@@ -63,20 +63,36 @@ index 33ac2b1..f0d9765 100644
 +	smp_rmb();
 +	return ret;
 +}
++
++static vhost_read_descs(struct vhost_virtqueue *vq)
++{
++	struct vhost_descs *descs = vq->descs;
++	int ret = vhost_read_desc_indices(vq
++	
++}
++
+ /* This looks in the virtqueue and for the first available buffer, and converts
+  * it to an iovec for convenient access.  Since descriptors consist of some
+  * number of output then some number of input descriptors, it's actually two
+@@ -2414,7 +2456,6 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+ }
+ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
  
+-
  static int __init vhost_init(void)
  {
+ 	return 0;
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 79c6e7a..9a188fe 100644
+index 79c6e7a..ffc8db2 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -84,6 +84,13 @@ enum vhost_uaddr_type {
  	VHOST_NUM_ADDRS = 3,
  };
  
-+struct vhost_vring_desc {
++struct vhost_descs {
 +	struct vring_desc descs[64];
-+	__virtio16 indices[64];
++	__virtio32 indices[64];
 +	int head;
 +	int tail;
 +};
@@ -89,7 +105,7 @@ index 79c6e7a..9a188fe 100644
  #endif
  	u32 busyloop_timeout;
 +
-+	struct vhost_vring_desc descq;
++	struct vhost_descs descs;
  };
  
  struct vhost_msg_node {
