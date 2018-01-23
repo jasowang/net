@@ -10,7 +10,7 @@ hold mutexes of all virtqueues. This may confuse lockdep to report a
 possible deadlock because of same lock class. Switch to use
 mutex_lock_nested() to avoid false positive.
 
-
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
