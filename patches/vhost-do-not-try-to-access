@@ -11,6 +11,7 @@ to NULL pointer dereference. Fixes this by check dev->iotlb before.
 
 Fixes: 6b1e6cc7855b0 ("vhost: new device IOTLB API")
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
