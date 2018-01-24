@@ -1,0 +1,44 @@
+Bottom: 599e127cb0212ecad364bb1ea693589b1e2394f9
+Top:    516c1fd4afe2ccb92509a787fd2f578880b4c459
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-24 14:48:58 +0800
+
+Refresh of vhost-introduce-helper-to
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index b966625..1a2cb8a 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2049,7 +2049,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 
+ 	if (unlikely(descs->head == num)) {
+ 		descs->last_desc = descs->descs[num - 1];
+-		return descs->head;
++		return 0;
+ 	}
+ 
+ 	if (unlikely(indices->head == indices->tail) ||
+@@ -2091,6 +2091,21 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 	return ret;
+ }
+ 
++struct vring_desc *get_next_desc(struct vhost_virtqueue *vq)
++{
++	struct vhost_descs *descs = &vq->descs;
++
++	if (descs->tail == descs->head) {
++		int ret = vhost_read_descs(vq, 64);
++		if (ret)
++			return ERR_PTR(-EFAULT);
++		if (descs->tail == descs->head)
++			return NULL;
++	}
++
++	return &descs->descs[descs->tail++];
++}
++
+ /* This looks in the virtqueue and for the first available buffer, and converts
+  * it to an iovec for convenient access.  Since descriptors consist of some
+  * number of output then some number of input descriptors, it's actually two
