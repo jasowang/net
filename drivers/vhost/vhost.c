@@ -1997,11 +1997,17 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 	int ret, ret2;
 	int i;
 
-	BUG_ON(indices->read_tail != indices->tail);
+	//BUG_ON(indices->read_tail != indices->tail);
+	printk("read indices tail %d read_tail %d head %d\n",
+		indices->tail, indices->read_tail, indices->head);
+	if (indices->read_tail != indices->tail)
+		printk("read_tail is not equal to tail\n");
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
 		       &vq->avail->idx);
+		printk("Failed to access avail idx at %p\n",
+			&vq->avail->idx);
 		return -EFAULT;
 	}
 	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
@@ -2013,11 +2019,14 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 		ret2 = vhost_get_avail(vq, heads[i],
 				      &vq->avail->ring[last_avail_idx]);
 		if (unlikely(ret2)) {
+			printk("Failed to get descriptor\n");
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 		if (unlikely(heads[i] >= vq->num)) {
 			vq_err(vq, "Guest says index %u > %u is available",
+			       heads[i], vq->num);
+			printk("Guest says index %u > %u is available",
 			       heads[i], vq->num);
 			return -EINVAL;
 		}
@@ -2050,6 +2059,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 			vq_err(vq, "Failed to get descriptor: "
 				"idx %d addr %p\n",
 				head, vq->desc + head);
+			printk("Failed to get descriptor: "
+				"idx %d addr %p\n",
+				head, vq->desc + head);
 			goto err;
 		}
 		descs->head++;
@@ -2076,6 +2088,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 				vq_err(vq, "Failed to get descriptor: "
 					   "idx %d addr %p\n",
 					   head, vq->desc + head);
+				printk("Failed to get descriptor: "
+					"idx %d addr %p\n",
+					head, vq->desc + head);
 				goto err;
 			}
 
