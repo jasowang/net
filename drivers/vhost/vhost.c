@@ -441,6 +441,8 @@ void vhost_dev_init(struct vhost_dev *dev,
 		vq->heads = NULL;
 		vq->dev = dev;
 		vq->descs.head = vq->descs.tail = 0;
+		vq->indices.head = vq->indices.tail = 0;
+		memset(&vq->descs.last_desc, 0, sizeof(vq->descs.last_desc));
 		mutex_init(&vq->mutex);
 		vhost_vq_reset(dev, vq);
 		if (vq->handle_kick)
@@ -1985,13 +1987,13 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
-				   __virtio32 *heads,
-				   u16 num)
+static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 {
-	int ret, ret2;
+	struct vhost_indices *indices = &vq->indices;
 	u16 last_avail_idx, total;
 	__virtio16 avail_idx;
+	__virtio32 *heads = indices->indices;
+	int ret, ret2;
 	int i;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
@@ -2016,14 +2018,66 @@ static int vhost_read_desc_indices(struct vhost_virtqueue *vq,
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
+	indices->head = ret;
+	indices->tail = 0;
 	return ret;
 }
 
-static vhost_read_descs(struct vhost_virtqueue *vq)
+static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 {
-	struct vhost_descs *descs = vq->descs;
-	int ret = vhost_read_desc_indices(vq
-	
+	struct vhost_indices *indices = &vq->indices;
+	struct vhost_descs *descs = &vq->descs;
+	struct vring_desc *desc = &descs->last_desc;
+	__virtio16 head;
+	int ret;
+
+	descs->head = descs->tail = 0;
+
+	while ((head = next_desc(vq, desc)) != -1 && descs->head < num) {
+		desc = &descs->descs[descs->head];
+		ret = vhost_copy_from_user(vq, desc,
+					   vq->desc + head,
+					   sizeof *desc);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to get descriptor: "
+				"idx %d addr %p\n",
+				head, vq->desc + head);
+			return -EFAULT;
+		}
+		descs->head++;
+	}
+
+	if (unlikely(descs->head == num)) {
+		descs->last_desc = descs->descs[num - 1];
+		return descs->head;
+	}
+
+	if (unlikely(indices->head == indices->tail))
+		vhost_read_indices(vq, num);
+
+	while (indices->tail < indices->head) {
+		head = vhost16_to_cpu(vq, indices->indices[indices->tail]);
+		do {
+			desc = &descs->descs[descs->head];
+
+			ret = vhost_copy_from_user(vq, desc,
+						   vq->desc + head,
+						   sizeof *desc);
+			if (unlikely(ret)) {
+				vq_err(vq, "Failed to get descriptor: "
+					   "idx %d addr %p\n",
+					   head, vq->desc + head);
+				return -EFAULT;
+			}
+
+			descs->head++;
+		} while ((head = next_desc(vq, desc)) != -1 &&
+			 descs->head < num);
+
+		indices->tail++;
+	}
+
+	return descs->head;
 }
 
 /* This looks in the virtqueue and for the first available buffer, and converts
