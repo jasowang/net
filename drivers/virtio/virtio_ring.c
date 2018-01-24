@@ -319,6 +319,8 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 		indirect = false;
 		desc = vq->vring.desc;
 		i = head;
+		if (_vq->index == 1)
+			printk("add %d\n", i);
 		descs_used = total_sg;
 	}
 
@@ -726,6 +728,8 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
 	i = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].id);
 	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
 
+	if (_vq->index == 1)
+		printk("get %d\n", i);
 	if (unlikely(i >= vq->vring.num)) {
 		BAD_RING(vq, "id %u out of range\n", i);
 		return NULL;

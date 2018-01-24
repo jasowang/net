@@ -575,8 +575,10 @@ static void handle_tx(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (!zcopy_used)
-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
+		if (!zcopy_used) {
+			printk("vq %p add used %d\n", vq, head);
+			vhost_add_used_and_signal(&net->dev, vq, head,	0);
+		}
 		else
 			vhost_zerocopy_signal_used(net, vq);
 		vhost_net_tx_packet(net);
