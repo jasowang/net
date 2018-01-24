@@ -2164,8 +2164,11 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
 		}
 	}
 
-	if (advance)
+	if (advance) {
+		printk("adv read tail is %d head %d\n",
+			indices->read_tail, indices->head);
 		*head = indices->indices[indices->read_tail++];
+	}
 	desc = &descs->descs[descs->tail++];
 
 	printk("vq %p advance %d desc %p head %d\n",
@@ -2322,6 +2325,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 	start = vq->last_used_idx & (vq->num - 1);
 	used = vq->used->ring + start;
 	if (count == 1) {
+		printk("add used %d to idx %d\n", heads[0].id, start);
 		if (vhost_put_user(vq, heads[0].id, &used->id)) {
 			vq_err(vq, "Failed to write used id");
 			return -EFAULT;
