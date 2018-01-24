@@ -1,5 +1,5 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    90fb0f0003af8e21f61712201782db7c7043476c
+Top:    e8b02f669338a20b62a01e695ac4ec1db4eb8eae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 18:45:23 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..b529576 100644
+index 33ac2b1..0b19845 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -440,6 +440,10 @@ void vhost_dev_init(struct vhost_dev *dev,
@@ -137,7 +137,7 @@ index 33ac2b1..b529576 100644
 +	}
 +
 +done:
-+	return descs->head;
++	return 0;
 +
 +err:
 +	descs->last_desc.flags = 0;
