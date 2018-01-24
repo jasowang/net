@@ -2092,7 +2092,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 	}
 
 done:
-	return descs->head;
+	return 0;
 
 err:
 	descs->last_desc.flags = 0;
