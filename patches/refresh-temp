@@ -1,0 +1,63 @@
+Bottom: a0c459dc5a7311d35d4d53d6026f31c45bd600fa
+Top:    4773f6420ee8101dd2e6c78e404cd88bdef59229
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-24 22:45:54 +0800
+
+Refresh of debug
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 23514fa..ccee3a0 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -575,10 +575,8 @@ static void handle_tx(struct vhost_net *net)
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+-		if (!zcopy_used) {
+-			printk("vq %p add used %d\n", vq, head);
++		if (!zcopy_used)
+ 			vhost_add_used_and_signal(&net->dev, vq, head,	0);
+-		}
+ 		else
+ 			vhost_zerocopy_signal_used(net, vq);
+ 		vhost_net_tx_packet(net);
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index a6580a8..4425d10 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2164,8 +2164,11 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+ 		}
+ 	}
+ 
+-	if (advance)
++	if (advance) {
++		printk("adv read tail is %d head %d\n",
++			indices->read_tail, indices->head);
+ 		*head = indices->indices[indices->read_tail++];
++	}
+ 	desc = &descs->descs[descs->tail++];
+ 
+ 	printk("vq %p advance %d desc %p head %d\n",
+@@ -2322,6 +2325,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 	start = vq->last_used_idx & (vq->num - 1);
+ 	used = vq->used->ring + start;
+ 	if (count == 1) {
++		printk("add used %d to idx %d\n", heads[0].id, start);
+ 		if (vhost_put_user(vq, heads[0].id, &used->id)) {
+ 			vq_err(vq, "Failed to write used id");
+ 			return -EFAULT;
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index d7e3684..2d9e93c 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -729,7 +729,7 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
+ 	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
+ 
+ 	if (_vq->index == 1)
+-		printk("get %d\n", i);
++		printk("get %d from %d\n", i, last_used);
+ 	if (unlikely(i >= vq->vring.num)) {
+ 		BAD_RING(vq, "id %u out of range\n", i);
+ 		return NULL;
