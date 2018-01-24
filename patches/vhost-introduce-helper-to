@@ -1,5 +1,5 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    516c1fd4afe2ccb92509a787fd2f578880b4c459
+Top:    90fb0f0003af8e21f61712201782db7c7043476c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 18:45:23 +0800
 
@@ -15,20 +15,21 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..1a2cb8a 100644
+index 33ac2b1..b529576 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -440,6 +440,9 @@ void vhost_dev_init(struct vhost_dev *dev,
+@@ -440,6 +440,10 @@ void vhost_dev_init(struct vhost_dev *dev,
  		vq->indirect = NULL;
  		vq->heads = NULL;
  		vq->dev = dev;
 +		vq->descs.head = vq->descs.tail = 0;
-+		vq->indices.head = vq->indices.tail = 0;
++		vq->indices.head = vq->indices.tail =
++			vq->indices.read_tail = 0;
 +		memset(&vq->descs.last_desc, 0, sizeof(vq->descs.last_desc));
  		mutex_init(&vq->mutex);
  		vhost_vq_reset(dev, vq);
  		if (vq->handle_kick)
-@@ -1984,6 +1987,125 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1984,6 +1988,136 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -37,9 +38,11 @@ index 33ac2b1..1a2cb8a 100644
 +	struct vhost_indices *indices = &vq->indices;
 +	u16 last_avail_idx, total;
 +	__virtio16 avail_idx;
-+	__virtio32 *heads = indices->indices;
++	__virtio16 *heads = indices->indices;
 +	int ret, ret2;
 +	int i;
++
++	BUG_ON(indices->read_tail != indices->tail);
 +
 +	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 +		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -58,13 +61,18 @@ index 33ac2b1..1a2cb8a 100644
 +			vq_err(vq, "Failed to get descriptors\n");
 +			return -EFAULT;
 +		}
++		if (unlikely(heads[i] >= vq->num)) {
++			vq_err(vq, "Guest says index %u > %u is available",
++			       heads[i], vq->num);
++			return -EINVAL;
++		}
 +		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
 +	}
 +
 +	/* Only get avail ring entries after they have been exposed by guest. */
 +	smp_rmb();
 +	indices->head = ret;
-+	indices->tail = 0;
++	indices->tail = indices->read_tail = 0;
 +	return ret;
 +}
 +
@@ -136,9 +144,11 @@ index 33ac2b1..1a2cb8a 100644
 +	return ret;
 +}
 +
-+struct vring_desc *get_next_desc(struct vhost_virtqueue *vq)
++static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
++					  __virtio16 *head, bool advance)
 +{
 +	struct vhost_descs *descs = &vq->descs;
++	struct vhost_indices *indices = &vq->indices;
 +
 +	if (descs->tail == descs->head) {
 +		int ret = vhost_read_descs(vq, 64);
@@ -148,17 +158,180 @@ index 33ac2b1..1a2cb8a 100644
 +			return NULL;
 +	}
 +
++	if (advance)
++		*head = indices->indices[indices->read_tail++];
 +	return &descs->descs[descs->tail++];
 +}
 +
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
+@@ -1997,111 +2131,61 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 		      unsigned int *out_num, unsigned int *in_num,
+ 		      struct vhost_log *log, unsigned int *log_num)
+ {
+-	struct vring_desc desc;
+-	unsigned int i, head, found = 0;
+-	u16 last_avail_idx;
+-	__virtio16 avail_idx;
++	struct vring_desc *desc;
++	unsigned int head, found = 0;
+ 	__virtio16 ring_head;
+ 	int ret, access;
+ 
+-	/* Check it isn't doing very strange things with descriptor numbers. */
+-	last_avail_idx = vq->last_avail_idx;
++	desc = vhost_next_desc(vq, &ring_head, true);
+ 
+-	if (vq->avail_idx == vq->last_avail_idx) {
+-		if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
+-			vq_err(vq, "Failed to access avail idx at %p\n",
+-				&vq->avail->idx);
+-			return -EFAULT;
+-		}
+-		vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
+-
+-		if (unlikely((u16)(vq->avail_idx - last_avail_idx) > vq->num)) {
+-			vq_err(vq, "Guest moved used index from %u to %u",
+-				last_avail_idx, vq->avail_idx);
+-			return -EFAULT;
+-		}
+-
+-		/* If there's nothing new since last we looked, return
+-		 * invalid.
+-		 */
+-		if (vq->avail_idx == last_avail_idx)
+-			return vq->num;
+-
+-		/* Only get avail ring entries after they have been
+-		 * exposed by guest.
+-		 */
+-		smp_rmb();
+-	}
+-
+-	/* Grab the next descriptor number they're advertising, and increment
+-	 * the index we've seen. */
+-	if (unlikely(vhost_get_avail(vq, ring_head,
+-		     &vq->avail->ring[last_avail_idx & (vq->num - 1)]))) {
+-		vq_err(vq, "Failed to read head: idx %d address %p\n",
+-		       last_avail_idx,
+-		       &vq->avail->ring[last_avail_idx % vq->num]);
++	/* If there's nothing new since last we looked, return
++	 * invalid.
++	 */
++	if (desc == NULL)
++		return vq->num;
++	if (IS_ERR(desc))
+ 		return -EFAULT;
+-	}
+ 
+ 	head = vhost16_to_cpu(vq, ring_head);
+ 
+-	/* If their number is silly, that's an error. */
+-	if (unlikely(head >= vq->num)) {
+-		vq_err(vq, "Guest says index %u > %u is available",
+-		       head, vq->num);
+-		return -EINVAL;
+-	}
+-
+ 	/* When we start there are none of either input nor output. */
+ 	*out_num = *in_num = 0;
+ 	if (unlikely(log))
+ 		*log_num = 0;
+ 
+-	i = head;
+ 	do {
+ 		unsigned iov_count = *in_num + *out_num;
+-		if (unlikely(i >= vq->num)) {
+-			vq_err(vq, "Desc index is %u > %u, head = %u",
+-			       i, vq->num, head);
+-			return -EINVAL;
+-		}
++
+ 		if (unlikely(++found > vq->num)) {
+-			vq_err(vq, "Loop detected: last one at %u "
+-			       "vq size %u head %u\n",
+-			       i, vq->num, head);
++			vq_err(vq, "Loop detected: vq size %u head %u\n",
++			       vq->num, head);
+ 			return -EINVAL;
+ 		}
+-		ret = vhost_copy_from_user(vq, &desc, vq->desc + i,
+-					   sizeof desc);
+-		if (unlikely(ret)) {
+-			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+-			       i, vq->desc + i);
+-			return -EFAULT;
+-		}
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+ 			ret = get_indirect(vq, iov, iov_size,
+ 					   out_num, in_num,
+-					   log, log_num, &desc);
++					   log, log_num, desc);
+ 			if (unlikely(ret < 0)) {
+ 				if (ret != -EAGAIN)
+ 					vq_err(vq, "Failure detected "
+-						"in indirect descriptor at idx %d\n", i);
++						"in indirect descriptor");
+ 				return ret;
+ 			}
+ 			continue;
+ 		}
+ 
+-		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
++		if (desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE))
+ 			access = VHOST_ACCESS_WO;
+ 		else
+ 			access = VHOST_ACCESS_RO;
+-		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+-				     vhost32_to_cpu(vq, desc.len), iov + iov_count,
++		ret = translate_desc(vq, vhost64_to_cpu(vq, desc->addr),
++				     vhost32_to_cpu(vq, desc->len),
++				     iov + iov_count,
+ 				     iov_size - iov_count, access);
+ 		if (unlikely(ret < 0)) {
+ 			if (ret != -EAGAIN)
+-				vq_err(vq, "Translation failure %d descriptor idx %d\n",
+-					ret, i);
++				vq_err(vq, "Translation failure %d descriptor "
++					   "idx\n", ret);
+ 			return ret;
+ 		}
+ 		if (access == VHOST_ACCESS_WO) {
+@@ -2109,21 +2193,22 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			 * increment that count. */
+ 			*in_num += ret;
+ 			if (unlikely(log)) {
+-				log[*log_num].addr = vhost64_to_cpu(vq, desc.addr);
+-				log[*log_num].len = vhost32_to_cpu(vq, desc.len);
++				log[*log_num].addr =
++					vhost64_to_cpu(vq, desc->addr);
++				log[*log_num].len =
++					vhost32_to_cpu(vq, desc->len);
+ 				++*log_num;
+ 			}
+ 		} else {
+ 			/* If it's an output descriptor, they're all supposed
+ 			 * to come before any input descriptors. */
+ 			if (unlikely(*in_num)) {
+-				vq_err(vq, "Descriptor has out after in: "
+-				       "idx %d\n", i);
++				vq_err(vq, "Descriptor has out after in\n");
+ 				return -EINVAL;
+ 			}
+ 			*out_num += ret;
+ 		}
+-	} while ((i = next_desc(vq, &desc)) != -1);
++	} while(!IS_ERR_OR_NULL(desc = vhost_next_desc(vq, &ring_head, false)));
+ 
+ 	/* On success, increment avail index. */
+ 	vq->last_avail_idx++;
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 79c6e7a..6cc8645 100644
+index 79c6e7a..855d8d7 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -84,6 +84,19 @@ enum vhost_uaddr_type {
+@@ -84,6 +84,20 @@ enum vhost_uaddr_type {
  	VHOST_NUM_ADDRS = 3,
  };
  
@@ -170,15 +343,16 @@ index 79c6e7a..6cc8645 100644
 +};
 +
 +struct vhost_indices {
-+	__virtio32 indices[64];
++	__virtio16 indices[64];
 +	int head;
 +	int tail;
++	int read_tail;
 +};
 +
  /* The virtqueue structure describes a queue attached to a device. */
  struct vhost_virtqueue {
  	struct vhost_dev *dev;
-@@ -150,6 +163,9 @@ struct vhost_virtqueue {
+@@ -150,6 +164,9 @@ struct vhost_virtqueue {
  	bool user_be;
  #endif
  	u32 busyloop_timeout;
