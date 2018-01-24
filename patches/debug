@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    ddf93b64279ba39ad1096fc5a0a731dbeadf3af3
+Top:    5b1aa964f5e410fb045ba97c0af8d5131a186505
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -9,7 +9,7 @@ debug
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..a2832ec 100644
+index 0b19845..552073f 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,17 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -31,7 +31,7 @@ index 0b19845..a2832ec 100644
  		return -EFAULT;
  	}
  	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
-@@ -2013,12 +2019,15 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+@@ -2013,14 +2019,19 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
  		ret2 = vhost_get_avail(vq, heads[i],
  				      &vq->avail->ring[last_avail_idx]);
  		if (unlikely(ret2)) {
@@ -46,8 +46,42 @@ index 0b19845..a2832ec 100644
 +			       heads[i], vq->num);
  			return -EINVAL;
  		}
++		printk("head %d offset %d\n",
++			heads[i], i);
  		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
-@@ -2050,6 +2059,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 	}
+ 
+@@ -2028,6 +2039,9 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+ 	smp_rmb();
+ 	indices->head = ret;
+ 	indices->tail = indices->read_tail = 0;
++
++	printk("indices head %d tail %d\n",
++		indices->head, indices->tail);
+ 	return ret;
+ }
+ 
+@@ -2036,12 +2050,17 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 	struct vhost_indices *indices = &vq->indices;
+ 	struct vhost_descs *descs = &vq->descs;
+ 	struct vring_desc *desc = &descs->last_desc;
+-	__virtio16 head;
++	int head;
+ 	int ret;
++	int loop = 0;
+ 
+ 	descs->head = descs->tail = 0;
+ 
+-	while ((head = next_desc(vq, desc)) != -1 && descs->head < num) {
++	head = next_desc(vq, desc);
++	printk("last desc flags %d avail %d\n", desc->flags, head);
++
++	while (((head = next_desc(vq, desc)) != -1) && (descs->head < num)) {
++		printk("continue read desc %d\n", head);
+ 		desc = &descs->descs[descs->head];
+ 		ret = vhost_copy_from_user(vq, desc,
+ 					   vq->desc + head,
+@@ -2050,6 +2069,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  			vq_err(vq, "Failed to get descriptor: "
  				"idx %d addr %p\n",
  				head, vq->desc + head);
@@ -57,7 +91,25 @@ index 0b19845..a2832ec 100644
  			goto err;
  		}
  		descs->head++;
-@@ -2076,6 +2088,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2060,9 +2082,14 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 		return 0;
+ 	}
+ 
+-	if (unlikely(indices->head == indices->tail) ||
+-	    unlikely(vhost_read_indices(vq, num) < 0))
+-		goto err;
++	printk("indices head %d indices tail %d\n",
++		indices->head, indices->tail);
++
++	if (unlikely(indices->head == indices->tail)) {
++		ret = vhost_read_indices(vq, num);
++		if (unlikely(ret))
++			goto err;
++	}
+ 
+ 	descs->last_desc.flags = 0;
+ 	while (indices->tail < indices->head) {
+@@ -2076,6 +2103,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  				vq_err(vq, "Failed to get descriptor: "
  					   "idx %d addr %p\n",
  					   head, vq->desc + head);
@@ -66,3 +118,48 @@ index 0b19845..a2832ec 100644
 +					head, vq->desc + head);
  				goto err;
  			}
+ 
+@@ -2088,6 +2118,11 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 			head = next_desc(vq, desc);
+ 			if (head == -1)
+ 				goto done;
++			if (loop++ > 64) {
++				printk("Dead loop!\n");
++				ret = -EFAULT;
++				goto err;
++			}
+ 		}
+ 	}
+ 
+@@ -2104,18 +2139,28 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+ {
+ 	struct vhost_descs *descs = &vq->descs;
+ 	struct vhost_indices *indices = &vq->indices;
++	struct vring_desc *desc;
+ 
++	printk("desc->tail %d, desc->head %d\n",
++		descs->tail, descs->head);
+ 	if (descs->tail == descs->head) {
+ 		int ret = vhost_read_descs(vq, 64);
+-		if (ret)
++		if (ret < 0) {
++			printk("fail to read descs!\n");
+ 			return ERR_PTR(-EFAULT);
+-		if (descs->tail == descs->head)
++		}
++		if (indices->tail == indices->head) {
++			printk("no new heads!\n");
+ 			return NULL;
++		}
+ 	}
+ 
+ 	if (advance)
+ 		*head = indices->indices[indices->read_tail++];
+-	return &descs->descs[descs->tail++];
++	desc = &descs->descs[descs->tail++];
++
++	printk("advance %d desc %p head %d\n", advance, desc, *head);
++	return desc;
+ }
+ 
+ /* This looks in the virtqueue and for the first available buffer, and converts
