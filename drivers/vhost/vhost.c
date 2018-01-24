@@ -2042,7 +2042,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 			vq_err(vq, "Failed to get descriptor: "
 				"idx %d addr %p\n",
 				head, vq->desc + head);
-			return -EFAULT;
+			goto err;
 		}
 		descs->head++;
 	}
@@ -2052,14 +2052,15 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 		return descs->head;
 	}
 
-	if (unlikely(indices->head == indices->tail))
-		vhost_read_indices(vq, num);
+	if (unlikely(indices->head == indices->tail) ||
+	    unlikely(vhost_read_indices(vq, num) < 0))
+		goto err;
 
+	descs->last_desc.flags = 0;
 	while (indices->tail < indices->head) {
-		head = vhost16_to_cpu(vq, indices->indices[indices->tail]);
-		do {
+		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
+		while(1) {
 			desc = &descs->descs[descs->head];
-
 			ret = vhost_copy_from_user(vq, desc,
 						   vq->desc + head,
 						   sizeof *desc);
@@ -2067,17 +2068,27 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 				vq_err(vq, "Failed to get descriptor: "
 					   "idx %d addr %p\n",
 					   head, vq->desc + head);
-				return -EFAULT;
+				goto err;
 			}
 
 			descs->head++;
-		} while ((head = next_desc(vq, desc)) != -1 &&
-			 descs->head < num);
+			if (descs->head == num) {
+				descs->last_desc = *desc;
+				goto done;
+			}
 
-		indices->tail++;
+			head = next_desc(vq, desc);
+			if (head == -1)
+				goto done;
+		}
 	}
 
+done:
 	return descs->head;
+
+err:
+	descs->last_desc.flags = 0;
+	return ret;
 }
 
 /* This looks in the virtqueue and for the first available buffer, and converts
