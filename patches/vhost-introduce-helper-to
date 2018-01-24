@@ -1,5 +1,5 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    0c2a7c483050384b2549a2a67dd1fdb14a332d7f
+Top:    599e127cb0212ecad364bb1ea693589b1e2394f9
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 18:45:23 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..178c7f05 100644
+index 33ac2b1..b966625 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -440,6 +440,9 @@ void vhost_dev_init(struct vhost_dev *dev,
@@ -28,7 +28,7 @@ index 33ac2b1..178c7f05 100644
  		mutex_init(&vq->mutex);
  		vhost_vq_reset(dev, vq);
  		if (vq->handle_kick)
-@@ -1984,6 +1987,99 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1984,6 +1987,110 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -87,7 +87,7 @@ index 33ac2b1..178c7f05 100644
 +			vq_err(vq, "Failed to get descriptor: "
 +				"idx %d addr %p\n",
 +				head, vq->desc + head);
-+			return -EFAULT;
++			goto err;
 +		}
 +		descs->head++;
 +	}
@@ -97,14 +97,15 @@ index 33ac2b1..178c7f05 100644
 +		return descs->head;
 +	}
 +
-+	if (unlikely(indices->head == indices->tail))
-+		vhost_read_indices(vq, num);
++	if (unlikely(indices->head == indices->tail) ||
++	    unlikely(vhost_read_indices(vq, num) < 0))
++		goto err;
 +
++	descs->last_desc.flags = 0;
 +	while (indices->tail < indices->head) {
-+		head = vhost16_to_cpu(vq, indices->indices[indices->tail]);
-+		do {
++		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
++		while(1) {
 +			desc = &descs->descs[descs->head];
-+
 +			ret = vhost_copy_from_user(vq, desc,
 +						   vq->desc + head,
 +						   sizeof *desc);
@@ -112,17 +113,27 @@ index 33ac2b1..178c7f05 100644
 +				vq_err(vq, "Failed to get descriptor: "
 +					   "idx %d addr %p\n",
 +					   head, vq->desc + head);
-+				return -EFAULT;
++				goto err;
 +			}
 +
 +			descs->head++;
-+		} while ((head = next_desc(vq, desc)) != -1 &&
-+			 descs->head < num);
++			if (descs->head == num) {
++				descs->last_desc = *desc;
++				goto done;
++			}
 +
-+		indices->tail++;
++			head = next_desc(vq, desc);
++			if (head == -1)
++				goto done;
++		}
 +	}
 +
++done:
 +	return descs->head;
++
++err:
++	descs->last_desc.flags = 0;
++	return ret;
 +}
 +
  /* This looks in the virtqueue and for the first available buffer, and converts
