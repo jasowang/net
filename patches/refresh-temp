@@ -1,0 +1,22 @@
+Bottom: bf1e39369f3939ab6acb242737f2b25da2c8b83e
+Top:    ddf93b64279ba39ad1096fc5a0a731dbeadf3af3
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-24 16:22:00 +0800
+
+Refresh of debug
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 5a06bb3..a2832ec 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2019,7 +2019,7 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+ 		ret2 = vhost_get_avail(vq, heads[i],
+ 				      &vq->avail->ring[last_avail_idx]);
+ 		if (unlikely(ret2)) {
+-			printk("Failed to get descriptor\n")
++			printk("Failed to get descriptor\n");
+ 			vq_err(vq, "Failed to get descriptors\n");
+ 			return -EFAULT;
+ 		}
