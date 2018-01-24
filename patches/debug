@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    a0c459dc5a7311d35d4d53d6026f31c45bd600fa
+Top:    4773f6420ee8101dd2e6c78e404cd88bdef59229
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -9,24 +9,20 @@ debug
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 7baa90a..23514fa 100644
+index 7baa90a..ccee3a0 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -575,8 +575,10 @@ static void handle_tx(struct vhost_net *net)
- 		if (err != len)
+@@ -576,7 +576,7 @@ static void handle_tx(struct vhost_net *net)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
--		if (!zcopy_used)
+ 		if (!zcopy_used)
 -			vhost_add_used_and_signal(&net->dev, vq, head, 0);
-+		if (!zcopy_used) {
-+			printk("vq %p add used %d\n", vq, head);
 +			vhost_add_used_and_signal(&net->dev, vq, head,	0);
-+		}
  		else
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..a6580a8 100644
+index 0b19845..4425d10 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,17 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -164,7 +160,7 @@ index 0b19845..a6580a8 100644
  		}
  	}
  
-@@ -2104,18 +2148,29 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+@@ -2104,18 +2148,32 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
  {
  	struct vhost_descs *descs = &vq->descs;
  	struct vhost_indices *indices = &vq->indices;
@@ -186,9 +182,13 @@ index 0b19845..a6580a8 100644
 +		}
  	}
  
- 	if (advance)
+-	if (advance)
++	if (advance) {
++		printk("adv read tail is %d head %d\n",
++			indices->read_tail, indices->head);
  		*head = indices->indices[indices->read_tail++];
 -	return &descs->descs[descs->tail++];
++	}
 +	desc = &descs->descs[descs->tail++];
 +
 +	printk("vq %p advance %d desc %p head %d\n",
@@ -197,7 +197,7 @@ index 0b19845..a6580a8 100644
  }
  
  /* This looks in the virtqueue and for the first available buffer, and converts
-@@ -2141,10 +2196,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2141,10 +2199,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* If there's nothing new since last we looked, return
  	 * invalid.
  	 */
@@ -214,7 +214,7 @@ index 0b19845..a6580a8 100644
  
  	head = vhost16_to_cpu(vq, ring_head);
  
-@@ -2157,6 +2216,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2157,6 +2219,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		unsigned iov_count = *in_num + *out_num;
  
  		if (unlikely(++found > vq->num)) {
@@ -222,7 +222,7 @@ index 0b19845..a6580a8 100644
  			vq_err(vq, "Loop detected: vq size %u head %u\n",
  			       vq->num, head);
  			return -EINVAL;
-@@ -2166,6 +2226,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2166,6 +2229,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  					   out_num, in_num,
  					   log, log_num, desc);
  			if (unlikely(ret < 0)) {
@@ -230,7 +230,7 @@ index 0b19845..a6580a8 100644
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
  						"in indirect descriptor");
-@@ -2183,11 +2244,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2183,11 +2247,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  				     iov + iov_count,
  				     iov_size - iov_count, access);
  		if (unlikely(ret < 0)) {
@@ -247,7 +247,7 @@ index 0b19845..a6580a8 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,12 +2267,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,12 +2270,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -268,8 +268,16 @@ index 0b19845..a6580a8 100644
  
  	/* On success, increment avail index. */
  	vq->last_avail_idx++;
+@@ -2251,6 +2325,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 	start = vq->last_used_idx & (vq->num - 1);
+ 	used = vq->used->ring + start;
+ 	if (count == 1) {
++		printk("add used %d to idx %d\n", heads[0].id, start);
+ 		if (vhost_put_user(vq, heads[0].id, &used->id)) {
+ 			vq_err(vq, "Failed to write used id");
+ 			return -EFAULT;
 diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
-index eb30f3e..d7e3684 100644
+index eb30f3e..2d9e93c 100644
 --- a/drivers/virtio/virtio_ring.c
 +++ b/drivers/virtio/virtio_ring.c
 @@ -319,6 +319,8 @@ static inline int virtqueue_add(struct virtqueue *_vq,
@@ -286,7 +294,7 @@ index eb30f3e..d7e3684 100644
  	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
  
 +	if (_vq->index == 1)
-+		printk("get %d\n", i);
++		printk("get %d from %d\n", i, last_used);
  	if (unlikely(i >= vq->vring.num)) {
  		BAD_RING(vq, "id %u out of range\n", i);
  		return NULL;
