@@ -2456,6 +2456,7 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
+
 static int __init vhost_init(void)
 {
 	return 0;
