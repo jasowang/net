@@ -1,0 +1,26 @@
+Bottom: 278f682f209e8da813d75fcaec6a37dd0cc4afdf
+Top:    f292d0a644e4b4831e2ed46eb3d25a797c9b4b2c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-24 18:29:25 +0800
+
+Refresh of debug
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 26dc3aa..8379c06 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2273,7 +2273,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ 			}
+ 			*out_num += ret;
+ 		}
+-	} while(!IS_ERR_OR_NULL(desc = vhost_next_desc(vq, &ring_head, false)));
++		if (next_desc(vq, desc) == -1)
++			break;
++		desc = vhost_next_desc(vq, &ring_head, false);
++		printk("next dest ? %d \n", IS_ERR_OR_NULL(desc));
++	} while(!IS_ERR_OR_NULL(desc));
+ 
+ 	/* On success, increment avail index. */
+ 	vq->last_avail_idx++;
