@@ -1,5 +1,5 @@
 Bottom: c1ada38a3a7858a58cafdcc2e68b25dfd1a4b3da
-Top:    cfb25c0514733885e27dcb031bfb6d12abc8f4f4
+Top:    9b39ae675fb3c1dc0bf13adc6e13fa3a0962584a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 18:45:23 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 33ac2b1..130bebc 100644
+index 33ac2b1..4b92e33 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -440,6 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
@@ -74,14 +74,6 @@ index 33ac2b1..130bebc 100644
  /* This looks in the virtqueue and for the first available buffer, and converts
   * it to an iovec for convenient access.  Since descriptors consist of some
   * number of output then some number of input descriptors, it's actually two
-@@ -2414,7 +2456,6 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
- }
- EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
- 
--
- static int __init vhost_init(void)
- {
- 	return 0;
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
 index 79c6e7a..ffc8db2 100644
 --- a/drivers/vhost/vhost.h
