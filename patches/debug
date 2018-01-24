@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    f292d0a644e4b4831e2ed46eb3d25a797c9b4b2c
+Top:    a0c459dc5a7311d35d4d53d6026f31c45bd600fa
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -8,8 +8,25 @@ debug
 
 ---
 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 7baa90a..23514fa 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -575,8 +575,10 @@ static void handle_tx(struct vhost_net *net)
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+-		if (!zcopy_used)
+-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
++		if (!zcopy_used) {
++			printk("vq %p add used %d\n", vq, head);
++			vhost_add_used_and_signal(&net->dev, vq, head,	0);
++		}
+ 		else
+ 			vhost_zerocopy_signal_used(net, vq);
+ 		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..8379c06 100644
+index 0b19845..a6580a8 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,17 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -46,8 +63,8 @@ index 0b19845..8379c06 100644
 +			       heads[i], vq->num);
  			return -EINVAL;
  		}
-+		printk("vq %p head %d offset %d\n",
-+			vq, heads[i], i);
++		printk("vq %p head %d offset %d last %d\n",
++			vq, heads[i], i, last_avail_idx);
  		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
  	}
  
@@ -230,7 +247,7 @@ index 0b19845..8379c06 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,12 +2267,17 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,12 +2267,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -246,6 +263,30 @@ index 0b19845..8379c06 100644
 +		desc = vhost_next_desc(vq, &ring_head, false);
 +		printk("next dest ? %d \n", IS_ERR_OR_NULL(desc));
 +	} while(!IS_ERR_OR_NULL(desc));
++
++	printk("one packet done!\n");
  
  	/* On success, increment avail index. */
  	vq->last_avail_idx++;
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index eb30f3e..d7e3684 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -319,6 +319,8 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 		indirect = false;
+ 		desc = vq->vring.desc;
+ 		i = head;
++		if (_vq->index == 1)
++			printk("add %d\n", i);
+ 		descs_used = total_sg;
+ 	}
+ 
+@@ -726,6 +728,8 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
+ 	i = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].id);
+ 	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
+ 
++	if (_vq->index == 1)
++		printk("get %d\n", i);
+ 	if (unlikely(i >= vq->vring.num)) {
+ 		BAD_RING(vq, "id %u out of range\n", i);
+ 		return NULL;
