@@ -2273,7 +2273,11 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			}
 			*out_num += ret;
 		}
-	} while(!IS_ERR_OR_NULL(desc = vhost_next_desc(vq, &ring_head, false)));
+		if (next_desc(vq, desc) == -1)
+			break;
+		desc = vhost_next_desc(vq, &ring_head, false);
+		printk("next dest ? %d \n", IS_ERR_OR_NULL(desc));
+	} while(!IS_ERR_OR_NULL(desc));
 
 	/* On success, increment avail index. */
 	vq->last_avail_idx++;
