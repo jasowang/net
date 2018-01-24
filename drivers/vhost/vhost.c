@@ -2019,7 +2019,7 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 		ret2 = vhost_get_avail(vq, heads[i],
 				      &vq->avail->ring[last_avail_idx]);
 		if (unlikely(ret2)) {
-			printk("Failed to get descriptor\n")
+			printk("Failed to get descriptor\n");
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
