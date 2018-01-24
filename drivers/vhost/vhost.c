@@ -2049,7 +2049,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 
 	if (unlikely(descs->head == num)) {
 		descs->last_desc = descs->descs[num - 1];
-		return descs->head;
+		return 0;
 	}
 
 	if (unlikely(indices->head == indices->tail) ||
@@ -2089,6 +2089,21 @@ done:
 err:
 	descs->last_desc.flags = 0;
 	return ret;
+}
+
+struct vring_desc *get_next_desc(struct vhost_virtqueue *vq)
+{
+	struct vhost_descs *descs = &vq->descs;
+
+	if (descs->tail == descs->head) {
+		int ret = vhost_read_descs(vq, 64);
+		if (ret)
+			return ERR_PTR(-EFAULT);
+		if (descs->tail == descs->head)
+			return NULL;
+	}
+
+	return &descs->descs[descs->tail++];
 }
 
 /* This looks in the virtqueue and for the first available buffer, and converts
