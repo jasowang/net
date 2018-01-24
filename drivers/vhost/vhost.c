@@ -2030,8 +2030,8 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 			       heads[i], vq->num);
 			return -EINVAL;
 		}
-		printk("vq %p head %d offset %d\n",
-			vq, heads[i], i);
+		printk("vq %p head %d offset %d last %d\n",
+			vq, heads[i], i, last_avail_idx);
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
 	}
 
@@ -2278,6 +2278,8 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		desc = vhost_next_desc(vq, &ring_head, false);
 		printk("next dest ? %d \n", IS_ERR_OR_NULL(desc));
 	} while(!IS_ERR_OR_NULL(desc));
+
+	printk("one packet done!\n");
 
 	/* On success, increment avail index. */
 	vq->last_avail_idx++;
