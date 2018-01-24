@@ -92,9 +92,10 @@ struct vhost_descs {
 };
 
 struct vhost_indices {
-	__virtio32 indices[64];
+	__virtio16 indices[64];
 	int head;
 	int tail;
+	int read_tail;
 };
 
 /* The virtqueue structure describes a queue attached to a device. */
