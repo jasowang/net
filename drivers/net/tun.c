@@ -1753,27 +1753,36 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->flags & IFF_VNET_HDR) {
 		int vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
 
-		if (len < vnet_hdr_sz)
+		if (len < vnet_hdr_sz) {
+			printk("tun vnet hdr sz!\n");
 			return -EINVAL;
+		}
 		len -= vnet_hdr_sz;
 
-		if (!copy_from_iter_full(&gso, sizeof(gso), from))
+		if (!copy_from_iter_full(&gso, sizeof(gso), from)) {
+			printk("tun gso !\n");
 			return -EFAULT;
+		}
 
 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
 		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
 
-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
+		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
+			printk("tun hdr len\n");
 			return -EINVAL;
+		}
 		iov_iter_advance(from, vnet_hdr_sz - sizeof(gso));
 	}
 
 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+				(gso.hdr_len && tun16_to_cpu(tun,
+		gso.hdr_len) < ETH_HLEN))){
+			printk("tun hdr check!\n");
 			return -EINVAL;
+		}
 	}
 
 	good_linear = SKB_MAX_HEAD(align);
@@ -1802,10 +1811,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		skb = tun_build_skb(tun, tfile, from, &gso, len, &skb_xdp);
 		if (IS_ERR(skb)) {
 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
+			printk("tun can't build!\n");
 			return PTR_ERR(skb);
 		}
-		if (!skb)
+		if (!skb) {
+			printk("tun sbk NULL!\n");
 			return total_len;
+		}
 	} else {
 		if (!zerocopy) {
 			copylen = len;
@@ -1833,6 +1845,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 				this_cpu_inc(tun->pcpu_stats->rx_dropped);
 			if (frags)
 				mutex_unlock(&tfile->napi_mutex);
+			printk("tun skb err!\n");
 			return PTR_ERR(skb);
 		}
 
@@ -1849,6 +1862,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 				mutex_unlock(&tfile->napi_mutex);
 			}
 
+			printk("tun copy err!\n");
 			return -EFAULT;
 		}
 	}
@@ -1861,6 +1875,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			mutex_unlock(&tfile->napi_mutex);
 		}
 
+		printk("tun vnet hdr conversion!\n");
 		return -EINVAL;
 	}
 
