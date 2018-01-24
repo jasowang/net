@@ -1,0 +1,22 @@
+Bottom: 90fb0f0003af8e21f61712201782db7c7043476c
+Top:    e8b02f669338a20b62a01e695ac4ec1db4eb8eae
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-24 16:14:32 +0800
+
+Refresh of vhost-introduce-helper-to
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index b529576..0b19845 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2092,7 +2092,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+ 	}
+ 
+ done:
+-	return descs->head;
++	return 0;
+ 
+ err:
+ 	descs->last_desc.flags = 0;
