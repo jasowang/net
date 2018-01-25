@@ -5,6 +5,8 @@ Date:   2018-01-25 21:48:03 +0800
 
 vhost_net: stop device during reset
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
