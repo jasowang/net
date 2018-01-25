@@ -1,10 +1,9 @@
 Version: 1
-Previous: c3cd8ccdc1571b54a4558c6d6120ffe788e7bfff
-Head: 8f386a57f314a8fa616f6b9a746cf55df04d5dee
+Previous: f0b27ecf37fb0a65d2d4a75d990313add44f4943
+Head: 1a432f4d464fe39da43068607fc489b8d20775df
 Applied:
   ptr_ring-fix-integer-overflow: e70da4391bb1f899b4bace463387ba4d444c7d64
-  vhost_net-stop-device-during: ff9f0dea4755129d898801f4983f86bb54e5d5f2
-  refresh-temp-0: 8f386a57f314a8fa616f6b9a746cf55df04d5dee
+  vhost_net-stop-device-during: 1a432f4d464fe39da43068607fc489b8d20775df
 Unapplied:
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
