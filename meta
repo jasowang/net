@@ -1,6 +1,6 @@
 Version: 1
-Previous: 917c9411541fdc382ec175b929b73043e1c7c19c
-Head: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
+Previous: 672fda7cbf776aa76a8b208186f8637437d8e618
+Head: be1b6e8b5470e8311bfa1a3dfd7bd59e85a99759
 Applied:
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
