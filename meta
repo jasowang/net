@@ -1,9 +1,9 @@
 Version: 1
-Previous: dd4956ca4580dafcace3ebdb8714dd6b0c40aaa6
-Head: 30d467ba6d4c5c453b3b7fcaa3da06b713605e5d
+Previous: ea2e53d6e5b376a773be4ddf9aa6c207ccd20531
+Head: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
 Applied:
   ptr_ring-fix-integer-overflow: e70da4391bb1f899b4bace463387ba4d444c7d64
-  vhost_net-stop-device-during: 30d467ba6d4c5c453b3b7fcaa3da06b713605e5d
+  vhost_net-stop-device-during: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
 Unapplied:
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
