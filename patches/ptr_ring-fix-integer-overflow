@@ -13,7 +13,7 @@ fail early.
 
 Fixes: bcecb4bbf88a ("net: ptr_ring: otherwise safe empty checks can overrun array bounds")
 Reported-by: syzbot+87678bcf753b44c39b67@syzkaller.appspotmail.com
-Cc:
+Cc: John Fastabend <john.fastabend@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
