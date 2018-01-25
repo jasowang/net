@@ -1,7 +1,8 @@
 Version: 1
-Previous: 35f3a740de8ff49510e9932748448db9c9cd6dd8
-Head: be1b6e8b5470e8311bfa1a3dfd7bd59e85a99759
+Previous: ebfc15daaac92c97f1ba592211f6eb4a771dc237
+Head: 36c80af41b91f9efc5fb89a6c8d48066ebff4886
 Applied:
+  ptr_ring-fix-integer-overflow: 36c80af41b91f9efc5fb89a6c8d48066ebff4886
 Unapplied:
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
