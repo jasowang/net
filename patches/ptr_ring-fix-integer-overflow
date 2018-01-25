@@ -1,5 +1,5 @@
 Bottom: bd9781e6686293b4cceeb6ee0b01ae517332bab8
-Top:    bd9781e6686293b4cceeb6ee0b01ae517332bab8
+Top:    eedc51bf194c9c590b13d03f965b405cc296f945
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-25 15:00:40 +0800
 
@@ -17,4 +17,16 @@ fail early.
 
 ---
 
-
+diff --git a/include/linux/ptr_ring.h b/include/linux/ptr_ring.h
+index 9ca1726..3f99484 100644
+--- a/include/linux/ptr_ring.h
++++ b/include/linux/ptr_ring.h
+@@ -453,6 +453,8 @@ static inline int ptr_ring_consume_batched_bh(struct ptr_ring *r,
+ 
+ static inline void **__ptr_ring_init_queue_alloc(unsigned int size, gfp_t gfp)
+ {
++	if (unlikely(size + 1 == 0))
++		return NULL;
+ 	/* Allocate an extra dummy element at end of ring to avoid consumer head
+ 	 * or produce head access past the end of the array. Possible when
+ 	 * producer/consumer operations and __ptr_ring_peek operations run in
