@@ -2035,6 +2035,8 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
 	}
 
+	vq->last_avail_idx += ret;
+
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
 	indices->head = ret;
