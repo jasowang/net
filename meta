@@ -1,10 +1,10 @@
 Version: 1
-Previous: 8ab19978329feabc81c057b43f76a8814033061c
-Head: e70da4391bb1f899b4bace463387ba4d444c7d64
+Previous: dd4956ca4580dafcace3ebdb8714dd6b0c40aaa6
+Head: 30d467ba6d4c5c453b3b7fcaa3da06b713605e5d
 Applied:
   ptr_ring-fix-integer-overflow: e70da4391bb1f899b4bace463387ba4d444c7d64
-Unapplied:
   vhost_net-stop-device-during: 30d467ba6d4c5c453b3b7fcaa3da06b713605e5d
+Unapplied:
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
   tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
