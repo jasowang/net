@@ -6,10 +6,10 @@ Date:   2018-01-25 15:00:40 +0800
 ptr_ring: fix integer overflow
 
 We try to allocate one more entry for lockless peeking. The adding
-operation may overflow which may lead zero was passed to kmalloc()
-which return a ZERO_SIZE_PTR wihout any notice. Try to do producing or
-consuming on such ring will lead NULL dereference. Fix this detect and
-fail early.
+operation may overflow which causes zero to be passed to kmalloc().
+In this case, it returns ZERO_SIZE_PTR without any notice by ptr
+ring. Try to do producing or consuming on such ring will lead NULL
+dereference. Fix this detect and fail early.
 
 Fixes: bcecb4bbf88a ("net: ptr_ring: otherwise safe empty checks can overrun array bounds")
 Reported-by: syzbot+87678bcf753b44c39b67@syzkaller.appspotmail.com
