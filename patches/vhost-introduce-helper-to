@@ -1,5 +1,5 @@
-Bottom: 17411b6cd879cb10624a7ba03db6c82a3b01036b
-Top:    3be1f74b756da26da518ff5ed0306041ccc4056f
+Bottom: bd9781e6686293b4cceeb6ee0b01ae517332bab8
+Top:    6aa799322ab5e0b8e11b4c228450ae69e97596e7
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2017-08-23 16:54:42 +0800
 
@@ -16,7 +16,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index d6dbb28..13edab4 100644
+index 33ac2b1..088afe5 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -2414,6 +2414,58 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
@@ -79,10 +79,10 @@ index d6dbb28..13edab4 100644
  static int __init vhost_init(void)
  {
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index d59a9cc..3342359 100644
+index 79c6e7a..1527f5c 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
-@@ -223,6 +223,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+@@ -224,6 +224,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
  ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
  			     struct iov_iter *from);
  int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
