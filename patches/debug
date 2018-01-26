@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    3274db35d47c5c8ee3315b6b1f1e45d60db832f3
+Top:    bc1b2817f7fa0fe78f0b632903bda018b5c46687
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -106,7 +106,7 @@ index 7baa90a..ccee3a0 100644
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..baf65cd 100644
+index 0b19845..0527459 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,18 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -207,9 +207,10 @@ index 0b19845..baf65cd 100644
 +	printk("vq %p want to read desc from indices tail %d head %d\n",
 +		vq, indices->tail, indices->head);
  	while (indices->tail < indices->head) {
+-		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
 +		printk("vq %p reading descs for indices tail %d\n",
 +			vq, indices->tail);
- 		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
++		head = vhost16_to_cpu(vq, indices->indices[indices->tail]);
  		while(1) {
 +			printk("vq %p read desc to descs head %d\n",
 +				vq, descs->head);
@@ -227,7 +228,7 @@ index 0b19845..baf65cd 100644
  				goto err;
  			}
  
-@@ -2087,7 +2123,12 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2087,8 +2123,14 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  
  			head = next_desc(vq, desc);
  			if (head == -1)
@@ -239,9 +240,11 @@ index 0b19845..baf65cd 100644
 +				goto err;
 +			}
  		}
++		indices->tail++;
  	}
  
-@@ -2104,18 +2145,42 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+ done:
+@@ -2104,18 +2146,42 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
  {
  	struct vhost_descs *descs = &vq->descs;
  	struct vhost_indices *indices = &vq->indices;
@@ -289,7 +292,7 @@ index 0b19845..baf65cd 100644
  }
  
  /* This looks in the virtqueue and for the first available buffer, and converts
-@@ -2141,10 +2206,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2141,10 +2207,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* If there's nothing new since last we looked, return
  	 * invalid.
  	 */
@@ -306,7 +309,7 @@ index 0b19845..baf65cd 100644
  
  	head = vhost16_to_cpu(vq, ring_head);
  
-@@ -2157,6 +2226,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2157,6 +2227,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		unsigned iov_count = *in_num + *out_num;
  
  		if (unlikely(++found > vq->num)) {
@@ -314,7 +317,7 @@ index 0b19845..baf65cd 100644
  			vq_err(vq, "Loop detected: vq size %u head %u\n",
  			       vq->num, head);
  			return -EINVAL;
-@@ -2166,6 +2236,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2166,6 +2237,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  					   out_num, in_num,
  					   log, log_num, desc);
  			if (unlikely(ret < 0)) {
@@ -322,7 +325,7 @@ index 0b19845..baf65cd 100644
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
  						"in indirect descriptor");
-@@ -2183,11 +2254,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2183,11 +2255,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  				     iov + iov_count,
  				     iov_size - iov_count, access);
  		if (unlikely(ret < 0)) {
@@ -339,7 +342,7 @@ index 0b19845..baf65cd 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,15 +2277,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,15 +2278,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -362,7 +365,7 @@ index 0b19845..baf65cd 100644
  
  	/* Assume notifications from guest are disabled at this point,
  	 * if they aren't we would need to update avail_event index. */
-@@ -2224,6 +2302,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+@@ -2224,6 +2303,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
  	vq->last_avail_idx -= n;
@@ -371,7 +374,7 @@ index 0b19845..baf65cd 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2251,6 +2331,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2251,6 +2332,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	start = vq->last_used_idx & (vq->num - 1);
  	used = vq->used->ring + start;
  	if (count == 1) {
