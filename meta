@@ -1,6 +1,6 @@
 Version: 1
-Previous: ea2e53d6e5b376a773be4ddf9aa6c207ccd20531
-Head: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
+Previous: cc696f22f2faaed2ceac88b711ffe71a61fda195
+Head: 3074c520626582d6d4fee39d426e1758d10f7a96
 Applied:
   ptr_ring-fix-integer-overflow: e70da4391bb1f899b4bace463387ba4d444c7d64
   vhost_net-stop-device-during: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
