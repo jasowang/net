@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    e6c3414b507a56c0c338d78a5d3778ca60c149e9
+Top:    309ef252e1f9667bf8c9a77d5f617ad5da03bc46
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -8,6 +8,90 @@ debug
 
 ---
 
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 6988746..ec03caf 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1753,27 +1753,36 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (tun->flags & IFF_VNET_HDR) {
+ 		int vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
+ 
+-		if (len < vnet_hdr_sz)
++		if (len < vnet_hdr_sz) {
++			printk("tun vnet hdr sz!\n");
+ 			return -EINVAL;
++		}
+ 		len -= vnet_hdr_sz;
+ 
+-		if (!copy_from_iter_full(&gso, sizeof(gso), from))
++		if (!copy_from_iter_full(&gso, sizeof(gso), from)) {
++			printk("tun gso !\n");
+ 			return -EFAULT;
++		}
+ 
+ 		if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+ 		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
+ 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+ 
+-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
++		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
++			printk("tun hdr len\n");
+ 			return -EINVAL;
++		}
+ 		iov_iter_advance(from, vnet_hdr_sz - sizeof(gso));
+ 	}
+ 
+ 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
+ 		align += NET_IP_ALIGN;
+ 		if (unlikely(len < ETH_HLEN ||
+-			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
++				(gso.hdr_len && tun16_to_cpu(tun,
++		gso.hdr_len) < ETH_HLEN))){
++			printk("tun hdr check!\n");
+ 			return -EINVAL;
++		}
+ 	}
+ 
+ 	good_linear = SKB_MAX_HEAD(align);
+@@ -1802,10 +1811,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		skb = tun_build_skb(tun, tfile, from, &gso, len, &skb_xdp);
+ 		if (IS_ERR(skb)) {
+ 			this_cpu_inc(tun->pcpu_stats->rx_dropped);
++			printk("tun can't build!\n");
+ 			return PTR_ERR(skb);
+ 		}
+-		if (!skb)
++		if (!skb) {
++			printk("tun sbk NULL!\n");
+ 			return total_len;
++		}
+ 	} else {
+ 		if (!zerocopy) {
+ 			copylen = len;
+@@ -1833,6 +1845,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 				this_cpu_inc(tun->pcpu_stats->rx_dropped);
+ 			if (frags)
+ 				mutex_unlock(&tfile->napi_mutex);
++			printk("tun skb err!\n");
+ 			return PTR_ERR(skb);
+ 		}
+ 
+@@ -1849,6 +1862,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 				mutex_unlock(&tfile->napi_mutex);
+ 			}
+ 
++			printk("tun copy err!\n");
+ 			return -EFAULT;
+ 		}
+ 	}
+@@ -1861,6 +1875,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			mutex_unlock(&tfile->napi_mutex);
+ 		}
+ 
++		printk("tun vnet hdr conversion!\n");
+ 		return -EINVAL;
+ 	}
+ 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index 7baa90a..ccee3a0 100644
 --- a/drivers/vhost/net.c
@@ -22,10 +106,10 @@ index 7baa90a..ccee3a0 100644
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..e1e91d3 100644
+index 0b19845..c49cedc 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1997,11 +1997,17 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+@@ -1997,11 +1997,18 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
  	int ret, ret2;
  	int i;
  
@@ -36,6 +120,7 @@ index 0b19845..e1e91d3 100644
 +	if (indices->read_tail != indices->tail)
 +		printk("vq %p read_tail is not equal to tail\n", vq);
  
++	printk("vq %p last_avail is %d\n", vq, vq->last_avail_idx);
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
  		vq_err(vq, "Failed to access avail idx at %p\n",
  		       &vq->avail->idx);
@@ -44,7 +129,7 @@ index 0b19845..e1e91d3 100644
  		return -EFAULT;
  	}
  	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
-@@ -2013,21 +2019,31 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
+@@ -2013,21 +2020,33 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
  		ret2 = vhost_get_avail(vq, heads[i],
  				      &vq->avail->ring[last_avail_idx]);
  		if (unlikely(ret2)) {
@@ -65,6 +150,8 @@ index 0b19845..e1e91d3 100644
  	}
  
 +	vq->last_avail_idx += ret;
++	printk("vq %p total %d last_avail_idx %d\n", vq, ret,
++		vq->last_avail_idx);
 +
  	/* Only get avail ring entries after they have been exposed by guest. */
  	smp_rmb();
@@ -76,7 +163,7 @@ index 0b19845..e1e91d3 100644
  	return ret;
  }
  
-@@ -2036,12 +2052,17 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2036,12 +2055,17 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  	struct vhost_indices *indices = &vq->indices;
  	struct vhost_descs *descs = &vq->descs;
  	struct vring_desc *desc = &descs->last_desc;
@@ -96,7 +183,7 @@ index 0b19845..e1e91d3 100644
  		desc = &descs->descs[descs->head];
  		ret = vhost_copy_from_user(vq, desc,
  					   vq->desc + head,
-@@ -2050,6 +2071,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2050,6 +2074,9 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  			vq_err(vq, "Failed to get descriptor: "
  				"idx %d addr %p\n",
  				head, vq->desc + head);
@@ -106,7 +193,7 @@ index 0b19845..e1e91d3 100644
  			goto err;
  		}
  		descs->head++;
-@@ -2060,14 +2084,27 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2060,14 +2087,27 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  		return 0;
  	}
  
@@ -137,7 +224,7 @@ index 0b19845..e1e91d3 100644
  			desc = &descs->descs[descs->head];
  			ret = vhost_copy_from_user(vq, desc,
  						   vq->desc + head,
-@@ -2076,6 +2113,10 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2076,6 +2116,10 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  				vq_err(vq, "Failed to get descriptor: "
  					   "idx %d addr %p\n",
  					   head, vq->desc + head);
@@ -148,7 +235,7 @@ index 0b19845..e1e91d3 100644
  				goto err;
  			}
  
-@@ -2087,7 +2128,12 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2087,7 +2131,12 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  
  			head = next_desc(vq, desc);
  			if (head == -1)
@@ -162,7 +249,7 @@ index 0b19845..e1e91d3 100644
  		}
  	}
  
-@@ -2104,18 +2150,32 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+@@ -2104,18 +2153,44 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
  {
  	struct vhost_descs *descs = &vq->descs;
  	struct vhost_indices *indices = &vq->indices;
@@ -186,8 +273,20 @@ index 0b19845..e1e91d3 100644
  
 -	if (advance)
 +	if (advance) {
-+		printk("adv read tail is %d head %d\n",
-+			indices->read_tail, indices->head);
++		/* This happens when we read descs more than indices */
++		if (indices->read_tail == indices->head) {
++			int ret = vhost_read_indices(vq, 64);
++			if (ret < 0) {
++				printk("vq %p fail to read indices\n", vq);
++				return ERR_PTR(-EFAULT);
++			}
++			if (ret == 0) {
++				/* BUG() */
++				return NULL;
++			}
++		}
++		printk("vq %p adv read tail is %d head %d\n",
++			vq, indices->read_tail, indices->head);
  		*head = indices->indices[indices->read_tail++];
 -	return &descs->descs[descs->tail++];
 +	}
@@ -199,7 +298,7 @@ index 0b19845..e1e91d3 100644
  }
  
  /* This looks in the virtqueue and for the first available buffer, and converts
-@@ -2141,10 +2201,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2141,10 +2216,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* If there's nothing new since last we looked, return
  	 * invalid.
  	 */
@@ -216,7 +315,7 @@ index 0b19845..e1e91d3 100644
  
  	head = vhost16_to_cpu(vq, ring_head);
  
-@@ -2157,6 +2221,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2157,6 +2236,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		unsigned iov_count = *in_num + *out_num;
  
  		if (unlikely(++found > vq->num)) {
@@ -224,7 +323,7 @@ index 0b19845..e1e91d3 100644
  			vq_err(vq, "Loop detected: vq size %u head %u\n",
  			       vq->num, head);
  			return -EINVAL;
-@@ -2166,6 +2231,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2166,6 +2246,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  					   out_num, in_num,
  					   log, log_num, desc);
  			if (unlikely(ret < 0)) {
@@ -232,7 +331,7 @@ index 0b19845..e1e91d3 100644
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
  						"in indirect descriptor");
-@@ -2183,11 +2249,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2183,11 +2264,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  				     iov + iov_count,
  				     iov_size - iov_count, access);
  		if (unlikely(ret < 0)) {
@@ -249,7 +348,7 @@ index 0b19845..e1e91d3 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,12 +2272,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,15 +2287,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -265,16 +364,27 @@ index 0b19845..e1e91d3 100644
 +		desc = vhost_next_desc(vq, &ring_head, false);
 +		printk("next dest ? %d \n", IS_ERR_OR_NULL(desc));
 +	} while(!IS_ERR_OR_NULL(desc));
-+
+ 
+-	/* On success, increment avail index. */
+-	vq->last_avail_idx++;
 +	printk("one packet done!\n");
  
- 	/* On success, increment avail index. */
- 	vq->last_avail_idx++;
-@@ -2251,6 +2327,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+ 	/* Assume notifications from guest are disabled at this point,
+ 	 * if they aren't we would need to update avail_event index. */
+@@ -2224,6 +2312,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
+ {
+ 	vq->last_avail_idx -= n;
++	printk("vq %p discard last_avail %d to %d\n",
++		vq, vq->last_avail_idx, n);
+ }
+ EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
+ 
+@@ -2251,6 +2341,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	start = vq->last_used_idx & (vq->num - 1);
  	used = vq->used->ring + start;
  	if (count == 1) {
-+		printk("add used %d to idx %d\n", heads[0].id, start);
++		printk("vq %p add used %d to idx %d\n", vq, heads[0].id, start);
  		if (vhost_put_user(vq, heads[0].id, &used->id)) {
  			vq_err(vq, "Failed to write used id");
  			return -EFAULT;
@@ -300,3 +410,38 @@ index eb30f3e..2d9e93c 100644
  	if (unlikely(i >= vq->vring.num)) {
  		BAD_RING(vq, "id %u out of range\n", i);
  		return NULL;
+diff --git a/include/linux/virtio_net.h b/include/linux/virtio_net.h
+index f144216..5498555 100644
+--- a/include/linux/virtio_net.h
++++ b/include/linux/virtio_net.h
+@@ -23,22 +23,28 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
+ 			gso_type = SKB_GSO_UDP;
+ 			break;
+ 		default:
++			printk("unknown gso type!\n");
+ 			return -EINVAL;
+ 		}
+ 
+ 		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_ECN)
+ 			gso_type |= SKB_GSO_TCP_ECN;
+ 
+-		if (hdr->gso_size == 0)
++		if (hdr->gso_size == 0) {
++			printk("gso size is zero!\n");
+ 			return -EINVAL;
++		}
+ 	}
+ 
+ 	if (hdr->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+ 		u16 start = __virtio16_to_cpu(little_endian, hdr->csum_start);
+ 		u16 off = __virtio16_to_cpu(little_endian, hdr->csum_offset);
+ 
+-		if (!skb_partial_csum_set(skb, start, off))
++		if (!skb_partial_csum_set(skb, start, off)) {
++			printk("partial csum set error skb->len %d "
++				"start %d off %d\n", skb->len, start, off);
+ 			return -EINVAL;
++		}
+ 	}
+ 
+ 	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
