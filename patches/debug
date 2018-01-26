@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    309ef252e1f9667bf8c9a77d5f617ad5da03bc46
+Top:    3274db35d47c5c8ee3315b6b1f1e45d60db832f3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -106,7 +106,7 @@ index 7baa90a..ccee3a0 100644
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..c49cedc 100644
+index 0b19845..baf65cd 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,18 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -118,7 +118,7 @@ index 0b19845..c49cedc 100644
 +	printk("vq %p read indices tail %d read_tail %d head %d\n",
 +		vq, indices->tail, indices->read_tail, indices->head);
 +	if (indices->read_tail != indices->tail)
-+		printk("vq %p read_tail is not equal to tail\n", vq);
++		printk("BUG vq %p read_tail is not equal to tail\n", vq);
  
 +	printk("vq %p last_avail is %d\n", vq, vq->last_avail_idx);
  	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
@@ -193,7 +193,7 @@ index 0b19845..c49cedc 100644
  			goto err;
  		}
  		descs->head++;
-@@ -2060,14 +2087,27 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2060,14 +2087,19 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  		return 0;
  	}
  
@@ -202,14 +202,6 @@ index 0b19845..c49cedc 100644
 -		goto err;
 +	printk("vq %p indices head %d indices tail %d\n",
 +		vq, indices->head, indices->tail);
-+
-+	if (unlikely(indices->head == indices->tail)) {
-+		ret = vhost_read_indices(vq, num);
-+		if (unlikely(ret < 0)) {
-+			printk("vq %p no new indices!\n", vq);
-+			goto err;
-+		}
-+	}
  
  	descs->last_desc.flags = 0;
 +	printk("vq %p want to read desc from indices tail %d head %d\n",
@@ -224,7 +216,7 @@ index 0b19845..c49cedc 100644
  			desc = &descs->descs[descs->head];
  			ret = vhost_copy_from_user(vq, desc,
  						   vq->desc + head,
-@@ -2076,6 +2116,10 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2076,6 +2108,10 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  				vq_err(vq, "Failed to get descriptor: "
  					   "idx %d addr %p\n",
  					   head, vq->desc + head);
@@ -235,7 +227,7 @@ index 0b19845..c49cedc 100644
  				goto err;
  			}
  
-@@ -2087,7 +2131,12 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
+@@ -2087,7 +2123,12 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
  
  			head = next_desc(vq, desc);
  			if (head == -1)
@@ -249,56 +241,55 @@ index 0b19845..c49cedc 100644
  		}
  	}
  
-@@ -2104,18 +2153,44 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
+@@ -2104,18 +2145,42 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
  {
  	struct vhost_descs *descs = &vq->descs;
  	struct vhost_indices *indices = &vq->indices;
 +	struct vring_desc *desc;
++	int ret;
  
-+	printk("vq %p desc->tail %d, desc->head %d\n",
-+		vq, descs->tail, descs->head);
++	if (indices->read_tail == indices->head) {
++		ret = vhost_read_indices(vq, 64);
++		if (unlikely(ret < 0)) {
++			printk("vq %p fail to read indices!\n", vq);
++			return ERR_PTR(-EFAULT);
++		}
++		if (ret == 0)
++			return NULL;
++	}
++
++	/* When reached here, we're sure we have indices cached */
  	if (descs->tail == descs->head) {
- 		int ret = vhost_read_descs(vq, 64);
+-		int ret = vhost_read_descs(vq, 64);
 -		if (ret)
-+		if (ret < 0) {
++		ret = vhost_read_descs(vq, 64);
++		if (ret) {
 +			printk("vq %p fail to read descs!\n", vq);
  			return ERR_PTR(-EFAULT);
 -		if (descs->tail == descs->head)
 +		}
-+		if (indices->read_tail == indices->head) {
-+			printk("vq %p no new heads!\n", vq);
++		if (descs->tail == descs->head) {
++			printk("BUG: vq %p no new heads but indices!\n", vq);
  			return NULL;
 +		}
  	}
  
 -	if (advance)
 +	if (advance) {
-+		/* This happens when we read descs more than indices */
-+		if (indices->read_tail == indices->head) {
-+			int ret = vhost_read_indices(vq, 64);
-+			if (ret < 0) {
-+				printk("vq %p fail to read indices\n", vq);
-+				return ERR_PTR(-EFAULT);
-+			}
-+			if (ret == 0) {
-+				/* BUG() */
-+				return NULL;
-+			}
-+		}
 +		printk("vq %p adv read tail is %d head %d\n",
 +			vq, indices->read_tail, indices->head);
  		*head = indices->indices[indices->read_tail++];
 -	return &descs->descs[descs->tail++];
 +	}
-+	desc = &descs->descs[descs->tail++];
 +
++	desc = &descs->descs[descs->tail++];
 +	printk("vq %p advance %d desc %p head %d\n",
 +		vq, advance, desc, *head);
 +	return desc;
  }
  
  /* This looks in the virtqueue and for the first available buffer, and converts
-@@ -2141,10 +2216,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2141,10 +2206,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* If there's nothing new since last we looked, return
  	 * invalid.
  	 */
@@ -315,7 +306,7 @@ index 0b19845..c49cedc 100644
  
  	head = vhost16_to_cpu(vq, ring_head);
  
-@@ -2157,6 +2236,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2157,6 +2226,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		unsigned iov_count = *in_num + *out_num;
  
  		if (unlikely(++found > vq->num)) {
@@ -323,7 +314,7 @@ index 0b19845..c49cedc 100644
  			vq_err(vq, "Loop detected: vq size %u head %u\n",
  			       vq->num, head);
  			return -EINVAL;
-@@ -2166,6 +2246,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2166,6 +2236,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  					   out_num, in_num,
  					   log, log_num, desc);
  			if (unlikely(ret < 0)) {
@@ -331,7 +322,7 @@ index 0b19845..c49cedc 100644
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
  						"in indirect descriptor");
-@@ -2183,11 +2264,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2183,11 +2254,14 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  				     iov + iov_count,
  				     iov_size - iov_count, access);
  		if (unlikely(ret < 0)) {
@@ -348,7 +339,7 @@ index 0b19845..c49cedc 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,15 +2287,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,15 +2277,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -371,7 +362,7 @@ index 0b19845..c49cedc 100644
  
  	/* Assume notifications from guest are disabled at this point,
  	 * if they aren't we would need to update avail_event index. */
-@@ -2224,6 +2312,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+@@ -2224,6 +2302,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
  	vq->last_avail_idx -= n;
@@ -380,7 +371,7 @@ index 0b19845..c49cedc 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2251,6 +2341,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2251,6 +2331,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	start = vq->last_used_idx & (vq->num - 1);
  	used = vq->used->ring + start;
  	if (count == 1) {
