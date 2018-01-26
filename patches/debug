@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    a7860f04a856dd41d346e747727bd2dfd6a0017d
+Top:    3188021b4af79c625ac9988e41d094ef2843138d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -107,7 +107,7 @@ index 7baa90a..ccee3a0 100644
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 0b19845..83eefbc 100644
+index 0b19845..8cfde21 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1997,11 +1997,18 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
@@ -351,7 +351,7 @@ index 0b19845..83eefbc 100644
  		if (access == VHOST_ACCESS_WO) {
  			/* If this is an input descriptor,
  			 * increment that count. */
-@@ -2203,15 +2285,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2203,15 +2285,20 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			/* If it's an output descriptor, they're all supposed
  			 * to come before any input descriptors. */
  			if (unlikely(*in_num)) {
@@ -362,6 +362,7 @@ index 0b19845..83eefbc 100644
  			*out_num += ret;
  		}
 -	} while(!IS_ERR_OR_NULL(desc = vhost_next_desc(vq, &ring_head, false)));
++		printk("vq %p head %d desc.addr %p\n", vq, head, desc->addr);
 +		if (next_desc(vq, desc) == -1)
 +			break;
 +		desc = vhost_next_desc(vq, &ring_head, false);
@@ -374,7 +375,7 @@ index 0b19845..83eefbc 100644
  
  	/* Assume notifications from guest are disabled at this point,
  	 * if they aren't we would need to update avail_event index. */
-@@ -2224,6 +2310,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+@@ -2224,6 +2311,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
  {
  	vq->last_avail_idx -= n;
@@ -383,7 +384,7 @@ index 0b19845..83eefbc 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2251,6 +2339,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2251,6 +2340,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	start = vq->last_used_idx & (vq->num - 1);
  	used = vq->used->ring + start;
  	if (count == 1) {
