@@ -1,0 +1,43 @@
+Bottom: 4ba8283ab7062f2ce47194b970f21d24f7b8f5f5
+Top:    92ac7ae2966b753819236c2a0966848d7babeed4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-09-11 09:50:45 +0800
+
+vhost_net: rename VHOST_RX_BATCH to VHOST_NET_BATCH
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 58585ec..c89640e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -87,7 +87,7 @@ struct vhost_net_ubuf_ref {
+ 	struct vhost_virtqueue *vq;
+ };
+ 
+-#define VHOST_RX_BATCH 64
++#define VHOST_NET_BATCH 64
+ struct vhost_net_buf {
+ 	struct sk_buff **queue;
+ 	int tail;
+@@ -159,7 +159,7 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
+ 
+ 	rxq->head = 0;
+ 	rxq->tail = skb_array_consume_batched(nvq->rx_array, rxq->queue,
+-					      VHOST_RX_BATCH);
++					      VHOST_NET_BATCH);
+ 	return rxq->tail;
+ }
+ 
+@@ -912,7 +912,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 		return -ENOMEM;
+ 	}
+ 
+-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(struct sk_buff *),
++	queue = kmalloc_array(VHOST_NET_BATCH, sizeof(struct sk_buff *),
+ 			      GFP_KERNEL);
+ 	if (!queue) {
+ 		kfree(vqs);

@@ -1,0 +1,94 @@
+Bottom: 5446c592a85861f1b61f051d0335c6c77a7b28c6
+Top:    e39308474bd60e807c7347fb3ce3c5a0322e8cc6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2017-08-23 16:54:42 +0800
+
+vhost: introduce helper to prefetch desc index
+
+This patch introduces vhost_prefetch_desc_indices() which could batch
+fetching descriptor indices and updating used ring. copy_to_user was
+used in order to benefit from modern cpus that support fast string
+copy. Batched vring processing will be the first user.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index f87ec75..b5d5e92 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2437,6 +2437,58 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
+ }
+ EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
+ 
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				struct vring_used_elem *heads,
++				u16 num)
++{
++	int ret, ret2;
++	u16 last_avail_idx, last_used_idx, total, copied;
++	__virtio16 avail_idx;
++	struct vring_used_elem __user *used;
++	int i;
++
++	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
++		vq_err(vq, "Failed to access avail idx at %p\n",
++		       &vq->avail->idx);
++		return -EFAULT;
++	}
++	last_avail_idx = vq->last_avail_idx & (vq->num - 1);
++	vq->avail_idx = vhost16_to_cpu(vq, avail_idx);
++	total = vq->avail_idx - vq->last_avail_idx;
++	ret = total = min(total, num);
++
++	for (i = 0; i < ret; i++) {
++		ret2 = vhost_get_avail(vq, heads[i].id,
++				      &vq->avail->ring[last_avail_idx]);
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to get descriptors\n");
++			return -EFAULT;
++		}
++		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
++	}
++
++	last_used_idx = vq->last_used_idx & (vq->num - 1);
++	while (total) {
++		copied = min((u16)(vq->num - last_used_idx), total);
++		ret2 = vhost_copy_to_user(vq,
++					  &vq->used->ring[last_used_idx],
++					  &heads[ret - total],
++					  copied * sizeof(*used));
++
++		if (unlikely(ret2)) {
++			vq_err(vq, "Failed to update used ring!\n");
++			return -EFAULT;
++		}
++
++		last_used_idx = 0;
++		total -= copied;
++	}
++
++	/* Only get avail ring entries after they have been exposed by guest. */
++	smp_rmb();
++	return ret;
++}
++EXPORT_SYMBOL(vhost_prefetch_desc_indices);
+ 
+ static int __init vhost_init(void)
+ {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 39ff897..3b99402 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -228,6 +228,9 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
++int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
++				struct vring_used_elem *heads,
++				u16 num);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
