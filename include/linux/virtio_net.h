@@ -23,22 +23,28 @@ static inline int virtio_net_hdr_to_skb(struct sk_buff *skb,
 			gso_type = SKB_GSO_UDP;
 			break;
 		default:
+			printk("unknown gso type!\n");
 			return -EINVAL;
 		}
 
 		if (hdr->gso_type & VIRTIO_NET_HDR_GSO_ECN)
 			gso_type |= SKB_GSO_TCP_ECN;
 
-		if (hdr->gso_size == 0)
+		if (hdr->gso_size == 0) {
+			printk("gso size is zero!\n");
 			return -EINVAL;
+		}
 	}
 
 	if (hdr->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
 		u16 start = __virtio16_to_cpu(little_endian, hdr->csum_start);
 		u16 off = __virtio16_to_cpu(little_endian, hdr->csum_offset);
 
-		if (!skb_partial_csum_set(skb, start, off))
+		if (!skb_partial_csum_set(skb, start, off)) {
+			printk("partial csum set error skb->len %d "
+				"start %d off %d\n", skb->len, start, off);
 			return -EINVAL;
+		}
 	}
 
 	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {

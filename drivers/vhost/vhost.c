@@ -2003,6 +2003,7 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 	if (indices->read_tail != indices->tail)
 		printk("vq %p read_tail is not equal to tail\n", vq);
 
+	printk("vq %p last_avail is %d\n", vq, vq->last_avail_idx);
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
 		       &vq->avail->idx);
@@ -2036,6 +2037,8 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 	}
 
 	vq->last_avail_idx += ret;
+	printk("vq %p total %d last_avail_idx %d\n", vq, ret,
+		vq->last_avail_idx);
 
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
@@ -2167,8 +2170,20 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
 	}
 
 	if (advance) {
-		printk("adv read tail is %d head %d\n",
-			indices->read_tail, indices->head);
+		/* This happens when we read descs more than indices */
+		if (indices->read_tail == indices->head) {
+			int ret = vhost_read_indices(vq, 64);
+			if (ret < 0) {
+				printk("vq %p fail to read indices\n", vq);
+				return ERR_PTR(-EFAULT);
+			}
+			if (ret == 0) {
+				/* BUG() */
+				return NULL;
+			}
+		}
+		printk("vq %p adv read tail is %d head %d\n",
+			vq, indices->read_tail, indices->head);
 		*head = indices->indices[indices->read_tail++];
 	}
 	desc = &descs->descs[descs->tail++];
@@ -2286,9 +2301,6 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 
 	printk("one packet done!\n");
 
-	/* On success, increment avail index. */
-	vq->last_avail_idx++;
-
 	/* Assume notifications from guest are disabled at this point,
 	 * if they aren't we would need to update avail_event index. */
 	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
@@ -2300,6 +2312,8 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
 {
 	vq->last_avail_idx -= n;
+	printk("vq %p discard last_avail %d to %d\n",
+		vq, vq->last_avail_idx, n);
 }
 EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
 
@@ -2327,7 +2341,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 	start = vq->last_used_idx & (vq->num - 1);
 	used = vq->used->ring + start;
 	if (count == 1) {
-		printk("add used %d to idx %d\n", heads[0].id, start);
+		printk("vq %p add used %d to idx %d\n", vq, heads[0].id, start);
 		if (vhost_put_user(vq, heads[0].id, &used->id)) {
 			vq_err(vq, "Failed to write used id");
 			return -EFAULT;
