@@ -2291,6 +2291,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			}
 			*out_num += ret;
 		}
+		printk("vq %p head %d desc.addr %p\n", vq, head, desc->addr);
 		if (next_desc(vq, desc) == -1)
 			break;
 		desc = vhost_next_desc(vq, &ring_head, false);
