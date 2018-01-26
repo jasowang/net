@@ -1,5 +1,5 @@
 Bottom: e8b02f669338a20b62a01e695ac4ec1db4eb8eae
-Top:    37cced031474387b542daeb7ccda117ddd2ee9be
+Top:    a7860f04a856dd41d346e747727bd2dfd6a0017d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-24 16:18:03 +0800
 
@@ -9,10 +9,10 @@ debug
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 6988746..ec03caf 100644
+index 6988746..2641da6 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1753,27 +1753,36 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1753,27 +1753,37 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  	if (tun->flags & IFF_VNET_HDR) {
  		int vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
  
@@ -45,15 +45,16 @@ index 6988746..ec03caf 100644
  		align += NET_IP_ALIGN;
  		if (unlikely(len < ETH_HLEN ||
 -			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
-+				(gso.hdr_len && tun16_to_cpu(tun,
-+		gso.hdr_len) < ETH_HLEN))){
-+			printk("tun hdr check!\n");
++				(gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN))){
++			printk("tun hdr check len %d "
++				"gso.hdr_len %d ETH_HLEN %d!\n", len,
++				tun16_to_cpu(tun, gso.hdr_len), ETH_HLEN);
  			return -EINVAL;
 +		}
  	}
  
  	good_linear = SKB_MAX_HEAD(align);
-@@ -1802,10 +1811,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1802,10 +1812,13 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  		skb = tun_build_skb(tun, tfile, from, &gso, len, &skb_xdp);
  		if (IS_ERR(skb)) {
  			this_cpu_inc(tun->pcpu_stats->rx_dropped);
@@ -68,7 +69,7 @@ index 6988746..ec03caf 100644
  	} else {
  		if (!zerocopy) {
  			copylen = len;
-@@ -1833,6 +1845,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1833,6 +1846,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  				this_cpu_inc(tun->pcpu_stats->rx_dropped);
  			if (frags)
  				mutex_unlock(&tfile->napi_mutex);
@@ -76,7 +77,7 @@ index 6988746..ec03caf 100644
  			return PTR_ERR(skb);
  		}
  
-@@ -1849,6 +1862,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1849,6 +1863,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  				mutex_unlock(&tfile->napi_mutex);
  			}
  
@@ -84,7 +85,7 @@ index 6988746..ec03caf 100644
  			return -EFAULT;
  		}
  	}
-@@ -1861,6 +1875,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1861,6 +1876,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
  			mutex_unlock(&tfile->napi_mutex);
  		}
  
