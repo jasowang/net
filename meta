@@ -1,9 +1,10 @@
 Version: 1
-Previous: d2271778e9e9a8c744991de6046345f75224bef6
-Head: fd2f43a7742da953ee47ebae86f5a9f53fce920d
+Previous: 767cca0e0c3030e15dae34779005c1048cd3dc06
+Head: 58cbe5228c3a079ea205d4c766a0d1c2acc6fe0b
 Applied:
   vhost-introduce-helper-to: a6e8491a4184fca8a555927e2b8c52e06d93830b
   debug: fd2f43a7742da953ee47ebae86f5a9f53fce920d
+  refresh-temp: 58cbe5228c3a079ea205d4c766a0d1c2acc6fe0b
 Unapplied:
   vhost: 73c7eee0bfa36def063de5458f54674a844dfc0a
   vhost-do-not-try-to-access: 4df7e4f1d03be2d77f12a1428d0a8b0d24cf919c
