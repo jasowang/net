@@ -1778,9 +1778,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if ((tun->flags & TUN_TYPE_MASK) == IFF_TAP) {
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
-				(gso.hdr_len && tun16_to_cpu(tun,
-		gso.hdr_len) < ETH_HLEN))){
-			printk("tun hdr check!\n");
+				(gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN))){
+			printk("tun hdr check len %d "
+				"gso.hdr_len %d ETH_HLEN %d!\n", len,
+				tun16_to_cpu(tun, gso.hdr_len), ETH_HLEN);
 			return -EINVAL;
 		}
 	}
