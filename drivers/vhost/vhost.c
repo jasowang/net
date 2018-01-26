@@ -2096,7 +2096,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 	while (indices->tail < indices->head) {
 		printk("vq %p reading descs for indices tail %d\n",
 			vq, indices->tail);
-		head = vhost16_to_cpu(vq, indices->indices[indices->tail++]);
+		head = vhost16_to_cpu(vq, indices->indices[indices->tail]);
 		while(1) {
 			printk("vq %p read desc to descs head %d\n",
 				vq, descs->head);
@@ -2130,6 +2130,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 				goto err;
 			}
 		}
+		indices->tail++;
 	}
 
 done:
