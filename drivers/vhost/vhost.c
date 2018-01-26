@@ -2001,8 +2001,8 @@ static int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 	printk("vq %p read indices tail %d read_tail %d head %d\n",
 		vq, indices->tail, indices->read_tail, indices->head);
 	if (indices->read_tail != indices->tail)
-		printk("BUG vq %p read_tail is not equal to tail\n", vq);
-
+		printk("BUG vq %p read_tail %d is not equal to tail %d\n",
+			vq, indices->read_tail, indices->tail);
 	printk("vq %p last_avail is %d\n", vq, vq->last_avail_idx);
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -2131,6 +2131,7 @@ static int vhost_read_descs(struct vhost_virtqueue *vq, int num)
 			}
 		}
 		indices->tail++;
+		printk("vq %p indices->tail to %d\n", vq, indices->tail);
 	}
 
 done:
@@ -2149,33 +2150,39 @@ static struct vring_desc *vhost_next_desc(struct vhost_virtqueue *vq,
 	struct vring_desc *desc;
 	int ret;
 
-	if (indices->read_tail == indices->head) {
+	/* In vhost_vq_get_desc() we call
+	 * vhost_next_desc(vq, &ring_head, true) first, this means, we
+	 * could have indices->read_tail == indices->head but descs
+	 * still has pending descs to be read.
+	 */
+	if (advance && indices->read_tail == indices->head) {
 		ret = vhost_read_indices(vq, 64);
 		if (unlikely(ret < 0)) {
-			printk("vq %p fail to read indices!\n", vq);
+			printk("BUG vq %p fail to read indices!\n", vq);
 			return ERR_PTR(-EFAULT);
 		}
 		if (ret == 0)
 			return NULL;
 	}
 
-	/* When reached here, we're sure we have indices cached */
 	if (descs->tail == descs->head) {
 		ret = vhost_read_descs(vq, 64);
 		if (ret) {
-			printk("vq %p fail to read descs!\n", vq);
+			printk("BUG vq %p fail to read descs!\n", vq);
 			return ERR_PTR(-EFAULT);
 		}
 		if (descs->tail == descs->head) {
-			printk("BUG: vq %p no new heads but indices!\n", vq);
+			if (advance)
+				printk("BUG: vq %p no new heads but "
+				       "indices!\n", vq);
 			return NULL;
 		}
 	}
 
 	if (advance) {
+		*head = indices->indices[indices->read_tail++];
 		printk("vq %p adv read tail is %d head %d\n",
 			vq, indices->read_tail, indices->head);
-		*head = indices->indices[indices->read_tail++];
 	}
 
 	desc = &descs->descs[descs->tail++];
