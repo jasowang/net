@@ -1,9 +1,8 @@
 Version: 1
-Previous: 73a84dad89d224ecee2ffaa6741d8290f7d7f6e9
+Previous: 212b2b83d2ce36892a5eebdcb1d3786a8d5a424f
 Head: a1e9ba7021fc87b939dbf66f3eefe670b3aa3b10
 Applied:
 Unapplied:
-  ptr_ring-fix-integer-overflow: e70da4391bb1f899b4bace463387ba4d444c7d64
   vhost_net-stop-device-during-0: 3074c520626582d6d4fee39d426e1758d10f7a96
   vhost_net-stop-device-during: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
