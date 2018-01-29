@@ -440,6 +440,7 @@ void vhost_dev_init(struct vhost_dev *dev,
 		vq->indirect = NULL;
 		vq->heads = NULL;
 		vq->dev = dev;
+		vq->avails.head = vq->avails.tail = 0;
 		mutex_init(&vq->mutex);
 		vhost_vq_reset(dev, vq);
 		if (vq->handle_kick)
@@ -2414,15 +2415,11 @@ struct vhost_msg_node *vhost_dequeue_msg(struct vhost_dev *dev,
 }
 EXPORT_SYMBOL_GPL(vhost_dequeue_msg);
 
-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				struct vring_used_elem *heads,
-				u16 num)
+int vhost_read_indices(struct vhost_virtqueue *vq, u16 num)
 {
-	int ret, ret2;
-	u16 last_avail_idx, last_used_idx, total, copied;
-	__virtio16 avail_idx;
-	struct vring_used_elem __user *used;
-	int i;
+	__virtio16 avail_idx, *heads = vq->avails.idx;
+	u16 last_avail_idx, last_used_idx;
+	int i, ret, total;
 
 	if (unlikely(vhost_get_avail(vq, avail_idx, &vq->avail->idx))) {
 		vq_err(vq, "Failed to access avail idx at %p\n",
@@ -2434,38 +2431,24 @@ int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
 	total = vq->avail_idx - vq->last_avail_idx;
 	ret = total = min(total, num);
 
-	for (i = 0; i < ret; i++) {
-		ret2 = vhost_get_avail(vq, heads[i].id,
+	for (i = 0; i < total; i++) {
+		ret = vhost_get_avail(vq, heads[i],
 				      &vq->avail->ring[last_avail_idx]);
-		if (unlikely(ret2)) {
+		if (unlikely(ret)) {
 			vq_err(vq, "Failed to get descriptors\n");
 			return -EFAULT;
 		}
 		last_avail_idx = (last_avail_idx + 1) & (vq->num - 1);
 	}
 
-	last_used_idx = vq->last_used_idx & (vq->num - 1);
-	while (total) {
-		copied = min((u16)(vq->num - last_used_idx), total);
-		ret2 = vhost_copy_to_user(vq,
-					  &vq->used->ring[last_used_idx],
-					  &heads[ret - total],
-					  copied * sizeof(*used));
-
-		if (unlikely(ret2)) {
-			vq_err(vq, "Failed to update used ring!\n");
-			return -EFAULT;
-		}
-
-		last_used_idx = 0;
-		total -= copied;
-	}
-
 	/* Only get avail ring entries after they have been exposed by guest. */
 	smp_rmb();
-	return ret;
+
+	vq->avails.head = total;
+	vq->avails.tail = 0;
+
+	return total;
 }
-EXPORT_SYMBOL(vhost_prefetch_desc_indices);
 
 static int __init vhost_init(void)
 {

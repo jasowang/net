@@ -27,6 +27,12 @@ struct vhost_work {
 	unsigned long		  flags;
 };
 
+struct vhost_avails {
+	__virtio16 idx[64];
+	int head;
+	int tail;
+};
+
 /* Poll a file (eventfd or socket) */
 /* Note: there's nothing vhost specific about this structure. */
 struct vhost_poll {
@@ -150,6 +156,8 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
+
+	struct vhost_avails avails;
 };
 
 struct vhost_msg_node {
@@ -224,9 +232,6 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 			     struct iov_iter *from);
 int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
-int vhost_prefetch_desc_indices(struct vhost_virtqueue *vq,
-				struct vring_used_elem *heads,
-				u16 num);
 
 #define vq_err(vq, fmt, ...) do {                                  \
 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
