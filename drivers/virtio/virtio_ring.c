@@ -342,9 +342,12 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 			if (vring_mapping_error(vq, addr))
 				goto unmap_release;
 
-			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
+			desc[i].flags = cpu_to_virtio16(_vq->vdev,
+			VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
+			printk("desc[i].addr %llx desc[i].len %d\n",
+			       desc[i].addr, desc[i].len);
 			prev = i;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
@@ -399,6 +402,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	 * do sync). */
 	avail = vq->avail_idx_shadow & (vq->vring.num - 1);
 	vq->vring.avail->ring[avail] = cpu_to_virtio16(_vq->vdev, head);
+	printk("head %d to avail %d\n", head, avail);
 
 	/* Descriptors and available array need to be set before we expose the
 	 * new available array entries. */
