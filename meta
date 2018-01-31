@@ -1,7 +1,8 @@
 Version: 1
-Previous: 2d8c6f9eaa6e56563f9476bc0c5b5f47ee1afe33
-Head: 6b2e2829c11ea677aa97ecfe95d9544aa0208b8c
+Previous: ff619c141f870073cf243a8ef5a3b3441c0eba08
+Head: bfa40015a1fe6807b3e0084c6d11282e9eab8c0f
 Applied:
+  debug-0: bfa40015a1fe6807b3e0084c6d11282e9eab8c0f
 Unapplied:
   tun-add-missing-xdp-flush: d2ab8f3df01fe260e5cf9f000413e63b2bc00e49
   vhost_net-stop-device-during-0: 3074c520626582d6d4fee39d426e1758d10f7a96
