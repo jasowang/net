@@ -1,0 +1,133 @@
+Bottom: 7b77e6494ab97efc7a70b86ee3a4ab9db0fd4552
+Top:    c668677d04bb2713b0c3bb5abcefeb4460e130ec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-01-31 17:17:06 +0800
+
+Refresh of debug-0
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index a0c5cb1..c48734a 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1444,8 +1444,10 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, sk_sleep(sk), wait);
+ 
+-	if (!ptr_ring_empty(&tfile->tx_ring))
++	if (!ptr_ring_empty(&tfile->tx_ring)) {
++		printk("POLLIN %p\n", &tfile->tx_ring);
+ 		mask |= POLLIN | POLLRDNORM;
++	}
+ 
+ 	if (tun->dev->flags & IFF_UP &&
+ 	    (sock_writeable(sk) ||
+@@ -1751,8 +1753,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 	if (tun->flags & IFF_VNET_HDR) {
+ 		int vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
+ 
+-		if (len < vnet_hdr_sz)
++		if (len < vnet_hdr_sz) {
++			printk("len %d vhdr %d\n", len, vnet_hdr_sz);
+ 			return -EINVAL;
++		}
+ 		len -= vnet_hdr_sz;
+ 
+ 		if (!copy_from_iter_full(&gso, sizeof(gso), from))
+@@ -1762,8 +1766,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
+ 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
+ 
+-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
++		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
++			printk("gso hdr len %d len %d\n", gso.hdr_len, len);
+ 			return -EINVAL;
++		}
+ 		iov_iter_advance(from, vnet_hdr_sz - sizeof(gso));
+ 	}
+ 
+@@ -1771,7 +1777,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 		align += NET_IP_ALIGN;
+ 		if (unlikely(len < ETH_HLEN ||
+ 			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
++		{
++			printk("len %d ETH_HLEN %d hdr_len %d\n",
++				len, ETH_HLEN, gso.hdr_len);
+ 			return -EINVAL;
++		}
+ 	}
+ 
+ 	good_linear = SKB_MAX_HEAD(align);
+@@ -1859,6 +1869,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
+ 			mutex_unlock(&tfile->napi_mutex);
+ 		}
+ 
++		printk("vnet hdr to skb fail \n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -2125,9 +2136,13 @@ static void *tun_ring_recv(struct tun_file *tfile, int noblock, int *err)
+ 	int error = 0;
+ 
+ 	ptr = ptr_ring_consume(&tfile->tx_ring);
+-	if (ptr)
++	if (ptr) {
++		printk("consume %p\n", &tfile->tx_ring);
+ 		goto out;
++	}
+ 	if (noblock) {
++		printk("-EAGAIN %p %d\n",
++			&tfile->tx_ring, ptr_ring_empty(&tfile->tx_ring));
+ 		error = -EAGAIN;
+ 		goto out;
+ 	}
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 626c273..e03ec23 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1297,6 +1297,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 	int num_sg;
+ 	unsigned hdr_len = vi->hdr_len;
+ 	bool can_push;
++	int ret;
+ 
+ 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
+ 
+@@ -1332,7 +1333,9 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
+ 			return num_sg;
+ 		num_sg++;
+ 	}
+-	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
++	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
++	printk("packet sent!\n");
++	return ret;
+ }
+ 
+ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index eb30f3e..87fcc5c 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -342,9 +342,12 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 			if (vring_mapping_error(vq, addr))
+ 				goto unmap_release;
+ 
+-			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
++			desc[i].flags = cpu_to_virtio16(_vq->vdev,
++			VRING_DESC_F_NEXT);
+ 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+ 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
++			printk("desc[i].addr %llx desc[i].len %d\n",
++			       desc[i].addr, desc[i].len);
+ 			prev = i;
+ 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
+ 		}
+@@ -399,6 +402,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 	 * do sync). */
+ 	avail = vq->avail_idx_shadow & (vq->vring.num - 1);
+ 	vq->vring.avail->ring[avail] = cpu_to_virtio16(_vq->vdev, head);
++	printk("head %d to avail %d\n", head, avail);
+ 
+ 	/* Descriptors and available array need to be set before we expose the
+ 	 * new available array entries. */
