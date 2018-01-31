@@ -1297,6 +1297,7 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 	int num_sg;
 	unsigned hdr_len = vi->hdr_len;
 	bool can_push;
+	int ret;
 
 	pr_debug("%s: xmit %p %pM\n", vi->dev->name, skb, dest);
 
@@ -1332,7 +1333,9 @@ static int xmit_skb(struct send_queue *sq, struct sk_buff *skb)
 			return num_sg;
 		num_sg++;
 	}
-	return virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	ret = virtqueue_add_outbuf(sq->vq, sq->sg, num_sg, skb, GFP_ATOMIC);
+	printk("packet sent!\n");
+	return ret;
 }
 
 static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)

@@ -1444,8 +1444,10 @@ static unsigned int tun_chr_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, sk_sleep(sk), wait);
 
-	if (!ptr_ring_empty(&tfile->tx_ring))
+	if (!ptr_ring_empty(&tfile->tx_ring)) {
+		printk("POLLIN %p\n", &tfile->tx_ring);
 		mask |= POLLIN | POLLRDNORM;
+	}
 
 	if (tun->dev->flags & IFF_UP &&
 	    (sock_writeable(sk) ||
@@ -1751,8 +1753,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 	if (tun->flags & IFF_VNET_HDR) {
 		int vnet_hdr_sz = READ_ONCE(tun->vnet_hdr_sz);
 
-		if (len < vnet_hdr_sz)
+		if (len < vnet_hdr_sz) {
+			printk("len %d vhdr %d\n", len, vnet_hdr_sz);
 			return -EINVAL;
+		}
 		len -= vnet_hdr_sz;
 
 		if (!copy_from_iter_full(&gso, sizeof(gso), from))
@@ -1762,8 +1766,10 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		    tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2 > tun16_to_cpu(tun, gso.hdr_len))
 			gso.hdr_len = cpu_to_tun16(tun, tun16_to_cpu(tun, gso.csum_start) + tun16_to_cpu(tun, gso.csum_offset) + 2);
 
-		if (tun16_to_cpu(tun, gso.hdr_len) > len)
+		if (tun16_to_cpu(tun, gso.hdr_len) > len) {
+			printk("gso hdr len %d len %d\n", gso.hdr_len, len);
 			return -EINVAL;
+		}
 		iov_iter_advance(from, vnet_hdr_sz - sizeof(gso));
 	}
 
@@ -1771,7 +1777,11 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		align += NET_IP_ALIGN;
 		if (unlikely(len < ETH_HLEN ||
 			     (gso.hdr_len && tun16_to_cpu(tun, gso.hdr_len) < ETH_HLEN)))
+		{
+			printk("len %d ETH_HLEN %d hdr_len %d\n",
+				len, ETH_HLEN, gso.hdr_len);
 			return -EINVAL;
+		}
 	}
 
 	good_linear = SKB_MAX_HEAD(align);
@@ -1859,6 +1869,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 			mutex_unlock(&tfile->napi_mutex);
 		}
 
+		printk("vnet hdr to skb fail \n");
 		return -EINVAL;
 	}
 
@@ -2125,9 +2136,13 @@ static void *tun_ring_recv(struct tun_file *tfile, int noblock, int *err)
 	int error = 0;
 
 	ptr = ptr_ring_consume(&tfile->tx_ring);
-	if (ptr)
+	if (ptr) {
+		printk("consume %p\n", &tfile->tx_ring);
 		goto out;
+	}
 	if (noblock) {
+		printk("-EAGAIN %p %d\n",
+			&tfile->tx_ring, ptr_ring_empty(&tfile->tx_ring));
 		error = -EAGAIN;
 		goto out;
 	}
