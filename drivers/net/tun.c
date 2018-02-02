@@ -181,7 +181,7 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct ptr_ring tx_ring;
 	struct xdp_rxq_info xdp_rxq;
-	bool xdp_flush_needed;
+	int xmit_flush_pending;
 };
 
 struct tun_flow_entry {
@@ -1670,7 +1670,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			if (err)
 				goto err_redirect;
 			rcu_read_unlock();
-			tfile->xdp_flush_needed = true;
+			++tfile->xmit_flush_pending;
 			return NULL;
 		case XDP_TX:
 			xdp_xmit = true;
@@ -1988,8 +1988,8 @@ static ssize_t tun_chr_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	result = tun_get_user(tun, tfile, NULL, from,
 			      file->f_flags & O_NONBLOCK, false);
 
-	if (tfile->xdp_flush_needed) {
-		tfile->xdp_flush_needed = false;
+	if (tfile->xmit_flush_pending) {
+		tfile->xmit_flush_pending = 0;
 		xdp_do_flush_map();
 	}
 
@@ -2330,8 +2330,9 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 			   m->msg_flags & MSG_DONTWAIT,
 			   m->msg_flags & MSG_MORE);
 
-	if (tfile->xdp_flush_needed && !(m->msg_flags & MSG_MORE)) {
-		tfile->xdp_flush_needed = false;
+	if (tfile->xmit_flush_pending &&
+	    (!(m->msg_flags & MSG_MORE) || tfile->xmit_flush_pending >= 64 )) {
+		tfile->xmit_flush_pending = 0;
 		xdp_do_flush_map();
 	}
 
@@ -3166,7 +3167,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
 	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
-	tfile->xdp_flush_needed = false;
+	tfile->xmit_flush_pending = 0;
 
 	return 0;
 }
