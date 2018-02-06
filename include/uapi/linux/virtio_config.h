@@ -71,4 +71,13 @@
  * this is for compatibility with legacy systems.
  */
 #define VIRTIO_F_IOMMU_PLATFORM		33
+
+#define VIRTIO_F_RING_PACKED		34
+
+/*
+ * This feature indicates that all buffers are used by the device in
+ * the same order in which they have been made available.
+ */
+#define VIRTIO_F_IN_ORDER		35
+
 #endif /* _UAPI_LINUX_VIRTIO_CONFIG_H */
