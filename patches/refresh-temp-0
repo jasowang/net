@@ -1,0 +1,58 @@
+Bottom: 7b77e6494ab97efc7a70b86ee3a4ab9db0fd4552
+Top:    293e49ac7312ff45637cf246fb9af47967e28e5e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-06 11:38:31 +0800
+
+Refresh of virtio-introduce-packed-ring
+
+---
+
+diff --git a/include/uapi/linux/virtio_config.h b/include/uapi/linux/virtio_config.h
+index 308e209..5903d51 100644
+--- a/include/uapi/linux/virtio_config.h
++++ b/include/uapi/linux/virtio_config.h
+@@ -71,4 +71,13 @@
+  * this is for compatibility with legacy systems.
+  */
+ #define VIRTIO_F_IOMMU_PLATFORM		33
++
++#define VIRTIO_F_RING_PACKED		34
++
++/*
++ * This feature indicates that all buffers are used by the device in
++ * the same order in which they have been made available.
++ */
++#define VIRTIO_F_IN_ORDER		35
++
+ #endif /* _UAPI_LINUX_VIRTIO_CONFIG_H */
+diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
+index 6d5d5fa..75412e4 100644
+--- a/include/uapi/linux/virtio_ring.h
++++ b/include/uapi/linux/virtio_ring.h
+@@ -43,6 +43,8 @@
+ #define VRING_DESC_F_WRITE	2
+ /* This means the buffer contains a list of buffer descriptors. */
+ #define VRING_DESC_F_INDIRECT	4
++#define VRING_DESC_F_AVAIL      7
++#define VRING_DESC_F_USED	15
+ 
+ /* The Host uses this in used->flags to advise the Guest: don't kick me when
+  * you add a buffer.  It's unreliable, so it's simply an optimization.  Guest
+@@ -62,6 +64,17 @@
+  * at the end of the used ring. Guest should ignore the used->flags field. */
+ #define VIRTIO_RING_F_EVENT_IDX		29
+ 
++struct vring_packed {
++	/* Buffer Address. */
++	__virtio64 addr;
++	/* Buffer Length. */
++	__virtio32 len;
++	/* Buffer ID. */
++	__virtio16 id;
++	/* The flags depending on descriptor type. */
++	__virito16 flags;
++};
++
+ /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
+ struct vring_desc {
+ 	/* Address (guest-physical). */
