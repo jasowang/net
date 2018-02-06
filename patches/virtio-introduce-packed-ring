@@ -5,6 +5,8 @@ Date:   2018-02-06 11:38:27 +0800
 
 virtio: introduce packed ring defines
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
