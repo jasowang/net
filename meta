@@ -1,9 +1,8 @@
 Version: 1
-Previous: 4c73aedbf049938c1f9559b81b6caf4fb957b83c
-Head: 36d62160fcac62bb1c6656e8316a9b2141457e01
+Previous: fb0696e9bf240a9f0745d09a2fd2fd5769ed4551
+Head: c807879218a4bd9ed4657b75885255775d9d0148
 Applied:
-  virtio-introduce-packed-ring: eb12f3ab5f3d12690413e6f37fc25ea7179c81c3
-  refresh-temp-0: 36d62160fcac62bb1c6656e8316a9b2141457e01
+  virtio-introduce-packed-ring: c807879218a4bd9ed4657b75885255775d9d0148
 Unapplied:
   tun-add-missing-xdp-flush: d5ee393ab4ba00843e97e921b19424b7a685e3a9
   debug-0: 8ad9dc832b1fa4be1b30c2dabc0f4cab04258719
