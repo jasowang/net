@@ -1,7 +1,8 @@
 Version: 1
-Previous: f9f2f1c77e088b4e332b93fb20a5334ea678a047
-Head: 617aebe6a97efa539cc4b8a52adccd89596e6be0
+Previous: 850250e0a0cf90abdf27fd27f39ca5d58c57bc71
+Head: 784ecfe46fa03f101023b7f8690b8b0ca82ee7bb
 Applied:
+  virtio-net-add-missing: 784ecfe46fa03f101023b7f8690b8b0ca82ee7bb
 Unapplied:
   virtio-introduce-packed-ring: c807879218a4bd9ed4657b75885255775d9d0148
   vhost-support-for-packed-ring: d06c41cbeb7aae3c86a62e1ffc2dc63ebc16729b
@@ -9,7 +10,6 @@ Unapplied:
   debug-0: 8ad9dc832b1fa4be1b30c2dabc0f4cab04258719
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
-  virtio-net-add-missing: 50ad053396450d5017be57f6e36d0846f6bd847e
   tuntap-xdp_tx-can-use-native: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
   vhost_net-descriptor-batch: bdb255ec17ebeb1a4f72f764cb521a9f5334da82
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
