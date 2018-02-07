@@ -1,5 +1,5 @@
 Bottom: 51c7753c940fd3727b8cc3e93553c57f89d1d9d2
-Top:    e3b6b53e8c087ce585281511e53d57ff0c384975
+Top:    a0ea8591dc3717b171c785ad5cf344b4729ff50d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-01-22 17:07:03 +0800
 
@@ -16,16 +16,29 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 626c273..e027e49 100644
+index 626c273..3ecedf9 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -1243,8 +1243,10 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+@@ -1232,7 +1232,8 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+ {
+ 	struct receive_queue *rq =
+ 		container_of(napi, struct receive_queue, napi);
+-	unsigned int received;
++	struct send_queue *sq;
++	unsigned int received, qp;
+ 	bool xdp_xmit = false;
+ 
+ 	virtnet_poll_cleantx(rq);
+@@ -1243,8 +1244,13 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
  	if (received < budget)
  		virtqueue_napi_complete(napi, rq->vq, received);
  
 -	if (xdp_xmit)
 +	if (xdp_xmit) {
-+		virtqueue_kick(rq->vq);
++		qp = vi->curr_queue_pairs - vi->xdp_queue_pairs +
++		     smp_processor_id();
++		sq = &vi->sq[qp];
++		virtqueue_kick(sq->vq);
  		xdp_do_flush_map();
 +	}
  
