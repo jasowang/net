@@ -1,10 +1,10 @@
 Version: 1
-Previous: 23779b1f866cbcdb8cfcaefa99098355afa541e4
-Head: 90f5b687cf7266c6152a26d41ab14319e128a8b0
+Previous: aa6ac4f15b99104d7d3dc321fd944c1d88480c71
+Head: e4a5ee2299a5a111e4e4727fd5a46fc453bd1b22
 Applied:
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
+  vhost-packed-ring-support: e4a5ee2299a5a111e4e4727fd5a46fc453bd1b22
 Unapplied:
-  vhost-packed-ring-support: aa1a3e82e44e1e84cff2e7e36e37c893779bbe90
   vhost-support-for-packed-ring: 18d6944449ce53dacb0366627461f300f079cf47
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
   tun-add-missing-xdp-flush: d5ee393ab4ba00843e97e921b19424b7a685e3a9
