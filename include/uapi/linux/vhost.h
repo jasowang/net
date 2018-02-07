@@ -48,6 +48,16 @@ struct vhost_vring_addr {
 	__u64 log_guest_addr;
 };
 
+struct vhost_vring_packed_addr {
+	unsigned int index;
+	/* Flag values: */
+	/* Whether log address is valid. If set enables logging. */
+#define VHOST_VRING_F_LOG 0
+	unsigned int flags;
+	__u64 desc_user_addr;
+	__u64 log_guest_addr;
+};
+
 /* no alignment requirement */
 struct vhost_iotlb_msg {
 	__u64 iova;
@@ -159,6 +169,9 @@ struct vhost_memory {
 /* Get busy loop timeout (in us) */
 #define VHOST_GET_VRING_BUSYLOOP_TIMEOUT _IOW(VHOST_VIRTIO, 0x24,	\
 					 struct vhost_vring_state)
+/* Set addresses for the packed ring */
+#define VHOST_SET_VRING_PACKED_ADDR _IOW(VHOST_VIRTIO, 0x25,		\
+				    struct vhost_vring_packed_addr)
 
 /* VHOST_NET specific defines */
 
