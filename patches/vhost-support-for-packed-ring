@@ -1,0 +1,11 @@
+Bottom: 293e49ac7312ff45637cf246fb9af47967e28e5e
+Top:    293e49ac7312ff45637cf246fb9af47967e28e5e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-07 10:31:56 +0800
+
+vhost: support for packed ring
+
+
+---
+
+
