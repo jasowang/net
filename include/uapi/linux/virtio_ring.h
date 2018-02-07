@@ -64,7 +64,7 @@
  * at the end of the used ring. Guest should ignore the used->flags field. */
 #define VIRTIO_RING_F_EVENT_IDX		29
 
-struct vring_packed {
+struct vring_desc_packed {
 	/* Buffer Address. */
 	__virtio64 addr;
 	/* Buffer Length. */
