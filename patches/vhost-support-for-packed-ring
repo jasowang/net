@@ -5,6 +5,8 @@ Date:   2018-02-07 10:31:56 +0800
 
 vhost: support for packed ring
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
