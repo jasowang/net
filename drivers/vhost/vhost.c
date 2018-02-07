@@ -1148,6 +1148,14 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	return 0;
 }
 
+static int vq_packed_access_ok(struct vhost_virtqueue *vq,
+			       unsigned int num,
+			       struct vring_packed __user *packed)
+{
+	return access_ok(VERIFY_READ, packed, num * sizeof *packed) &&
+	       access_ok(VERIFY_WRITE, packed, num * sizeof *packed);
+}
+
 static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
 			struct vring_desc __user *desc,
 			struct vring_avail __user *avail,
@@ -1359,6 +1367,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 	struct vhost_vring_state s;
 	struct vhost_vring_file f;
 	struct vhost_vring_addr a;
+	struct vhost_vring_packed_addr p;
 	u32 idx;
 	long r;
 
@@ -1470,6 +1479,37 @@ long vhost_vring_ioctl(struct vhost_dev *d, int ioctl, void __user *argp)
 		vq->avail = (void __user *)(unsigned long)a.avail_user_addr;
 		vq->log_addr = a.log_guest_addr;
 		vq->used = (void __user *)(unsigned long)a.used_user_addr;
+		break;
+	case VHOST_SET_VRING_PACKED_ADDR:
+		if (copy_from_user(&p, argp, sizeof p)) {
+			r = -EFAULT;
+			break;
+		}
+		if (p.flags & ~(0x1 << VHOST_VRING_F_LOG)) {
+			r = -EOPNOTSUPP;
+			break;
+		}
+		/* We only verify access here if backend is configured.
+		 * If it is not, we don't as size might not have been setup.
+		 * We will verify when backend is configured. */
+		if (vq->private_data) {
+			if (!vq_packed_access_ok(vq, vq->num,
+						 (void __user *)(unsigned long)
+						 p.packed_user_addr)) {
+				r = -EINVAL;
+				break;
+			}
+
+			/* Also validate log access for desc ring if enabled. */
+			if ((a.flags & (0x1 << VHOST_VRING_F_LOG)) &&
+			    !log_access_ok(vq->log_base, p.log_guest_addr,
+					   vq->num * sizeof *vq->packed)) {
+				r = -EINVAL;
+				break;
+			}
+		}
+
+		vq->log_used = !!(p.flags & (0x1 << VHOST_VRING_F_LOG));
 		break;
 	case VHOST_SET_VRING_KICK:
 		if (copy_from_user(&f, argp, sizeof f)) {
