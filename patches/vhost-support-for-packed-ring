@@ -1,5 +1,5 @@
-Bottom: 293e49ac7312ff45637cf246fb9af47967e28e5e
-Top:    e03e20e049aaf8ce504f5c2b83d4e0b2c8d731b9
+Bottom: 0184b89c903695ef19182b6d6bc473de0aaefda4
+Top:    f4e9860b836c85a02efca6070cea84b876a02e6f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-07 10:31:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 5727b18..854e4ae 100644
+index 8d43746..d8b8792 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1148,6 +1148,14 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
@@ -76,7 +76,7 @@ index 5727b18..854e4ae 100644
  		if (copy_from_user(&f, argp, sizeof f)) {
  			r = -EFAULT;
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 79c6e7a..c847496 100644
+index 7876a3d..612e52d 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -94,6 +94,7 @@ struct vhost_virtqueue {
