@@ -1,0 +1,22 @@
+Bottom: 0184b89c903695ef19182b6d6bc473de0aaefda4
+Top:    a500657e3404d72a3a8e50dde9f60a5e7a25443d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-07 20:55:44 +0800
+
+Refresh of virtio-introduce-packed-ring
+
+---
+
+diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
+index 75412e4..403a66c 100644
+--- a/include/uapi/linux/virtio_ring.h
++++ b/include/uapi/linux/virtio_ring.h
+@@ -72,7 +72,7 @@ struct vring_packed {
+ 	/* Buffer ID. */
+ 	__virtio16 id;
+ 	/* The flags depending on descriptor type. */
+-	__virito16 flags;
++	__virtio16 flags;
+ };
+ 
+ /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
