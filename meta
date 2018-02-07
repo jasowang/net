@@ -1,5 +1,5 @@
 Version: 1
-Previous: 2d7a91ac92c5675ee497d58705550fba50131958
+Previous: dd1aa1f4e40f696d1a921d748d0b8c33e254bc45
 Head: 617aebe6a97efa539cc4b8a52adccd89596e6be0
 Applied:
 Unapplied:
@@ -11,7 +11,6 @@ Unapplied:
   vhost_net-stop-device-during: 7e784a55efc965e36239fe07ae0fb7ba3ff04894
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
-  tun-slient-sparse-warning: 262cf135d5cc18e42a226cc2b0e1c4407601fbb7
   virtio-net-add-missing: 50ad053396450d5017be57f6e36d0846f6bd847e
   tuntap-xdp_tx-can-use-native: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
   vhost_net-descriptor-batch: bdb255ec17ebeb1a4f72f764cb521a9f5334da82
