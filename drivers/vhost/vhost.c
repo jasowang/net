@@ -327,6 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
+	vq->used_warp_counter = false;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
@@ -1983,6 +1984,105 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
+bool desc_is_avail(struct vring_desc_packed *desc)
+{
+	return ((desc->flags & VRING_DESC_F_AVAIL) ^
+		(desc->flags & VRING_DESC_F_USED));
+}
+
+int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+			     struct iovec iov[], unsigned int iov_size,
+			     unsigned int *out_num, unsigned int *in_num,
+			     struct vhost_log *log, unsigned int *log_num)
+{
+	unsigned iov_count = *in_num + *out_num, head;
+	struct vring_desc_packed desc;
+	int ret, access;
+	u16 avail_idx = vq->last_avail_idx;
+
+	/* When we start there are none of either input nor output. */
+	*out_num = *in_num = 0;
+	if (unlikely(log))
+		*log_num = 0;
+
+	do {
+		i = vq->last_avail_idx & (vq->num - 1);
+		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
+					   sizeof desc);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+				i, vq->desc_packed + i);
+			return -EFAULT;
+		}
+
+		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+			printk("INDIRECT is not supported!\n");
+			return -EFAULT;
+		}
+
+		if (!desc_is_avail(&desc)) {
+			/* If there's nothing new since last we looked, return
+			 * invalid.
+			 */
+			if (likely(avail_idx == vq->last_avail_idx)) {
+				return vq->num;
+			} else {
+				vq_err(vq, "descriptor idx %d is expected "
+					"to be available\n", i);
+				return -EFAULT;
+			}
+		}
+
+		/* Only start to read descriptor after we're sure it was
+		 * available.
+		 */
+		smp_rmb();
+
+		access = desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE);
+		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+				     vhost32_to_cpu(vq, desc.len),
+				     iov + iov_count, iov_size - iov_count,
+				     access);
+		if (unlikely(ret < 0)) {
+			if (ret != -EAGAIN)
+				vq_err(vq, "Translation failure %d "
+					   "descriptor idx %d\n", ret, i);
+			return ret;
+		}
+
+		if (access == VHOST_ACCESS_WO) {
+			/* If this is an input descriptor,
+			 * increment that count. */
+			*in_num += ret;
+			if (unlikely(log)) {
+				log[*log_num].addr =
+					vhost64_to_cpu(vq, desc.addr);
+				log[*log_num].len =
+					vhost32_to_cpu(vq, desc.len);
+				++*log_num;
+			}
+		} else {
+			/* If it's an output descriptor, they're all supposed
+			 * to come before any input descriptors. */
+			if (unlikely(*in_num)) {
+				vq_err(vq, "Descriptor has out after in: "
+				       "idx %d\n", i);
+				return -EINVAL;
+			}
+			*out_num += ret;
+		}
+
+		if (avail_idx == vq->last_avail_idx)
+			head = desc->id;
+
+		/* On success, increment avail index. */
+		vq->last_avail_idx++;
+	/* If this descriptor says it doesn't chain, we're done. */
+	} while(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
+
+	return head;
+}
+
 /* This looks in the virtqueue and for the first available buffer, and converts
  * it to an iovec for convenient access.  Since descriptors consist of some
  * number of output then some number of input descriptors, it's actually two
@@ -2196,6 +2296,10 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 		vq->signalled_used_valid = false;
 	return 0;
 }
+
+int vhost_add_used_packed_n(struct vhost_virtqueue *vq,
+			    struct vring_used_elem *heads,
+			    unsigned count)
 
 /* After we've used one of their buffers, we tell them about it.  We'll then
  * want to notify the guest, using eventfd. */
