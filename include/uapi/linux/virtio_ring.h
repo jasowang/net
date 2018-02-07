@@ -72,7 +72,7 @@ struct vring_packed {
 	/* Buffer ID. */
 	__virtio16 id;
 	/* The flags depending on descriptor type. */
-	__virito16 flags;
+	__virtio16 flags;
 };
 
 /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
