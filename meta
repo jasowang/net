@@ -1,6 +1,6 @@
 Version: 1
-Previous: d575dcd4a7e1f1f2059b4ef0c89b2090c171e74c
-Head: 6b2e2829c11ea677aa97ecfe95d9544aa0208b8c
+Previous: 2d7a91ac92c5675ee497d58705550fba50131958
+Head: 617aebe6a97efa539cc4b8a52adccd89596e6be0
 Applied:
 Unapplied:
   virtio-introduce-packed-ring: c807879218a4bd9ed4657b75885255775d9d0148
