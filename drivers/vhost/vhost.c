@@ -2034,7 +2034,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 				    unsigned int *out_num, unsigned int *in_num,
 				    struct vhost_log *log, unsigned int *log_num)
 {
-	unsigned iov_count = *in_num + *out_num, head;
+	unsigned iov_count = *in_num + *out_num;
 	struct vring_desc_packed desc;
 	int ret, access, i;
 	u16 avail_idx = vq->last_avail_idx;
@@ -2111,15 +2111,12 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			*out_num += ret;
 		}
 
-		if (avail_idx == vq->last_avail_idx)
-			head = desc.id;
-
 		/* On success, increment avail index. */
 		vq->last_avail_idx++;
 	/* If this descriptor says it doesn't chain, we're done. */
 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
-	return head;
+	return desc.id;
 }
 
 static int vhost_get_vq_desc_split(struct vhost_virtqueue *vq,
