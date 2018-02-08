@@ -93,7 +93,7 @@ struct vhost_virtqueue {
 	unsigned int num;
 	union {
 		struct vring_desc __user *desc;
-		struct vring_packed __user *packed;
+		struct vring_desc_packed __user *desc_packed;
 	};
 	struct vring_avail __user *avail;
 	struct vring_used __user *used;
@@ -153,6 +153,7 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
+	bool used_warp_counter;
 };
 
 struct vhost_msg_node {
