@@ -1,5 +1,5 @@
 Bottom: a500657e3404d72a3a8e50dde9f60a5e7a25443d
-Top:    fbcb17688810f7233d960b9098f0e73fa8f06405
+Top:    35097adeba80bcc566557dbce6388ba41e097d0d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-07 20:54:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 8d43746..c007729 100644
+index 8d43746..e150648 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -327,6 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -22,7 +22,50 @@ index 8d43746..c007729 100644
  	vq->umem = NULL;
  	vq->iotlb = NULL;
  	__vhost_vq_meta_reset(vq);
-@@ -1983,18 +1984,117 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1148,10 +1149,20 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+ 	return 0;
+ }
+ 
+-static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+-			struct vring_desc __user *desc,
+-			struct vring_avail __user *avail,
+-			struct vring_used __user *used)
++static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
++			       struct vring_desc_packed __user *desc,
++			       struct vring_avail __user *avail,
++			       struct vring_used __user *used)
++{
++	return access_ok(VERIFY_READ | VERIFY_WRITE, desc, num *
++			 sizeof *desc) &&
++		
++}
++
++static int vq_access_ok_split(struct vhost_virtqueue *vq, unsigned int num,
++			      struct vring_desc __user *desc,
++			      struct vring_avail __user *avail,
++			      struct vring_used __user *used)
+ 
+ {
+ 	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
+@@ -1163,6 +1174,17 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+ 			sizeof *used + num * sizeof *used->ring + s);
+ }
+ 
++static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
++			struct vring_desc __user *desc,
++			struct vring_avail __user *avail,
++			struct vring_used __user *used)
++{
++	if (vhost_has_feature(vq, VIRTIO_RING_F_PACKED))
++		return vq_access_ok_packed();
++	else
++		return vq_access_ok_split(vq, num, desc, avail, used);
++}
++
+ static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
+ 				 const struct vhost_umem_node *node,
+ 				 int type)
+@@ -1983,18 +2005,117 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -152,7 +195,7 @@ index 8d43746..c007729 100644
  {
  	struct vring_desc desc;
  	unsigned int i, head, found = 0;
-@@ -2132,6 +2232,29 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2132,6 +2253,29 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
  	return head;
  }
@@ -182,7 +225,7 @@ index 8d43746..c007729 100644
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
  /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
-@@ -2197,10 +2320,49 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2197,10 +2341,49 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -236,7 +279,7 @@ index 8d43746..c007729 100644
  {
  	int start, n, r;
  
-@@ -2232,6 +2394,18 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+@@ -2232,6 +2415,18 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
  	}
  	return r;
  }
@@ -255,6 +298,17 @@ index 8d43746..c007729 100644
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
  static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2239,6 +2434,10 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 	__u16 old, new;
+ 	__virtio16 event;
+ 	bool v;
++
++	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
++		return false;
++
+ 	/* Flush out used index updates. This is paired
+ 	 * with the barrier that the Guest executes when enabling
+ 	 * interrupts. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
 index 7876a3d..c68bbfb 100644
 --- a/drivers/vhost/vhost.h
