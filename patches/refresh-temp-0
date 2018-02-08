@@ -1,0 +1,39 @@
+Bottom: 599d02c00359e2f05f56780ed1fe992645a59b97
+Top:    36ba08eefee23ad63ab827c00447a9b14b34529f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-08 18:12:04 +0800
+
+Refresh of vhost-packed-ring-support
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 97b4d42..19a4bbb 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2034,7 +2034,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 				    unsigned int *out_num, unsigned int *in_num,
+ 				    struct vhost_log *log, unsigned int *log_num)
+ {
+-	unsigned iov_count = *in_num + *out_num, head;
++	unsigned iov_count = *in_num + *out_num;
+ 	struct vring_desc_packed desc;
+ 	int ret, access, i;
+ 	u16 avail_idx = vq->last_avail_idx;
+@@ -2111,15 +2111,12 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 			*out_num += ret;
+ 		}
+ 
+-		if (avail_idx == vq->last_avail_idx)
+-			head = desc.id;
+-
+ 		/* On success, increment avail index. */
+ 		vq->last_avail_idx++;
+ 	/* If this descriptor says it doesn't chain, we're done. */
+ 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
+ 
+-	return head;
++	return desc.id;
+ }
+ 
+ static int vhost_get_vq_desc_split(struct vhost_virtqueue *vq,
