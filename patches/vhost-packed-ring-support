@@ -1,5 +1,5 @@
 Bottom: a500657e3404d72a3a8e50dde9f60a5e7a25443d
-Top:    35097adeba80bcc566557dbce6388ba41e097d0d
+Top:    aa91824495a842717965ba26da12a43670ba0c21
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-07 20:54:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 8d43746..e150648 100644
+index 8d43746..06f670e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -327,6 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -31,13 +31,13 @@ index 8d43746..e150648 100644
 -			struct vring_avail __user *avail,
 -			struct vring_used __user *used)
 +static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
-+			       struct vring_desc_packed __user *desc,
++			       struct vring_desc __user *desc,
 +			       struct vring_avail __user *avail,
 +			       struct vring_used __user *used)
 +{
-+	return access_ok(VERIFY_READ | VERIFY_WRITE, desc, num *
-+			 sizeof *desc) &&
-+		
++	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
++	return access_ok(VERIFY_READ, packed, num * sizeof *packed) &&
++	       access_ok(VERIFY_WRITE, packed, num * sizeof *packed);
 +}
 +
 +static int vq_access_ok_split(struct vhost_virtqueue *vq, unsigned int num,
@@ -56,8 +56,8 @@ index 8d43746..e150648 100644
 +			struct vring_avail __user *avail,
 +			struct vring_used __user *used)
 +{
-+	if (vhost_has_feature(vq, VIRTIO_RING_F_PACKED))
-+		return vq_access_ok_packed();
++	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
++		return vq_access_ok_packed(vq, num, desc, avail, used);
 +	else
 +		return vq_access_ok_split(vq, num, desc, avail, used);
 +}
