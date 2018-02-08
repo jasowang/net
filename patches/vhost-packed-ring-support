@@ -1,5 +1,5 @@
 Bottom: a500657e3404d72a3a8e50dde9f60a5e7a25443d
-Top:    aa91824495a842717965ba26da12a43670ba0c21
+Top:    5e43fd297dce9c2e2902cde4b8a817241016300e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-07 20:54:03 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 8d43746..06f670e 100644
+index 8d43746..bcac12b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -327,6 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -22,7 +22,7 @@ index 8d43746..06f670e 100644
  	vq->umem = NULL;
  	vq->iotlb = NULL;
  	__vhost_vq_meta_reset(vq);
-@@ -1148,10 +1149,20 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+@@ -1148,10 +1149,22 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
  	return 0;
  }
  
@@ -36,6 +36,8 @@ index 8d43746..06f670e 100644
 +			       struct vring_used __user *used)
 +{
 +	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
++
++	/* FIXME: check device area and driver area */
 +	return access_ok(VERIFY_READ, packed, num * sizeof *packed) &&
 +	       access_ok(VERIFY_WRITE, packed, num * sizeof *packed);
 +}
@@ -47,7 +49,7 @@ index 8d43746..06f670e 100644
  
  {
  	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
-@@ -1163,6 +1174,17 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+@@ -1163,6 +1176,17 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
  			sizeof *used + num * sizeof *used->ring + s);
  }
  
@@ -65,7 +67,17 @@ index 8d43746..06f670e 100644
  static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
  				 const struct vhost_umem_node *node,
  				 int type)
-@@ -1983,18 +2005,117 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1799,6 +1823,9 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+ 
+ 	vhost_init_is_le(vq);
+ 
++	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
++		return 0;
++
+ 	r = vhost_update_used_flags(vq);
+ 	if (r)
+ 		goto err;
+@@ -1983,18 +2010,117 @@ static int get_indirect(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -195,7 +207,7 @@ index 8d43746..06f670e 100644
  {
  	struct vring_desc desc;
  	unsigned int i, head, found = 0;
-@@ -2132,6 +2253,29 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2132,6 +2258,29 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
  	return head;
  }
@@ -225,7 +237,7 @@ index 8d43746..06f670e 100644
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
  /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
-@@ -2197,10 +2341,49 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2197,10 +2346,49 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -279,7 +291,7 @@ index 8d43746..06f670e 100644
  {
  	int start, n, r;
  
-@@ -2232,6 +2415,18 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+@@ -2232,6 +2420,18 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
  	}
  	return r;
  }
@@ -298,17 +310,95 @@ index 8d43746..06f670e 100644
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
  static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
-@@ -2239,6 +2434,10 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2239,6 +2439,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__u16 old, new;
  	__virtio16 event;
  	bool v;
 +
++	/* FIXME: check driver area */
 +	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
 +		return false;
 +
  	/* Flush out used index updates. This is paired
  	 * with the barrier that the Guest executes when enabling
  	 * interrupts. */
+@@ -2318,8 +2523,30 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ }
+ EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);
+ 
+-/* OK, now we need to know about added descriptors. */
+-bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++static bool vhost_enable_notify_packed(struct vhost_dev *dev,
++				       struct vhost_virtqueue *vq)
++{
++	struct vring_desc_packed desc;
++	int ret, i = vq->last_avail_idx & (vq->num - 1);
++
++	/* FIXME: disable notification through device area */
++
++	ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
++				   sizeof desc);
++	if (unlikely(ret)) {
++		vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
++			i, vq->desc_packed + i);
++		return -EFAULT;
++	}
++
++	/* Read flag after desc is read */
++	smp_mb();
++
++	return desc_is_avail(&desc);
++}
++
++static bool vhost_enable_notify_split(struct vhost_dev *dev,
++				      struct vhost_virtqueue *vq)
+ {
+ 	__virtio16 avail_idx;
+ 	int r;
+@@ -2354,10 +2581,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 
+ 	return vhost16_to_cpu(vq, avail_idx) != vq->avail_idx;
+ }
++
++/* OK, now we need to know about added descriptors. */
++bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++{
++	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
++		return vhost_enable_notify_packed(dev, vq);
++	else
++		return vhost_enable_notify_split(dev, vq);
++}
+ EXPORT_SYMBOL_GPL(vhost_enable_notify);
+ 
+-/* We don't need to be notified again. */
+-void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++static void vhost_disable_notify_packed(struct vhost_dev *dev,
++					struct vhost_virtqueue *vq)
++{
++	/* FIXME: disable notification through device area */
++}
++
++static void vhost_disable_notify_split(struct vhost_dev *dev,
++				       struct vhost_virtqueue *vq)
+ {
+ 	int r;
+ 
+@@ -2371,6 +2613,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+ 			       &vq->used->flags, r);
+ 	}
+ }
++
++/* We don't need to be notified again. */
++void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
++{
++	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
++		return vhost_disable_notify_packed(dev, vq);
++	else
++		return vhost_disable_notify_split(dev, vq);
++}
+ EXPORT_SYMBOL_GPL(vhost_disable_notify);
+ 
+ /* Create a new message. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
 index 7876a3d..c68bbfb 100644
 --- a/drivers/vhost/vhost.h
