@@ -2359,8 +2359,8 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 		desc.len = heads[i].len;
 		set_desc_used(&desc, vq->used_warp_counter);
 
-		/* Update the flags before id and len */
-		smp_wmb();
+		/* Update flags etc before desc is written */
+		smp_mb();
 
 		used_idx = vq->last_used_idx & (vq->num - 1);
 		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
