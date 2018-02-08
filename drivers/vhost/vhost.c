@@ -1984,20 +1984,28 @@ static int get_indirect(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-bool desc_is_avail(struct vring_desc_packed *desc)
+static bool desc_is_avail(struct vring_desc_packed *desc)
 {
 	return ((desc->flags & VRING_DESC_F_AVAIL) ^
 		(desc->flags & VRING_DESC_F_USED));
 }
 
-int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
-			     struct iovec iov[], unsigned int iov_size,
-			     unsigned int *out_num, unsigned int *in_num,
-			     struct vhost_log *log, unsigned int *log_num)
+static void set_desc_used(struct vring_desc_packed *desc, bool wrap_counter)
+{
+	if (wrap_counter)
+		desc->flags = (VRING_DESC_F_USED | VRING_DESC_F_AVAIL);
+	else
+		desc->flags = ~(VRING_DESC_F_USED | VRING_DESC_F_AVAIL);
+}
+
+static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+				    struct iovec iov[], unsigned int iov_size,
+				    unsigned int *out_num, unsigned int *in_num,
+				    struct vhost_log *log, unsigned int *log_num)
 {
 	unsigned iov_count = *in_num + *out_num, head;
 	struct vring_desc_packed desc;
-	int ret, access;
+	int ret, access, i;
 	u16 avail_idx = vq->last_avail_idx;
 
 	/* When we start there are none of either input nor output. */
@@ -2073,28 +2081,20 @@ int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 		}
 
 		if (avail_idx == vq->last_avail_idx)
-			head = desc->id;
+			head = desc.id;
 
 		/* On success, increment avail index. */
 		vq->last_avail_idx++;
 	/* If this descriptor says it doesn't chain, we're done. */
-	} while(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
+	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
 	return head;
 }
 
-/* This looks in the virtqueue and for the first available buffer, and converts
- * it to an iovec for convenient access.  Since descriptors consist of some
- * number of output then some number of input descriptors, it's actually two
- * iovecs, but we pack them into one and note how many of each there were.
- *
- * This function returns the descriptor number found, or vq->num (which is
- * never a valid descriptor number) if none was found.  A negative code is
- * returned on error. */
-int vhost_get_vq_desc(struct vhost_virtqueue *vq,
-		      struct iovec iov[], unsigned int iov_size,
-		      unsigned int *out_num, unsigned int *in_num,
-		      struct vhost_log *log, unsigned int *log_num)
+static int vhost_get_vq_desc_split(struct vhost_virtqueue *vq,
+				   struct iovec iov[], unsigned int iov_size,
+				   unsigned int *out_num, unsigned int *in_num,
+				   struct vhost_log *log, unsigned int *log_num)
 {
 	struct vring_desc desc;
 	unsigned int i, head, found = 0;
@@ -2232,6 +2232,29 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
 	return head;
 }
+
+/* This looks in the virtqueue and for the first available buffer, and converts
+ * it to an iovec for convenient access.  Since descriptors consist of some
+ * number of output then some number of input descriptors, it's actually two
+ * iovecs, but we pack them into one and note how many of each there were.
+ *
+ * This function returns the descriptor number found, or vq->num (which is
+ * never a valid descriptor number) if none was found.  A negative code is
+ * returned on error. */
+int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+		      struct iovec iov[], unsigned int iov_size,
+		      unsigned int *out_num, unsigned int *in_num,
+		      struct vhost_log *log, unsigned int *log_num)
+{
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return vhost_get_vq_desc_packed(vq, iov, iov_size,
+						out_num, in_num,
+						log, log_num);
+	else
+		return vhost_get_vq_desc_split(vq, iov, iov_size,
+					       out_num, in_num,
+					       log, log_num);
+}
 EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 
 /* Reverse the effect of vhost_get_vq_desc. Useful for error handling. */
@@ -2297,14 +2320,49 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-int vhost_add_used_packed_n(struct vhost_virtqueue *vq,
-			    struct vring_used_elem *heads,
-			    unsigned count)
+static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+				   struct vring_used_elem *heads,
+				   unsigned count)
+{
+	struct vring_desc_packed desc;
+	u16 used_idx;
+	int i, ret;
 
-/* After we've used one of their buffers, we tell them about it.  We'll then
- * want to notify the guest, using eventfd. */
-int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
-		     unsigned count)
+	for (i = 0; i < count; i++) {
+		desc.id = heads[i].id;
+		desc.len = heads[i].len;
+		set_desc_used(&desc, vq->used_warp_counter);
+
+		/* Update the flags before id and len */
+		smp_wmb();
+
+		used_idx = vq->last_used_idx & (vq->num - 1);
+		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
+					&desc, sizeof desc);
+		if (unlikely(ret)) {
+			vq_err(vq, "Failed to set descriptor: idx %d addr %p\n",
+			       used_idx, vq->desc_packed + used_idx);
+			return -EFAULT;
+		}
+		if (unlikely(vq->log_used)) {
+			/* Make sure desc is written before update log. */
+			smp_wmb();
+			log_write(vq->log_base,
+				  vq->log_addr + used_idx * sizeof desc,
+				  sizeof desc);
+			if (vq->log_ctx)
+				eventfd_signal(vq->log_ctx, 1);
+		}
+		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
+			vq->used_warp_counter ^= 1;
+	}
+
+	return 0;
+}
+
+static int vhost_add_used_n_split(struct vhost_virtqueue *vq,
+				  struct vring_used_elem *heads,
+				  unsigned count)
 {
 	int start, n, r;
 
@@ -2335,6 +2393,18 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 			eventfd_signal(vq->log_ctx, 1);
 	}
 	return r;
+}
+
+/* After we've used one of their buffers, we tell them about it.  We'll then
+ * want to notify the guest, using eventfd. */
+int vhost_add_used_n(struct vhost_virtqueue *vq,
+		     struct vring_used_elem *heads,
+		     unsigned count)
+{
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return vhost_add_used_n_packed(vq, heads, count);
+	else
+		return vhost_add_used_n_split(vq, heads, count);
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_n);
 
