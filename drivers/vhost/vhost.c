@@ -1149,10 +1149,20 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	return 0;
 }
 
-static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
-			struct vring_desc __user *desc,
-			struct vring_avail __user *avail,
-			struct vring_used __user *used)
+static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
+			       struct vring_desc_packed __user *desc,
+			       struct vring_avail __user *avail,
+			       struct vring_used __user *used)
+{
+	return access_ok(VERIFY_READ | VERIFY_WRITE, desc, num *
+			 sizeof *desc) &&
+		
+}
+
+static int vq_access_ok_split(struct vhost_virtqueue *vq, unsigned int num,
+			      struct vring_desc __user *desc,
+			      struct vring_avail __user *avail,
+			      struct vring_used __user *used)
 
 {
 	size_t s = vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX) ? 2 : 0;
@@ -1162,6 +1172,17 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
 			 sizeof *avail + num * sizeof *avail->ring + s) &&
 	       access_ok(VERIFY_WRITE, used,
 			sizeof *used + num * sizeof *used->ring + s);
+}
+
+static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
+			struct vring_desc __user *desc,
+			struct vring_avail __user *avail,
+			struct vring_used __user *used)
+{
+	if (vhost_has_feature(vq, VIRTIO_RING_F_PACKED))
+		return vq_access_ok_packed();
+	else
+		return vq_access_ok_split(vq, num, desc, avail, used);
 }
 
 static void vhost_vq_meta_update(struct vhost_virtqueue *vq,
@@ -2413,6 +2434,10 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	__u16 old, new;
 	__virtio16 event;
 	bool v;
+
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return false;
+
 	/* Flush out used index updates. This is paired
 	 * with the barrier that the Guest executes when enabling
 	 * interrupts. */
