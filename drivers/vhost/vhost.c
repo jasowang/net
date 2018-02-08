@@ -1155,6 +1155,8 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
 			       struct vring_used __user *used)
 {
 	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
+
+	/* FIXME: check device area and driver area */
 	return access_ok(VERIFY_READ, packed, num * sizeof *packed) &&
 	       access_ok(VERIFY_WRITE, packed, num * sizeof *packed);
 }
@@ -1821,6 +1823,9 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
 
 	vhost_init_is_le(vq);
 
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return 0;
+
 	r = vhost_update_used_flags(vq);
 	if (r)
 		goto err;
@@ -2435,6 +2440,7 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 	__virtio16 event;
 	bool v;
 
+	/* FIXME: check driver area */
 	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
 		return false;
 
@@ -2517,8 +2523,30 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 }
 EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);
 
-/* OK, now we need to know about added descriptors. */
-bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+static bool vhost_enable_notify_packed(struct vhost_dev *dev,
+				       struct vhost_virtqueue *vq)
+{
+	struct vring_desc_packed desc;
+	int ret, i = vq->last_avail_idx & (vq->num - 1);
+
+	/* FIXME: disable notification through device area */
+
+	ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
+				   sizeof desc);
+	if (unlikely(ret)) {
+		vq_err(vq, "Failed to get descriptor: idx %d addr %p\n",
+			i, vq->desc_packed + i);
+		return -EFAULT;
+	}
+
+	/* Read flag after desc is read */
+	smp_mb();
+
+	return desc_is_avail(&desc);
+}
+
+static bool vhost_enable_notify_split(struct vhost_dev *dev,
+				      struct vhost_virtqueue *vq)
 {
 	__virtio16 avail_idx;
 	int r;
@@ -2553,10 +2581,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 
 	return vhost16_to_cpu(vq, avail_idx) != vq->avail_idx;
 }
+
+/* OK, now we need to know about added descriptors. */
+bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+{
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return vhost_enable_notify_packed(dev, vq);
+	else
+		return vhost_enable_notify_split(dev, vq);
+}
 EXPORT_SYMBOL_GPL(vhost_enable_notify);
 
-/* We don't need to be notified again. */
-void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+static void vhost_disable_notify_packed(struct vhost_dev *dev,
+					struct vhost_virtqueue *vq)
+{
+	/* FIXME: disable notification through device area */
+}
+
+static void vhost_disable_notify_split(struct vhost_dev *dev,
+				       struct vhost_virtqueue *vq)
 {
 	int r;
 
@@ -2569,6 +2612,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 			vq_err(vq, "Failed to enable notification at %p: %d\n",
 			       &vq->used->flags, r);
 	}
+}
+
+/* We don't need to be notified again. */
+void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+{
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return vhost_disable_notify_packed(dev, vq);
+	else
+		return vhost_disable_notify_split(dev, vq);
 }
 EXPORT_SYMBOL_GPL(vhost_disable_notify);
 
