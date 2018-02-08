@@ -1150,13 +1150,13 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 }
 
 static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
-			       struct vring_desc_packed __user *desc,
+			       struct vring_desc __user *desc,
 			       struct vring_avail __user *avail,
 			       struct vring_used __user *used)
 {
-	return access_ok(VERIFY_READ | VERIFY_WRITE, desc, num *
-			 sizeof *desc) &&
-		
+	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
+	return access_ok(VERIFY_READ, packed, num * sizeof *packed) &&
+	       access_ok(VERIFY_WRITE, packed, num * sizeof *packed);
 }
 
 static int vq_access_ok_split(struct vhost_virtqueue *vq, unsigned int num,
@@ -1179,8 +1179,8 @@ static int vq_access_ok(struct vhost_virtqueue *vq, unsigned int num,
 			struct vring_avail __user *avail,
 			struct vring_used __user *used)
 {
-	if (vhost_has_feature(vq, VIRTIO_RING_F_PACKED))
-		return vq_access_ok_packed();
+	if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
+		return vq_access_ok_packed(vq, num, desc, avail, used);
 	else
 		return vq_access_ok_split(vq, num, desc, avail, used);
 }
