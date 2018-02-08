@@ -1,0 +1,65 @@
+Bottom: 4596c6a6a99512d523a96c99f7c565e7af015baa
+Top:    599d02c00359e2f05f56780ed1fe992645a59b97
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-08 18:04:18 +0800
+
+Refresh of vhost-packed-ring-support
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index e67f9e1..97b4d42 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2010,16 +2010,18 @@ static int get_indirect(struct vhost_virtqueue *vq,
+ 	return 0;
+ }
+ 
+-static bool desc_is_avail(struct vring_desc_packed *desc)
++static bool desc_is_avail(struct vhost_virtqueue *vq,
++			  struct vring_desc_packed *desc)
+ {
+-	return ((desc->flags & cpu_to_vhost16(VRING_DESC_F_AVAIL)) ^
+-		(desc->flags & cpu_to_vhost16(VRING_DESC_F_USED)));
++	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
++		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
+ }
+ 
+-static void set_desc_used(struct vring_desc_packed *desc, bool wrap_counter)
++static void set_desc_used(struct vhost_virtqueue *vq,
++			  struct vring_desc_packed *desc, bool wrap_counter)
+ {
+-	__virtio16 flags = vhost16_to_cpu(VRING_DESC_F_USED |
+-					  VRING_DESC_F_AVAIL);
++	__virtio16 flags = vhost16_to_cpu(vq, VRING_DESC_F_USED |
++					      VRING_DESC_F_AVAIL);
+ 
+ 	if (wrap_counter)
+ 		desc->flags = flags;
+@@ -2057,7 +2059,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 
+-		if (!desc_is_avail(&desc)) {
++		if (!desc_is_avail(vq, &desc)) {
+ 			/* If there's nothing new since last we looked, return
+ 			 * invalid.
+ 			 */
+@@ -2360,7 +2362,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+ 	for (i = 0; i < count; i++) {
+ 		desc.id = heads[i].id;
+ 		desc.len = heads[i].len;
+-		set_desc_used(&desc, vq->used_warp_counter);
++		set_desc_used(vq, &desc, vq->used_warp_counter);
+ 
+ 		/* Update flags etc before desc is written */
+ 		smp_mb();
+@@ -2545,7 +2547,7 @@ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
+ 	/* Read flag after desc is read */
+ 	smp_mb();
+ 
+-	return desc_is_avail(&desc);
++	return desc_is_avail(vq, &desc);
+ }
+ 
+ static bool vhost_enable_notify_split(struct vhost_dev *dev,
