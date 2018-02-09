@@ -327,7 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
-	vq->used_warp_counter = false;
+	vq->used_wrap_counter = false;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
@@ -2013,15 +2013,15 @@ static int get_indirect(struct vhost_virtqueue *vq,
 static bool desc_is_avail(struct vhost_virtqueue *vq,
 			  struct vring_desc_packed *desc)
 {
-	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
-		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
+	return ((desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_AVAIL)) ^
+		(desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_USED)));
 }
 
 static void set_desc_used(struct vhost_virtqueue *vq,
 			  struct vring_desc_packed *desc, bool wrap_counter)
 {
-	__virtio16 flags = vhost16_to_cpu(vq, VRING_DESC_F_USED |
-					      VRING_DESC_F_AVAIL);
+	__virtio16 flags = vhost16_to_cpu(vq, 1 << VRING_DESC_F_USED |
+					      1 << VRING_DESC_F_AVAIL);
 
 	if (wrap_counter)
 		desc->flags = flags;
@@ -2044,8 +2044,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	if (unlikely(log))
 		*log_num = 0;
 
+	printk("vq %p last avail %u vq->num %d \n", vq,
+		vq->last_avail_idx, vq->num);
 	do {
 		i = vq->last_avail_idx & (vq->num - 1);
+		printk("vq %p idx at %d\n", vq, i);
 		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
 					   sizeof desc);
 		if (unlikely(ret)) {
@@ -2060,11 +2063,13 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 
+		printk("check desc at %p\n", vq->desc_packed + i);
 		if (!desc_is_avail(vq, &desc)) {
 			/* If there's nothing new since last we looked, return
 			 * invalid.
 			 */
 			if (likely(avail_idx == vq->last_avail_idx)) {
+				printk("no new!\n");
 				return vq->num;
 			} else {
 				vq_err(vq, "descriptor idx %d is expected "
@@ -2078,6 +2083,8 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 		 */
 		smp_rmb();
 
+		printk("desc avail desc.addr %p desc.len %d!\n",
+			desc.addr, desc.len);
 		access = desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE);
 		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
 				     vhost32_to_cpu(vq, desc.len),
@@ -2089,6 +2096,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 					   "descriptor idx %d\n", ret, i);
 			return ret;
 		}
+		printk("translation done!\n");
 
 		if (access == VHOST_ACCESS_WO) {
 			/* If this is an input descriptor,
@@ -2114,9 +2122,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 
 		/* On success, increment avail index. */
 		vq->last_avail_idx++;
+		printk("incrase last avail to %d\n", vq->last_avail_idx);
 	/* If this descriptor says it doesn't chain, we're done. */
 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
+	printk("vq %p desc.id is %d\n", vq, desc.id);
 	return desc.id;
 }
 
@@ -2357,15 +2367,19 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 	u16 used_idx;
 	int i, ret;
 
+#if 0
+
 	for (i = 0; i < count; i++) {
 		desc.id = heads[i].id;
 		desc.len = heads[i].len;
-		set_desc_used(vq, &desc, vq->used_warp_counter);
+		set_desc_used(vq, &desc, vq->used_wrap_counter);
 
 		/* Update flags etc before desc is written */
 		smp_mb();
 
 		used_idx = vq->last_used_idx & (vq->num - 1);
+		printk("vq %p update used idx at %d id %d len %d\n",
+			vq, used_idx, desc.id, desc.len);
 		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
 					&desc, sizeof desc);
 		if (unlikely(ret)) {
@@ -2383,8 +2397,9 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 				eventfd_signal(vq->log_ctx, 1);
 		}
 		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
-			vq->used_warp_counter ^= 1;
+			vq->used_wrap_counter ^= 1;
 	}
+#endif
 
 	return 0;
 }
