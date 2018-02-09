@@ -2054,8 +2054,9 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 
+		/* FIXME: support indirect */
 		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
-			printk("INDIRECT is not supported!\n");
+			vq_err(vq, "indirect descriptors is not	supported \n");
 			return -EFAULT;
 		}
 
