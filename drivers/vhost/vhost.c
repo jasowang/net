@@ -2044,8 +2044,10 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	if (unlikely(log))
 		*log_num = 0;
 
+	printk("vq %p last avail %u\n", vq->last_avail_idx);
 	do {
 		i = vq->last_avail_idx & (vq->num - 1);
+		printk("vq %p idx at %d\n", i);
 		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
 					   sizeof desc);
 		if (unlikely(ret)) {
@@ -2065,6 +2067,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			 * invalid.
 			 */
 			if (likely(avail_idx == vq->last_avail_idx)) {
+				printk("no new!\n");
 				return vq->num;
 			} else {
 				vq_err(vq, "descriptor idx %d is expected "
@@ -2117,6 +2120,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	/* If this descriptor says it doesn't chain, we're done. */
 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
+	printk("desc.id is %d\n", desc.id);
 	return desc.id;
 }
 
@@ -2366,6 +2370,8 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 		smp_mb();
 
 		used_idx = vq->last_used_idx & (vq->num - 1);
+		printk("vq %p update used idx at %d id %d len %d\n",
+			vq, used_idx, desc.id, desc.len);
 		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
 					&desc, sizeof desc);
 		if (unlikely(ret)) {
