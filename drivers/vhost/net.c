@@ -67,7 +67,8 @@ enum {
 	VHOST_NET_FEATURES = VHOST_FEATURES |
 			 (1ULL << VHOST_NET_F_VIRTIO_NET_HDR) |
 			 (1ULL << VIRTIO_NET_F_MRG_RXBUF) |
-			 (1ULL << VIRTIO_F_IOMMU_PLATFORM)
+			 (1ULL << VIRTIO_F_IOMMU_PLATFORM) |
+	                 (1ULL << VIRTIO_F_RING_PACKED)
 };
 
 enum {
@@ -482,6 +483,8 @@ static void handle_tx(struct vhost_net *net)
 	if (!vq_iotlb_prefetch(vq))
 		goto out;
 
+	printk("handle tx!\n");
+
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
@@ -586,6 +589,7 @@ static void handle_tx(struct vhost_net *net)
 		}
 	}
 out:
+	printk("tx done!\n");
 	mutex_unlock(&vq->mutex);
 }
 
@@ -781,6 +785,7 @@ static void handle_rx(struct vhost_net *net)
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
 
+	printk("handle rx!\n");
 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
 		sock_len += sock_hlen;
 		vhost_len = sock_len + vhost_hlen;
@@ -872,6 +877,7 @@ static void handle_rx(struct vhost_net *net)
 	}
 	vhost_net_enable_vq(net, vq);
 out:
+	printk("rx done!\n");
 	if (nheads)
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    nheads);
@@ -1266,6 +1272,12 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
 		if (vhost_init_device_iotlb(&n->dev, true))
 			goto out_unlock;
 	}
+
+	if (features & (1ULL << VIRTIO_F_RING_PACKED)) {
+		dump_stack();
+		printk("packed ring!\n");
+	} else
+		printk("split ring!\n");
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
 		mutex_lock(&n->vqs[i].vq.mutex);
