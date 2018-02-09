@@ -1,0 +1,23 @@
+Bottom: 36ba08eefee23ad63ab827c00447a9b14b34529f
+Top:    acfa1276cf27ff4a32a985709c5da64ac3220221
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-09 11:58:08 +0800
+
+Refresh of vhost-packed-ring-support
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 19a4bbb..52e026a 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2054,8 +2054,9 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 
++		/* FIXME: support indirect */
+ 		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
+-			printk("INDIRECT is not supported!\n");
++			vq_err(vq, "indirect descriptors is not	supported \n");
+ 			return -EFAULT;
+ 		}
