@@ -153,7 +153,7 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
-	bool used_warp_counter;
+	bool used_wrap_counter;
 };
 
 struct vhost_msg_node {
@@ -229,6 +229,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 			     struct iov_iter *from);
 int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
 
+#define DEBUG
 #define vq_err(vq, fmt, ...) do {                                  \
 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
 		if ((vq)->error_ctx)                               \
