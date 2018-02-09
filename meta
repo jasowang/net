@@ -1,9 +1,10 @@
 Version: 1
-Previous: 1e64aecfb271f95e70019b075b327ae2b8d7d90b
-Head: 527b31e41c864887f1c9192e32b800566d11ff9e
+Previous: 4e93b90dbc54d99562ca941f226cec0871ea3f02
+Head: 42813ee2adff51d3ef29ad4876e3a41b09d4248b
 Applied:
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
   vhost-packed-ring-support: 527b31e41c864887f1c9192e32b800566d11ff9e
+  debug-1: 42813ee2adff51d3ef29ad4876e3a41b09d4248b
 Unapplied:
   vhost-support-for-packed-ring: 18d6944449ce53dacb0366627461f300f079cf47
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
