@@ -777,6 +777,7 @@ static void handle_rx(struct vhost_net *net)
 
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
+	printk("net disable!\n");
 
 	vhost_hlen = nvq->vhost_hlen;
 	sock_hlen = nvq->sock_hlen;
@@ -876,6 +877,7 @@ static void handle_rx(struct vhost_net *net)
 		}
 	}
 	vhost_net_enable_vq(net, vq);
+	printk("net enable!\n");
 out:
 	printk("rx done!\n");
 	if (nheads)

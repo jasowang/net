@@ -2076,6 +2076,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 
+		printk("check desc at %p\n", vq->desc_packed + i);
 		if (!desc_is_avail(vq, &desc)) {
 			/* If there's nothing new since last we looked, return
 			 * invalid.
