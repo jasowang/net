@@ -2013,28 +2013,15 @@ static int get_indirect(struct vhost_virtqueue *vq,
 static bool desc_is_avail(struct vhost_virtqueue *vq,
 			  struct vring_desc_packed *desc)
 {
-	if (vq->used_wrap_counter) {
-		if ((desc->flags & VRING_DESC_F_AVAIL) &&
-		   !(desc->flags & VRING_DESC_F_USED))
-			return true;
-	} else {
-		if (!(desc->flags & VRING_DESC_F_AVAIL) &&
-		     (desc->flags & VRING_DESC_F_USED))
-			return true;
-	}
-	return false;
-
-#if 0
-	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
-		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
-#endif
+	return ((desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_AVAIL)) ^
+		(desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_USED)));
 }
 
 static void set_desc_used(struct vhost_virtqueue *vq,
 			  struct vring_desc_packed *desc, bool wrap_counter)
 {
-	__virtio16 flags = vhost16_to_cpu(vq, VRING_DESC_F_USED |
-					      VRING_DESC_F_AVAIL);
+	__virtio16 flags = vhost16_to_cpu(vq, 1 << VRING_DESC_F_USED |
+					      1 << VRING_DESC_F_AVAIL);
 
 	if (wrap_counter)
 		desc->flags = flags;
