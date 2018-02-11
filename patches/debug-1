@@ -1,5 +1,5 @@
 Bottom: acfa1276cf27ff4a32a985709c5da64ac3220221
-Top:    4bb671154dedb3939d353bcdc278816b8669819c
+Top:    7bc50d871007bc1015cf0e2b7f29b69d80d633e1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-09 17:57:17 +0800
 
@@ -79,7 +79,7 @@ index 9c3f816..5ce2c6e 100644
  		mutex_lock(&n->vqs[i].vq.mutex);
  		n->vqs[i].vq.acked_features = features;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 52e026a..db3205e 100644
+index 52e026a..b36482a 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -327,7 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -91,29 +91,27 @@ index 52e026a..db3205e 100644
  	vq->umem = NULL;
  	vq->iotlb = NULL;
  	__vhost_vq_meta_reset(vq);
-@@ -2013,8 +2013,21 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -2013,15 +2013,15 @@ static int get_indirect(struct vhost_virtqueue *vq,
  static bool desc_is_avail(struct vhost_virtqueue *vq,
  			  struct vring_desc_packed *desc)
  {
-+	if (vq->used_wrap_counter) {
-+		if ((desc->flags & VRING_DESC_F_AVAIL) &&
-+		   !(desc->flags & VRING_DESC_F_USED))
-+			return true;
-+	} else {
-+		if (!(desc->flags & VRING_DESC_F_AVAIL) &&
-+		     (desc->flags & VRING_DESC_F_USED))
-+			return true;
-+	}
-+	return false;
-+
-+#if 0
- 	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
- 		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
-+#endif
+-	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
+-		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
++	return ((desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_AVAIL)) ^
++		(desc->flags & cpu_to_vhost16(vq, 1 << VRING_DESC_F_USED)));
  }
  
  static void set_desc_used(struct vhost_virtqueue *vq,
-@@ -2044,8 +2057,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 			  struct vring_desc_packed *desc, bool wrap_counter)
+ {
+-	__virtio16 flags = vhost16_to_cpu(vq, VRING_DESC_F_USED |
+-					      VRING_DESC_F_AVAIL);
++	__virtio16 flags = vhost16_to_cpu(vq, 1 << VRING_DESC_F_USED |
++					      1 << VRING_DESC_F_AVAIL);
+ 
+ 	if (wrap_counter)
+ 		desc->flags = flags;
+@@ -2044,8 +2044,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  	if (unlikely(log))
  		*log_num = 0;
  
@@ -125,7 +123,7 @@ index 52e026a..db3205e 100644
  		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
  					   sizeof desc);
  		if (unlikely(ret)) {
-@@ -2060,11 +2076,13 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2060,11 +2063,13 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  			return -EFAULT;
  		}
  
@@ -139,7 +137,7 @@ index 52e026a..db3205e 100644
  				return vq->num;
  			} else {
  				vq_err(vq, "descriptor idx %d is expected "
-@@ -2117,6 +2135,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2117,6 +2122,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  	/* If this descriptor says it doesn't chain, we're done. */
  	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
  
@@ -147,7 +145,7 @@ index 52e026a..db3205e 100644
  	return desc.id;
  }
  
-@@ -2360,12 +2379,14 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+@@ -2360,12 +2366,14 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
  	for (i = 0; i < count; i++) {
  		desc.id = heads[i].id;
  		desc.len = heads[i].len;
@@ -163,7 +161,7 @@ index 52e026a..db3205e 100644
  		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
  					&desc, sizeof desc);
  		if (unlikely(ret)) {
-@@ -2383,7 +2404,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+@@ -2383,7 +2391,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
  				eventfd_signal(vq->log_ctx, 1);
  		}
  		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
