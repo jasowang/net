@@ -2044,10 +2044,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	if (unlikely(log))
 		*log_num = 0;
 
-	printk("vq %p last avail %u\n", vq->last_avail_idx);
+	printk("vq %p last avail %u vq->num %d \n", vq,
+		vq->last_avail_idx, vq->num);
 	do {
 		i = vq->last_avail_idx & (vq->num - 1);
-		printk("vq %p idx at %d\n", i);
+		printk("vq %p idx at %d\n", vq, i);
 		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
 					   sizeof desc);
 		if (unlikely(ret)) {
@@ -2120,7 +2121,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	/* If this descriptor says it doesn't chain, we're done. */
 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
-	printk("desc.id is %d\n", desc.id);
+	printk("vq %p desc.id is %d\n", vq, desc.id);
 	return desc.id;
 }
 
