@@ -1,5 +1,5 @@
 Bottom: acfa1276cf27ff4a32a985709c5da64ac3220221
-Top:    9b13c0716b97610ddd0a599f0570760d60348b34
+Top:    6fd49c721b483eccd20097efc322f7871c61bba3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-09 17:57:17 +0800
 
@@ -8,22 +8,49 @@ debug
 
 ---
 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9c3f816..87d989a 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -67,7 +67,8 @@ enum {
+ 	VHOST_NET_FEATURES = VHOST_FEATURES |
+ 			 (1ULL << VHOST_NET_F_VIRTIO_NET_HDR) |
+ 			 (1ULL << VIRTIO_NET_F_MRG_RXBUF) |
+-			 (1ULL << VIRTIO_F_IOMMU_PLATFORM)
++			 (1ULL << VIRTIO_F_IOMMU_PLATFORM) |
++	                 (1ULL << VIRTIO_F_RING_PACKED)
+ };
+ 
+ enum {
+@@ -1267,6 +1268,11 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+ 			goto out_unlock;
+ 	}
+ 
++	if (features & (1ULL << VIRTIO_F_RING_PACKED))
++		printk("packed ring!\n");
++	else
++		printk("split ring!\n");
++
+ 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
+ 		mutex_lock(&n->vqs[i].vq.mutex);
+ 		n->vqs[i].vq.acked_features = features;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 52e026a..d5fbc78 100644
+index 52e026a..716d4d0 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2044,8 +2044,10 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2044,8 +2044,11 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  	if (unlikely(log))
  		*log_num = 0;
  
-+	printk("vq %p last avail %u\n", vq->last_avail_idx);
++	printk("vq %p last avail %u vq->num %d \n", vq,
++		vq->last_avail_idx, vq->num);
  	do {
  		i = vq->last_avail_idx & (vq->num - 1);
-+		printk("vq %p idx at %d\n", i);
++		printk("vq %p idx at %d\n", vq, i);
  		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
  					   sizeof desc);
  		if (unlikely(ret)) {
-@@ -2065,6 +2067,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2065,6 +2068,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  			 * invalid.
  			 */
  			if (likely(avail_idx == vq->last_avail_idx)) {
@@ -31,15 +58,15 @@ index 52e026a..d5fbc78 100644
  				return vq->num;
  			} else {
  				vq_err(vq, "descriptor idx %d is expected "
-@@ -2117,6 +2120,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2117,6 +2121,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  	/* If this descriptor says it doesn't chain, we're done. */
  	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
  
-+	printk("desc.id is %d\n", desc.id);
++	printk("vq %p desc.id is %d\n", vq, desc.id);
  	return desc.id;
  }
  
-@@ -2366,6 +2370,8 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+@@ -2366,6 +2371,8 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
  		smp_mb();
  
  		used_idx = vq->last_used_idx & (vq->num - 1);
@@ -48,3 +75,15 @@ index 52e026a..d5fbc78 100644
  		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
  					&desc, sizeof desc);
  		if (unlikely(ret)) {
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index c68bbfb..657b7a6 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -229,6 +229,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from);
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ 
++#define DEBUG
+ #define vq_err(vq, fmt, ...) do {                                  \
+ 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
+ 		if ((vq)->error_ctx)                               \
