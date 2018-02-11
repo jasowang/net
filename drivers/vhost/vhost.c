@@ -327,7 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
-	vq->used_warp_counter = false;
+	vq->used_wrap_counter = false;
 	vq->umem = NULL;
 	vq->iotlb = NULL;
 	__vhost_vq_meta_reset(vq);
@@ -2013,8 +2013,21 @@ static int get_indirect(struct vhost_virtqueue *vq,
 static bool desc_is_avail(struct vhost_virtqueue *vq,
 			  struct vring_desc_packed *desc)
 {
+	if (vq->used_wrap_counter) {
+		if ((desc->flags & VRING_DESC_F_AVAIL) &&
+		   !(desc->flags & VRING_DESC_F_USED))
+			return true;
+	} else {
+		if (!(desc->flags & VRING_DESC_F_AVAIL) &&
+		     (desc->flags & VRING_DESC_F_USED))
+			return true;
+	}
+	return false;
+
+#if 0
 	return ((desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL)) ^
 		(desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_USED)));
+#endif
 }
 
 static void set_desc_used(struct vhost_virtqueue *vq,
@@ -2365,7 +2378,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 	for (i = 0; i < count; i++) {
 		desc.id = heads[i].id;
 		desc.len = heads[i].len;
-		set_desc_used(vq, &desc, vq->used_warp_counter);
+		set_desc_used(vq, &desc, vq->used_wrap_counter);
 
 		/* Update flags etc before desc is written */
 		smp_mb();
@@ -2390,7 +2403,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 				eventfd_signal(vq->log_ctx, 1);
 		}
 		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
-			vq->used_warp_counter ^= 1;
+			vq->used_wrap_counter ^= 1;
 	}
 
 	return 0;

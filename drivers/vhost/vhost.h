@@ -153,7 +153,7 @@ struct vhost_virtqueue {
 	bool user_be;
 #endif
 	u32 busyloop_timeout;
-	bool used_warp_counter;
+	bool used_wrap_counter;
 };
 
 struct vhost_msg_node {
