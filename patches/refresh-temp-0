@@ -1,0 +1,55 @@
+Bottom: 7bc50d871007bc1015cf0e2b7f29b69d80d633e1
+Top:    5b4ba29191c348f735092eaa5b27bf72abd63404
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-11 18:54:34 +0800
+
+Refresh of debug-1
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index b36482a..7544046 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2083,6 +2083,8 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 		 */
+ 		smp_rmb();
+ 
++		printk("desc avail desc.addr %p desc.len %d!\n",
++			desc.addr, desc.len);
+ 		access = desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_WRITE);
+ 		ret = translate_desc(vq, vhost64_to_cpu(vq, desc.addr),
+ 				     vhost32_to_cpu(vq, desc.len),
+@@ -2094,6 +2096,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 					   "descriptor idx %d\n", ret, i);
+ 			return ret;
+ 		}
++		printk("translation done!\n");
+ 
+ 		if (access == VHOST_ACCESS_WO) {
+ 			/* If this is an input descriptor,
+@@ -2119,6 +2122,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 
+ 		/* On success, increment avail index. */
+ 		vq->last_avail_idx++;
++		printk("incrase last avail to %d\n", vq->last_avail_idx);
+ 	/* If this descriptor says it doesn't chain, we're done. */
+ 	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
+ 
+@@ -2363,6 +2367,8 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+ 	u16 used_idx;
+ 	int i, ret;
+ 
++#if 0
++
+ 	for (i = 0; i < count; i++) {
+ 		desc.id = heads[i].id;
+ 		desc.len = heads[i].len;
+@@ -2393,6 +2399,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+ 		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
+ 			vq->used_wrap_counter ^= 1;
+ 	}
++#endif
+ 
+ 	return 0;
+ }
