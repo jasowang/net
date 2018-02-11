@@ -1,5 +1,5 @@
 Bottom: acfa1276cf27ff4a32a985709c5da64ac3220221
-Top:    93f33124a9df5e450387a019e5f83f9f772c80d8
+Top:    4bb671154dedb3939d353bcdc278816b8669819c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-09 17:57:17 +0800
 
@@ -8,20 +8,8 @@ debug
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0dc66e4..14ac8d7 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -1119,6 +1119,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
- 	/* Notify and wake up reader process */
- 	if (tfile->flags & TUN_FASYNC)
- 		kill_fasync(&tfile->fasync, SIGIO, POLL_IN);
-+	printk("wake up !\n");
- 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
- 
- 	rcu_read_unlock();
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9c3f816..7f05607 100644
+index 9c3f816..5ce2c6e 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -67,7 +67,8 @@ enum {
@@ -51,7 +39,15 @@ index 9c3f816..7f05607 100644
  	mutex_unlock(&vq->mutex);
  }
  
-@@ -781,6 +785,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -773,6 +777,7 @@ static void handle_rx(struct vhost_net *net)
+ 
+ 	vhost_disable_notify(&net->dev, vq);
+ 	vhost_net_disable_vq(net, vq);
++	printk("net disable!\n");
+ 
+ 	vhost_hlen = nvq->vhost_hlen;
+ 	sock_hlen = nvq->sock_hlen;
+@@ -781,6 +786,7 @@ static void handle_rx(struct vhost_net *net)
  		vq->log : NULL;
  	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
  
@@ -59,15 +55,17 @@ index 9c3f816..7f05607 100644
  	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
  		sock_len += sock_hlen;
  		vhost_len = sock_len + vhost_hlen;
-@@ -872,6 +877,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -871,7 +877,9 @@ static void handle_rx(struct vhost_net *net)
+ 		}
  	}
  	vhost_net_enable_vq(net, vq);
++	printk("net enable!\n");
  out:
 +	printk("rx done!\n");
  	if (nheads)
  		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
  					    nheads);
-@@ -1267,6 +1273,12 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+@@ -1267,6 +1275,12 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
  			goto out_unlock;
  	}
  
@@ -81,7 +79,7 @@ index 9c3f816..7f05607 100644
  		mutex_lock(&n->vqs[i].vq.mutex);
  		n->vqs[i].vq.acked_features = features;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 52e026a..88b4c05 100644
+index 52e026a..db3205e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -327,7 +327,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -127,7 +125,13 @@ index 52e026a..88b4c05 100644
  		ret = vhost_copy_from_user(vq, &desc, vq->desc_packed + i,
  					   sizeof desc);
  		if (unlikely(ret)) {
-@@ -2065,6 +2081,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2060,11 +2076,13 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 			return -EFAULT;
+ 		}
+ 
++		printk("check desc at %p\n", vq->desc_packed + i);
+ 		if (!desc_is_avail(vq, &desc)) {
+ 			/* If there's nothing new since last we looked, return
  			 * invalid.
  			 */
  			if (likely(avail_idx == vq->last_avail_idx)) {
@@ -135,7 +139,7 @@ index 52e026a..88b4c05 100644
  				return vq->num;
  			} else {
  				vq_err(vq, "descriptor idx %d is expected "
-@@ -2117,6 +2134,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+@@ -2117,6 +2135,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
  	/* If this descriptor says it doesn't chain, we're done. */
  	} while(desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
  
@@ -143,7 +147,7 @@ index 52e026a..88b4c05 100644
  	return desc.id;
  }
  
-@@ -2360,12 +2378,14 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+@@ -2360,12 +2379,14 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
  	for (i = 0; i < count; i++) {
  		desc.id = heads[i].id;
  		desc.len = heads[i].len;
@@ -159,7 +163,7 @@ index 52e026a..88b4c05 100644
  		ret = vhost_copy_to_user(vq, vq->desc_packed + used_idx,
  					&desc, sizeof desc);
  		if (unlikely(ret)) {
-@@ -2383,7 +2403,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
+@@ -2383,7 +2404,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
  				eventfd_signal(vq->log_ctx, 1);
  		}
  		if ((++vq->last_used_idx & (vq->num - 1)) == 0)
