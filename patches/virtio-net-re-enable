@@ -5,6 +5,8 @@ Date:   2018-02-26 14:39:27 +0800
 
 virtio-net: re enable XDP_REDIRECT for mergeable buffer
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
