@@ -474,6 +474,26 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
 	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
 }
 
+static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
+				       struct sk_buff *skb)
+{
+	struct bpf_prog *xdp_prog;
+	int ret;
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(rq->xdp_prog);
+	if (xdp_prog) {
+		ret = do_xdp_generic(xdp_prog, skb);
+		if (ret != XDP_PASS) {
+			rcu_read_unlock();
+			return NULL;
+		}
+	}
+	rcu_read_unlock();
+
+	return skb;
+}
+
 static struct sk_buff *receive_small(struct net_device *dev,
 				     struct virtnet_info *vi,
 				     struct receive_queue *rq,
@@ -490,7 +510,6 @@ static struct sk_buff *receive_small(struct net_device *dev,
 			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	struct page *page = virt_to_head_page(buf);
 	unsigned int delta = 0;
-	struct page *xdp_page;
 	bool sent, skb_xdp = false;
 	int err;
 
@@ -599,26 +618,6 @@ err:
 	dev->stats.rx_dropped++;
 	give_pages(rq, page);
 	return NULL;
-}
-
-static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
-				       struct sk_buff *skb)
-{
-	struct bpf_prog *xdp_prog;
-	int ret;
-
-	rcu_read_lock();
-	xdp_prog = rcu_dereference(rq->xdp_prog);
-	if (xdp_prog) {
-		ret = do_xdp_generic(xdp_prog, skb);
-		if (ret != XDP_PASS) {
-			rcu_read_unlock();
-			return NULL;
-		}
-	}
-	rcu_read_unlock();
-
-	return skb;
 }
 
 static struct sk_buff *receive_mergeable(struct net_device *dev,
