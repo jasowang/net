@@ -1,9 +1,9 @@
 Version: 1
-Previous: 1701b3ebb2493bd14f194a6eaf9d607410524011
-Head: bfc4174a262ad0c93ddd5b571c25692e4ebc5285
+Previous: a1cf7ae855a75b5bebe83ee9fc5b1bc6ca2e898f
+Head: c440c0df4a460eb0daf335a733f6c93f618eef88
 Applied:
   virtio-net-re-enable: e4f4da6e954d717977ddba91ecad448fd2041bc7
-  refresh-temp-0: bfc4174a262ad0c93ddd5b571c25692e4ebc5285
+  refresh-temp-0: c440c0df4a460eb0daf335a733f6c93f618eef88
 Unapplied:
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
   vhost-packed-ring-support: 527b31e41c864887f1c9192e32b800566d11ff9e
