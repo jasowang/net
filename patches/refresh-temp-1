@@ -1,0 +1,23 @@
+Bottom: 19f3e54924a597ecb6c8e05f994462defbff57bb
+Top:    d28bcdb57fb15318c1fa7ea43c98045c0cbdc5ec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-02-28 18:16:23 +0800
+
+Refresh of virtio-net-disable-napi-only
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 09ee9a0..d0803c3 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2158,7 +2158,8 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+ 		}
+ 		if (old_prog)
+ 			bpf_prog_put(old_prog);
+-		virtnet_napi_enable(vi->rq[i].vq, &vi->rq[i].napi);
++		if (netif_running(dev))
++			virtnet_napi_enable(vi->rq[i].vq, &vi->rq[i].napi);
+ 	}
+ 
+ 	return 0;
