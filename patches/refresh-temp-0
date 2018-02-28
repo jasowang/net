@@ -1,5 +1,5 @@
 Bottom: 65bd216d686ec7fbe69f7ef857b0abdd61fa62fb
-Top:    d7f1bf094bd0098a323290b0b3d74890801176e3
+Top:    cd3bc7da493e1d5d7163e2b22ef19bc7b9e51325
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-28 15:30:31 +0800
 
@@ -16,10 +16,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 771a7d8..a2571f9 100644
+index 771a7d8..9bbf35f 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -474,67 +474,24 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+@@ -474,69 +474,6 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
  	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
  }
  
@@ -43,9 +43,7 @@ index 771a7d8..a2571f9 100644
 -				       int offset,
 -				       int page_off,
 -				       unsigned int *len)
-+static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
-+				       struct sk_buff *skb)
- {
+-{
 -	struct page *page = alloc_page(GFP_ATOMIC);
 -
 -	if (!page)
@@ -65,42 +63,33 @@ index 771a7d8..a2571f9 100644
 -
 -		p = virt_to_head_page(buf);
 -		off = buf - page_address(p);
-+	struct bpf_prog *xdp_prog;
-+	int ret;
- 
+-
 -		/* guard against a misconfigured or uncooperative backend that
 -		 * is sending packet larger than the MTU.
 -		 */
 -		if ((page_off + buflen) > PAGE_SIZE) {
 -			put_page(p);
 -			goto err_buf;
-+	rcu_read_lock();
-+	xdp_prog = rcu_dereference(rq->xdp_prog);
-+	if (xdp_prog) {
-+		ret = do_xdp_generic(xdp_prog, skb);
-+		if (ret != XDP_PASS) {
-+			rcu_read_unlock();
-+			return NULL;
- 		}
+-		}
 -
 -		memcpy(page_address(page) + page_off,
 -		       page_address(p) + off, buflen);
 -		page_off += buflen;
 -		put_page(p);
- 	}
-+	rcu_read_unlock();
- 
+-	}
+-
 -	/* Headroom does not contribute to packet length */
 -	*len = page_off - VIRTIO_XDP_HEADROOM;
 -	return page;
 -err_buf:
 -	__free_pages(page, 0);
 -	return NULL;
-+	return skb;
- }
- 
+-}
+-
  static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
-@@ -573,8 +530,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ 				       struct sk_buff *skb)
+ {
+@@ -573,8 +510,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
  	struct page *page = virt_to_head_page(buf);
  	unsigned int delta = 0;
@@ -110,7 +99,7 @@ index 771a7d8..a2571f9 100644
  	int err;
  
  	len -= vi->hdr_len;
-@@ -590,25 +546,14 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -590,25 +526,14 @@ static struct sk_buff *receive_small(struct net_device *dev,
  		if (unlikely(hdr->hdr.gso_type))
  			goto err_xdp;
  
@@ -143,7 +132,7 @@ index 771a7d8..a2571f9 100644
  		}
  
  		xdp.data_hard_start = buf + VIRTNET_RX_PAD + vi->hdr_len;
-@@ -650,6 +595,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -650,6 +575,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -151,7 +140,7 @@ index 771a7d8..a2571f9 100644
  	skb = build_skb(buf, buflen);
  	if (!skb) {
  		put_page(page);
-@@ -662,6 +608,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -662,6 +588,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
  	} /* keep zeroed vnet hdr since packet was changed by bpf */
  
