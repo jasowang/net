@@ -12,6 +12,8 @@ by checking device state through netif_running() before.
 
 Fixes: 4941d472bf95b ("virtio-net: do not reset during XDP set")
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
