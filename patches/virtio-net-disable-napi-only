@@ -10,7 +10,7 @@ cpus. But we don't check if device is up (napi is enabled), this could
 result stall because of infinite wait in napi_disable(). Fixing this
 by checking device state through netif_running() before.
 
-
+Fixes: 4941d472bf95b ("virtio-net: do not reset during XDP set")
 
 
 ---
