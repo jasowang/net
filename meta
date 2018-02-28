@@ -1,10 +1,11 @@
 Version: 1
-Previous: a98bea13c31848ead767a58566fb66035d99840d
-Head: 284dd1cda502197d985225b54a5d51d4eb2984cb
+Previous: f6564d9df5098508958031f9c53323730982f71e
+Head: 174ad19743383500b3c01a9879663b28e3a149b4
 Applied:
   virtio-net-re-enable: e4f4da6e954d717977ddba91ecad448fd2041bc7
   refresh-temp-0: 793755226d135788bb14045ca2213c2b018bdf97
   virtio-net-disable-napi-only: 284dd1cda502197d985225b54a5d51d4eb2984cb
+  refresh-temp-1: 174ad19743383500b3c01a9879663b28e3a149b4
 Unapplied:
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
   vhost-packed-ring-support: 527b31e41c864887f1c9192e32b800566d11ff9e
