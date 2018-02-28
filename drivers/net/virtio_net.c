@@ -537,6 +537,26 @@ err_buf:
 	return NULL;
 }
 
+static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
+				       struct sk_buff *skb)
+{
+	struct bpf_prog *xdp_prog;
+	int ret;
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(rq->xdp_prog);
+	if (xdp_prog) {
+		ret = do_xdp_generic(xdp_prog, skb);
+		if (ret != XDP_PASS) {
+			rcu_read_unlock();
+			return NULL;
+		}
+	}
+	rcu_read_unlock();
+
+	return skb;
+}
+
 static struct sk_buff *receive_small(struct net_device *dev,
 				     struct virtnet_info *vi,
 				     struct receive_queue *rq,
@@ -671,26 +691,6 @@ err:
 	dev->stats.rx_dropped++;
 	give_pages(rq, page);
 	return NULL;
-}
-
-static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
-				       struct sk_buff *skb)
-{
-	struct bpf_prog *xdp_prog;
-	int ret;
-
-	rcu_read_lock();
-	xdp_prog = rcu_dereference(rq->xdp_prog);
-	if (xdp_prog) {
-		ret = do_xdp_generic(xdp_prog, skb);
-		if (ret != XDP_PASS) {
-			rcu_read_unlock();
-			return NULL;
-		}
-	}
-	rcu_read_unlock();
-
-	return skb;
 }
 
 static struct sk_buff *receive_mergeable(struct net_device *dev,
