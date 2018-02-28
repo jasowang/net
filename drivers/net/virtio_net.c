@@ -710,6 +710,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	unsigned int truesize;
 	unsigned int headroom = mergeable_ctx_to_headroom(ctx);
 	bool sent, skb_xdp = false;
+	int err;
 
 	head_skb = NULL;
 
@@ -769,6 +770,13 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 				trace_xdp_exception(vi->dev, xdp_prog, act);
 				goto err_xdp;
 			}
+			*xdp_xmit = true;
+			rcu_read_unlock();
+			goto xdp_xmit;
+		case XDP_REDIRECT:
+			err = xdp_do_redirect(dev, &xdp, xdp_prog);
+			if (err)
+				goto err_xdp;
 			*xdp_xmit = true;
 			rcu_read_unlock();
 			goto xdp_xmit;
