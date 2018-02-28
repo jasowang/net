@@ -649,11 +649,11 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		u32 act;
 
 		/* This happens when rx buffer size is underestimated
-		 * or headroom is not enough because the buffer
+		 * or headroom is not enough because of the buffer
 		 * was refilled before XDP is set. In both cases,
 		 * for simplicity, we will offload them to generic
-		 * XDP routine. This should only happen for several
-		 * packets, so we don't care much about its
+		 * XDP routine. This should only happen for the first
+		 * several packets, so we don't care much about its
 		 * performance.
 		 */
 		if (unlikely(num_buf > 1 ||
