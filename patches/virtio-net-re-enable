@@ -5,6 +5,13 @@ Date:   2018-02-26 14:39:27 +0800
 
 virtio-net: re enable XDP_REDIRECT for mergeable buffer
 
+XDP_REDIRECT support for mergeable buffer was removed since commit
+7324f5399b06 ("virtio_net: disable XDP_REDIRECT in receive_mergeable()
+case"). This is because we don't reserve enough tailroom for struct
+skb_shared_info which breaks XDP assumption. Other complaints are, the
+complex linearize logic and EWMA estimation may increase the
+possibility of linearizing.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
