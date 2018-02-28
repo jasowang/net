@@ -494,6 +494,69 @@ static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
 	return skb;
 }
 
+/* We copy the packet for XDP in the following cases:
+ *
+ * 1) Packet is scattered across multiple rx buffers.
+ * 2) Headroom space is insufficient.
+ *
+ * This is inefficient but it's a temporary condition that
+ * we hit right after XDP is enabled and until queue is refilled
+ * with large buffers with sufficient headroom - so it should affect
+ * at most queue size packets.
+ * Afterwards, the conditions to enable
+ * XDP should preclude the underlying device from sending packets
+ * across multiple buffers (num_buf > 1), and we make sure buffers
+ * have enough headroom.
+ */
+static struct page *xdp_linearize_page(struct receive_queue *rq,
+				       u16 *num_buf,
+				       struct page *p,
+				       int offset,
+				       int page_off,
+				       unsigned int *len)
+{
+	struct page *page = alloc_page(GFP_ATOMIC);
+
+	if (!page)
+		return NULL;
+
+	memcpy(page_address(page) + page_off, page_address(p) + offset, *len);
+	page_off += *len;
+
+	while (--*num_buf) {
+		unsigned int buflen;
+		void *buf;
+		int off;
+
+		buf = virtqueue_get_buf(rq->vq, &buflen);
+		if (unlikely(!buf))
+			goto err_buf;
+
+		p = virt_to_head_page(buf);
+		off = buf - page_address(p);
+
+		/* guard against a misconfigured or uncooperative backend that
+		 * is sending packet larger than the MTU.
+		 */
+		if ((page_off + buflen) > PAGE_SIZE) {
+			put_page(p);
+			goto err_buf;
+		}
+
+		memcpy(page_address(page) + page_off,
+		       page_address(p) + off, buflen);
+		page_off += buflen;
+		put_page(p);
+	}
+
+	/* Headroom does not contribute to packet length */
+	*len = page_off - VIRTIO_XDP_HEADROOM;
+	return page;
+err_buf:
+	__free_pages(page, 0);
+	return NULL;
+}
+
 static struct sk_buff *receive_small(struct net_device *dev,
 				     struct virtnet_info *vi,
 				     struct receive_queue *rq,
