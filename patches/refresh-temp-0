@@ -1,5 +1,5 @@
 Bottom: 798d2ba16acf0670b2db9ddb31978ce4b0bd5b3e
-Top:    833ddabb12146cf8d987cebc154ab4699f783a21
+Top:    cd3bc7da493e1d5d7163e2b22ef19bc7b9e51325
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-28 15:30:31 +0800
 
@@ -8,7 +8,7 @@ Refresh of virtio-net-re-enable
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ca1441d..1cb8057 100644
+index ca1441d..9bbf35f 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -474,67 +474,24 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
@@ -178,18 +178,3 @@ index ca1441d..1cb8057 100644
  static struct sk_buff *receive_mergeable(struct net_device *dev,
  					 struct virtnet_info *vi,
  					 struct receive_queue *rq,
-@@ -722,11 +649,11 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
- 		u32 act;
- 
- 		/* This happens when rx buffer size is underestimated
--		 * or headroom is not enough because of the buffer
-+		 * or headroom is not enough because the buffer
- 		 * was refilled before XDP is set. In both cases,
- 		 * for simplicity, we will offload them to generic
--		 * XDP routine. This should only happen for the first
--		 * several packets, so we don't care much about its
-+		 * XDP routine. This should only happen for several
-+		 * packets, so we don't care much about its
- 		 * performance.
- 		 */
- 		if (unlikely(num_buf > 1 ||
