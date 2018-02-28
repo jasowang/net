@@ -2608,8 +2608,8 @@ static ssize_t mergeable_rx_buffer_size_show(struct netdev_rx_queue *queue,
 	BUG_ON(queue_index >= vi->max_queue_pairs);
 	avg = &vi->rq[queue_index].mrg_avg_pkt_len;
 	return sprintf(buf, "%u\n",
-		get_mergeable_buf_len(&vi->rq[queue_index], avg,
-				      headroom + tailroom));
+		       get_mergeable_buf_len(&vi->rq[queue_index], avg,
+				             headroom + tailroom));
 }
 
 static struct rx_queue_attribute mergeable_rx_buffer_size_attribute =
