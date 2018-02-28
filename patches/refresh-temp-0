@@ -1,5 +1,5 @@
 Bottom: 798d2ba16acf0670b2db9ddb31978ce4b0bd5b3e
-Top:    cac40585e8eb50b6e3709df842a0a7260e423e3e
+Top:    cd3bc7da493e1d5d7163e2b22ef19bc7b9e51325
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-28 15:30:31 +0800
 
@@ -11,19 +11,64 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ca1441d..7f080d3 100644
+index ca1441d..9bbf35f 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -474,6 +474,26 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
+@@ -474,67 +474,24 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
  	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
  }
  
+-/* We copy the packet for XDP in the following cases:
+- *
+- * 1) Packet is scattered across multiple rx buffers.
+- * 2) Headroom space is insufficient.
+- *
+- * This is inefficient but it's a temporary condition that
+- * we hit right after XDP is enabled and until queue is refilled
+- * with large buffers with sufficient headroom - so it should affect
+- * at most queue size packets.
+- * Afterwards, the conditions to enable
+- * XDP should preclude the underlying device from sending packets
+- * across multiple buffers (num_buf > 1), and we make sure buffers
+- * have enough headroom.
+- */
+-static struct page *xdp_linearize_page(struct receive_queue *rq,
+-				       u16 *num_buf,
+-				       struct page *p,
+-				       int offset,
+-				       int page_off,
+-				       unsigned int *len)
 +static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
 +				       struct sk_buff *skb)
-+{
+ {
+-	struct page *page = alloc_page(GFP_ATOMIC);
+-
+-	if (!page)
+-		return NULL;
+-
+-	memcpy(page_address(page) + page_off, page_address(p) + offset, *len);
+-	page_off += *len;
+-
+-	while (--*num_buf) {
+-		unsigned int buflen;
+-		void *buf;
+-		int off;
+-
+-		buf = virtqueue_get_buf(rq->vq, &buflen);
+-		if (unlikely(!buf))
+-			goto err_buf;
+-
+-		p = virt_to_head_page(buf);
+-		off = buf - page_address(p);
 +	struct bpf_prog *xdp_prog;
 +	int ret;
-+
+ 
+-		/* guard against a misconfigured or uncooperative backend that
+-		 * is sending packet larger than the MTU.
+-		 */
+-		if ((page_off + buflen) > PAGE_SIZE) {
+-			put_page(p);
+-			goto err_buf;
 +	rcu_read_lock();
 +	xdp_prog = rcu_dereference(rq->xdp_prog);
 +	if (xdp_prog) {
@@ -31,17 +76,26 @@ index ca1441d..7f080d3 100644
 +		if (ret != XDP_PASS) {
 +			rcu_read_unlock();
 +			return NULL;
-+		}
-+	}
+ 		}
+-
+-		memcpy(page_address(page) + page_off,
+-		       page_address(p) + off, buflen);
+-		page_off += buflen;
+-		put_page(p);
+ 	}
 +	rcu_read_unlock();
-+
+ 
+-	/* Headroom does not contribute to packet length */
+-	*len = page_off - VIRTIO_XDP_HEADROOM;
+-	return page;
+-err_buf:
+-	__free_pages(page, 0);
+-	return NULL;
 +	return skb;
-+}
-+
- /* We copy the packet for XDP in the following cases:
-  *
-  * 1) Packet is scattered across multiple rx buffers.
-@@ -553,8 +573,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+ }
+ 
+ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -553,8 +510,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
  	struct page *page = virt_to_head_page(buf);
  	unsigned int delta = 0;
@@ -51,7 +105,7 @@ index ca1441d..7f080d3 100644
  	int err;
  
  	len -= vi->hdr_len;
-@@ -570,25 +589,14 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -570,25 +526,14 @@ static struct sk_buff *receive_small(struct net_device *dev,
  		if (unlikely(hdr->hdr.gso_type))
  			goto err_xdp;
  
@@ -84,7 +138,7 @@ index ca1441d..7f080d3 100644
  		}
  
  		xdp.data_hard_start = buf + VIRTNET_RX_PAD + vi->hdr_len;
-@@ -630,6 +638,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -630,6 +575,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  	}
  	rcu_read_unlock();
  
@@ -92,7 +146,7 @@ index ca1441d..7f080d3 100644
  	skb = build_skb(buf, buflen);
  	if (!skb) {
  		put_page(page);
-@@ -642,6 +651,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
+@@ -642,6 +588,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
  		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
  	} /* keep zeroed vnet hdr since packet was changed by bpf */
  
@@ -100,7 +154,7 @@ index ca1441d..7f080d3 100644
  err:
  	return skb;
  
-@@ -673,26 +683,6 @@ static struct sk_buff *receive_big(struct net_device *dev,
+@@ -673,26 +620,6 @@ static struct sk_buff *receive_big(struct net_device *dev,
  	return NULL;
  }
  
