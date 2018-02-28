@@ -1,5 +1,5 @@
 Bottom: a5c8f6332f06550e935d1e557ac927302f7f63c4
-Top:    798d2ba16acf0670b2db9ddb31978ce4b0bd5b3e
+Top:    65bd216d686ec7fbe69f7ef857b0abdd61fa62fb
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-26 14:39:27 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9bb9e56..ca1441d 100644
+index 9bb9e56..771a7d8 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -673,6 +673,26 @@ static struct sk_buff *receive_big(struct net_device *dev,
+@@ -537,6 +537,26 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
  	return NULL;
  }
  
@@ -38,9 +38,9 @@ index 9bb9e56..ca1441d 100644
 +	return skb;
 +}
 +
- static struct sk_buff *receive_mergeable(struct net_device *dev,
- 					 struct virtnet_info *vi,
- 					 struct receive_queue *rq,
+ static struct sk_buff *receive_small(struct net_device *dev,
+ 				     struct virtnet_info *vi,
+ 				     struct receive_queue *rq,
 @@ -689,31 +709,30 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  	struct bpf_prog *xdp_prog;
  	unsigned int truesize;
