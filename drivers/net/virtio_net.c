@@ -474,6 +474,26 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
 	return vi->xdp_queue_pairs ? VIRTIO_XDP_HEADROOM : 0;
 }
 
+static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
+				       struct sk_buff *skb)
+{
+	struct bpf_prog *xdp_prog;
+	int ret;
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(rq->xdp_prog);
+	if (xdp_prog) {
+		ret = do_xdp_generic(xdp_prog, skb);
+		if (ret != XDP_PASS) {
+			rcu_read_unlock();
+			return NULL;
+		}
+	}
+	rcu_read_unlock();
+
+	return skb;
+}
+
 /* We copy the packet for XDP in the following cases:
  *
  * 1) Packet is scattered across multiple rx buffers.
@@ -553,8 +573,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 			      SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	struct page *page = virt_to_head_page(buf);
 	unsigned int delta = 0;
-	struct page *xdp_page;
-	bool sent;
+	bool sent, skb_xdp = false;
 	int err;
 
 	len -= vi->hdr_len;
@@ -570,25 +589,14 @@ static struct sk_buff *receive_small(struct net_device *dev,
 		if (unlikely(hdr->hdr.gso_type))
 			goto err_xdp;
 
+		/* This happnes when headroom is not enough because
+		 * the buffer was refilled before XDP is set. This
+		 * only happen for several packets, for simplicity,
+		 * offload them to generic XDP routine.
+		 */
 		if (unlikely(xdp_headroom < virtnet_get_headroom(vi))) {
-			int offset = buf - page_address(page) + header_offset;
-			unsigned int tlen = len + vi->hdr_len;
-			u16 num_buf = 1;
-
-			xdp_headroom = virtnet_get_headroom(vi);
-			header_offset = VIRTNET_RX_PAD + xdp_headroom;
-			headroom = vi->hdr_len + header_offset;
-			buflen = SKB_DATA_ALIGN(GOOD_PACKET_LEN + headroom) +
-				 SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-			xdp_page = xdp_linearize_page(rq, &num_buf, page,
-						      offset, header_offset,
-						      &tlen);
-			if (!xdp_page)
-				goto err_xdp;
-
-			buf = page_address(xdp_page);
-			put_page(page);
-			page = xdp_page;
+			skb_xdp = true;
+			goto skb_xdp;
 		}
 
 		xdp.data_hard_start = buf + VIRTNET_RX_PAD + vi->hdr_len;
@@ -630,6 +638,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	}
 	rcu_read_unlock();
 
+skb_xdp:
 	skb = build_skb(buf, buflen);
 	if (!skb) {
 		put_page(page);
@@ -642,6 +651,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 		memcpy(skb_vnet_hdr(skb), buf, vi->hdr_len);
 	} /* keep zeroed vnet hdr since packet was changed by bpf */
 
+	skb = virtnet_skb_xdp(rq, skb);
 err:
 	return skb;
 
@@ -671,26 +681,6 @@ err:
 	dev->stats.rx_dropped++;
 	give_pages(rq, page);
 	return NULL;
-}
-
-static struct sk_buff *virtnet_skb_xdp(struct receive_queue *rq,
-				       struct sk_buff *skb)
-{
-	struct bpf_prog *xdp_prog;
-	int ret;
-
-	rcu_read_lock();
-	xdp_prog = rcu_dereference(rq->xdp_prog);
-	if (xdp_prog) {
-		ret = do_xdp_generic(xdp_prog, skb);
-		if (ret != XDP_PASS) {
-			rcu_read_unlock();
-			return NULL;
-		}
-	}
-	rcu_read_unlock();
-
-	return skb;
 }
 
 static struct sk_buff *receive_mergeable(struct net_device *dev,
