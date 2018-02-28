@@ -5,13 +5,13 @@ Date:   2018-02-28 17:28:30 +0800
 
 virtio-net: disable NAPI only when enabled during XDP set
 
-We try to disable NAPI to prevent XDP TX queue to be used by multiple
-cpus. But we don't check if device is up (napi is enabled), this could
-result stall because of infinite wait in napi_disable(). Fixing this
-by checking device state through netif_running() before.
+We try to disable NAPI to prevent a single XDP TX queue being used by
+multiple cpus. But we don't check if device is up (NAPI is enabled),
+this could result stall because of infinite wait in
+napi_disable(). Fixing this by checking device state through
+netif_running() before.
 
 Fixes: 4941d472bf95b ("virtio-net: do not reset during XDP set")
-
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
