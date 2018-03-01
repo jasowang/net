@@ -1,0 +1,29 @@
+Bottom: b7cadde8a9fbda44443eb4b6137a961f9d4d607c
+Top:    4193925afa4b9f6bcdb47908662d2937efa9ad0d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-03-01 10:40:33 +0800
+
+Refresh of virtio-net-re-enable
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 2de97b6..81190ba 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1033,11 +1033,10 @@ static unsigned int get_mergeable_buf_len(struct receive_queue *rq,
+ 	unsigned int len;
+ 
+ 	if (room)
+-		len = PAGE_SIZE - room;
+-	else
+-		len = hdr_len +
+-		      clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
+-			      rq->min_buf_len, PAGE_SIZE - hdr_len);
++		return PAGE_SIZE - room;
++
++	len = hdr_len +	clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
++				rq->min_buf_len, PAGE_SIZE - hdr_len);
+ 
+ 	return ALIGN(len, L1_CACHE_BYTES);
+ }
