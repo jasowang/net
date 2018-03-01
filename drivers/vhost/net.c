@@ -114,6 +114,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
+	struct vring_used_elem heads[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -478,6 +479,7 @@ static void handle_tx(struct vhost_net *net)
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
 	int sent_pkts = 0;
+	s16 nheads = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -552,6 +554,8 @@ static void handle_tx(struct vhost_net *net)
 			atomic_inc(&ubufs->refcount);
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
 		} else {
+			nvq->heads[nheads].id = cpu_to_vhost32(vq, head);
+			nvq->heads[nheads].len = 0;
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
@@ -580,10 +584,13 @@ static void handle_tx(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (!zcopy_used)
-			vhost_add_used_and_signal(&net->dev, vq, head, 0);
-		else
+		if (zcopy_used)
 			vhost_zerocopy_signal_used(net, vq);
+		else if (++nheads == VHOST_RX_BATCH) {
+			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
+						    nheads);
+			nheads = 0;
+		}
 		vhost_net_tx_packet(net);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
 		    unlikely(++sent_pkts >= VHOST_NET_PKT_WEIGHT(vq))) {
@@ -592,6 +599,8 @@ static void handle_tx(struct vhost_net *net)
 		}
 	}
 out:
+	if (nheads)
+		vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, nheads);
 	mutex_unlock(&vq->mutex);
 }
 
