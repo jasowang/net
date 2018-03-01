@@ -1,5 +1,5 @@
 Bottom: 65bd216d686ec7fbe69f7ef857b0abdd61fa62fb
-Top:    cd3bc7da493e1d5d7163e2b22ef19bc7b9e51325
+Top:    393b1c63a86cdf04688c144364419a400524f9f3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-28 15:30:31 +0800
 
@@ -16,7 +16,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 771a7d8..9bbf35f 100644
+index 771a7d8..c9f60ba 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -474,69 +474,6 @@ static unsigned int virtnet_get_headroom(struct virtnet_info *vi)
@@ -147,3 +147,38 @@ index 771a7d8..9bbf35f 100644
 +	skb = virtnet_skb_xdp(rq, skb);
  err:
  	return skb;
+ 
+@@ -1033,11 +960,10 @@ static unsigned int get_mergeable_buf_len(struct receive_queue *rq,
+ 	unsigned int len;
+ 
+ 	if (room)
+-		len = PAGE_SIZE - room;
+-	else
+-		len = hdr_len +
+-		      clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
+-			      rq->min_buf_len, PAGE_SIZE - hdr_len);
++		return PAGE_SIZE - room;
++
++	len = hdr_len + clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
++				rq->min_buf_len, PAGE_SIZE - hdr_len);
+ 
+ 	return ALIGN(len, L1_CACHE_BYTES);
+ }
+@@ -1048,7 +974,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
+ 	struct page_frag *alloc_frag = &rq->alloc_frag;
+ 	unsigned int headroom = virtnet_get_headroom(vi);
+ 	unsigned int tailroom = headroom ? sizeof(struct skb_shared_info) : 0;
+-	unsigned int room = headroom + tailroom;
++	unsigned int room = SKB_DATA_ALIGN(headroom + tailroom);
+ 	char *buf;
+ 	void *ctx;
+ 	int err;
+@@ -2609,7 +2535,7 @@ static ssize_t mergeable_rx_buffer_size_show(struct netdev_rx_queue *queue,
+ 	avg = &vi->rq[queue_index].mrg_avg_pkt_len;
+ 	return sprintf(buf, "%u\n",
+ 		       get_mergeable_buf_len(&vi->rq[queue_index], avg,
+-				             headroom + tailroom));
++				       SKB_DATA_ALIGN(headroom + tailroom)));
+ }
+ 
+ static struct rx_queue_attribute mergeable_rx_buffer_size_attribute =
