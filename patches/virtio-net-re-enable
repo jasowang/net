@@ -1,5 +1,5 @@
 Bottom: a5c8f6332f06550e935d1e557ac927302f7f63c4
-Top:    65bd216d686ec7fbe69f7ef857b0abdd61fa62fb
+Top:    b7cadde8a9fbda44443eb4b6137a961f9d4d607c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-26 14:39:27 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9bb9e56..771a7d8 100644
+index 9bb9e56..2de97b6 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -537,6 +537,26 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
@@ -203,7 +203,7 @@ index 9bb9e56..771a7d8 100644
  	struct page_frag *alloc_frag = &rq->alloc_frag;
  	unsigned int headroom = virtnet_get_headroom(vi);
 +	unsigned int tailroom = headroom ? sizeof(struct skb_shared_info) : 0;
-+	unsigned int room = headroom + tailroom;
++	unsigned int room = SKB_DATA_ALIGN(headroom + tailroom);
  	char *buf;
  	void *ctx;
  	int err;
@@ -243,7 +243,7 @@ index 9bb9e56..771a7d8 100644
  	return sprintf(buf, "%u\n",
 -		       get_mergeable_buf_len(&vi->rq[queue_index], avg));
 +		       get_mergeable_buf_len(&vi->rq[queue_index], avg,
-+				             headroom + tailroom));
++				       SKB_DATA_ALIGN(headroom + tailroom)));
  }
  
  static struct rx_queue_attribute mergeable_rx_buffer_size_attribute =
