@@ -1,5 +1,5 @@
 Version: 1
-Previous: 446c813aedef6de058f508d14b066cce1c1da979
+Previous: 4999df760067abb655e354649f968f28c531be96
 Head: f74290fdb363665538743d14c4f00aeacdb68d87
 Applied:
 Unapplied:
@@ -10,7 +10,6 @@ Unapplied:
   debug-1: 7075b5f6efa88ba54ee99533d73756ed71c4e7f2
   vhost-support-for-packed-ring: 18d6944449ce53dacb0366627461f300f079cf47
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
-  tun-add-missing-xdp-flush: d5ee393ab4ba00843e97e921b19424b7a685e3a9
   debug-0: 8ad9dc832b1fa4be1b30c2dabc0f4cab04258719
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
