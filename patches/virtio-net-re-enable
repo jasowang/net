@@ -1,5 +1,5 @@
 Bottom: a5c8f6332f06550e935d1e557ac927302f7f63c4
-Top:    b7cadde8a9fbda44443eb4b6137a961f9d4d607c
+Top:    4193925afa4b9f6bcdb47908662d2937efa9ad0d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-26 14:39:27 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9bb9e56..2de97b6 100644
+index 9bb9e56..81190ba 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -537,6 +537,26 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
@@ -175,7 +175,7 @@ index 9bb9e56..2de97b6 100644
  	return head_skb;
  
  err_xdp:
-@@ -1013,13 +1026,19 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
+@@ -1013,13 +1026,18 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
  }
  
  static unsigned int get_mergeable_buf_len(struct receive_queue *rq,
@@ -187,18 +187,16 @@ index 9bb9e56..2de97b6 100644
  	unsigned int len;
  
 -	len = hdr_len + clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
--				rq->min_buf_len, PAGE_SIZE - hdr_len);
 +	if (room)
-+		len = PAGE_SIZE - room;
-+	else
-+		len = hdr_len +
-+		      clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
-+			      rq->min_buf_len, PAGE_SIZE - hdr_len);
++		return PAGE_SIZE - room;
++
++	len = hdr_len +	clamp_t(unsigned int, ewma_pkt_len_read(avg_pkt_len),
+ 				rq->min_buf_len, PAGE_SIZE - hdr_len);
 +
  	return ALIGN(len, L1_CACHE_BYTES);
  }
  
-@@ -1028,21 +1047,27 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
+@@ -1028,21 +1046,27 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
  {
  	struct page_frag *alloc_frag = &rq->alloc_frag;
  	unsigned int headroom = virtnet_get_headroom(vi);
@@ -230,7 +228,7 @@ index 9bb9e56..2de97b6 100644
  		/* To avoid internal fragmentation, if there is very likely not
  		 * enough space for another buffer, add the remaining space to
  		 * the current buffer.
-@@ -2576,12 +2601,15 @@ static ssize_t mergeable_rx_buffer_size_show(struct netdev_rx_queue *queue,
+@@ -2576,12 +2600,15 @@ static ssize_t mergeable_rx_buffer_size_show(struct netdev_rx_queue *queue,
  {
  	struct virtnet_info *vi = netdev_priv(queue->dev);
  	unsigned int queue_index = get_netdev_rx_queue_index(queue);
