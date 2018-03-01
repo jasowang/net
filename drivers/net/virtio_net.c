@@ -1048,7 +1048,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi,
 	struct page_frag *alloc_frag = &rq->alloc_frag;
 	unsigned int headroom = virtnet_get_headroom(vi);
 	unsigned int tailroom = headroom ? sizeof(struct skb_shared_info) : 0;
-	unsigned int room = headroom + tailroom;
+	unsigned int room = SKB_DATA_ALIGN(headroom + tailroom);
 	char *buf;
 	void *ctx;
 	int err;
@@ -2609,7 +2609,7 @@ static ssize_t mergeable_rx_buffer_size_show(struct netdev_rx_queue *queue,
 	avg = &vi->rq[queue_index].mrg_avg_pkt_len;
 	return sprintf(buf, "%u\n",
 		       get_mergeable_buf_len(&vi->rq[queue_index], avg,
-				             headroom + tailroom));
+				       SKB_DATA_ALIGN(headroom + tailroom)));
 }
 
 static struct rx_queue_attribute mergeable_rx_buffer_size_attribute =
