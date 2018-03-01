@@ -1,8 +1,8 @@
 Version: 1
-Previous: 5c83d237407cb3814c9d978e925bfd191ef9dc16
-Head: 29d75143b31c7a2f7f654e85d035e2800d7a9915
+Previous: 93c162b55dca91e27f431858ad357274041c7b69
+Head: a911d206f16be7793474ecf5d033ebe5ff103e85
 Applied:
-  vhost-tx-batching: 29d75143b31c7a2f7f654e85d035e2800d7a9915
+  vhost-tx-batching: a911d206f16be7793474ecf5d033ebe5ff103e85
 Unapplied:
   virtio-net-re-enable: f88a4b062e93144c933e6722d699df0036e42fc7
   refresh-temp-0: efb36c0548bb494664e6134e7bfa68b93c8d32b5
