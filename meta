@@ -1,7 +1,7 @@
 Version: 1
-Previous: 6de9f727195fbd0b4aa6071c17a9fe6d86880898
-Head: 0ec615a53d4472cda0fe057ef264bcdc56c78ef2
+Previous: 431185e8f418e1f4a6632bc772a938b9c0389d8f
+Head: 3bd3b9ed1b602c065aa0b1ba109b9622afa6ff98
 Applied:
-  mlx4-xdp-redirection-support: 0ec615a53d4472cda0fe057ef264bcdc56c78ef2
 Unapplied:
+  mlx4-xdp-redirection-support: 0ec615a53d4472cda0fe057ef264bcdc56c78ef2
 Hidden:
