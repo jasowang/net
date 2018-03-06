@@ -5,6 +5,9 @@ Date:   2018-03-06 16:51:42 +0800
 
 tuntap: XDP_TX can use native XDP
 
+Now we have ndo_xdp_xmit, switch to use it instead of the slow generic
+XDP TX routine.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
