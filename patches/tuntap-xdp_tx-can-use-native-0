@@ -1,0 +1,11 @@
+Bottom: 2f5ae4076ae58c1d272b3d90029225ae43e6197b
+Top:    2f5ae4076ae58c1d272b3d90029225ae43e6197b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-03-06 16:51:42 +0800
+
+tuntap: XDP_TX can use native XDP
+
+
+---
+
+
