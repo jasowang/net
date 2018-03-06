@@ -1,8 +1,10 @@
 Version: 1
-Previous: 1f3d0bc03197545845208fcfbda6de8b5a135b8d
+Previous: 97eddc3e7728174bc3462ee80285c728529f57f4
 Head: b76102c46f17149d14fe3f78d6e984102fd0712b
 Applied:
   vhost-move-get_rx_bufs-to: 4cd3c2eadba09e858006f146de4020cf2737053f
   vhost-hide-used-ring-layout: 1f7bc58a0009232aede5b25159dd9deac25133f7
+  virtio-introduce-packed-ring: 8c5f05d6b774c86ab1e461c74c1bf1487b73e39d
+  vhost-packed-ring-support: b76102c46f17149d14fe3f78d6e984102fd0712b
 Unapplied:
 Hidden:
