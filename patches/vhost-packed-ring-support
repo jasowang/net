@@ -1,5 +1,5 @@
 Bottom: 4feceeb754aec1ceafd017045f60848f8eb30356
-Top:    0ff443b76e9380d49aa67614de01a973819800fa
+Top:    2edd6d231a54682057fde37240be1342b221fee0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-02-14 10:37:09 +0800
 
@@ -34,7 +34,7 @@ index 97bebe2..eaf1421 100644
  	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
  		sock_len += sock_hlen;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 83cb1dc..1784501 100644
+index 83cb1dc..4057a74 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -324,6 +324,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -234,6 +234,7 @@ index 83cb1dc..1784501 100644
 +			*out_num += ret;
 +		}
 +
++		used->wrap_counter = vq->used_wrap_counter;
 +		/* On success, increment avail index. */
 +		if ((++vq->last_avail_idx & (vq->num - 1)) == 0)
 +			vq->used_wrap_counter ^= 1;
@@ -242,7 +243,6 @@ index 83cb1dc..1784501 100644
 +	} while (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 +
 +	used->id = desc.id;
-+	used->wrap_counter = vq->used_wrap_counter;
 +
 +	return 0;
 +}
