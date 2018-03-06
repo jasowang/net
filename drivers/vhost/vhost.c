@@ -2091,6 +2091,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 			*out_num += ret;
 		}
 
+		used->wrap_counter = vq->used_wrap_counter;
 		/* On success, increment avail index. */
 		if ((++vq->last_avail_idx & (vq->num - 1)) == 0)
 			vq->used_wrap_counter ^= 1;
@@ -2099,7 +2100,6 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 	} while (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT));
 
 	used->id = desc.id;
-	used->wrap_counter = vq->used_wrap_counter;
 
 	return 0;
 }
