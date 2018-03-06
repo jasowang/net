@@ -1,5 +1,5 @@
-Bottom: 2f5ae4076ae58c1d272b3d90029225ae43e6197b
-Top:    c45cdc4b2b36edfb82e4b47d62131fecdd761063
+Bottom: 439c89ea3c87496c23e167148f2cdbefb6e82b30
+Top:    439c89ea3c87496c23e167148f2cdbefb6e82b30
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-06 16:51:42 +0800
 
@@ -13,43 +13,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index d531954..1bd19e1 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -1614,7 +1614,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 	unsigned int delta = 0;
- 	char *buf;
- 	size_t copied;
--	bool xdp_xmit = false;
- 	int err, pad = TUN_RX_PAD;
- 
- 	rcu_read_lock();
-@@ -1670,8 +1669,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 			rcu_read_unlock();
- 			return NULL;
- 		case XDP_TX:
--			xdp_xmit = true;
--			/* fall through */
-+			if (tun_xdp_xmit(tun->dev, &xdp))
-+				goto err_redirect;
-+			tun_xdp_flush(tun->dev);
-+			rcu_read_unlock();
-+			return NULL;
- 		case XDP_PASS:
- 			delta = orig_data - xdp.data;
- 			break;
-@@ -1697,13 +1699,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 	get_page(alloc_frag->page);
- 	alloc_frag->offset += buflen;
- 
--	if (xdp_xmit) {
--		skb->dev = tun->dev;
--		generic_xdp_tx(skb, xdp_prog);
--		rcu_read_unlock();
--		return NULL;
--	}
--
- 	rcu_read_unlock();
- 
- 	return skb;
+
