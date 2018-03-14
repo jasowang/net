@@ -1,9 +1,8 @@
 Version: 1
-Previous: 6e979a8f0d297de4ee4e0a522997c55efd3d25df
-Head: a6d9cb6505f3706f0f8082a81c8beeedd157ee43
+Previous: aa11ef2326110bfbaea5da526f7fa15af1ca3dbb
+Head: b77af3e590060ebbb1664c68df3c504ea8b64c05
 Applied:
-  tuntap-xdp_tx-can-use-native-0: 442083c97b2fb0bb44d6535da3b4bdce36e27726
-  refresh-temp-1: a6d9cb6505f3706f0f8082a81c8beeedd157ee43
+  tuntap-xdp_tx-can-use-native-0: b77af3e590060ebbb1664c68df3c504ea8b64c05
 Unapplied:
   refresh-temp-0: efb36c0548bb494664e6134e7bfa68b93c8d32b5
   vhost-tx-batching: babddfa39073861ac25505f286f8cd1cde6ac9dc
