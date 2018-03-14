@@ -1,5 +1,5 @@
 Bottom: 439c89ea3c87496c23e167148f2cdbefb6e82b30
-Top:    d9e1fa658128fae0d78ba94130da2d9d0d37808c
+Top:    aca4da55d501147bb69291d2725545587c60406c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-06 16:51:42 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 475088f..bc18434 100644
+index 475088f..baeafa0 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1613,7 +1613,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
@@ -25,13 +25,15 @@ index 475088f..bc18434 100644
  	int err, pad = TUN_RX_PAD;
  
  	rcu_read_lock();
-@@ -1671,8 +1670,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1671,8 +1670,14 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  			preempt_enable();
  			return NULL;
  		case XDP_TX:
 -			xdp_xmit = true;
 -			/* fall through */
-+			if (tun_xdp_xmit(tun->dev, tun_xdp_to_ptr(&xdp)))
++			get_page(alloc_frag->page);
++			alloc_frag->offset += buflen;
++			if (tun_xdp_xmit(tun->dev, &xdp))
 +				goto err_redirect;
 +			tun_xdp_flush(tun->dev);
 +			rcu_read_unlock();
@@ -40,7 +42,7 @@ index 475088f..bc18434 100644
  		case XDP_PASS:
  			delta = orig_data - xdp.data;
  			break;
-@@ -1699,14 +1702,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1699,14 +1704,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	get_page(alloc_frag->page);
  	alloc_frag->offset += buflen;
  
