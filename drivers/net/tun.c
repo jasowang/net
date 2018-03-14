@@ -1670,7 +1670,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			preempt_enable();
 			return NULL;
 		case XDP_TX:
-			if (tun_xdp_xmit(tun->dev, tun_xdp_to_ptr(&xdp)))
+			get_page(alloc_frag->page);
+			alloc_frag->offset += buflen;
+			if (tun_xdp_xmit(tun->dev, &xdp))
 				goto err_redirect;
 			tun_xdp_flush(tun->dev);
 			rcu_read_unlock();
