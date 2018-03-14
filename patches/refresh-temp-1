@@ -1,0 +1,24 @@
+Bottom: d9e1fa658128fae0d78ba94130da2d9d0d37808c
+Top:    aca4da55d501147bb69291d2725545587c60406c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-03-14 10:54:28 +0800
+
+Refresh of tuntap-xdp_tx-can-use-native-0
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index bc18434..baeafa0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1670,7 +1670,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			preempt_enable();
+ 			return NULL;
+ 		case XDP_TX:
+-			if (tun_xdp_xmit(tun->dev, tun_xdp_to_ptr(&xdp)))
++			get_page(alloc_frag->page);
++			alloc_frag->offset += buflen;
++			if (tun_xdp_xmit(tun->dev, &xdp))
+ 				goto err_redirect;
+ 			tun_xdp_flush(tun->dev);
+ 			rcu_read_unlock();
