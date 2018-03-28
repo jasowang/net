@@ -1,9 +1,9 @@
 Version: 1
-Previous: 20201329605557e1f59d4d6133bb6f0e174a106a
-Head: 3a376cb3affe585882422330def8659fb85e0e70
+Previous: bc86dee3189de1d707ff9241bb5160b8f5814256
+Head: fb2a5a6dbd7d41a51bdd386fbc090bde65ec39ea
 Applied:
   vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
-  vhost-net-batch-submit-packets: 3a376cb3affe585882422330def8659fb85e0e70
+  vhost-net-batch-submit-packets: fb2a5a6dbd7d41a51bdd386fbc090bde65ec39ea
 Unapplied:
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
