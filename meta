@@ -1,9 +1,8 @@
 Version: 1
-Previous: 7be39c9ca0e5727b4031a88f25126b9ed3bded92
+Previous: 41f03f8ee66ff41b8ede59ed4b8de389ffaa14ee
 Head: e3c72f3d37e4745dc3a6ae69f5fc2bd4c31ca4eb
 Applied:
 Unapplied:
-  tuntap-xdp_tx-can-use-native-0: c339b7b6ba79e88b2f4c3df978e3871b1e5fcc98
   refresh-temp-0: efb36c0548bb494664e6134e7bfa68b93c8d32b5
   vhost-tx-batching: babddfa39073861ac25505f286f8cd1cde6ac9dc
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
