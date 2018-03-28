@@ -576,13 +576,12 @@ static void handle_tx(struct vhost_net *net)
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
-		nheads ++;
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
 		if (zcopy_used)
 			vhost_zerocopy_signal_used(net, vq);
-		else if (nheads == VHOST_RX_BATCH) {
+		else if (++nheads == VHOST_RX_BATCH) {
 			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
 						    nheads);
 			nheads = 0;
