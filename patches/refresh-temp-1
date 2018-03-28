@@ -1,0 +1,28 @@
+Bottom: 95a85c6f6e6aff0a565e9d3ada734ea97a527604
+Top:    1ada6eeadb0d506e78b1a8ad7d0f08443b4fe6d2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-03-28 15:04:33 +0800
+
+Refresh of vhost-tx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 74824c5..079cd26 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -576,13 +576,12 @@ static void handle_tx(struct vhost_net *net)
+ 			vhost_net_enable_vq(net, vq);
+ 			break;
+ 		}
+-		nheads ++;
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+ 		if (zcopy_used)
+ 			vhost_zerocopy_signal_used(net, vq);
+-		else if (nheads == VHOST_RX_BATCH) {
++		else if (++nheads == VHOST_RX_BATCH) {
+ 			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
+ 						    nheads);
+ 			nheads = 0;
