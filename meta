@@ -1,9 +1,8 @@
 Version: 1
-Previous: bfee953b31e4672b5dcd9a6d0dcf44fce4873556
-Head: 47c3070e3845427794d2dcc1fd0bc5b0a5087e2e
+Previous: 794a79890bba4998a9013bd66cc9d6b5ca58aebc
+Head: 5cc18de5c806e859445fc04823ee73d26b07c6e1
 Applied:
-  vhost-tx-batching: 66020fd2f2a2fedf0bc7eba90a362a55b9c0f5eb
-  refresh-temp-1: 47c3070e3845427794d2dcc1fd0bc5b0a5087e2e
+  vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
 Unapplied:
   refresh-temp-0: efb36c0548bb494664e6134e7bfa68b93c8d32b5
   virtio-introduce-packed-ring: 90f5b687cf7266c6152a26d41ab14319e128a8b0
