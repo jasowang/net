@@ -19,6 +19,11 @@
 
 #define TUN_XDP_FLAG 0x1UL
 
+struct tun_ubuf_info {
+	int npackets;
+	struct ubuf_info *ubufs;
+};
+
 #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
 struct socket *tun_get_socket(struct file *);
 struct ptr_ring *tun_get_tx_ring(struct file *file);
