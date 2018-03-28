@@ -1,5 +1,5 @@
 Version: 1
-Previous: e2a965b9a59d27d9d87f154edb7c7a70ea1e807c
+Previous: 7b3c001b4f395a83586472d5b3335f9220ee420a
 Head: 5cc18de5c806e859445fc04823ee73d26b07c6e1
 Applied:
   vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
@@ -7,7 +7,6 @@ Unapplied:
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
   vhost-descriptor-batch: 9cf55b4afa55bbf3bd1c9b857ebf95d7beb7896f
-  tuntap-xdp_tx-can-use-native: d8ea9008bba5392c16a1b5fedcf05d6f5903fc07
   vhost_net-descriptor-batch: bdb255ec17ebeb1a4f72f764cb521a9f5334da82
   change: 506eecfccd7131e63cbadb5fbc6118983d3dd600
   tun-silent-sparse-warnings: 24d58e019205145cb52104210bee6670a77d5e71
