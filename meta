@@ -1,9 +1,10 @@
 Version: 1
-Previous: bc86dee3189de1d707ff9241bb5160b8f5814256
-Head: fb2a5a6dbd7d41a51bdd386fbc090bde65ec39ea
+Previous: 1e2ce39abc12d2bf679466bed1efd3671ce93dc2
+Head: 737f50bb2dfa347f84727eed304d24fc9ec7d82c
 Applied:
   vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
   vhost-net-batch-submit-packets: fb2a5a6dbd7d41a51bdd386fbc090bde65ec39ea
+  refresh-temp-0: 737f50bb2dfa347f84727eed304d24fc9ec7d82c
 Unapplied:
   virtio-net-add-missing: 9187727c058e216da46099fb274dc2781c07f412
   vhost-introduce-helper-to-1: 40864d5268592bafa901537cbfb1f50ecdea5cd1
