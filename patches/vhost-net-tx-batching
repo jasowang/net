@@ -1,5 +1,5 @@
 Bottom: 1ada6eeadb0d506e78b1a8ad7d0f08443b4fe6d2
-Top:    ec42d02c3f30bb4a52bb9ca4d0fe3d094c83dcfc
+Top:    f69c81fad8d783737b787c612cd06a3394fa94d2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-29 10:31:43 +0800
 
@@ -10,6 +10,49 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index baeafa0..d816780 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2369,16 +2369,34 @@ static void tun_sock_write_space(struct sock *sk)
+ 
+ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ {
+-	int ret;
++	int ret, i;
+ 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+ 	struct tun_struct *tun = tun_get(tfile);
++	struct tun_msg_ctl *ctl = m->msg_control;
+ 
+ 	if (!tun)
+ 		return -EBADFD;
+ 
+-	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+-			   m->msg_flags & MSG_DONTWAIT,
+-			   m->msg_flags & MSG_MORE);
++	if (!m) {
++		ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
++				   m->msg_flags & MSG_DONTWAIT,
++				   m->msg_flags & MSG_MORE);
++		goto done;
++	}
++
++	for (i = 0; i < ctl->n; i++) {
++		struct tun_msg *msg = &ctl->msgs[i];
++
++		ret = tun_get_user(tun, tfile, msg->ubuf, &msg->iov_iter,
++				   m->msg_flags & MSG_DONTWAIT,
++				   m->msg_flags & MSG_MORE);
++		if (ret < 0)
++			goto done;
++	}
++
++	ret = 0;
++
++done:
+ 	tun_put(tun);
+ 	return ret;
+ }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
 index 079cd26..f11109b 100644
 --- a/drivers/vhost/net.c
