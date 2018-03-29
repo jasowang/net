@@ -5,6 +5,8 @@ Date:   2018-03-29 10:31:43 +0800
 
 vhost-net: tx batching
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
