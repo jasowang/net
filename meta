@@ -1,7 +1,7 @@
 Version: 1
-Previous: 57d8875aeaededfc761a0ade646c3a0085ef9166
-Head: 496f8b6d3330030a64fae803372e5a90e7f98abf
+Previous: 7098dd900f69051a1baa9fa004bb6b35cb9338e0
+Head: 68156cd7ba26c325ed61786e3524a091680a06c4
 Applied:
+  vhost-net-tx-batching: 68156cd7ba26c325ed61786e3524a091680a06c4
 Unapplied:
-  vhost-net-tx-batching: 0afbe06f2a42ce784e565c983b5732eafa20e715
 Hidden:
