@@ -1,8 +1,7 @@
 Version: 1
-Previous: 0723c92836327940f97671b503bad89400c3cbdd
-Head: 32239fa1ca211ff2e95439f5a6f248d751ad54d9
+Previous: fdfadd3847e68215ac0a48c59d6df627285fb10a
+Head: 0afbe06f2a42ce784e565c983b5732eafa20e715
 Applied:
-  vhost-net-tx-batching: e8fedc92352498b04721d2b467b42f1756d3d821
-  refresh-temp: 32239fa1ca211ff2e95439f5a6f248d751ad54d9
+  vhost-net-tx-batching: 0afbe06f2a42ce784e565c983b5732eafa20e715
 Unapplied:
 Hidden:
