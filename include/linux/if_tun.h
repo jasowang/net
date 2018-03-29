@@ -17,6 +17,18 @@
 
 #include <uapi/linux/if_tun.h>
 
+#define TUN_MAX_MSG 64
+
+struct tun_msg {
+	struct ubuf_info *ubuf;
+	struct iov_iter iov_iter;
+};
+
+struct tun_msg_ctl {
+	int n;
+	struct tun_msg msgs[TUN_MAX_MSG];
+};
+
 #define TUN_XDP_FLAG 0x1UL
 
 #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)

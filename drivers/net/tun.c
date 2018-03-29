@@ -2369,16 +2369,34 @@ static void tun_sock_write_space(struct sock *sk)
 
 static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 {
-	int ret;
+	int ret, i;
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun = tun_get(tfile);
+	struct tun_msg_ctl *ctl = m->msg_control;
 
 	if (!tun)
 		return -EBADFD;
 
-	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-			   m->msg_flags & MSG_DONTWAIT,
-			   m->msg_flags & MSG_MORE);
+	if (!m) {
+		ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+				   m->msg_flags & MSG_DONTWAIT,
+				   m->msg_flags & MSG_MORE);
+		goto done;
+	}
+
+	for (i = 0; i < ctl->n; i++) {
+		struct tun_msg *msg = &ctl->msgs[i];
+
+		ret = tun_get_user(tun, tfile, msg->ubuf, &msg->iov_iter,
+				   m->msg_flags & MSG_DONTWAIT,
+				   m->msg_flags & MSG_MORE);
+		if (ret < 0)
+			goto done;
+	}
+
+	ret = 0;
+
+done:
 	tun_put(tun);
 	return ret;
 }

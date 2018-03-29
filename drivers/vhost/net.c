@@ -111,6 +111,7 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct vring_used_elem heads[VHOST_RX_BATCH];
+	struct tun_msg_ctl ctl;
 };
 
 struct vhost_net {
@@ -295,9 +296,9 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 
 }
 
-static void vhost_net_tx_packet(struct vhost_net *net)
+static void vhost_net_tx_packet(struct vhost_net *net, int n)
 {
-	++net->tx_packets;
+	net->tx_packets += n;
 	if (net->tx_packets < 1024)
 		return;
 	net->tx_packets = 0;
@@ -453,6 +454,29 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
 	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
 }
 
+static int batch_tx(struct vhost_net *net,
+		    struct vhost_net_virtqueue *nvq,
+		    struct socket *sock,
+		    struct msghdr *msg, int n)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	int err;
+
+	nvq->ctl.n = n;
+	msg->msg_control = &nvq->ctl;
+
+	err = sock->ops->sendmsg(sock, msg, 0);
+	if (unlikely(err < 0)) {
+		vhost_discard_vq_desc(vq, n);
+		vhost_net_enable_vq(net, vq);
+		return err;
+	}
+	vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, n);
+	vhost_net_tx_packet(net, VHOST_RX_BATCH);
+
+	return 0;
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
@@ -474,7 +498,7 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy, zcopy_used;
-	s16 nheads = 0;
+	s16 nheads = 0, off = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -491,13 +515,15 @@ static void handle_tx(struct vhost_net *net)
 	zcopy = nvq->ubufs;
 
 	for (;;) {
+		struct tun_msg *m = &nvq->ctl.msgs[nheads];
+
 		/* Release DMAs done buffers first */
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
 
 
-		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
-						ARRAY_SIZE(vq->iov),
+		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov + off,
+						ARRAY_SIZE(vq->iov) - off,
 						&out, &in);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(head < 0))
@@ -516,17 +542,17 @@ static void handle_tx(struct vhost_net *net)
 			break;
 		}
 		/* Skip header. TODO: support TSO. */
-		len = iov_length(vq->iov, out);
-		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
-		iov_iter_advance(&msg.msg_iter, hdr_size);
+		len = iov_length(vq->iov + off, out);
+		iov_iter_init(&m->iov_iter, WRITE, vq->iov + off, out, len);
+		iov_iter_advance(&m->iov_iter, hdr_size);
 		/* Sanity check */
-		if (!msg_data_left(&msg)) {
+		if (!iov_iter_count(&m->iov_iter)) {
 			vq_err(vq, "Unexpected header len for TX: "
 			       "%zd expected %zd\n",
 			       len, hdr_size);
 			break;
 		}
-		len = msg_data_left(&msg);
+		len = iov_iter_count(&m->iov_iter);
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
@@ -551,7 +577,7 @@ static void handle_tx(struct vhost_net *net)
 		} else {
 			nvq->heads[nheads].id = cpu_to_vhost32(vq, head);
 			nvq->heads[nheads].len = 0;
-			msg.msg_control = NULL;
+			m->ubuf = NULL;
 			ubufs = NULL;
 		}
 
@@ -564,29 +590,16 @@ static void handle_tx(struct vhost_net *net)
 			msg.msg_flags &= ~MSG_MORE;
 		}
 
-		/* TODO: Check specific error and bomb out unless ENOBUFS? */
-		err = sock->ops->sendmsg(sock, &msg, len);
-		if (unlikely(err < 0)) {
-			if (zcopy_used) {
-				vhost_net_ubuf_put(ubufs);
-				nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
-					% UIO_MAXIOV;
-			}
-			vhost_discard_vq_desc(vq, 1);
-			vhost_net_enable_vq(net, vq);
-			break;
-		}
-		if (err != len)
-			pr_debug("Truncated TX packet: "
-				 " len %d != %zd\n", err, len);
-		if (zcopy_used)
-			vhost_zerocopy_signal_used(net, vq);
-		else if (++nheads == VHOST_RX_BATCH) {
-			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
-						    nheads);
+		if (++nheads == VHOST_RX_BATCH) {
+			err = batch_tx(net, nvq, sock, &msg, nheads);
+			if (unlikely(err < 0))
+				break;
 			nheads = 0;
+			off = 0;
+		} else {
+			off += out;
 		}
-		vhost_net_tx_packet(net);
+
 		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
 			vhost_poll_queue(&vq->poll);
 			break;
@@ -594,7 +607,7 @@ static void handle_tx(struct vhost_net *net)
 	}
 out:
 	if (nheads)
-		vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, nheads);
+		batch_tx(net, nvq, sock, &msg, nheads);
 	mutex_unlock(&vq->mutex);
 }
 
