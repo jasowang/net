@@ -21,7 +21,7 @@
 
 struct tun_msg {
 	struct ubuf_info *ubuf;
-	struct iov_iter *iter;
+	struct iov_iter iov_iter;
 };
 
 struct tun_msg_ctl {
