@@ -1,0 +1,22 @@
+Bottom: f69c81fad8d783737b787c612cd06a3394fa94d2
+Top:    11b81edbc124b9b252e8245a8da9da007f33faee
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-15 18:06:25 +0800
+
+Refresh of vhost-net-tx-batching
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f11109b..8b3e9f3 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -467,7 +467,7 @@ static int batch_tx(struct vhost_net *net,
+ 
+ 	err = sock->ops->sendmsg(sock, msg, 0);
+ 	if (unlikely(err < 0)) {
+-		vhost_discard_vq_desc(vq, VHOST_RX_BATCH);
++		vhost_discard_vq_desc(vq, n);
+ 		vhost_net_enable_vq(net, vq);
+ 		return err;
+ 	}
