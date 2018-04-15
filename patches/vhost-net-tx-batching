@@ -1,5 +1,5 @@
 Bottom: 1ada6eeadb0d506e78b1a8ad7d0f08443b4fe6d2
-Top:    f69c81fad8d783737b787c612cd06a3394fa94d2
+Top:    11b81edbc124b9b252e8245a8da9da007f33faee
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-29 10:31:43 +0800
 
@@ -54,7 +54,7 @@ index baeafa0..d816780 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 079cd26..f11109b 100644
+index 079cd26..8b3e9f3 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -111,6 +111,7 @@ struct vhost_net_virtqueue {
@@ -94,7 +94,7 @@ index 079cd26..f11109b 100644
 +
 +	err = sock->ops->sendmsg(sock, msg, 0);
 +	if (unlikely(err < 0)) {
-+		vhost_discard_vq_desc(vq, VHOST_RX_BATCH);
++		vhost_discard_vq_desc(vq, n);
 +		vhost_net_enable_vq(net, vq);
 +		return err;
 +	}
