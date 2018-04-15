@@ -467,7 +467,7 @@ static int batch_tx(struct vhost_net *net,
 
 	err = sock->ops->sendmsg(sock, msg, 0);
 	if (unlikely(err < 0)) {
-		vhost_discard_vq_desc(vq, VHOST_RX_BATCH);
+		vhost_discard_vq_desc(vq, n);
 		vhost_net_enable_vq(net, vq);
 		return err;
 	}
