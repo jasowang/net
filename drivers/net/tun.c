@@ -1689,9 +1689,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	skb = build_skb(buf, buflen);
 	if (!skb) {
-		rcu_read_unlock();
-		preempt_enable();
-		return ERR_PTR(-ENOMEM);
+		skb = ERR_PTR(-ENOMEM);
+		goto out;
 	}
 
 	skb_reserve(skb, pad - delta);
