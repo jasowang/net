@@ -1687,6 +1687,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			goto err_xdp;
 		}
 	}
+	rcu_read_unlock();
+	preempt_enable();
 
 	skb = build_skb(buf, buflen);
 	if (!skb) {
@@ -1699,9 +1701,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	skb_put(skb, len + delta);
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
-
-	rcu_read_unlock();
-	preempt_enable();
 
 	return skb;
 
