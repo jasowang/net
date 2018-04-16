@@ -1,5 +1,5 @@
 Bottom: 65bc006a2ffa034d9fb4077be4598d4527c2c6fb
-Top:    65bc006a2ffa034d9fb4077be4598d4527c2c6fb
+Top:    6ad149547cab58280377e71946e214802fab9a4d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-16 17:08:34 +0800
 
@@ -10,4 +10,60 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 2d5e102..7f0077c 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1600,6 +1600,52 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
+ 	return true;
+ }
+ 
++static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
++				  struct tun_file *tfile,
++				  struct bpf_prog *xdp_prog,
++				  struct xdp_buff *xdp)
++{
++	void *orid_data = xdp->data;
++	u32 act = bpf_prog_run_xdp(xdp_prog, &xdp);
++
++	switch (act) {
++	case XDP_REDIRECT:
++		err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
++		xdp_do_flush_map();
++		if (err)
++			goto err_xdp;
++		goto out;
++	case XDP_TX:
++		if (tun_xdp_xmit(tun->dev, &xdp))
++			goto err_xdp;
++		tun_xdp_flush(tun->dev);
++		goto out;
++	case XDP_PASS:
++		delta = orig_data - xdp.data;
++		break;
++	default:
++		bpf_warn_invalid_xdp_action(act);
++		/* fall through */
++	case XDP_ABORTED:
++		trace_xdp_exception(tun->dev, xdp_prog, act);
++		/* fall through */
++	case XDP_DROP:
++		goto err_xdp;
++	}
++
++	skb = build_skb(xdp.data_hadr_start, buflen);
++	if (!skb) {
++		rcu_read_unlock();
++		preempt_enable();
++		return ERR_PTR(-ENOMEM);
++	}
++
++	skb_reserve(skb, pad - delta);
++	skb_put(skb, len + delta);
++
++
++}
++
+ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     struct tun_file *tfile,
+ 				     struct iov_iter *from,
