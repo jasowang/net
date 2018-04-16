@@ -1,0 +1,25 @@
+Bottom: 65bc006a2ffa034d9fb4077be4598d4527c2c6fb
+Top:    6df6cace7eaf28129bd3e39b78deb3e45be0a516
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-16 17:09:31 +0800
+
+Refresh of tuntap-simplify-error-handling
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 2d5e102..f906274 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1689,9 +1689,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+ 	skb = build_skb(buf, buflen);
+ 	if (!skb) {
+-		rcu_read_unlock();
+-		preempt_enable();
+-		return ERR_PTR(-ENOMEM);
++		skb = ERR_PTR(-ENOMEM);
++		goto out;
+ 	}
+ 
+ 	skb_reserve(skb, pad - delta);
