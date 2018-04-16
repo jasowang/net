@@ -8,6 +8,8 @@ tuntap: tweak on the patch of non-xdp case in tun_build_skb()
 If we're sure not to go native XDP, there's no need for several things
 like touching preemption counter and rcu stuffs.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
