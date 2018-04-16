@@ -1633,6 +1633,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
 
+	get_page(alloc_frag->page);
+	alloc_frag->offset += buflen;
+
 	/* There's a small window that XDP may be set after the check
 	 * of xdp_prog above, this should be rare and for simplicity
 	 * we do XDP on skb in case the headroom is not enough.
@@ -1641,9 +1644,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		*skb_xdp = 1;
 	else
 		*skb_xdp = 0;
-
-	get_page(alloc_frag->page);
-	alloc_frag->offset += buflen;
 
 	preempt_disable();
 	rcu_read_lock();
