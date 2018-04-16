@@ -1,10 +1,10 @@
 Version: 1
-Previous: fd179e9cac12d2460083a3597b0161e239ffab3f
-Head: 496f8b6d3330030a64fae803372e5a90e7f98abf
+Previous: e7b55c7dd42e119c10f681352185923045946f0a
+Head: e854fe3245c7da52fb7a34cafac9b0a850bf76cd
 Applied:
   vhost-tx-batching: 496f8b6d3330030a64fae803372e5a90e7f98abf
-Unapplied:
   tuntap-simplify-error-handling: e854fe3245c7da52fb7a34cafac9b0a850bf76cd
+Unapplied:
   tuntap-split-out-xdp: b7918ae3222a3658e020c28c0d5694893fa263bd
   vhost-net-tx-batching: 6607805fc2fb8d380fe1fcb47392abf44d812528
 Hidden:
