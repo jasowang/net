@@ -1643,7 +1643,7 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
 
 	skb = build_skb(xdp->data_hard_start, buflen);
 	if (!skb) {
-		skb = ERR_PTR(-ENOMEM);
+		err = -ENOMEM;
 		goto err_xdp;
 	}
 
@@ -1654,7 +1654,7 @@ out:
 	return skb;
 err_xdp:
 	put_page(virt_to_head_page(xdp->data_hard_start));
-	return ERR_PTR(-err);
+	return ERR_PTR(err);
 }
 
 static struct sk_buff *tun_build_skb(struct tun_struct *tun,
