@@ -1607,7 +1607,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     int len, int *skb_xdp)
 {
 	struct page_frag *alloc_frag = &current->task_frag;
-	struct sk_buff *skb;
+	struct sk_buff *skb = NULL;
 	struct bpf_prog *xdp_prog;
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
@@ -1667,16 +1667,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 			xdp_do_flush_map();
 			if (err)
 				goto err_xdp;
-			rcu_read_unlock();
-			preempt_enable();
-			return NULL;
+			goto out;
 		case XDP_TX:
 			if (tun_xdp_xmit(tun->dev, &xdp))
 				goto err_xdp;
 			tun_xdp_flush(tun->dev);
-			rcu_read_unlock();
-			preempt_enable();
-			return NULL;
+			goto out;
 		case XDP_PASS:
 			delta = orig_data - xdp.data;
 			break;
@@ -1709,10 +1705,11 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 err_xdp:
 	alloc_frag->offset -= buflen;
 	put_page(alloc_frag->page);
+	this_cpu_inc(tun->pcpu_stats->rx_dropped);
+out:
 	rcu_read_unlock();
 	preempt_enable();
-	this_cpu_inc(tun->pcpu_stats->rx_dropped);
-	return NULL;
+	return skb;
 }
 
 /* Get packet from user space buffer */
