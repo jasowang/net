@@ -1,5 +1,5 @@
 Bottom: 1ada6eeadb0d506e78b1a8ad7d0f08443b4fe6d2
-Top:    911b92c37714f963c09759c1a1b378bcb15d0f95
+Top:    ca645550e0050e1492659e779400701705bad29e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-29 10:31:43 +0800
 
@@ -54,7 +54,7 @@ index baeafa0..d816780 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 079cd26..a4d7ec3 100644
+index 079cd26..e97ede5 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -111,6 +111,7 @@ struct vhost_net_virtqueue {
@@ -117,7 +117,7 @@ index 079cd26..a4d7ec3 100644
 +		return err;
 +	}
 +	vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, n);
-+	vhost_net_tx_packet(net, VHOST_RX_BATCH);
++	vhost_net_tx_packet(net, n);
 +
 +	return 0;
 +}
