@@ -428,7 +428,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    unsigned int *out_num, unsigned int *in_num)
 {
 	unsigned long uninitialized_var(endtime);
-	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+	int r = vhost_get_vq_desc(vq, iov, iov_size,
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
@@ -438,7 +438,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 		       vhost_vq_avail_empty(vq->dev, vq))
 			cpu_relax();
 		preempt_enable();
-		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+		r = vhost_get_vq_desc(vq, iov, iov_size,
 				      out_num, in_num, NULL, NULL);
 	}
 
@@ -521,7 +521,6 @@ static void handle_tx(struct vhost_net *net)
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
 
-
 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov + off,
 						ARRAY_SIZE(vq->iov) - off,
 						&out, &in);
@@ -582,6 +581,7 @@ static void handle_tx(struct vhost_net *net)
 		}
 
 		total_len += len;
+#if 0
 		if (total_len < VHOST_NET_WEIGHT &&
 		    !vhost_vq_avail_empty(&net->dev, vq) &&
 		    likely(!vhost_exceeds_maxpend(net))) {
@@ -589,11 +589,14 @@ static void handle_tx(struct vhost_net *net)
 		} else {
 			msg.msg_flags &= ~MSG_MORE;
 		}
+#endif
+		msg.msg_flags &= ~MSG_MORE;
 
 		if (++nheads == VHOST_RX_BATCH) {
 			err = batch_tx(net, nvq, sock, &msg, nheads);
-			if (unlikely(err < 0))
+			if (unlikely(err < 0)) {
 				break;
+			}
 			nheads = 0;
 			off = 0;
 		} else {
