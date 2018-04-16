@@ -1,5 +1,5 @@
 Bottom: 1ada6eeadb0d506e78b1a8ad7d0f08443b4fe6d2
-Top:    11b81edbc124b9b252e8245a8da9da007f33faee
+Top:    911b92c37714f963c09759c1a1b378bcb15d0f95
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-03-29 10:31:43 +0800
 
@@ -54,7 +54,7 @@ index baeafa0..d816780 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 079cd26..8b3e9f3 100644
+index 079cd26..a4d7ec3 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -111,6 +111,7 @@ struct vhost_net_virtqueue {
@@ -77,6 +77,24 @@ index 079cd26..8b3e9f3 100644
  	if (net->tx_packets < 1024)
  		return;
  	net->tx_packets = 0;
+@@ -427,7 +428,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 				    unsigned int *out_num, unsigned int *in_num)
+ {
+ 	unsigned long uninitialized_var(endtime);
+-	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
++	int r = vhost_get_vq_desc(vq, iov, iov_size,
+ 				  out_num, in_num, NULL, NULL);
+ 
+ 	if (r == vq->num && vq->busyloop_timeout) {
+@@ -437,7 +438,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 		       vhost_vq_avail_empty(vq->dev, vq))
+ 			cpu_relax();
+ 		preempt_enable();
+-		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
++		r = vhost_get_vq_desc(vq, iov, iov_size,
+ 				      out_num, in_num, NULL, NULL);
+ 	}
+ 
 @@ -453,6 +454,29 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
  	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
  }
@@ -116,7 +134,7 @@ index 079cd26..8b3e9f3 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -491,13 +515,15 @@ static void handle_tx(struct vhost_net *net)
+@@ -491,13 +515,14 @@ static void handle_tx(struct vhost_net *net)
  	zcopy = nvq->ubufs;
  
  	for (;;) {
@@ -126,7 +144,7 @@ index 079cd26..8b3e9f3 100644
  		if (zcopy)
  			vhost_zerocopy_signal_used(net, vq);
  
- 
+-
 -		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
 -						ARRAY_SIZE(vq->iov),
 +		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov + off,
@@ -134,7 +152,7 @@ index 079cd26..8b3e9f3 100644
  						&out, &in);
  		/* On error, stop handling until the next kick. */
  		if (unlikely(head < 0))
-@@ -516,17 +542,17 @@ static void handle_tx(struct vhost_net *net)
+@@ -516,17 +541,17 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  		/* Skip header. TODO: support TSO. */
@@ -157,7 +175,7 @@ index 079cd26..8b3e9f3 100644
  
  		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
  				   && !vhost_exceeds_maxpend(net)
-@@ -551,7 +577,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -551,11 +576,12 @@ static void handle_tx(struct vhost_net *net)
  		} else {
  			nvq->heads[nheads].id = cpu_to_vhost32(vq, head);
  			nvq->heads[nheads].len = 0;
@@ -166,9 +184,17 @@ index 079cd26..8b3e9f3 100644
  			ubufs = NULL;
  		}
  
-@@ -564,29 +590,16 @@ static void handle_tx(struct vhost_net *net)
+ 		total_len += len;
++#if 0
+ 		if (total_len < VHOST_NET_WEIGHT &&
+ 		    !vhost_vq_avail_empty(&net->dev, vq) &&
+ 		    likely(!vhost_exceeds_maxpend(net))) {
+@@ -563,30 +589,20 @@ static void handle_tx(struct vhost_net *net)
+ 		} else {
  			msg.msg_flags &= ~MSG_MORE;
  		}
++#endif
++		msg.msg_flags &= ~MSG_MORE;
  
 -		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 -		err = sock->ops->sendmsg(sock, &msg, len);
@@ -177,7 +203,11 @@ index 079cd26..8b3e9f3 100644
 -				vhost_net_ubuf_put(ubufs);
 -				nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
 -					% UIO_MAXIOV;
--			}
++		if (++nheads == VHOST_RX_BATCH) {
++			err = batch_tx(net, nvq, sock, &msg, nheads);
++			if (unlikely(err < 0)) {
++				break;
+ 			}
 -			vhost_discard_vq_desc(vq, 1);
 -			vhost_net_enable_vq(net, vq);
 -			break;
@@ -190,10 +220,6 @@ index 079cd26..8b3e9f3 100644
 -		else if (++nheads == VHOST_RX_BATCH) {
 -			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
 -						    nheads);
-+		if (++nheads == VHOST_RX_BATCH) {
-+			err = batch_tx(net, nvq, sock, &msg, nheads);
-+			if (unlikely(err < 0))
-+				break;
  			nheads = 0;
 +			off = 0;
 +		} else {
@@ -204,7 +230,7 @@ index 079cd26..8b3e9f3 100644
  		if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -594,7 +607,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -594,7 +610,7 @@ static void handle_tx(struct vhost_net *net)
  	}
  out:
  	if (nheads)
@@ -213,6 +239,19 @@ index 079cd26..8b3e9f3 100644
  	mutex_unlock(&vq->mutex);
  }
  
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index ac4b605..0a61e4e 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -219,7 +219,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
+ 
+ #define vq_err(vq, fmt, ...) do {                                  \
+-		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
++		printk(pr_fmt(fmt), ##__VA_ARGS__);       \
+ 		if ((vq)->error_ctx)                               \
+ 				eventfd_signal((vq)->error_ctx, 1);\
+ 	} while (0)
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
 index c5b0a75..809e093 100644
 --- a/include/linux/if_tun.h
