@@ -472,7 +472,7 @@ static int batch_tx(struct vhost_net *net,
 		return err;
 	}
 	vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, n);
-	vhost_net_tx_packet(net, VHOST_RX_BATCH);
+	vhost_net_tx_packet(net, n);
 
 	return 0;
 }
