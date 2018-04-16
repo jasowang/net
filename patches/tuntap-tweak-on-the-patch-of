@@ -1,0 +1,14 @@
+Bottom: 5fff162f44a40fdfdf4caabc96975f626a65c7eb
+Top:    5fff162f44a40fdfdf4caabc96975f626a65c7eb
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-17 07:46:51 +0800
+
+tuntap: tweak on the patch of non-xdp case in tun_build_skb()
+
+If we're sure not to go native XDP, there's no need for several things
+like touching preemption counter and rcu stuffs.
+
+
+---
+
+
