@@ -1642,8 +1642,10 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
 	}
 
 	skb = build_skb(xdp->data_hard_start, buflen);
-	if (!skb)
-		return ERR_PTR(-ENOMEM);
+	if (!skb) {
+		skb = ERR_PTR(-ENOMEM);
+		goto err_xdp;
+	}
 
 	skb_reserve(skb, pad - delta);
 	skb_put(skb, len + delta);
@@ -1651,6 +1653,7 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
 out:
 	return skb;
 err_xdp:
+	put_page(virt_to_head_page(xdp->data_hard_start));
 	return ERR_PTR(-err);
 }
 
@@ -1718,6 +1721,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	skb = build_skb(buf, buflen);
 	if (!skb) {
+		put_page(alloc_frag->page);
 		skb = ERR_PTR(-ENOMEM);
 		goto out;
 	}
@@ -1731,8 +1735,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	return skb;
 
 err_xdp:
-	alloc_frag->offset -= buflen;
-	put_page(alloc_frag->page);
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 out:
 	rcu_read_unlock();
