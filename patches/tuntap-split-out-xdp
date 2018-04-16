@@ -5,6 +5,8 @@ Date:   2018-04-16 17:08:34 +0800
 
 tuntap: split out XDP processing logic
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
