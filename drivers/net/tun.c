@@ -1600,6 +1600,63 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
 	return true;
 }
 
+static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+				  struct tun_file *tfile,
+				  struct bpf_prog *xdp_prog,
+				  struct xdp_buff *xdp,
+				  int buflen)
+{
+	u32 act = bpf_prog_run_xdp(xdp_prog, xdp);
+	struct sk_buff *skb = NULL;
+	void *orig_data = xdp->data;
+	unsigned int delta = 0;
+	int pad = xdp->data - xdp->data_hard_start;
+	int len = xdp->data_end - xdp->data;
+	int err;
+
+	switch (act) {
+	case XDP_REDIRECT:
+		err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
+		xdp_do_flush_map();
+		if (err)
+			goto err_xdp;
+		goto out;
+	case XDP_TX:
+		err = tun_xdp_xmit(tun->dev, xdp);
+		if (err)
+			goto err_xdp;
+		tun_xdp_flush(tun->dev);
+		goto out;
+	case XDP_PASS:
+		delta = orig_data - xdp->data;
+		break;
+	default:
+		bpf_warn_invalid_xdp_action(act);
+		/* fall through */
+	case XDP_ABORTED:
+		trace_xdp_exception(tun->dev, xdp_prog, act);
+		/* fall through */
+	case XDP_DROP:
+		err = -EINVAL;
+		goto err_xdp;
+	}
+
+	skb = build_skb(xdp->data_hard_start, buflen);
+	if (!skb) {
+		err = -ENOMEM;
+		goto err_xdp;
+	}
+
+	skb_reserve(skb, pad - delta);
+	skb_put(skb, len + delta);
+
+out:
+	return skb;
+err_xdp:
+	put_page(virt_to_head_page(xdp->data_hard_start));
+	return ERR_PTR(err);
+}
+
 static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     struct tun_file *tfile,
 				     struct iov_iter *from,
@@ -1610,10 +1667,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	struct sk_buff *skb = NULL;
 	struct bpf_prog *xdp_prog;
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-	unsigned int delta = 0;
 	char *buf;
 	size_t copied;
-	int err, pad = TUN_RX_PAD;
+	int pad = TUN_RX_PAD;
 
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tun->xdp_prog);
@@ -1652,41 +1708,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog && !*skb_xdp) {
 		struct xdp_buff xdp;
-		void *orig_data;
-		u32 act;
 
 		xdp.data_hard_start = buf;
 		xdp.data = buf + pad;
 		xdp_set_data_meta_invalid(&xdp);
 		xdp.data_end = xdp.data + len;
 		xdp.rxq = &tfile->xdp_rxq;
-		orig_data = xdp.data;
-		act = bpf_prog_run_xdp(xdp_prog, &xdp);
 
-		switch (act) {
-		case XDP_REDIRECT:
-			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
-			xdp_do_flush_map();
-			if (err)
-				goto err_xdp;
-			goto out;
-		case XDP_TX:
-			if (tun_xdp_xmit(tun->dev, &xdp))
-				goto err_xdp;
-			tun_xdp_flush(tun->dev);
-			goto out;
-		case XDP_PASS:
-			delta = orig_data - xdp.data;
-			break;
-		default:
-			bpf_warn_invalid_xdp_action(act);
-			/* fall through */
-		case XDP_ABORTED:
-			trace_xdp_exception(tun->dev, xdp_prog, act);
-			/* fall through */
-		case XDP_DROP:
+		skb = tun_do_xdp(tun, tfile, xdp_prog, &xdp, buflen);
+		if (PTR_ERR(skb))
 			goto err_xdp;
-		}
+		goto out;
 	}
 	rcu_read_unlock();
 	preempt_enable();
@@ -1694,18 +1726,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 build:
 	skb = build_skb(buf, buflen);
 	if (!skb) {
+		put_page(alloc_frag->page);
 		skb = ERR_PTR(-ENOMEM);
 		goto out;
 	}
 
-	skb_reserve(skb, pad - delta);
-	skb_put(skb, len + delta);
+	skb_reserve(skb, pad);
+	skb_put(skb, len);
 
 	return skb;
 
 err_xdp:
-	alloc_frag->offset -= buflen;
-	put_page(alloc_frag->page);
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
 out:
 	rcu_read_unlock();
