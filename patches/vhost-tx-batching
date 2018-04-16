@@ -5,6 +5,8 @@ Date:   2018-03-01 16:59:54 +0800
 
 vhost: tx batching
 
+xdp_redirect.sh shows 13.7% improvement.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
