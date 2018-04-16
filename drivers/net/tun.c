@@ -1642,6 +1642,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	else
 		*skb_xdp = 0;
 
+	get_page(alloc_frag->page);
+	alloc_frag->offset += buflen;
+
 	preempt_disable();
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tun->xdp_prog);
@@ -1660,20 +1663,16 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 		switch (act) {
 		case XDP_REDIRECT:
-			get_page(alloc_frag->page);
-			alloc_frag->offset += buflen;
 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
 			xdp_do_flush_map();
 			if (err)
-				goto err_redirect;
+				goto err_xdp;
 			rcu_read_unlock();
 			preempt_enable();
 			return NULL;
 		case XDP_TX:
-			get_page(alloc_frag->page);
-			alloc_frag->offset += buflen;
 			if (tun_xdp_xmit(tun->dev, &xdp))
-				goto err_redirect;
+				goto err_xdp;
 			tun_xdp_flush(tun->dev);
 			rcu_read_unlock();
 			preempt_enable();
@@ -1701,17 +1700,15 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	skb_reserve(skb, pad - delta);
 	skb_put(skb, len + delta);
-	get_page(alloc_frag->page);
-	alloc_frag->offset += buflen;
 
 	rcu_read_unlock();
 	preempt_enable();
 
 	return skb;
 
-err_redirect:
-	put_page(alloc_frag->page);
 err_xdp:
+	alloc_frag->offset -= buflen;
+	put_page(alloc_frag->page);
 	rcu_read_unlock();
 	preempt_enable();
 	this_cpu_inc(tun->pcpu_stats->rx_dropped);
