@@ -5,6 +5,8 @@ Date:   2018-04-17 07:44:14 +0800
 
 tuntap: enable premmption early
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
