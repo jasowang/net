@@ -1,5 +1,5 @@
-Bottom: 7a9147bbf4814b4ce56b28a03dae65dad5aa5118
-Top:    29c3b8e23ace7f70ed4f19f71a4262874eca694f
+Bottom: 5fff162f44a40fdfdf4caabc96975f626a65c7eb
+Top:    09f797f3a7ea215961a43779305ad7379a5a785e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-16 17:08:34 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index e180bda..cf93bd1 100644
+index 2217e4c..bc9cf0e 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1600,6 +1600,63 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
@@ -90,7 +90,7 @@ index e180bda..cf93bd1 100644
  
  	rcu_read_lock();
  	xdp_prog = rcu_dereference(tun->xdp_prog);
-@@ -1650,51 +1706,28 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1650,59 +1706,34 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	xdp_prog = rcu_dereference(tun->xdp_prog);
  	if (xdp_prog && !*skb_xdp) {
  		struct xdp_buff xdp;
@@ -134,6 +134,8 @@ index e180bda..cf93bd1 100644
 -		}
 +		goto out;
  	}
+ 	rcu_read_unlock();
+ 	preempt_enable();
  
  	skb = build_skb(buf, buflen);
  	if (!skb) {
@@ -147,9 +149,6 @@ index e180bda..cf93bd1 100644
 +	skb_reserve(skb, pad);
 +	skb_put(skb, len);
  
- 	rcu_read_unlock();
- 	preempt_enable();
-@@ -1702,8 +1735,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	return skb;
  
  err_xdp:
