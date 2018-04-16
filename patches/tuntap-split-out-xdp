@@ -1,5 +1,5 @@
 Bottom: 6df6cace7eaf28129bd3e39b78deb3e45be0a516
-Top:    8f2e2e7be2a40612a8094174f3600312aa39f98b
+Top:    9c90c117b90afcfb6366389c47f10cee69985cad
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-16 17:08:34 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index f906274..b111643 100644
+index f906274..40d2c05 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1600,6 +1600,63 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
@@ -61,7 +61,7 @@ index f906274..b111643 100644
 +
 +	skb = build_skb(xdp->data_hard_start, buflen);
 +	if (!skb) {
-+		skb = ERR_PTR(-ENOMEM);
++		err = -ENOMEM;
 +		goto err_xdp;
 +	}
 +
@@ -72,7 +72,7 @@ index f906274..b111643 100644
 +	return skb;
 +err_xdp:
 +	put_page(virt_to_head_page(xdp->data_hard_start));
-+	return ERR_PTR(-err);
++	return ERR_PTR(err);
 +}
 +
  static struct sk_buff *tun_build_skb(struct tun_struct *tun,
