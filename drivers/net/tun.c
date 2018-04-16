@@ -1636,10 +1636,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	 * of xdp_prog above, this should be rare and for simplicity
 	 * we do XDP on skb in case the headroom is not enough.
 	 */
-	if (hdr->gso_type || !xdp_prog)
+	if (hdr->gso_type || !xdp_prog) {
 		*skb_xdp = 1;
-	else
-		*skb_xdp = 0;
+		goto build;
+	}
+
+	*skb_xdp = 0;
 
 	preempt_disable();
 	rcu_read_lock();
@@ -1685,6 +1687,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	rcu_read_unlock();
 	preempt_enable();
 
+build:
 	skb = build_skb(buf, buflen);
 	if (!skb) {
 		skb = ERR_PTR(-ENOMEM);
