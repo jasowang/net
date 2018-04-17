@@ -1,0 +1,22 @@
+Bottom: 62f73aae916dd17288721dee02c38bce6849b02f
+Top:    da893d71cb7ec879f04090ce6bb39f83320d25b2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-17 08:19:50 +0800
+
+Refresh of tuntap-xdp-batching-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 9514bbb..d3279d1 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1754,7 +1754,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+ 	xdp->data_hard_start = buf;
+ 	xdp->data = buf + pad;
+-	xdp_set_data_meta_invalid(&dp);
++	xdp_set_data_meta_invalid(xdp);
+ 	xdp->data_end = xdp->data + len;
+ 	xdp->rxq = &tfile->xdp_rxq;
+ 	lenp = (int *)xdp->data_hard_start;
