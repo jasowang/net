@@ -1,0 +1,198 @@
+Bottom: 2cd8cae87fc712db511bd2cef952041268ecb9fc
+Top:    c473a54abe507ca05cf88398d3a4c6335b81556d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-17 08:13:34 +0800
+
+Refresh of tuntap-xdp-batching-support
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 819bd83..997374e 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -182,6 +182,10 @@ struct tun_file {
+ 	struct tun_struct *detached;
+ 	struct ptr_ring tx_ring;
+ 	struct xdp_rxq_info xdp_rxq;
++	struct xdp_buff xdp[NAPI_POLL_WEIGHT];
++	u16 xdp_head;
++	u16 xdp_tail;
++	bool xdp_xmit;
+ };
+ 
+ struct tun_flow_entry {
+@@ -1603,8 +1607,7 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
+ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+ 				  struct tun_file *tfile,
+ 				  struct bpf_prog *xdp_prog,
+-				  struct xdp_buff *xdp,
+-				  int buflen)
++				  struct xdp_buff *xdp)
+ {
+ 	u32 act = bpf_prog_run_xdp(xdp_prog, xdp);
+ 	struct sk_buff *skb = NULL;
+@@ -1612,20 +1615,24 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+ 	unsigned int delta = 0;
+ 	int pad = xdp->data - xdp->data_hard_start;
+ 	int len = xdp->data_end - xdp->data;
++	int buflen = *(int *)xdp->data_hard_start;
+ 	int err;
+ 
++	if (!xdp_prog)
++		goto build;
++
+ 	switch (act) {
+ 	case XDP_REDIRECT:
+ 		err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
+-		xdp_do_flush_map();
+ 		if (err)
+ 			goto err_xdp;
++		tfile->xdp_xmit = true;
+ 		goto out;
+ 	case XDP_TX:
+ 		err = tun_xdp_xmit(tun->dev, xdp);
+ 		if (err)
+ 			goto err_xdp;
+-		tun_xdp_flush(tun->dev);
++		tfile->xdp_xmit = true;
+ 		goto out;
+ 	case XDP_PASS:
+ 		delta = orig_data - xdp->data;
+@@ -1641,6 +1648,7 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+ 		goto err_xdp;
+ 	}
+ 
++build:
+ 	skb = build_skb(xdp->data_hard_start, buflen);
+ 	if (!skb) {
+ 		err = -ENOMEM;
+@@ -1657,6 +1665,42 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+ 	return ERR_PTR(err);
+ }
+ 
++static void tun_flush_xdp(struct tun_struct *tun,
++			  struct tun_file *tfile)
++{
++	struct bpf_prog *xdp_prog;
++	struct sk_buff *skb;
++	int xdp_xmit = false;
++
++	if (tfile->xdp_head == tfile->xdp_tail)
++		return;
++
++	preempt_disable();
++	rcu_read_lock();
++	xdp_prog = rcu_dereference(tun->xdp_prog);
++
++	while (tfile->xdp_head != tfile->xdp_tail) {
++		struct xdp_buff *xdp = &tfile->xdp[tfile->xdp_head++];
++		skb = tun_do_xdp(tun, tfile, xdp_prog, xdp);
++		/* FIXME, receive */
++		if (skb)
++			kfree_skb(skb);
++	}
++
++	if (tfile->xdp_xmit) {
++		xdp_do_flush_map();
++		tun_xdp_flush(tun->dev);
++		tfile->xdp_xmit = false;
++	}
++
++done:
++	tfile->xdp_head = tfile->xdp_tail = 0;
++	rcu_read_unlock();
++	preempt_enable();
++
++	return NULL;
++}
++
+ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     struct tun_file *tfile,
+ 				     struct iov_iter *from,
+@@ -1664,12 +1708,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     int len, int *skb_xdp)
+ {
+ 	struct page_frag *alloc_frag = &current->task_frag;
++	struct xdp_buff *xdp = &tfile->xdp[tfile->xdp_tail];
+ 	struct sk_buff *skb = NULL;
+ 	struct bpf_prog *xdp_prog;
+ 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+ 	char *buf;
+ 	size_t copied;
+ 	int pad = TUN_RX_PAD;
++	int *lenp;
++
++	if (tfile->xdp_tail == NAPI_POLL_WEIGHT)
++		tun_flush_xdp();
+ 
+ 	rcu_read_lock();
+ 	xdp_prog = rcu_dereference(tun->xdp_prog);
+@@ -1697,31 +1746,24 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	 * we do XDP on skb in case the headroom is not enough.
+ 	 */
+ 	if (hdr->gso_type || !xdp_prog) {
++		/* Flush pending XDP to avoid OOO */
++		tun_flush_xdp();
+ 		*skb_xdp = 1;
+-		goto build;
++		goto build:
+ 	}
+ 
+ 	*skb_xdp = 0;
+ 
+-	preempt_disable();
+-	rcu_read_lock();
+-	xdp_prog = rcu_dereference(tun->xdp_prog);
+-	if (xdp_prog && !*skb_xdp) {
+-		struct xdp_buff xdp;
++	xdp->data_hard_start = buf;
++	xdp->data = buf + pad;
++	xdp_set_data_meta_invalid(&dp);
++	xdp->data_end = xdp->data + len;
++	xdp->rxq = &tfile->xdp_rxq;
++	lenp = (int *)xdp->data_hard_start;
++	*lenp = buflen;
+ 
+-		xdp.data_hard_start = buf;
+-		xdp.data = buf + pad;
+-		xdp_set_data_meta_invalid(&xdp);
+-		xdp.data_end = xdp.data + len;
+-		xdp.rxq = &tfile->xdp_rxq;
+-
+-		skb = tun_do_xdp(tun, tfile, xdp_prog, &xdp, buflen);
+-		if (PTR_ERR(skb))
+-			goto err_xdp;
+-		goto out;
+-	}
+-	rcu_read_unlock();
+-	preempt_enable();
++	++tfile->xdp_tail;
++	goto out;
+ 
+ build:
+ 	skb = build_skb(buf, buflen);
+@@ -1733,14 +1775,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 
+ 	skb_reserve(skb, pad);
+ 	skb_put(skb, len);
+-
+-	return skb;
+-
+-err_xdp:
+-	this_cpu_inc(tun->pcpu_stats->rx_dropped);
+ out:
+-	rcu_read_unlock();
+-	preempt_enable();
+ 	return skb;
+ }
+ 
+@@ -3248,6 +3283,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 
+ 	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
+ 
++	tfile->xdp_head = tfile->xdp_tail = 0;
++	tfile->xdp_xmit = false;
++
+ 	return 0;
+ }
