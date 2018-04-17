@@ -1670,7 +1670,6 @@ static void tun_flush_xdp(struct tun_struct *tun,
 {
 	struct bpf_prog *xdp_prog;
 	struct sk_buff *skb;
-	int xdp_xmit = false;
 
 	if (tfile->xdp_head == tfile->xdp_tail)
 		return;
@@ -1693,12 +1692,11 @@ static void tun_flush_xdp(struct tun_struct *tun,
 		tfile->xdp_xmit = false;
 	}
 
-done:
 	tfile->xdp_head = tfile->xdp_tail = 0;
 	rcu_read_unlock();
 	preempt_enable();
 
-	return NULL;
+	return;
 }
 
 static struct sk_buff *tun_build_skb(struct tun_struct *tun,
@@ -1718,7 +1716,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	int *lenp;
 
 	if (tfile->xdp_tail == NAPI_POLL_WEIGHT)
-		tun_flush_xdp();
+		tun_flush_xdp(tun, tfile);
 
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(tun->xdp_prog);
@@ -1747,9 +1745,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 	 */
 	if (hdr->gso_type || !xdp_prog) {
 		/* Flush pending XDP to avoid OOO */
-		tun_flush_xdp();
+		tun_flush_xdp(tun, tfile);
 		*skb_xdp = 1;
-		goto build:
+		goto build;
 	}
 
 	*skb_xdp = 0;
