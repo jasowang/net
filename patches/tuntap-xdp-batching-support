@@ -1,5 +1,5 @@
 Bottom: 2cd8cae87fc712db511bd2cef952041268ecb9fc
-Top:    c473a54abe507ca05cf88398d3a4c6335b81556d
+Top:    62f73aae916dd17288721dee02c38bce6849b02f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:40:09 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 819bd83..997374e 100644
+index 819bd83..9514bbb 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -182,6 +182,10 @@ struct tun_file {
@@ -70,7 +70,7 @@ index 819bd83..997374e 100644
  	skb = build_skb(xdp->data_hard_start, buflen);
  	if (!skb) {
  		err = -ENOMEM;
-@@ -1657,6 +1665,42 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
+@@ -1657,6 +1665,40 @@ static struct sk_buff *tun_do_xdp(struct tun_struct *tun,
  	return ERR_PTR(err);
  }
  
@@ -79,7 +79,6 @@ index 819bd83..997374e 100644
 +{
 +	struct bpf_prog *xdp_prog;
 +	struct sk_buff *skb;
-+	int xdp_xmit = false;
 +
 +	if (tfile->xdp_head == tfile->xdp_tail)
 +		return;
@@ -102,18 +101,17 @@ index 819bd83..997374e 100644
 +		tfile->xdp_xmit = false;
 +	}
 +
-+done:
 +	tfile->xdp_head = tfile->xdp_tail = 0;
 +	rcu_read_unlock();
 +	preempt_enable();
 +
-+	return NULL;
++	return;
 +}
 +
  static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  				     struct tun_file *tfile,
  				     struct iov_iter *from,
-@@ -1664,12 +1708,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1664,12 +1706,17 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  				     int len, int *skb_xdp)
  {
  	struct page_frag *alloc_frag = &current->task_frag;
@@ -127,19 +125,18 @@ index 819bd83..997374e 100644
 +	int *lenp;
 +
 +	if (tfile->xdp_tail == NAPI_POLL_WEIGHT)
-+		tun_flush_xdp();
++		tun_flush_xdp(tun, tfile);
  
  	rcu_read_lock();
  	xdp_prog = rcu_dereference(tun->xdp_prog);
-@@ -1697,31 +1746,24 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1697,31 +1744,24 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	 * we do XDP on skb in case the headroom is not enough.
  	 */
  	if (hdr->gso_type || !xdp_prog) {
 +		/* Flush pending XDP to avoid OOO */
-+		tun_flush_xdp();
++		tun_flush_xdp(tun, tfile);
  		*skb_xdp = 1;
--		goto build;
-+		goto build:
+ 		goto build;
  	}
  
  	*skb_xdp = 0;
@@ -175,7 +172,7 @@ index 819bd83..997374e 100644
  
  build:
  	skb = build_skb(buf, buflen);
-@@ -1733,14 +1775,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1733,14 +1773,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  
  	skb_reserve(skb, pad);
  	skb_put(skb, len);
@@ -190,7 +187,7 @@ index 819bd83..997374e 100644
  	return skb;
  }
  
-@@ -3248,6 +3283,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -3248,6 +3281,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
  
