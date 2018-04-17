@@ -1,5 +1,5 @@
 Bottom: 2cd8cae87fc712db511bd2cef952041268ecb9fc
-Top:    62f73aae916dd17288721dee02c38bce6849b02f
+Top:    da893d71cb7ec879f04090ce6bb39f83320d25b2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:40:09 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 819bd83..9514bbb 100644
+index 819bd83..d3279d1 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -182,6 +182,10 @@ struct tun_file {
@@ -148,7 +148,7 @@ index 819bd83..9514bbb 100644
 -		struct xdp_buff xdp;
 +	xdp->data_hard_start = buf;
 +	xdp->data = buf + pad;
-+	xdp_set_data_meta_invalid(&dp);
++	xdp_set_data_meta_invalid(xdp);
 +	xdp->data_end = xdp->data + len;
 +	xdp->rxq = &tfile->xdp_rxq;
 +	lenp = (int *)xdp->data_hard_start;
