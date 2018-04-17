@@ -1,5 +1,5 @@
-Bottom: 5fff162f44a40fdfdf4caabc96975f626a65c7eb
-Top:    c776ce42f559cd7ead46deeb6194cf785df9bd4f
+Bottom: f7431f2dfbab602d5f34ebf4a990a1516c4c3129
+Top:    29d4817221a31042fee32ab92c02174f34865665
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:46:51 +0800
 
@@ -14,10 +14,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2217e4c..9ac5176 100644
+index 2617e6f..9bbb8b5 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1640,10 +1640,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1641,10 +1641,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	 * of xdp_prog above, this should be rare and for simplicity
  	 * we do XDP on skb in case the headroom is not enough.
  	 */
@@ -33,7 +33,7 @@ index 2217e4c..9ac5176 100644
  
  	preempt_disable();
  	rcu_read_lock();
-@@ -1689,6 +1691,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1690,6 +1692,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	rcu_read_unlock();
  	preempt_enable();
  
