@@ -587,6 +587,9 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		return -ENOSPC;
 	}
 
+	if (_vq->index == 1)
+		printk("chain start!\n");
+
 	for (n = 0; n < out_sgs + in_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
 			dma_addr_t addr = vring_map_one_sg(vq, sg, n < out_sgs ?
@@ -600,12 +603,27 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 					VRING_DESC_F_USED(!vq->wrap_counter));
 			if (!indirect && i == head)
 				head_flags = flags;
-			else
+			else {
 				desc[i].flags = flags;
+				printk("write flags to %u\n", i);
+			}
+
+#if 0
+			if (_vq->index == 0)
+				printk("vq %p desc[%d] for %s avail %d used %d\n", _vq,
+					i, n < out_sgs ? "read" : "write",
+					VRING_DESC_F_AVAIL(vq->wrap_counter),
+					VRING_DESC_F_USED(!vq->wrap_counter));
+#endif
 
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			desc[i].id = cpu_to_virtio32(_vq->vdev, head);
+
+			if (_vq->index == 1)
+				printk("desc[%d] id %u addr %llx len %llx\n",
+					i, desc[i].id, desc[i].addr, desc[i].len);
+
 			prev = i;
 			i++;
 			if (!indirect && i >= vq->vring_packed.num) {
@@ -614,11 +632,17 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 			}
 		}
 	}
+
+	if (_vq->index == 1)
+		printk("chain end!\n");
+
 	/* Last one doesn't continue. */
 	if (total_sg == 1)
 		head_flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
-	else
+	else {
 		desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
+		printk("prev %u does not chain\n", prev);
+	}
 
 	if (indirect) {
 		/* Now that the indirect table is filled in, map it. */
@@ -663,7 +687,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 	 * available before all subsequent descriptors comprising
 	 * the list are made available. */
 	virtio_wmb(vq->weak_barriers);
+	smp_wmb();
 	vq->vring_packed.desc[head].flags = head_flags;
+	printk("update head %u flags next %d\n", head,
+		head_flags &  cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT));
 	vq->num_added++;
 
 	pr_debug("Added buffer head %i to %p\n", head, vq);
@@ -870,14 +897,9 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
 
 	off_wrap = virtio16_to_cpu(_vq->vdev, vq->vring_packed.device->off_wrap);
 
-	if (vq->event) {
-		// FIXME: fix this!
-		needs_kick = ((off_wrap >> 15) == vq->wrap_counter) &&
-			     vring_need_event(off_wrap & ~(1<<15), new, old);
-	} else {
-		needs_kick = (vq->vring_packed.device->flags !=
-			      cpu_to_virtio16(_vq->vdev, VRING_EVENT_F_DISABLE));
-	}
+	needs_kick = (vq->vring_packed.device->flags !=
+		      cpu_to_virtio16(_vq->vdev, VRING_EVENT_F_DISABLE));
+
 	END_USE(vq);
 	return needs_kick;
 }
@@ -1009,7 +1031,7 @@ static int detach_buf_packed(struct vring_virtqueue *vq, unsigned int head,
 	for (j = 0; j < vq->desc_state[head].num; j++) {
 		desc = &vq->vring_packed.desc[i];
 		vring_unmap_one_packed(vq, desc);
-		desc->flags = 0x0;
+//		desc->flags = 0x0;
 		i++;
 		if (i >= vq->vring_packed.num)
 			i = 0;
@@ -1442,6 +1464,11 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
 
 	START_USE(vq);
 
+	vq->vring_packed.driver->flags = cpu_to_virtio16(_vq->vdev,
+							 VRING_EVENT_F_ENABLE);
+	smp_mb();
+
+#if 0
 	/* We optimistically turn back on interrupts, then check if there was
 	 * more to do. */
 	/* Depending on the VIRTIO_RING_F_USED_EVENT_IDX feature, we need to
@@ -1469,6 +1496,7 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
 
 	virtio_store_mb(vq->weak_barriers, &vq->vring_packed.driver->off_wrap,
 			cpu_to_virtio16(_vq->vdev, off_wrap));
+#endif
 
 	if (more_used_packed(vq)) {
 		END_USE(vq);
