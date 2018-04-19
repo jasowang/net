@@ -1,9 +1,9 @@
 Version: 1
-Previous: c415d7c3bc3c3f3138a9d3a38a0fca4054e79d78
-Head: 2f40ae7377023057e992f91dd4b0dbc7fcc58c87
+Previous: 49efe13912e0b0f8758056cdc4cb5b753226fe83
+Head: d8f026acbeed3823c3735b295221d42ff25f93a3
 Applied:
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
-  virtio-correctly-track-used: 2f40ae7377023057e992f91dd4b0dbc7fcc58c87
+  virtio-correctly-track-used: d8f026acbeed3823c3735b295221d42ff25f93a3
 Unapplied:
   fix: 77087e6e01977fcf293f1e5eb196b68b1b2f0a12
   disable: 42d20b5fc9d2378707f2115741db94b1cd55b4b3

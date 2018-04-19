@@ -5,6 +5,8 @@ Date:   2018-04-19 16:48:56 +0800
 
 virtio: correctly track used descriptor
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
