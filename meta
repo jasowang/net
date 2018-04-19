@@ -1,9 +1,10 @@
 Version: 1
-Previous: 49efe13912e0b0f8758056cdc4cb5b753226fe83
-Head: d8f026acbeed3823c3735b295221d42ff25f93a3
+Previous: 9bbff9d25cbe31280d8722d1fd46eee7bf37d876
+Head: e82f551148d30b22f8def9c0ad0b2f8d5864b451
 Applied:
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
   virtio-correctly-track-used: d8f026acbeed3823c3735b295221d42ff25f93a3
+  refresh-temp-0: e82f551148d30b22f8def9c0ad0b2f8d5864b451
 Unapplied:
   fix: 77087e6e01977fcf293f1e5eb196b68b1b2f0a12
   disable: 42d20b5fc9d2378707f2115741db94b1cd55b4b3
