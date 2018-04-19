@@ -1,5 +1,5 @@
-Bottom: 1a49fd630e314cd78ea77386ca3826299c5a4d5f
-Top:    d4cf23e7d84eb8f0344ebd8cb27ea6d7c2051b5e
+Bottom: 765f6fdc791f1b8f98f1a0181783191413ee08e2
+Top:    ddde09869c5996874472baf7ed6e5c13e6d292ae
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-19 14:04:22 +0800
 
@@ -43,10 +43,10 @@ index 1b3e8d2d..67b989d 100644
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
 diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
-index 0515dca..5ba9593 100644
+index da2a192..a170eb6 100644
 --- a/drivers/virtio/virtio_ring.c
 +++ b/drivers/virtio/virtio_ring.c
-@@ -587,6 +587,9 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+@@ -588,6 +588,9 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
  		return -ENOSPC;
  	}
  
@@ -56,7 +56,7 @@ index 0515dca..5ba9593 100644
  	for (n = 0; n < out_sgs + in_sgs; n++) {
  		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
  			dma_addr_t addr = vring_map_one_sg(vq, sg, n < out_sgs ?
-@@ -600,12 +603,27 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+@@ -601,12 +604,27 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
  					VRING_DESC_F_USED(!vq->wrap_counter));
  			if (!indirect && i == head)
  				head_flags = flags;
@@ -85,7 +85,7 @@ index 0515dca..5ba9593 100644
  			prev = i;
  			i++;
  			if (!indirect && i >= vq->vring_packed.num) {
-@@ -614,11 +632,17 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+@@ -615,11 +633,17 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
  			}
  		}
  	}
@@ -104,7 +104,7 @@ index 0515dca..5ba9593 100644
  
  	if (indirect) {
  		/* Now that the indirect table is filled in, map it. */
-@@ -663,7 +687,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+@@ -664,7 +688,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
  	 * available before all subsequent descriptors comprising
  	 * the list are made available. */
  	virtio_wmb(vq->weak_barriers);
@@ -115,7 +115,7 @@ index 0515dca..5ba9593 100644
  	vq->num_added++;
  
  	pr_debug("Added buffer head %i to %p\n", head, vq);
-@@ -870,14 +897,9 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
+@@ -871,14 +898,9 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
  
  	off_wrap = virtio16_to_cpu(_vq->vdev, vq->vring_packed.device->off_wrap);
  
@@ -133,7 +133,7 @@ index 0515dca..5ba9593 100644
  	END_USE(vq);
  	return needs_kick;
  }
-@@ -1009,7 +1031,7 @@ static int detach_buf_packed(struct vring_virtqueue *vq, unsigned int head,
+@@ -1010,7 +1032,7 @@ static int detach_buf_packed(struct vring_virtqueue *vq, unsigned int head,
  	for (j = 0; j < vq->desc_state[head].num; j++) {
  		desc = &vq->vring_packed.desc[i];
  		vring_unmap_one_packed(vq, desc);
@@ -142,7 +142,7 @@ index 0515dca..5ba9593 100644
  		i++;
  		if (i >= vq->vring_packed.num)
  			i = 0;
-@@ -1442,6 +1464,11 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
+@@ -1444,6 +1466,11 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
  
  	START_USE(vq);
  
@@ -154,7 +154,7 @@ index 0515dca..5ba9593 100644
  	/* We optimistically turn back on interrupts, then check if there was
  	 * more to do. */
  	/* Depending on the VIRTIO_RING_F_USED_EVENT_IDX feature, we need to
-@@ -1469,6 +1496,7 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
+@@ -1471,6 +1498,7 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
  
  	virtio_store_mb(vq->weak_barriers, &vq->vring_packed.driver->off_wrap,
  			cpu_to_virtio16(_vq->vdev, off_wrap));
