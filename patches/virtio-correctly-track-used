@@ -1,0 +1,11 @@
+Bottom: 1a49fd630e314cd78ea77386ca3826299c5a4d5f
+Top:    1a49fd630e314cd78ea77386ca3826299c5a4d5f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-19 16:48:56 +0800
+
+virtio: correctly track used descriptor
+
+
+---
+
+
