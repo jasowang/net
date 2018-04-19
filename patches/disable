@@ -1,5 +1,5 @@
 Bottom: d4cf23e7d84eb8f0344ebd8cb27ea6d7c2051b5e
-Top:    d4cf23e7d84eb8f0344ebd8cb27ea6d7c2051b5e
+Top:    0eef247ea26e5749ac5ed5295a1f77f72406fbf8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-19 16:40:11 +0800
 
@@ -10,4 +10,88 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 5ba9593..9097d48 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -587,7 +587,7 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 		return -ENOSPC;
+ 	}
+ 
+-	if (_vq->index == 1)
++	if (_vq->index == 3)
+ 		printk("chain start!\n");
+ 
+ 	for (n = 0; n < out_sgs + in_sgs; n++) {
+@@ -605,22 +605,19 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 				head_flags = flags;
+ 			else {
+ 				desc[i].flags = flags;
+-				printk("write flags to %u\n", i);
+ 			}
+ 
+-#if 0
+-			if (_vq->index == 0)
++			if (_vq->index == 3)
+ 				printk("vq %p desc[%d] for %s avail %d used %d\n", _vq,
+ 					i, n < out_sgs ? "read" : "write",
+ 					VRING_DESC_F_AVAIL(vq->wrap_counter),
+ 					VRING_DESC_F_USED(!vq->wrap_counter));
+-#endif
+ 
+ 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+ 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
+ 			desc[i].id = cpu_to_virtio32(_vq->vdev, head);
+ 
+-			if (_vq->index == 1)
++			if (_vq->index == 3)
+ 				printk("desc[%d] id %u addr %llx len %llx\n",
+ 					i, desc[i].id, desc[i].addr, desc[i].len);
+ 
+@@ -633,7 +630,7 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 		}
+ 	}
+ 
+-	if (_vq->index == 1)
++	if (_vq->index == 3)
+ 		printk("chain end!\n");
+ 
+ 	/* Last one doesn't continue. */
+@@ -641,7 +638,7 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 		head_flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
+ 	else {
+ 		desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
+-		printk("prev %u does not chain\n", prev);
++		if (_vq->index == 3) printk("prev %u does not chain\n", prev);
+ 	}
+ 
+ 	if (indirect) {
+@@ -689,8 +686,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 	virtio_wmb(vq->weak_barriers);
+ 	smp_wmb();
+ 	vq->vring_packed.desc[head].flags = head_flags;
+-	printk("update head %u flags next %d\n", head,
+-		head_flags &  cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT));
++	if (_vq->index == 3)
++		printk("update head %u flags next %d\n", head,
++			head_flags &
++			cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT));
+ 	vq->num_added++;
+ 
+ 	pr_debug("Added buffer head %i to %p\n", head, vq);
+@@ -1197,6 +1196,7 @@ void *virtqueue_get_buf_ctx_packed(struct virtqueue *_vq, unsigned int *len,
+ 	if (vq->last_used_idx >= vq->vring_packed.num)
+ 		vq->last_used_idx -= vq->vring_packed.num;
+ 
++#if 0
+ 	wrap_counter = vq->wrap_counter;
+ 	if (vq->last_used_idx > vq->next_avail_idx)
+ 		wrap_counter ^= 1;
+@@ -1209,6 +1209,7 @@ void *virtqueue_get_buf_ctx_packed(struct virtqueue *_vq, unsigned int *len,
+ 				&vq->vring_packed.driver->off_wrap,
+ 				cpu_to_virtio16(_vq->vdev, vq->last_used_idx |
+ 						wrap_counter << 15));
++#endif
+ 
+ #ifdef DEBUG
+ 	vq->last_add_time_valid = false;
