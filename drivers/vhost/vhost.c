@@ -2102,6 +2102,7 @@ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
 void vhost_discard_vq_desc(struct vhost_virtqueue *vq, int n)
 {
 	vq->last_avail_idx -= n;
+	
 }
 EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
 
