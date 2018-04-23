@@ -1,0 +1,48 @@
+Bottom: 1d1fcf32038e8de178235af480d488279632f98a
+Top:    3d7ca059ea5b6dd0c8915146a80c4f3267a2ed03
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-23 15:49:38 +0800
+
+Refresh of fix
+
+---
+
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index a0cdd34..4ad5381 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -552,8 +552,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 	head = vq->next_avail_idx;
+ 	wrap_counter = vq->wrap_counter;
+ 
+-	printk("vq->indirect %d total_sg %d\n",
+-		vq->indirect, total_sg);
++//	printk("vq->indirect %d total_sg %d\n",
++//		vq->indirect, total_sg);
+ 	/* If the host supports indirect descriptor tables, and we have multiple
+ 	 * buffers, then go indirect. FIXME: tune this threshold */
+ 	if (vq->indirect && total_sg > 1 && vq->vq.num_free)
+@@ -624,10 +624,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
+ 			desc[i].id = cpu_to_virtio32(_vq->vdev, head);
+ 
+-			if (_vq->index == 0)
+-				printk("desc[%d] id %u addr %llx len %llx\n",
+-					i, desc[i].id, desc[i].addr,
+-					desc[i].len);
++//			if (_vq->index == 0)
++//				printk("desc[%d] id %u addr %llx len %llx\n",
++//					i, desc[i].id, desc[i].addr,
++//					desc[i].len);
+ 
+ 			prev = i;
+ 			i++;
+@@ -646,7 +646,7 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
+ 		head_flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
+ 	else {
+ 		desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
+-		if (_vq->index == 0) printk("prev %u does not chain\n", prev);
++//		if (_vq->index == 0) printk("prev %u does not chain\n", prev);
+ 	}
+ 
+ 	if (indirect) {
