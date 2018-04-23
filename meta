@@ -1,11 +1,10 @@
 Version: 1
-Previous: df97dcc189107d92bc3161f8f88c451c6faeecf9
-Head: 206320e41cb4d2b035ddf09b149808aeab03d729
+Previous: 0bb707e28e79ea6ff197485d711967e374d94370
+Head: 30a463c29a76c901c69b8964e20a82fbbc75e940
 Applied:
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
   virtio-correctly-track-used: cf20c2b02b3b88f8306a8af96cbcfcd7ffa6f7b6
-  fix: 95cdc54659e61afff14bf26e0dcd62b482f1e9af
-  refresh-temp-0: 206320e41cb4d2b035ddf09b149808aeab03d729
+  fix: 30a463c29a76c901c69b8964e20a82fbbc75e940
 Unapplied:
   disable: 42d20b5fc9d2378707f2115741db94b1cd55b4b3
   vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
