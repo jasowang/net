@@ -453,6 +453,75 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
 	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
 }
 
+#define VHOST_NET_HEADROOM 256
+#define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
+
+static int vhost_net_build_pkt(struct vhost_virtqueue *nvq,
+			       struct iov_iter *from,
+			       struct xdp_buff *xdp)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct page_frag *alloc_frag = &current->task_frag;
+	struct virtio_net_hdr gso = { 0 };
+	size_t len = iov_iter_count(from);
+	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	int pad = VHOST_NET_RX_PAD + VHOST_NET_HEADROOM;
+	void *ret;
+
+	if (len < nvq->sock_hlen)
+		return -EFAULT;
+
+	len -= nvq->sock_hlen;
+
+	if (!copy_from_iter_full(&gso, sizeof(gso), from))
+		return -EFAULT;
+
+	if ((gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
+	    vhost16_to_cpu(&vq->vq, gso.csum_start) +
+	    vhost16_to_cpu(&vq->vq, gso.csum_offset) + 2 >
+	    vhost16_to_cpu(&vq->vq, gso.hdr_len))
+		gso.hdr_len = cpu_to_vhost16(vq,
+			      vhost16_to_cpu(vq, gso.csum_start) +
+			      vhost16_to_cpu(vq, gso.csum_offset) + 2);
+
+		if (vhost16_to_cpu(vq, gso.hdr_len) > len)
+			return -EINVAL;
+
+	iov_iter_advance(from, sock_hlen - sizeof(gso));
+
+	if (SKB_DATA_ALIGN(len + pad) +
+	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) > PAGE_SIZE)
+		return -ENOSPC;
+
+	buflen += SKB_DATA_ALIGN(len + pad);
+	alloc_frag->offset = ALIGN((u64)alloc_frag->offset, SMP_CACHE_BYTES);
+	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
+		return -ENOMEM;
+
+	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
+	copied = copy_page_from_iter(alloc_frag->page,
+				     alloc_frag->offset + pad,
+				     len, from);
+	if (copied != len)
+		return -EFAULT;
+
+	/* GSO packet, build skb */
+	if (gso.gso_type) {
+		return -EINVAL;
+	}
+
+	xdp->data_hard_start = buf;
+	xdp->data = buf + pad;
+	xdp_set_data_meta_invalid(xdp);
+	xdp.data_end = xdp.data + len;
+	*(int *)xdp.data_hard_start = buflen;
+
+	get_page(alloc_frag->page);
+	alloc_frag->offset += buflen;
+
+	return 0;
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
