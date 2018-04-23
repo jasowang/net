@@ -552,8 +552,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 	head = vq->next_avail_idx;
 	wrap_counter = vq->wrap_counter;
 
-	printk("vq->indirect %d total_sg %d\n",
-		vq->indirect, total_sg);
+//	printk("vq->indirect %d total_sg %d\n",
+//		vq->indirect, total_sg);
 	/* If the host supports indirect descriptor tables, and we have multiple
 	 * buffers, then go indirect. FIXME: tune this threshold */
 	if (vq->indirect && total_sg > 1 && vq->vq.num_free)
@@ -624,10 +624,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			desc[i].id = cpu_to_virtio32(_vq->vdev, head);
 
-			if (_vq->index == 0)
-				printk("desc[%d] id %u addr %llx len %llx\n",
-					i, desc[i].id, desc[i].addr,
-					desc[i].len);
+//			if (_vq->index == 0)
+//				printk("desc[%d] id %u addr %llx len %llx\n",
+//					i, desc[i].id, desc[i].addr,
+//					desc[i].len);
 
 			prev = i;
 			i++;
@@ -646,7 +646,7 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		head_flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
 	else {
 		desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
-		if (_vq->index == 0) printk("prev %u does not chain\n", prev);
+//		if (_vq->index == 0) printk("prev %u does not chain\n", prev);
 	}
 
 	if (indirect) {
