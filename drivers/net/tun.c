@@ -2376,6 +2376,28 @@ static void tun_sock_write_space(struct sock *sk)
 	kill_fasync(&tfile->fasync, SIGIO, POLL_OUT);
 }
 
+static void tun_xdp_one(struct tun_struct *tun,
+			struct tun_file *tfile,
+			struct xdp_buff *xdp)
+{
+	struct bpf_prog *xdp_prog;
+	int buflen;
+
+	preempt_disable();
+	rcu_read_lock();
+
+	xdp_prog = rcu_dereference(tun->xdp_prog);
+	if (xdp_prog) {
+		xdp_set_data_meta_invalid(xdp);
+		xdp->rxq = &tfile->xdp_rxq;
+		buflen = *(int *)xdp->data_hard_start;
+		tun_do_xdp(tun, tfile, xdp_prog, xdp, buflen);
+	}
+
+	rcu_read_unlock();
+	preempt_enable();
+}
+
 static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 {
 	int ret;
@@ -2385,9 +2407,17 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 	if (!tun)
 		return -EBADFD;
 
+	if (m->msg_control) {
+		struct xdp_buff *xdp = m->msg_control;
+		tun_xdp_one(tun, tfile, xdp);
+		ret = total_len;
+		goto out;
+	}
+
 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
 			   m->msg_flags & MSG_DONTWAIT,
 			   m->msg_flags & MSG_MORE);
+out:
 	tun_put(tun);
 	return ret;
 }
