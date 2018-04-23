@@ -1112,7 +1112,7 @@ static bool try_fill_recv(struct virtnet_info *vi, struct receive_queue *rq,
 		if (err)
 			break;
 	} while (rq->vq->num_free);
-	printk("rx kick\n");
+//	printk("rx kick\n");
 	virtqueue_kick(rq->vq);
 	return !oom;
 }
@@ -1206,7 +1206,7 @@ static int virtnet_receive(struct receive_queue *rq, int budget, bool *xdp_xmit)
 		}
 	}
 
-	printk("num free is %d\n", rq->vq->num_free);
+//	printk("num free is %d\n", rq->vq->num_free);
 	if (rq->vq->num_free > virtqueue_get_vring_size(rq->vq) / 2) {
 		if (!try_fill_recv(vi, rq, GFP_ATOMIC))
 			schedule_delayed_work(&vi->refill, 0);

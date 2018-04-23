@@ -552,6 +552,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 	head = vq->next_avail_idx;
 	wrap_counter = vq->wrap_counter;
 
+	printk("vq->indirect %d total_sg %d\n",
+		vq->indirect, total_sg);
 	/* If the host supports indirect descriptor tables, and we have multiple
 	 * buffers, then go indirect. FIXME: tune this threshold */
 	if (vq->indirect && total_sg > 1 && vq->vq.num_free)
@@ -588,8 +590,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		return -ENOSPC;
 	}
 
-	if (_vq->index == 1)
-		printk("chain start!\n");
+//	if (_vq->index == 0)
+//		printk("chain start!\n");
 
 	for (n = 0; n < out_sgs + in_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
@@ -606,7 +608,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 				head_flags = flags;
 			else {
 				desc[i].flags = flags;
-				printk("write flags to %u\n", i);
+//				if (_vq->index == 0)
+//					printk("write flags to %u\n", i);
 			}
 
 #if 0
@@ -621,9 +624,10 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			desc[i].id = cpu_to_virtio32(_vq->vdev, head);
 
-			if (_vq->index == 1)
+			if (_vq->index == 0)
 				printk("desc[%d] id %u addr %llx len %llx\n",
-					i, desc[i].id, desc[i].addr, desc[i].len);
+					i, desc[i].id, desc[i].addr,
+					desc[i].len);
 
 			prev = i;
 			i++;
@@ -634,15 +638,15 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		}
 	}
 
-	if (_vq->index == 1)
-		printk("chain end!\n");
+//	if (_vq->index == 0)
+//		printk("chain end!\n");
 
 	/* Last one doesn't continue. */
 	if (total_sg == 1)
 		head_flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
 	else {
 		desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
-		printk("prev %u does not chain\n", prev);
+		if (_vq->index == 0) printk("prev %u does not chain\n", prev);
 	}
 
 	if (indirect) {
@@ -690,8 +694,9 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 	virtio_wmb(vq->weak_barriers);
 	smp_wmb();
 	vq->vring_packed.desc[head].flags = head_flags;
-	printk("update head %u flags next %d\n", head,
-		head_flags &  cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT));
+//	if (_vq->index == 0)
+//		printk("update head %u flags next %d\n", head,
+//			head_flags &  cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT));
 	vq->num_added++;
 
 	pr_debug("Added buffer head %i to %p\n", head, vq);
@@ -1051,9 +1056,9 @@ static int detach_buf_packed(struct vring_virtqueue *vq, unsigned int head,
 		len = virtio32_to_cpu(vq->vq.vdev,
 				      vq->vring_packed.desc[head].len);
 
-		BUG_ON(!(vq->vring_packed.desc[head].flags &
-			 cpu_to_virtio16(vq->vq.vdev, VRING_DESC_F_INDIRECT)));
-		BUG_ON(len == 0 || len % sizeof(struct vring_packed_desc));
+//		BUG_ON(!(vq->vring_packed.desc[head].flags &
+//			 cpu_to_virtio16(vq->vq.vdev, VRING_DESC_F_INDIRECT)));
+//		BUG_ON(len == 0 || len % sizeof(struct vring_packed_desc));
 
 		for (j = 0; j < len / sizeof(struct vring_packed_desc); j++)
 			vring_unmap_one_packed(vq, &desc[j]);
@@ -1883,12 +1888,10 @@ void vring_transport_features(struct virtio_device *vdev)
 
 	for (i = VIRTIO_TRANSPORT_F_START; i < VIRTIO_TRANSPORT_F_END; i++) {
 		switch (i) {
-#if 0
 		case VIRTIO_RING_F_INDIRECT_DESC: // FIXME not tested yet.
 			break;
 		case VIRTIO_RING_F_EVENT_IDX: // FIXME probably not work.
 			break;
-#endif
 		case VIRTIO_F_VERSION_1:
 			break;
 		case VIRTIO_F_IOMMU_PLATFORM:
