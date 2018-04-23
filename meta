@@ -1,11 +1,11 @@
 Version: 1
-Previous: 0bb707e28e79ea6ff197485d711967e374d94370
-Head: 30a463c29a76c901c69b8964e20a82fbbc75e940
+Previous: f0d1fefefa96c0bfbbd435f62d9f28bfb2ffec89
+Head: 18845557fd6fc1998f2d0d8c30467f86db587529
 Applied:
+Unapplied:
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
   virtio-correctly-track-used: cf20c2b02b3b88f8306a8af96cbcfcd7ffa6f7b6
   fix: 30a463c29a76c901c69b8964e20a82fbbc75e940
-Unapplied:
   disable: 42d20b5fc9d2378707f2115741db94b1cd55b4b3
   vhost-tx-batching: 5cc18de5c806e859445fc04823ee73d26b07c6e1
   vhost-net-batch-submit-packets: e3555086497245ca4637644cdda8709c2d129765
