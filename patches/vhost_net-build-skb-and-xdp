@@ -1,5 +1,5 @@
-Bottom: 3e625c4b139a35af10aacb2348744e13d0ab090c
-Top:    347c56960bbaf0d9a20bdf30720a78f5e6679ca4
+Bottom: 44afc355b1c6398a3102d2244f4955b4e2876c89
+Top:    4bd759e8d57fdab5ce303779db313c48b5b03981
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-23 16:57:48 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f1f9b44..1245c85 100644
+index e0f9b42..657b2762 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -453,6 +453,76 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
+@@ -458,6 +458,76 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
  	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
  }
  
