@@ -1,0 +1,22 @@
+Bottom: a2a1566f2aa66d801c644530d3702624c80e0d35
+Top:    bdfe61e196e663f004d66bec9374c9e822eb12c9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-04-24 11:45:50 +0800
+
+Refresh of tuntap-simplify-error-handling
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 62b82f6..2c5fec3 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1675,7 +1675,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			goto out;
+ 		case XDP_TX:
+ 			if (tun_xdp_tx(tun->dev, &xdp))
+-				goto err_redirect;
++				goto err_xdp;
+ 			tun_xdp_flush(tun->dev);
+ 			goto out;
+ 		case XDP_PASS:
