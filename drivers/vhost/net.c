@@ -114,8 +114,8 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
-	struct vring_used_elem heads[VHOST_RX_BATCH];
 	struct xdp_buff xdp[VHOST_RX_BATCH];
+	struct vring_used_elem heads[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -532,13 +532,36 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	return 0;
 }
 
+static void vhost_tx_batch(struct vhost_net *net,
+			   struct vhost_net_virtqueue *nvq,
+			   struct socket *sock,
+			   struct msghdr *msghdr, int n)
+{
+	struct tun_msg_ctl ctl = {
+		.type = n << 16 | TUN_MSG_PTR,
+		.ptr = nvq->xdp,
+	};
+	int err;
+
+	if (n == 0)
+		return;
+
+	msghdr->msg_control = &ctl;
+	err = sock->ops->sendmsg(sock, msghdr, 0);
+
+	if (unlikely(err < 0)) {
+		/* FIXME vq_err() */
+		return;
+	}
+	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->heads, n);
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -640,21 +663,43 @@ static void handle_tx(struct vhost_net *net)
 			ubufs = NULL;
 		}
 
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
-		if (!err) {
-			ctl.type = TUN_MSG_PTR;
-			ctl.ptr = &xdp;
-			msg.msg_control = &ctl;
-		}
 		total_len += len;
-		if (total_len < VHOST_NET_WEIGHT &&
-		    !vhost_vq_avail_empty(&net->dev, vq) &&
-		    likely(!vhost_exceeds_maxpend(net))) {
-			msg.msg_flags |= MSG_MORE;
-		} else {
-			msg.msg_flags &= ~MSG_MORE;
+
+		if (zcopy_used) {
+			printk("flush since zerocopy!\n");
+			goto flush;
 		}
 
+		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
+					  &nvq->xdp[nheads]);
+		if (!err) {
+			printk("nheads to %d\n", nheads + 1);
+			if (++nheads <= VHOST_RX_BATCH)
+				goto done;
+		} else if (err != -ENOSPC) {
+			vq_err(vq, "Fail to build XDP buffer");
+			break;
+		}
+
+flush:
+		/* Flush queued packets when:
+		 * 1) We've queued enough packets
+		 * 2) Current packet is too big for build_skb()
+		 * 3) We use zerocopy
+		 */
+		printk("flush %d\n", nheads);
+		vhost_tx_batch(net, nvq, sock, &msg, nheads);
+		if (nheads == VHOST_RX_BATCH) {
+			nheads = 0;
+			goto done;
+		}
+		nheads = 0;
+
+		msg.msg_control = NULL;
+		ubufs = NULL;
+
+sendmsg:
+		printk("sendmsg\n");
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
@@ -672,11 +717,9 @@ static void handle_tx(struct vhost_net *net)
 				 " len %d != %zd\n", err, len);
 		if (zcopy_used)
 			vhost_zerocopy_signal_used(net, vq);
-		else if (++nheads == VHOST_RX_BATCH) {
-			vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads,
-						    nheads);
-			nheads = 0;
-		}
+		else
+			vhost_add_used_and_signal(&net->dev, vq, head, 0);
+done:
 		vhost_net_tx_packet(net);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
 		    unlikely(++sent_pkts >= VHOST_NET_PKT_WEIGHT(vq))) {
@@ -685,8 +728,11 @@ static void handle_tx(struct vhost_net *net)
 		}
 	}
 out:
-	if (nheads)
-		vhost_add_used_and_signal_n(&net->dev, vq, nvq->heads, nheads);
+	if (nheads) {
+		printk("batch for nheads %d\n", nheads);
+		vhost_tx_batch(net, nvq, sock, &msg, nheads);
+	}
+
 	mutex_unlock(&vq->mutex);
 }
 
