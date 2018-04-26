@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9a62b1cb5dcdc6488f11f30cc21e2d898a125f9e
-Head: 3272860cfbf285fdb1829e60470de76969da107b
+Previous: a073a8dd345158c5939eadaf60b365fe017ed6bc
+Head: 1e4b63b72e003a6ca72b4196d0a41e9a70467ec4
 Applied:
   vhost-tx-batching: a11690bfab59734bac96fbde63a0aecd61cad678
   tuntap-enable-premmption-early: a8cd44cc407ea080ed19654a13079c35a7f470f7
@@ -8,7 +8,7 @@ Applied:
   tuntap-tweak-on-the-patch-of: 44757a126658fe8abe060e1dee7f06e8f387a41d
   tuntap-split-out-xdp: e59d38f0201fc502b93660339b708c37ff100c52
   vhost_net-build-skb-and-xdp: 1e4b63b72e003a6ca72b4196d0a41e9a70467ec4
-  vhost_net-passing-raw-xdp-buff: 3272860cfbf285fdb1829e60470de76969da107b
 Unapplied:
+  vhost_net-passing-raw-xdp-buff: 3272860cfbf285fdb1829e60470de76969da107b
   tuntap-xdp-batching-support: 5b708220c7575f39951f9831724c726e259ff6c7
 Hidden:
