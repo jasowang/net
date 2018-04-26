@@ -19,6 +19,13 @@
 
 #define TUN_XDP_FLAG 0x1UL
 
+#define TUN_MSG_UBUF 1
+#define TUN_MSG_PTR  2
+struct tun_msg_ctl {
+	int type;
+	void *ptr;
+};
+
 #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
 struct socket *tun_get_socket(struct file *);
 struct ptr_ring *tun_get_tx_ring(struct file *file);

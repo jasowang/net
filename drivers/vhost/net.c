@@ -115,6 +115,7 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct vring_used_elem heads[VHOST_RX_BATCH];
+	struct xdp_buff xdp[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -552,6 +553,7 @@ static void handle_tx(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+	struct tun_msg_ctl ctl;
 	bool zcopy, zcopy_used;
 	int sent_pkts = 0;
 	s16 nheads = 0;
@@ -617,14 +619,17 @@ static void handle_tx(struct vhost_net *net)
 			struct ubuf_info *ubuf;
 			ubuf = nvq->ubuf_info + nvq->upend_idx;
 
+			ctl.type = TUN_MSG_UBUF;
+			ctl.ptr = ubuf;
+
 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
 			ubuf->callback = vhost_zerocopy_callback;
 			ubuf->ctx = nvq->ubufs;
 			ubuf->desc = nvq->upend_idx;
 			refcount_set(&ubuf->refcnt, 1);
-			msg.msg_control = ubuf;
-			msg.msg_controllen = sizeof(ubuf);
+			msg.msg_control = &ctl;
+			msg.msg_controllen = sizeof(ctl);
 			ubufs = nvq->ubufs;
 			atomic_inc(&ubufs->refcount);
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
@@ -637,7 +642,9 @@ static void handle_tx(struct vhost_net *net)
 
 		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
 		if (!err) {
-			msg.msg_control = &xdp;
+			ctl.type = TUN_MSG_PTR;
+			ctl.ptr = &xdp;
+			msg.msg_control = &ctl;
 		}
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&

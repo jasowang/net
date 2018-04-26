@@ -2376,26 +2376,84 @@ static void tun_sock_write_space(struct sock *sk)
 	kill_fasync(&tfile->fasync, SIGIO, POLL_OUT);
 }
 
-static void tun_xdp_one(struct tun_struct *tun,
-			struct tun_file *tfile,
-			struct xdp_buff *xdp)
+static int tun_xdp_one(struct tun_struct *tun,
+		       struct tun_file *tfile,
+		       struct xdp_buff *xdp)
 {
+	struct virtio_net_hdr *gso = xdp->data_hard_start + sizeof(int);
+	struct tun_pcpu_stats *stats;
 	struct bpf_prog *xdp_prog;
-	int buflen;
+	struct sk_buff *skb = NULL;
+	u32 rxhash = 0, act;
+	int buflen = *(int *)xdp->data_hard_start;
+	int err = 0;
+	bool skb_xdp = false;
 
 	preempt_disable();
 	rcu_read_lock();
 
 	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog) {
+		if (gso->gso_type) {
+			skb_xdp = true;
+			goto build;
+		}
 		xdp_set_data_meta_invalid(xdp);
 		xdp->rxq = &tfile->xdp_rxq;
-		buflen = *(int *)xdp->data_hard_start;
-		tun_do_xdp(tun, tfile, xdp_prog, xdp, buflen);
+		act = tun_do_xdp(tun, tfile, xdp_prog, xdp, &err);
+		if (err)
+			goto out;
+		if (act != XDP_PASS)
+			goto out;
 	}
 
+build:
+	skb = build_skb(xdp->data_hard_start, buflen);
+	if (!skb) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	if (skb_xdp) {
+		err = do_xdp_generic(xdp_prog, skb);
+		if (err != XDP_PASS)
+			goto out;
+	}
+
+	skb_reserve(skb, xdp->data - xdp->data_hard_start);
+	skb_put(skb, xdp->data_end - xdp->data);
+
+	if (virtio_net_hdr_to_skb(skb, gso, tun_is_little_endian(tun))) {
+		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
+		kfree_skb(skb);
+		err = -EINVAL;
+		goto out;
+	}
+
+	skb->protocol = eth_type_trans(skb, tun->dev);
+	skb_reset_network_header(skb);
+	skb_probe_transport_header(skb, 0);
+
+	if (!rcu_dereference(tun->steering_prog))
+		rxhash = __skb_get_hash_symmetric(skb);
+
+	netif_receive_skb(skb);
+
+	stats = get_cpu_ptr(tun->pcpu_stats);
+	u64_stats_update_begin(&stats->syncp);
+	stats->rx_packets++;
+	stats->rx_bytes += skb->len;
+	u64_stats_update_end(&stats->syncp);
+	put_cpu_ptr(stats);
+
+	if (rxhash)
+		tun_flow_update(tun, rxhash, tfile);
+
+out:
 	rcu_read_unlock();
 	preempt_enable();
+
+	return err;
 }
 
 static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
@@ -2403,18 +2461,19 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 	int ret;
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun = tun_get(tfile);
+	struct tun_msg_ctl *ctl = m->msg_control;
 
 	if (!tun)
 		return -EBADFD;
 
-	if (m->msg_control) {
-		struct xdp_buff *xdp = m->msg_control;
-		tun_xdp_one(tun, tfile, xdp);
-		ret = total_len;
+	if (ctl && ctl->type == TUN_MSG_PTR) {
+		ret = tun_xdp_one(tun, tfile, ctl->ptr);
+		if (!ret)
+			ret = total_len;
 		goto out;
 	}
 
-	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+	ret = tun_get_user(tun, tfile, ctl ? ctl->ptr : NULL, &m->msg_iter,
 			   m->msg_flags & MSG_DONTWAIT,
 			   m->msg_flags & MSG_MORE);
 out:
