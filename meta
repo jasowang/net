@@ -1,7 +1,8 @@
 Version: 1
-Previous: 43a25ed55207db312ebd06bee6681da3518049fd
-Head: af201bab50a89aa6cf4df952b2c3bf55895c8eee
+Previous: 1d51c56634419a292ae3910fb91179c419508a93
+Head: 2714dbeb874d579adff0ad99814da08aabb7eaf3
 Applied:
+  vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
 Unapplied:
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
   virtio-correctly-track-used: cf20c2b02b3b88f8306a8af96cbcfcd7ffa6f7b6
@@ -22,7 +23,6 @@ Unapplied:
   bpf-debug: 45ddcc77159f3c5f83c77593d63683f42259e30f
   dev-reproducer: 6fdb3889ac061dbc2d23f176556a6df390233617
   ptr_ring-speed-up-through: 390000df5d450137f9abb5c3e4cfbea845841146
-  vhost_net-vmapped-metadata: 2e6efe80d708d2252f3440abf5f2b4b0953b3d01
   introduce-core-ring: d9b17c808d5cfc3ca23a4420e4a8fca38b0966d7
   virtio-net-correctly-set: 1dc793ca9e0d3277004f94df054573fbf96e4123
   vhost-split-out-ring-head: 5911a2bd19c4ca815f9d78e657f08a82cff9673c
