@@ -621,14 +621,17 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 
 	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 
-	/* Copy vnet header in case underlayer device (TAP) needs it
-	 * for XDP_PASS. */
+	/* We store two kinds of metadata in the header which will be
+	 * used for XDP_PASS to do build_skb():
+	 * offset 0: buflen
+	 * offset sizeof(int): vnet header
+	 */
 	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset, sock_hlen, from);
+				     alloc_frag->offset + sizeof(int), sock_hlen, from);
 	if (copied != sock_hlen)
 		return -EFAULT;
 
-	gso = (struct virtio_net_hdr *)buf;
+	gso = (struct virtio_net_hdr *)(buf + sizeof(int));
 
 	if ((gso->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
 	    vhost16_to_cpu(vq, gso->csum_start) +
@@ -652,8 +655,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	xdp->data_hard_start = buf;
 	xdp->data = buf + pad;
 	xdp->data_end = xdp->data + len;
-	/* Store buflen for the use of build_skb() in XDP_PASS */
-	*(int *)(xdp->data_hard_start + SKB_DATA_ALIGN(nvq->sock_hlen))= buflen;
+	*(int *)(xdp->data_hard_start)= buflen;
 
 	get_page(alloc_frag->page);
 	alloc_frag->offset += buflen;
