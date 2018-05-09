@@ -1,9 +1,9 @@
 Version: 1
-Previous: 0d8dcab906d64265136df2bb116e934b0d326660
+Previous: 82bc88b3569ed5fcca90feef0cd4aaf56679d46b
 Head: bdc9a64e27a1ff7e89e18ba9e8a0d9ab82233e19
 Applied:
-  vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
 Unapplied:
+  vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
   virtio-correctly-track-used: cf20c2b02b3b88f8306a8af96cbcfcd7ffa6f7b6
   fix: 30a463c29a76c901c69b8964e20a82fbbc75e940
