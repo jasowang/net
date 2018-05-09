@@ -1,9 +1,8 @@
 Version: 1
-Previous: 1c5843bb567d94685f909089bd74b617cf45ee14
-Head: a8651e447c105ed486ff7fe09b386c6c301d2932
+Previous: 961ff58c562360c511d2979e74933c8f9a59468e
+Head: bb256bd9a9eb3de7d2230d16c6c802b925088f88
 Applied:
-  tuntap: 0468aa81a9a07d0f44c4095ceff56d380ace469e
-  refresh-temp-0: a8651e447c105ed486ff7fe09b386c6c301d2932
+  tuntap: bb256bd9a9eb3de7d2230d16c6c802b925088f88
 Unapplied:
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
