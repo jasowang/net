@@ -1,6 +1,6 @@
 Version: 1
-Previous: 1d51c56634419a292ae3910fb91179c419508a93
-Head: 2714dbeb874d579adff0ad99814da08aabb7eaf3
+Previous: 0d8dcab906d64265136df2bb116e934b0d326660
+Head: bdc9a64e27a1ff7e89e18ba9e8a0d9ab82233e19
 Applied:
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
 Unapplied:
