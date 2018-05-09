@@ -1,0 +1,31 @@
+Bottom: 91e08599d5edd764e3a1f7f76861c427f164f3b2
+Top:    e3c8dbdc3b4b1bb11db170951a21dd961755200f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-09 14:08:54 +0800
+
+Refresh of tuntap
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index d3c04ab..ecaa9a5 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1007,7 +1007,7 @@ static const struct ethtool_ops tun_ethtool_ops;
+ /* Net device detach from fd. */
+ static void tun_net_uninit(struct net_device *dev)
+ {
+-	tun_detach_all(dev);
++//	tun_detach_all(dev);
+ }
+ 
+ /* Net device open. */
+@@ -2262,6 +2262,8 @@ static void tun_free_netdev(struct net_device *dev)
+ {
+ 	struct tun_struct *tun = netdev_priv(dev);
+ 
++	tun_detach_all(dev);
++
+ 	BUG_ON(!(list_empty(&tun->disabled)));
+ 	free_percpu(tun->pcpu_stats);
+ 	tun_flow_uninit(tun);
