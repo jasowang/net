@@ -1,5 +1,5 @@
-Bottom: e3c8dbdc3b4b1bb11db170951a21dd961755200f
-Top:    d2827a63eeb7836634016862cc46dd3d8b98b876
+Bottom: 91e08599d5edd764e3a1f7f76861c427f164f3b2
+Top:    48f9dc8d41548106ab6ac5b859cdc929c2a4c2ed
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-09 12:53:12 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index ecaa9a5..33ad5fe 100644
+index d3c04ab..55c67a2 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -675,15 +675,6 @@ static void tun_queue_purge(struct tun_file *tfile)
@@ -67,7 +67,7 @@ index ecaa9a5..33ad5fe 100644
  		err = -ENOMEM;
  		goto out;
  	}
-@@ -3227,6 +3220,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -3225,6 +3218,11 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  					    &tun_proto, 0);
  	if (!tfile)
  		return -ENOMEM;
@@ -79,7 +79,7 @@ index ecaa9a5..33ad5fe 100644
  	RCU_INIT_POINTER(tfile->tun, NULL);
  	tfile->flags = 0;
  	tfile->ifindex = 0;
-@@ -3247,8 +3245,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -3245,8 +3243,6 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
  
