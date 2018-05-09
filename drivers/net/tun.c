@@ -1007,7 +1007,7 @@ static const struct ethtool_ops tun_ethtool_ops;
 /* Net device detach from fd. */
 static void tun_net_uninit(struct net_device *dev)
 {
-	tun_detach_all(dev);
+//	tun_detach_all(dev);
 }
 
 /* Net device open. */
@@ -2261,6 +2261,8 @@ static int __tun_set_ebpf(struct tun_struct *tun,
 static void tun_free_netdev(struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
+
+	tun_detach_all(dev);
 
 	BUG_ON(!(list_empty(&tun->disabled)));
 	free_percpu(tun->pcpu_stats);
