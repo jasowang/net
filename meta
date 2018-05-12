@@ -1,8 +1,7 @@
 Version: 1
-Previous: a5d48ad3a2d40f351c4395b8983dcfd60ef7737a
-Head: 7d768c86d07e5784348f774f6d6ce35d4c293389
+Previous: b45616a04cd4c72d06f2c29a10db2db3efcbf850
+Head: 7c3c2a6b67c2fda820779023d2472b3faece9fb3
 Applied:
-  vhost_net-introduce-helper-to: 2424d163add4c37d04569c5574310b34ee4fdfd1
-  refresh-temp: 7d768c86d07e5784348f774f6d6ce35d4c293389
+  vhost_net-introduce-helper-to: 7c3c2a6b67c2fda820779023d2472b3faece9fb3
 Unapplied:
 Hidden:
