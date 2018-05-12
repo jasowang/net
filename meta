@@ -1,10 +1,11 @@
 Version: 1
-Previous: 1802209945f0c2302b373823b336d0d0531a35af
-Head: 432e442a1983b0837700d7bdb83118bee15c6ff6
+Previous: 7beaff2904a53f1e7f390564183fe6672a790c3c
+Head: bc1f7f9c5f9ddc96ab863a49b98e190bcb5cdd33
 Applied:
   vhost_net-introduce-helper-to: a77b289161b461f81af3483fc40a5471a7fbf2b4
   vhost_net-introduce: 7fc194d9536c3ce9112760d02e59b72f8ef2b474
   vhost_net-introduce-0: a1e423d670acd166210d9a1b04b6a4598a945b24
   vhost_net-split-out-datacopy: 432e442a1983b0837700d7bdb83118bee15c6ff6
+  vhost_net-batch-update-used: bc1f7f9c5f9ddc96ab863a49b98e190bcb5cdd33
 Unapplied:
 Hidden:
