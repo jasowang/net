@@ -1,0 +1,11 @@
+Bottom: 7c5dfec560ba135a3ef5f6a9efaa8fb369c82df9
+Top:    7c5dfec560ba135a3ef5f6a9efaa8fb369c82df9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-12 10:48:35 +0800
+
+vhost_net: introduce helper to initialize tx iov iter
+
+
+---
+
+
