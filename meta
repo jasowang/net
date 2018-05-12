@@ -1,10 +1,9 @@
 Version: 1
-Previous: e1cab84b36a1037d7b3ddbb2b7cdd5dd282ed72c
-Head: daffabc66c95a75b52452b488511b3187e11e37a
+Previous: 2704f768d97f656815f79cce1ddea1059d59505c
+Head: cd8d1b5c034c0322688820d1910c9609e880a73e
 Applied:
   vhost_net-introduce-helper-to: 7c3c2a6b67c2fda820779023d2472b3faece9fb3
   vhost_net-introduce: 286e92d361d39a3cbbec46b9e9a0b4cbce38c227
-  vhost_net-introduce-0: db5c2224bb7cdbcdd4c98c7c4d91ae6fd4233b4d
-  refresh-temp: daffabc66c95a75b52452b488511b3187e11e37a
+  vhost_net-introduce-0: cd8d1b5c034c0322688820d1910c9609e880a73e
 Unapplied:
 Hidden:
