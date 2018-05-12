@@ -5,6 +5,8 @@ Date:   2018-05-13 07:59:51 +0800
 
 vhost_net: batch update used ring for datacopy
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
