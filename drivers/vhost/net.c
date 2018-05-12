@@ -459,11 +459,11 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
 	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
 }
 
-static int init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
-		         int hdr_size, int out)
+static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
+			    size_t hdr_size, int out)
 {
 	/* Skip header. TODO: support TSO. */
-	int len = iov_length(vq->iov, out);
+	size_t len = iov_length(vq->iov, out);
 
 	iov_iter_init(iter, WRITE, vq->iov, out, len);
 	iov_iter_advance(iter, hdr_size);
