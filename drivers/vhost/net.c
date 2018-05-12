@@ -481,9 +481,99 @@ static bool vhost_exceeds_weight(int pkts, int total_len)
 	       pkts >= VHOST_NET_PKT_WEIGHT;
 }
 
+static void handle_tx_copy(struct vhost_net *net)
+{
+	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_used_elem used;
+	unsigned out, in;
+	struct msghdr msg = {
+		.msg_name = NULL,
+		.msg_namelen = 0,
+		.msg_control = NULL,
+		.msg_controllen = 0,
+		.msg_flags = MSG_DONTWAIT,
+	};
+	size_t len, total_len = 0;
+	int err;
+	size_t hdr_size;
+	struct socket *sock;
+	int sent_pkts = 0;
+
+	mutex_lock(&vq->mutex);
+	sock = vq->private_data;
+	if (!sock)
+		goto out;
+
+	if (!vq_iotlb_prefetch(vq))
+		goto out;
+
+	vhost_disable_notify(&net->dev, vq);
+	vhost_net_disable_vq(net, vq);
+
+	hdr_size = nvq->vhost_hlen;
+
+	for (;;) {
+		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
+						ARRAY_SIZE(vq->iov),
+						&out, &in);
+		/* Nothing new?  Wait for eventfd to tell us they refilled. */
+		if (err == -ENOSPC) {
+			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+				vhost_disable_notify(&net->dev, vq);
+				continue;
+			}
+			break;
+		}
+		/* On error, stop handling until the next kick. */
+		if (unlikely(err < 0))
+			break;
+		if (in) {
+			vq_err(vq, "Unexpected descriptor format for TX: "
+			       "out %d, int %d\n", out, in);
+			break;
+		}
+
+		/* Sanity check */
+		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
+		if (!len) {
+			vq_err(vq, "Unexpected header len for TX: "
+			"%zd expected %zd\n",
+			len, hdr_size);
+			break;
+		}
+
+		total_len += len;
+
+		if (total_len < VHOST_NET_WEIGHT &&
+		    !vhost_vq_avail_empty(&net->dev, vq))
+			msg.msg_flags |= MSG_MORE;
+		else
+			msg.msg_flags &= ~MSG_MORE;
+
+		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+		err = sock->ops->sendmsg(sock, &msg, len);
+		if (unlikely(err < 0)) {
+			vhost_discard_vq_desc(vq, &used, 1);
+			vhost_net_enable_vq(net, vq);
+			break;
+		}
+		if (err != len)
+			pr_debug("Truncated TX packet: "
+				 " len %d != %zd\n", err, len);
+		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
+		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
+			vhost_poll_queue(&vq->poll);
+			break;
+		}
+	}
+out:
+	mutex_unlock(&vq->mutex);
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
-static void handle_tx(struct vhost_net *net)
+static void handle_tx_zerocopy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
@@ -501,7 +591,7 @@ static void handle_tx(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	struct vhost_used_elem used;
-	bool zcopy, zcopy_used;
+	bool zcopy_used;
 	int sent_pkts = 0;
 
 	mutex_lock(&vq->mutex);
@@ -516,13 +606,10 @@ static void handle_tx(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	hdr_size = nvq->vhost_hlen;
-	zcopy = nvq->ubufs;
 
 	for (;;) {
 		/* Release DMAs done buffers first */
-		if (zcopy)
-			vhost_zerocopy_signal_used(net, vq);
-
+		vhost_zerocopy_signal_used(net, vq);
 
 		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
 					       ARRAY_SIZE(vq->iov),
@@ -553,9 +640,9 @@ static void handle_tx(struct vhost_net *net)
 			break;
 		}
 
-		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
-				   && !vhost_exceeds_maxpend(net)
-				   && vhost_net_tx_select_zcopy(net);
+		zcopy_used = len >= VHOST_GOODCOPY_LEN
+			     && !vhost_exceeds_maxpend(net)
+			     && vhost_net_tx_select_zcopy(net);
 
 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
 		if (zcopy_used) {
@@ -613,6 +700,16 @@ static void handle_tx(struct vhost_net *net)
 	}
 out:
 	mutex_unlock(&vq->mutex);
+}
+
+static void handle_tx(struct vhost_net *net)
+{
+	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+
+	if (nvq->ubufs)
+		handle_tx_zerocopy(net);
+	else
+		handle_tx_copy(net);
 }
 
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
