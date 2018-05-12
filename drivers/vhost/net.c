@@ -481,8 +481,8 @@ static int init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
 
 static bool vhost_exceeds_weight(int pkts, int total_len)
 {
-	return total_len >= VHOST_NET_WEIGHT ||
-	       pkts >= VHOST_NET_PKT_WEIGHT;
+	return unlikely(total_len >= VHOST_NET_WEIGHT) ||
+	       unlikely(pkts >= VHOST_NET_PKT_WEIGHT);
 }
 
 /* Expects to be always run from workqueue - which acts as
