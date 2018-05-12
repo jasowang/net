@@ -489,7 +489,7 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
 				struct vhost_virtqueue *vq)
 {
 	return !vhost_vq_avail_empty(&net->dev, vq) &&
-	       likely(!vhost_exceeds_maxpand(net));
+	       likely(!vhost_exceeds_maxpend(net));
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -585,7 +585,7 @@ static void handle_tx(struct vhost_net *net)
 		}
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
-		    vhost_has_more_pkts(net, vq))
+		    vhost_has_more_pkts(net, vq)) {
 			msg.msg_flags |= MSG_MORE;
 		} else {
 			msg.msg_flags &= ~MSG_MORE;
