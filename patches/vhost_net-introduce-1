@@ -5,6 +5,8 @@ Date:   2018-05-12 11:01:29 +0800
 
 vhost_net: introduce vhost_has_more_pkts()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
