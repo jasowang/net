@@ -1,8 +1,8 @@
 Version: 1
-Previous: 7460ba5442f35e71238a961d47f7a9fe2773379e
-Head: baa0ecc292a9d9e40e32bb35f5544c0278187d71
+Previous: 0e362ee8cd0606ba57883fd88fcf75dc21ac5019
+Head: 29fe1357c543a254a97daea4ade1387ef92c9319
 Applied:
   vhost_net-introduce-helper-to: 7c3c2a6b67c2fda820779023d2472b3faece9fb3
-  vhost_net-introduce: baa0ecc292a9d9e40e32bb35f5544c0278187d71
+  vhost_net-introduce: 29fe1357c543a254a97daea4ade1387ef92c9319
 Unapplied:
 Hidden:
