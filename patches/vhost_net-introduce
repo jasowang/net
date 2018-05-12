@@ -1,5 +1,5 @@
-Bottom: 75fef7778d5397443fdec18f035348f7320a5047
-Top:    2829f6f3aad33715503272cad2af13f577038e9f
+Bottom: 6c0129f352c2cd3c1851b4dd8f2dfde46fb37074
+Top:    d468d5cad54e4beacedf176f503027ae1c0f4d6b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 10:54:47 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 18cd90e..d0a3c30 100644
+index 15d191a..de544ee 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -479,6 +479,12 @@ static int init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
+@@ -479,6 +479,12 @@ static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
  	return len;
  }
  
