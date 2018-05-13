@@ -428,16 +428,32 @@ static int vhost_net_enable_vq(struct vhost_net *n,
 	return vhost_poll_start(poll, sock->file);
 }
 
+static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_dev *dev = vq->dev;
+
+	if (!nvq->done_idx)
+		return;
+
+	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
+	nvq->done_idx = 0;
+}
+
 static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
-				    struct vhost_virtqueue *vq,
+				    struct vhost_net_virtqueue *nvq,
 				    unsigned int *out_num, unsigned int *in_num,
 				    bool *busyloop_intr)
 {
+	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
+		/* FLush batched heads first */
+		if (!nvq->ubufs)
+			vhost_net_signal_used(nvq);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(endtime)) {
@@ -493,7 +509,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, vq, out, in, busyloop_intr);
+	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, busyloop_intr);
 
 	if (ret < 0 || ret == vq->num)
 		return ret;
@@ -511,6 +527,10 @@ static int get_tx_bufs(struct vhost_net *net,
 			*len, nvq->vhost_hlen);
 		return -EFAULT;
 	}
+
+	vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, ret);
+	vq->heads[nvq->done_idx].len = 0;
+	++nvq->done_idx;
 
 	return ret;
 }
@@ -585,13 +605,15 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+		if (nvq->done_idx >= VHOST_NET_BATCH)
+			vhost_net_signal_used(nvq);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
 	}
 out:
+	vhost_net_signal_used(nvq);
 	mutex_unlock(&vq->mutex);
 }
 
@@ -751,18 +773,6 @@ static int sk_has_rx_data(struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
-}
-
-static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
-{
-	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_dev *dev = vq->dev;
-
-	if (!nvq->done_idx)
-		return;
-
-	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
-	nvq->done_idx = 0;
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
