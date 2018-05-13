@@ -431,17 +431,33 @@ static int vhost_net_enable_vq(struct vhost_net *n,
 	return vhost_poll_start(poll, sock->file);
 }
 
+static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_dev *dev = vq->dev;
+
+	if (!nvq->done_idx)
+		return;
+
+	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
+	nvq->done_idx = 0;
+}
+
 static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
-				    struct vhost_virtqueue *vq,
+				    struct vhost_net_virtqueue *nvq,
 				    struct vhost_used_elem *used_elem,
 				    struct iovec iov[], unsigned int iov_size,
 				    unsigned int *out_num, unsigned int *in_num)
 {
 	unsigned long uninitialized_var(endtime);
+	struct vhost_virtqueue *vq = &nvq->vq;
 	int r = vhost_get_vq_desc(vq, used_elem, vq->iov, ARRAY_SIZE(vq->iov),
 				  out_num, in_num, NULL, NULL);
 
 	if (r == -ENOSPC && vq->busyloop_timeout) {
+		/* FLush batched heads first */
+		if (!nvq->ubufs)
+			vhost_net_signal_used(nvq);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
@@ -493,7 +509,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, vq, used, vq->iov,
+	ret = vhost_net_tx_get_vq_desc(net, nvq, used, vq->iov,
 				       ARRAY_SIZE(vq->iov),
 				       out, in);
 	if (ret)
@@ -532,7 +548,6 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_used_elem used;
 	unsigned out, in;
 	struct msghdr msg = {
 		.msg_name = NULL,
@@ -558,7 +573,8 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
-		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
+		err = get_tx_bufs(net, nvq, vq->heads + nvq->done_idx,
+				  &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
@@ -579,20 +595,22 @@ static void handle_tx_copy(struct vhost_net *net)
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
-			vhost_discard_vq_desc(vq, &used, 1);
+			vhost_discard_vq_desc(vq, vq->heads, 1);
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
+		if (++nvq->done_idx >= VHOST_NET_BATCH)
+			vhost_net_signal_used(nvq);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
 	}
 out:
+	vhost_net_signal_used(nvq);
 	mutex_unlock(&vq->mutex);
 }
 
@@ -745,18 +763,6 @@ static int sk_has_rx_data(struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
-}
-
-static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
-{
-	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_dev *dev = vq->dev;
-
-	if (!nvq->done_idx)
-		return;
-
-	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
-	nvq->done_idx = 0;
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
