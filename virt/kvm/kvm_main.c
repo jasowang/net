@@ -2142,7 +2142,7 @@ void kvm_vcpu_block(struct kvm_vcpu *vcpu)
 			 * This sets KVM_REQ_UNHALT if an interrupt
 			 * arrives.
 			 */
-			if (kvm_vcpu_check_bloxck(vcpu) < 0) {
+			if (kvm_vcpu_check_block(vcpu) < 0) {
 				++vcpu->stat.halt_successful_poll;
 				if (!vcpu_valid_wakeup(vcpu))
 					++vcpu->stat.halt_poll_invalid;
