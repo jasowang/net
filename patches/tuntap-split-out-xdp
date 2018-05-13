@@ -3,7 +3,7 @@ Top:    3f399a41fbb2917c943a65724a0e9af9655b3b56
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-16 17:08:34 +0800
 
-tuntap: split out XDP processing logic
+vhost: build xdp
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
