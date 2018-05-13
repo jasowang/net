@@ -1,5 +1,5 @@
 Bottom: 00224ae3d3e6b3d060172ad4eca2348dc6c6e9b4
-Top:    feea54e910b879f05530643831541b1f8e9e4093
+Top:    d313f10735cb33598e1e326ef8dde77756e38665
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:46:51 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index f6e0f96..d425830 100644
+index f6e0f96..2560378 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1605,6 +1605,44 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
@@ -37,7 +37,7 @@ index f6e0f96..d425830 100644
 +			break;
 +		goto out;
 +	case XDP_TX:
-+		*err = tun_xdp_xmit(tun->dev, xdp);
++		*err = tun_xdp_tx(tun->dev, xdp);
 +		if (*err)
 +			break;
 +		tun_xdp_flush(tun->dev);
