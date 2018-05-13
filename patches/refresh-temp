@@ -3,7 +3,8 @@ Top:    d313f10735cb33598e1e326ef8dde77756e38665
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:20:25 +0800
 
-Refresh of tuntap-tweak-on-the-path-of
+tuntap: split out XDP logic
+
 
 ---
 
