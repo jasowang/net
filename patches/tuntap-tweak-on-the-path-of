@@ -9,7 +9,6 @@ If we're sure not to go native XDP, there's no need for several things
 like touching preemption counter and rcu stuffs.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-(cherry picked from commit 44757a126658fe8abe060e1dee7f06e8f387a41d)
 
 
 ---
