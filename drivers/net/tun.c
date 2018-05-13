@@ -1621,7 +1621,7 @@ static u32 tun_do_xdp(struct tun_struct *tun,
 			break;
 		goto out;
 	case XDP_TX:
-		*err = tun_xdp_xmit(tun->dev, xdp);
+		*err = tun_xdp_tx(tun->dev, xdp);
 		if (*err)
 			break;
 		tun_xdp_flush(tun->dev);
