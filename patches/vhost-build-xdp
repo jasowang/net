@@ -1,20 +1,19 @@
 Bottom: d313f10735cb33598e1e326ef8dde77756e38665
-Top:    3f399a41fbb2917c943a65724a0e9af9655b3b56
+Top:    7a53252ac978ba9612ae316034fc388dd40af68f
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-04-16 17:08:34 +0800
+Date:   2018-05-13 08:29:30 +0800
 
 vhost: build xdp
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f0639d7..b769a25 100644
+index f0639d7..090d436 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -589,6 +589,78 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -589,6 +589,80 @@ static void handle_tx_copy(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
@@ -50,14 +49,17 @@ index f0639d7..b769a25 100644
 +
 +	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
 +
-+	/* Copy vnet header in case underlayer device (TAP) needs it
-+	 * for XDP_PASS. */
++	/* We store two kinds of metadata in the header which will be
++	 * used for XDP_PASS to do build_skb():
++	 * offset 0: buflen
++	 * offset sizeof(int): vnet header
++	 */
 +	copied = copy_page_from_iter(alloc_frag->page,
-+				     alloc_frag->offset, sock_hlen, from);
++				     alloc_frag->offset + sizeof(int), sock_hlen, from);
 +	if (copied != sock_hlen)
 +		return -EFAULT;
 +
-+	gso = (struct virtio_net_hdr *)buf;
++	gso = (struct virtio_net_hdr *)(buf + sizeof(int));
 +
 +	if ((gso->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
 +	    vhost16_to_cpu(vq, gso->csum_start) +
@@ -81,8 +83,7 @@ index f0639d7..b769a25 100644
 +	xdp->data_hard_start = buf;
 +	xdp->data = buf + pad;
 +	xdp->data_end = xdp->data + len;
-+	/* Store buflen for the use of build_skb() in XDP_PASS */
-+	*(int *)(xdp->data_hard_start + SKB_DATA_ALIGN(nvq->sock_hlen))= buflen;
++	*(int *)(xdp->data_hard_start)= buflen;
 +
 +	get_page(alloc_frag->page);
 +	alloc_frag->offset += buflen;
