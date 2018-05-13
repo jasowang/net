@@ -1,5 +1,5 @@
 Version: 1
-Previous: 124bce9c1dc4a2fb29fc39d9efffee8f240ea2d3
+Previous: 9b4aa38b2743053770fe27dced5afbad6165bb43
 Head: c56ee20b0a696698fb106b83ba5886e90ce743ba
 Applied:
   vhost_net-introduce-helper-to: a77b289161b461f81af3483fc40a5471a7fbf2b4
@@ -9,5 +9,6 @@ Applied:
   vhost_net-batch-update-used: 3f24351915811c950b1d243afc90123754ebc5c0
   tuntap-enable-premmption-early: 52d2c166923b003b4563676bacaea94cc4f94301
   tuntap-simplify-error-handling: b79687473071d5f36191123c617b4b7814da893b
+  tuntap-tweak-on-the-path-of: c56ee20b0a696698fb106b83ba5886e90ce743ba
 Unapplied:
 Hidden:
