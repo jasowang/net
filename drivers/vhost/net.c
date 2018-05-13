@@ -508,6 +508,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	int sent_pkts = 0;
+	s16 nheads = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -547,6 +548,9 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (len < 0)
 			break;
 
+		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
+		vq->heads[nheads].len = 0;
+
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
@@ -565,13 +569,20 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+		if (++nheads == VHOST_RX_BATCH) {
+			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+						    nheads);
+			nheads = 0;
+		}
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
 	}
 out:
+	if (nheads)
+		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+					    nheads);
 	mutex_unlock(&vq->mutex);
 }
 
