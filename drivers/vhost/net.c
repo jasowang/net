@@ -567,6 +567,7 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -624,6 +625,12 @@ static void handle_tx_copy(struct vhost_net *net)
 
 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
 		vq->heads[nheads].len = 0;
+
+		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
+		if (!err)
+			msg.msg_control = &xdp;
+		else
+			msg.msg_control = NULL;
 
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
@@ -748,6 +755,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
