@@ -1,5 +1,5 @@
 Version: 1
-Previous: 434281f3263888db87d1ddb44c057a7d577b1c2e
+Previous: 6919bcb9c45df16ffd6a91a360300cdba7084fa1
 Head: b1824d0d91624036294c41f1e05df68983e603c8
 Applied:
   vhost_net-introduce-helper-to: a77b289161b461f81af3483fc40a5471a7fbf2b4
@@ -13,5 +13,6 @@ Applied:
   tuntap-split: 9d871ea7722cbeb3213b0e44680f7eec84218739
   vhost-build-xdp: 061ce1e452690c73124dfb7edbc34071bce5a264
   vhost-fix-for-storing-metadata: e519f11b2995764654bc6e25c43adbebd13109cb
+  vhost_net-passing-raw-xdp-buff: b1824d0d91624036294c41f1e05df68983e603c8
 Unapplied:
 Hidden:
