@@ -1,6 +1,6 @@
 Version: 1
-Previous: 1e0c77c27f54d3f8bbcbb11f4a637a483c40b887
-Head: 237665592b85913edae448c66fc70ac08d18a9f9
+Previous: d21afb634750ec6c1ecec034376ee7b810f87121
+Head: eb8536b4311df6b816553936857ea46f34622b1f
 Applied:
   vhost_net-introduce-helper-to: a77b289161b461f81af3483fc40a5471a7fbf2b4
   vhost_net-introduce: 7fc194d9536c3ce9112760d02e59b72f8ef2b474
@@ -12,7 +12,6 @@ Applied:
   tuntap-tweak-on-the-path-of: 3c974d5082add3b6d15416d7ede2f14d2cf9a23c
   tuntap-split: 9d871ea7722cbeb3213b0e44680f7eec84218739
   vhost-build-xdp: 534417c07bac80c9d3e5fc00eeea1a0ae7afb2ab
-  vhost_net-passing-raw-xdp-buff: db6a313bed39b0146ccc18918a72a1e73de962df
-  refresh-temp: 237665592b85913edae448c66fc70ac08d18a9f9
+  vhost_net-passing-raw-xdp-buff: eb8536b4311df6b816553936857ea46f34622b1f
 Unapplied:
 Hidden:
