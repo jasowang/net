@@ -1,5 +1,5 @@
 Bottom: 00224ae3d3e6b3d060172ad4eca2348dc6c6e9b4
-Top:    bca5d25ea924e73d107bea26db8215b1c42fcebe
+Top:    feea54e910b879f05530643831541b1f8e9e4093
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:46:51 +0800
 
@@ -14,10 +14,68 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index f6e0f96..ed04291 100644
+index f6e0f96..d425830 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1645,10 +1645,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1605,6 +1605,44 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
+ 	return true;
+ }
+ 
++static u32 tun_do_xdp(struct tun_struct *tun,
++		      struct tun_file *tfile,
++		      struct bpf_prog *xdp_prog,
++		      struct xdp_buff *xdp,
++		      int *err)
++{
++	u32 act = bpf_prog_run_xdp(xdp_prog, xdp);
++
++	switch (act) {
++	case XDP_REDIRECT:
++		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
++		xdp_do_flush_map();
++		if (*err)
++			break;
++		goto out;
++	case XDP_TX:
++		*err = tun_xdp_xmit(tun->dev, xdp);
++		if (*err)
++			break;
++		tun_xdp_flush(tun->dev);
++		goto out;
++	case XDP_PASS:
++		goto out;
++	default:
++		bpf_warn_invalid_xdp_action(act);
++		/* fall through */
++	case XDP_ABORTED:
++		trace_xdp_exception(tun->dev, xdp_prog, act);
++		/* fall through */
++	case XDP_DROP:
++		break;
++	}
++
++	put_page(virt_to_head_page(xdp->data_hard_start));
++out:
++	return act;
++}
++
+ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 				     struct tun_file *tfile,
+ 				     struct iov_iter *from,
+@@ -1615,10 +1653,10 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	struct sk_buff *skb = NULL;
+ 	struct bpf_prog *xdp_prog;
+ 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+-	unsigned int delta = 0;
+ 	char *buf;
+ 	size_t copied;
+-	int err, pad = TUN_RX_PAD;
++	int pad = TUN_RX_PAD;
++	int err = 0;
+ 
+ 	rcu_read_lock();
+ 	xdp_prog = rcu_dereference(tun->xdp_prog);
+@@ -1645,17 +1683,18 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	 * of xdp_prog above, this should be rare and for simplicity
  	 * we do XDP on skb in case the headroom is not enough.
  	 */
@@ -33,11 +91,75 @@ index f6e0f96..ed04291 100644
  
  	preempt_disable();
  	rcu_read_lock();
-@@ -1695,6 +1697,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 	xdp_prog = rcu_dereference(tun->xdp_prog);
+-	if (xdp_prog && !*skb_xdp) {
++	if (xdp_prog) {
+ 		struct xdp_buff xdp;
+-		void *orig_data;
+ 		u32 act;
+ 
+ 		xdp.data_hard_start = buf;
+@@ -1663,52 +1702,33 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		xdp_set_data_meta_invalid(&xdp);
+ 		xdp.data_end = xdp.data + len;
+ 		xdp.rxq = &tfile->xdp_rxq;
+-		orig_data = xdp.data;
+-		act = bpf_prog_run_xdp(xdp_prog, &xdp);
+-
+-		switch (act) {
+-		case XDP_REDIRECT:
+-			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
+-			xdp_do_flush_map();
+-			if (err)
+-				goto err_xdp;
+-			goto out;
+-		case XDP_TX:
+-			if (tun_xdp_tx(tun->dev, &xdp))
+-				goto err_xdp;
+-			tun_xdp_flush(tun->dev);
+-			goto out;
+-		case XDP_PASS:
+-			delta = orig_data - xdp.data;
+-			len = xdp.data_end - xdp.data;
+-			break;
+-		default:
+-			bpf_warn_invalid_xdp_action(act);
+-			/* fall through */
+-		case XDP_ABORTED:
+-			trace_xdp_exception(tun->dev, xdp_prog, act);
+-			/* fall through */
+-		case XDP_DROP:
++		act = tun_do_xdp(tun, tfile, xdp_prog, &xdp, &err);
++		if (err)
+ 			goto err_xdp;
+-		}
++		if (act != XDP_PASS)
++			goto out;
++
++		pad = xdp.data - xdp.data_hard_start;
++		len = xdp.data_end - xdp.data;
+ 	}
  	rcu_read_unlock();
  	preempt_enable();
  
 +build:
  	skb = build_skb(buf, buflen);
  	if (!skb) {
++		put_page(alloc_frag->page);
  		skb = ERR_PTR(-ENOMEM);
+ 		goto out;
+ 	}
+ 
+-	skb_reserve(skb, pad - delta);
++	skb_reserve(skb, pad);
+ 	skb_put(skb, len);
+ 
+ 	return skb;
+ 
+ err_xdp:
+-	alloc_frag->offset -= buflen;
+-	put_page(alloc_frag->page);
++	this_cpu_inc(tun->pcpu_stats->rx_dropped);
+ out:
+ 	rcu_read_unlock();
+ 	preempt_enable();
