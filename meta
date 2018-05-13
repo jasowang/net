@@ -1,5 +1,5 @@
 Version: 1
-Previous: 5d6a2530bf4d5ad08fb233f52db5c3acaa806b2f
+Previous: 2f070dd8f878acbc71cf36f2ea7fee84180aa90f
 Head: af26222231d31fa605df95ae2405318c1f6e0b8f
 Applied:
   vhost_net-introduce-helper-to: a77b289161b461f81af3483fc40a5471a7fbf2b4
@@ -11,5 +11,6 @@ Applied:
   tuntap-simplify-error-handling: b79687473071d5f36191123c617b4b7814da893b
   tuntap-tweak-on-the-path-of: 3c974d5082add3b6d15416d7ede2f14d2cf9a23c
   tuntap-split: 9d871ea7722cbeb3213b0e44680f7eec84218739
+  tuntap-split-out-xdp: af26222231d31fa605df95ae2405318c1f6e0b8f
 Unapplied:
 Hidden:
