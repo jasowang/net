@@ -1,5 +1,5 @@
 Bottom: bca5d25ea924e73d107bea26db8215b1c42fcebe
-Top:    feea54e910b879f05530643831541b1f8e9e4093
+Top:    d313f10735cb33598e1e326ef8dde77756e38665
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:20:25 +0800
 
@@ -8,7 +8,7 @@ Refresh of tuntap-tweak-on-the-path-of
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index ed04291..d425830 100644
+index ed04291..2560378 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1605,6 +1605,44 @@ static bool tun_can_build_skb(struct tun_struct *tun, struct tun_file *tfile,
@@ -31,7 +31,7 @@ index ed04291..d425830 100644
 +			break;
 +		goto out;
 +	case XDP_TX:
-+		*err = tun_xdp_xmit(tun->dev, xdp);
++		*err = tun_xdp_tx(tun->dev, xdp);
 +		if (*err)
 +			break;
 +		tun_xdp_flush(tun->dev);
