@@ -530,7 +530,6 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_used_elem used;
 	unsigned out, in;
 	struct msghdr msg = {
 		.msg_name = NULL,
@@ -543,6 +542,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	int err;
 	struct socket *sock;
 	int sent_pkts = 0;
+	s16 nheads = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -556,7 +556,8 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
-		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
+		err = get_tx_bufs(net, nvq, vq->heads + nheads,
+				  &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
@@ -577,20 +578,27 @@ static void handle_tx_copy(struct vhost_net *net)
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
-			vhost_discard_vq_desc(vq, &used, 1);
+			vhost_discard_vq_desc(vq, vq->heads, 1);
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
+		if (++nheads == VHOST_RX_BATCH) {
+			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+						    nheads);
+			nheads = 0;
+		}
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
 	}
 out:
+	if (nheads)
+		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+					    nheads);
 	mutex_unlock(&vq->mutex);
 }
 
