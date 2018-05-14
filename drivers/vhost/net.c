@@ -118,6 +118,7 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct xdp_buff xdp[VHOST_RX_BATCH];
+	struct vring_used_elem heads[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -567,11 +568,36 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	return 0;
 }
 
+static void vhost_tx_batch(struct vhost_net *net,
+			   struct vhost_net_virtqueue *nvq,
+			   struct socket *sock,
+			   struct msghdr *msghdr, int n)
+{
+	struct tun_msg_ctl ctl = {
+		.type = n << 16 | TUN_MSG_PTR,
+		.ptr = nvq->xdp,
+	};
+	int err;
+
+	if (n == 0)
+		return;
+
+	msghdr->msg_control = &ctl;
+	err = sock->ops->sendmsg(sock, msghdr, 0);
+
+	if (unlikely(err < 0)) {
+		/* FIXME vq_err() */
+		return;
+	}
+	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->vq.heads, n);
+}
+
+/* Expects to be always run from workqueue - which acts as
+ * read-size critical section for our kind of RCU. */
 static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -586,7 +612,6 @@ static void handle_tx_copy(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
-	struct tun_msg_ctl ctl;
 	int sent_pkts = 0;
 	s16 nheads = 0;
 
@@ -631,21 +656,18 @@ static void handle_tx_copy(struct vhost_net *net)
 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
 		vq->heads[nheads].len = 0;
 
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
-		if (!err) {
-			ctl.type = TUN_MSG_PTR;
-			ctl.ptr = &xdp;
-			msg.msg_control = &ctl;
-		} else
-			msg.msg_control = NULL;
-
 		total_len += len;
-		if (total_len < VHOST_NET_WEIGHT &&
-		    vhost_has_more_pkts(net, vq)) {
-			msg.msg_flags |= MSG_MORE;
-		} else {
-			msg.msg_flags &= ~MSG_MORE;
+		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &nvq->xdp[nheads]);
+		if (!err) {
+			if (++nheads < VHOST_RX_BATCH)
+				goto done;
+		} else if (err != -ENOSPC) {
+			vq_err(vq, "Fail to build XDP buffer\n");
+			break;
 		}
+
+		vhost_tx_batch(net, nvq, sock, &msg, nheads);
+		nheads = 0;
 
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
@@ -657,11 +679,9 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (++nheads == VHOST_RX_BATCH) {
-			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-						    nheads);
-			nheads = 0;
-		}
+
+		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+done:
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
