@@ -117,6 +117,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
+	struct xdp_buff xdp[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -578,6 +579,7 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -592,8 +594,10 @@ static void handle_tx_copy(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+	struct tun_msg_ctl ctl;
 	int sent_pkts = 0;
 	s16 nheads = 0;
+	bool can_xdp;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -607,6 +611,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	hdr_size = nvq->vhost_hlen;
+	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
 
 	for (;;) {
 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
@@ -636,6 +641,15 @@ static void handle_tx_copy(struct vhost_net *net)
 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
 		vq->heads[nheads].len = 0;
 
+		if (can_xdp &&
+		    !vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp)) {
+			ctl.type = TUN_MSG_PTR;
+			ctl.ptr = &xdp;
+			msg.msg_control = &ctl;
+		}
+		else
+			msg.msg_control = NULL;
+
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
@@ -651,6 +665,7 @@ static void handle_tx_copy(struct vhost_net *net)
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
+
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
@@ -742,7 +757,12 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
 		if (zcopy_used) {
 			struct ubuf_info *ubuf;
+			struct tun_msg_ctl ctl;
+
 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+
+			ctl.type = TUN_MSG_UBUF;
+			ctl.ptr = ubuf;
 
 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
@@ -750,8 +770,8 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 			ubuf->ctx = nvq->ubufs;
 			ubuf->desc = nvq->upend_idx;
 			refcount_set(&ubuf->refcnt, 1);
-			msg.msg_control = ubuf;
-			msg.msg_controllen = sizeof(ubuf);
+			msg.msg_control = &ctl;
+			msg.msg_controllen = sizeof(ctl);
 			ubufs = nvq->ubufs;
 			atomic_inc(&ubufs->refcount);
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
@@ -759,6 +779,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
