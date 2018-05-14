@@ -1,5 +1,5 @@
 Bottom: 88bba080aac2fb2cc0db59233df27aba25bac2f8
-Top:    88b8781c127102576c0b8a464950f33e4aa814c9
+Top:    af68676c883701598841cb548a32e813c6746be4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 14:25:10 +0800
 
@@ -23,7 +23,7 @@ index 4102f0f..be8a009 100644
  	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 80add75..1987a6e 100644
+index 80add75..85e2c31 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -595,6 +595,7 @@ static void handle_tx_copy(struct vhost_net *net)
@@ -57,22 +57,11 @@ index 80add75..1987a6e 100644
  		total_len += len;
  		if (total_len < VHOST_NET_WEIGHT &&
  		    vhost_has_more_pkts(net, vq)) {
-@@ -655,8 +658,10 @@ static void handle_tx_copy(struct vhost_net *net)
- 		if (unlikely(err < 0)) {
- 			vhost_discard_vq_desc(vq, 1);
+@@ -657,6 +660,7 @@ static void handle_tx_copy(struct vhost_net *net)
  			vhost_net_enable_vq(net, vq);
-+			mutex_unlock(&vq->mutex);
  			break;
  		}
 +
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
-@@ -675,6 +680,7 @@ static void handle_tx_copy(struct vhost_net *net)
- 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
- 					    nheads);
- 	mutex_unlock(&vq->mutex);
-+	return;
- }
- 
- /* Expects to be always run from workqueue - which acts as
