@@ -595,6 +595,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	int sent_pkts = 0;
 	s16 nheads = 0;
+	bool can_xdp;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -608,6 +609,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	hdr_size = nvq->vhost_hlen;
+	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
 
 	for (;;) {
 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
@@ -637,11 +639,12 @@ static void handle_tx_copy(struct vhost_net *net)
 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
 		vq->heads[nheads].len = 0;
 
-		err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp);
-		if (!err)
+		if (can_xdp &&
+		    !vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp))
 			msg.msg_control = &xdp;
 		else
 			msg.msg_control = NULL;
+
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
@@ -655,8 +658,10 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (unlikely(err < 0)) {
 			vhost_discard_vq_desc(vq, 1);
 			vhost_net_enable_vq(net, vq);
+			mutex_unlock(&vq->mutex);
 			break;
 		}
+
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
@@ -675,6 +680,7 @@ out:
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    nheads);
 	mutex_unlock(&vq->mutex);
+	return;
 }
 
 /* Expects to be always run from workqueue - which acts as
