@@ -1,5 +1,5 @@
 Version: 1
-Previous: de3b1c4314b874913ac190f81f11f416c9e7258d
+Previous: 9054b2f2ebd5f5567f62027706bb0dcc650c636c
 Head: 407847b1cc389676925ad2ebc59a1bc2cb298606
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
@@ -17,6 +17,5 @@ Applied:
   tuntap-allow-receiving-xdp: fe5511fc01fb15fb7ee30513f457570755cddab6
   vhost-passing-xdp-buffers-to: 407847b1cc389676925ad2ebc59a1bc2cb298606
 Unapplied:
-  vhost_net-passing-raw-xdp-buff: c1ad0b09f25368909699faa1346d7175c7355db2
   vhost_net-batch-submitting-xdp: 07feb81996f44f8bc4342bc009cbe636910d65f0
 Hidden:
