@@ -655,8 +655,13 @@ static void handle_tx_copy(struct vhost_net *net)
 
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
-		if (unlikely(err < 0))
-			goto err;
+		if (unlikely(err < 0)) {
+			vhost_discard_vq_desc(vq, 1);
+			vhost_net_enable_vq(net, vq);
+			mutex_unlock(&vq->mutex);
+			break;
+		}
+
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
@@ -674,11 +679,6 @@ out:
 	if (nheads)
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    nheads);
-	mutex_unlock(&vq->mutex);
-	return;
-err:
-	vhost_discard_vq_desc(vq, 1);
-	vhost_net_enable_vq(net, vq);
 	mutex_unlock(&vq->mutex);
 	return;
 }
