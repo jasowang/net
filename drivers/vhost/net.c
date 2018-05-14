@@ -556,7 +556,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	void *buf;
 	int copied;
 
-	if (len < nvq->sock_hlen)
+	if (unlikely(len < nvq->sock_hlen))
 		return -EFAULT;
 
 	if (SKB_DATA_ALIGN(len + pad) +
@@ -612,11 +612,35 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	return 0;
 }
 
+static void vhost_tx_batch(struct vhost_net *net,
+			   struct vhost_net_virtqueue *nvq,
+			   struct socket *sock,
+			   struct msghdr *msghdr)
+{
+	struct tun_msg_ctl ctl = {
+		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
+		.ptr = nvq->xdp,
+	};
+	int err;
+
+	if (n == 0)
+		return;
+
+	msghdr->msg_control = &ctl;
+	err = sock->ops->sendmsg(sock, msghdr, 0);
+	if (unlikely(err < 0)) {
+		/* FIXME vq_err() */
+		vq_err(&nvq->vq, "sendmsg err!\n");
+		return;
+	}
+
+	vhost_net_signal_used(nvq);
+}
+
 static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -654,19 +678,23 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		vq->heads[nvq->done_idx].len = 0;
 		batch_len += len;
 
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
-		if (!err) {
-			ctl.type = TUN_MSG_PTR;
-			ctl.ptr = &xdp;
-			msg.msg_control = &ctl;
-		} else
-			msg.msg_control = NULL;
 
 		total_len += len;
-		if (tx_can_batch(vq, total_len))
-			msg.msg_flags |= MSG_MORE;
-		else
-			msg.msg_flags &= ~MSG_MORE;
+		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
+					  &nvq->xdp[nvq->done_idx]);
+
+		if (!err) {
+			if (++nvq->done_idx == VHOST_RX_BATCH)
+				vhost_tx_batch(net, nvq, sock, &msg)
+			goto done;
+		} else if (unlikely(err != -ENOSPC)) {
+			vq_err(vq, "Fail to build XDP buffer\n");
+			break;
+		}
+
+		/* Flush batched packets */
+		vhost_tx_batch(net, nvq, sock, &msg);
+		msg.msg_control = NULL;
 
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
@@ -678,11 +706,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (++nvq->done_idx >= VHOST_NET_BATCH ||
-		    batch_len >= VHOST_NET_BATCH_BYTES) {
-			batch_len = 0;
-			vhost_net_signal_used(nvq);
-		}
+		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+done:
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
