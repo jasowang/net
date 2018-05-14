@@ -589,7 +589,7 @@ static void vhost_tx_batch(struct vhost_net *net,
 		/* FIXME vq_err() */
 		return;
 	}
-	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->vq->heads, n);
+	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->vq.heads, n);
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -612,7 +612,6 @@ static void handle_tx_copy(struct vhost_net *net)
 	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
-	struct tun_msg_ctl ctl;
 	int sent_pkts = 0;
 	s16 nheads = 0;
 
