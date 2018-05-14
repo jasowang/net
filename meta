@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4ff49bef24e59931f2b26a55bfa8818b08a7a481
-Head: a818e50abeb96daf312b9e63c89745f2490faaa6
+Previous: ea8a1962aef8aa983e0e65d6181e4b89b19d2a2a
+Head: c1ad0b09f25368909699faa1346d7175c7355db2
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   net-core-introduce: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
@@ -14,7 +14,7 @@ Applied:
   tuntap-tweak-on-the-path-of: 53f9101892f75400cca9fa5d548caf4758823346
   tuntap-split-out-xdp-logic: daaf3a1056a113a9351a06c3d23f41a3a83f8ad2
   vhost-build-xdp: a818e50abeb96daf312b9e63c89745f2490faaa6
-Unapplied:
   vhost_net-passing-raw-xdp-buff: c1ad0b09f25368909699faa1346d7175c7355db2
+Unapplied:
   vhost_net-batch-submitting-xdp: 07feb81996f44f8bc4342bc009cbe636910d65f0
 Hidden:
