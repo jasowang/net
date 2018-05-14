@@ -1,0 +1,65 @@
+Bottom: fcaf031ac84f089cdf8f0f099acbb088d43deb92
+Top:    f0ee32bf29fd8a4057b15230a1065cf5c3b5f9d1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-14 14:10:38 +0800
+
+Refresh of refresh-temp
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index cbd8fc2..bec4109 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -512,7 +512,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+ 	void *buf;
+ 	int copied;
+ 
+-	if (len < nvq->sock_hlen)
++	if (unlikely(len < nvq->sock_hlen))
+ 		return -EFAULT;
+ 
+ 	if (SKB_DATA_ALIGN(len + pad) +
+@@ -587,6 +587,7 @@ static void vhost_tx_batch(struct vhost_net *net,
+ 
+ 	if (unlikely(err < 0)) {
+ 		/* FIXME vq_err() */
++		vq_err(&nvq->vq, "sendmsg err!\n");
+ 		return;
+ 	}
+ 	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->vq.heads, n);
+@@ -657,16 +658,21 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vq->heads[nheads].len = 0;
+ 
+ 		total_len += len;
+-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &nvq->xdp[nheads]);
++		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
++					  &nvq->xdp[nheads]);
+ 		if (!err) {
+-			if (++nheads < VHOST_RX_BATCH)
+-				goto done;
+-		} else if (err != -ENOSPC) {
++			if (++nheads == VHOST_RX_BATCH) {
++				vhost_tx_batch(net, nvq, sock, &msg, nheads);
++				nheads = 0;
++			}
++			goto done;
++		} else if (unlikely(err != -ENOSPC)) {
+ 			vq_err(vq, "Fail to build XDP buffer\n");
+ 			break;
+ 		}
+ 
+ 		vhost_tx_batch(net, nvq, sock, &msg, nheads);
++		msg.msg_control = NULL;
+ 		nheads = 0;
+ 
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+@@ -689,8 +695,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	}
+ out:
+ 	if (nheads)
+-		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+-					    nheads);
++		vhost_tx_batch(net, nvq, sock, &msg, nheads);
+ 	mutex_unlock(&vq->mutex);
+ }
