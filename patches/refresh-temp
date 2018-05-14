@@ -1,0 +1,40 @@
+Bottom: 594f3884c31e215a4715569ca4a55d21563fd5b8
+Top:    cf1f25b0e1404c161eb0ab95ac74e2330d486149
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-14 14:41:19 +0800
+
+Refresh of fix-for-flag
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 7777b21..85a2fa9 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -595,7 +595,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	int sent_pkts = 0;
+ 	s16 nheads = 0;
+-	bool can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
++	bool can_xdp;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
+@@ -609,6 +609,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
+ 
+ 	hdr_size = nvq->vhost_hlen;
++	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
+ 
+ 	for (;;) {
+ 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+@@ -640,7 +641,8 @@ static void handle_tx_copy(struct vhost_net *net)
+ 
+ 		msg.msg_control = NULL;
+ 		if (can_xdp) {
+-			err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
++			err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter,
++						  &xdp);
+ 			if (!err)
+ 				msg.msg_control = &xdp;
+ 			else if (unlikely(err != -ENOSPC))
