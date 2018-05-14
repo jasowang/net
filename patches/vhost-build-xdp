@@ -1,7 +1,7 @@
 Bottom: 3122b53715f61ac2b5a35f1435566d346018c2e3
-Top:    d8a3190bd956dce84135211fb4efa7ce833a7563
+Top:    fa25bdab80edbd346e0e486d4b50af92efdade3e
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-05-13 08:29:30 +0800
+Date:   2018-05-14 16:21:23 +0800
 
 vhost: build xdp
 
@@ -10,10 +10,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f0639d7..75501d2 100644
+index f0639d7..c2b4751 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -492,6 +492,88 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
+@@ -117,6 +117,7 @@ struct vhost_net_virtqueue {
+ 	struct vhost_net_ubuf_ref *ubufs;
+ 	struct ptr_ring *rx_ring;
+ 	struct vhost_net_buf rxq;
++	struct xdp_buff xdp[VHOST_RX_BATCH];
+ };
+ 
+ struct vhost_net {
+@@ -492,10 +493,93 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
  	       likely(!vhost_exceeds_maxpend(net));
  }
  
@@ -102,3 +110,101 @@ index f0639d7..75501d2 100644
  static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+ 	struct vhost_virtqueue *vq = &nvq->vq;
++	struct xdp_buff xdp;
+ 	unsigned out, in;
+ 	int head;
+ 	struct msghdr msg = {
+@@ -510,8 +594,10 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	size_t hdr_size;
+ 	struct socket *sock;
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
++	struct tun_msg_ctl ctl;
+ 	int sent_pkts = 0;
+ 	s16 nheads = 0;
++	bool can_xdp;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
+@@ -525,6 +611,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
+ 
+ 	hdr_size = nvq->vhost_hlen;
++	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
+ 
+ 	for (;;) {
+ 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+@@ -554,6 +641,15 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
+ 		vq->heads[nheads].len = 0;
+ 
++		if (can_xdp &&
++		    !vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp)) {
++			ctl.type = TUN_MSG_PTR;
++			ctl.ptr = &xdp;
++			msg.msg_control = &ctl;
++		}
++		else
++			msg.msg_control = NULL;
++
+ 		total_len += len;
+ 		if (total_len < VHOST_NET_WEIGHT &&
+ 		    vhost_has_more_pkts(net, vq)) {
+@@ -569,6 +665,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 			vhost_net_enable_vq(net, vq);
+ 			break;
+ 		}
++
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+@@ -660,16 +757,21 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+ 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
+ 		if (zcopy_used) {
+ 			struct ubuf_info *ubuf;
++			struct tun_msg_ctl ctl;
++
+ 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+ 
++			ctl.type = TUN_MSG_UBUF;
++			ctl.ptr = ubuf;
++
+ 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
+ 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+ 			ubuf->callback = vhost_zerocopy_callback;
+ 			ubuf->ctx = nvq->ubufs;
+ 			ubuf->desc = nvq->upend_idx;
+ 			refcount_set(&ubuf->refcnt, 1);
+-			msg.msg_control = ubuf;
+-			msg.msg_controllen = sizeof(ubuf);
++			msg.msg_control = &ctl;
++			msg.msg_controllen = sizeof(ctl);
+ 			ubufs = nvq->ubufs;
+ 			atomic_inc(&ubufs->refcount);
+ 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+@@ -677,6 +779,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+ 			msg.msg_control = NULL;
+ 			ubufs = NULL;
+ 		}
++
+ 		total_len += len;
+ 		if (total_len < VHOST_NET_WEIGHT &&
+ 		    vhost_has_more_pkts(net, vq)) {
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index 3d2996d..ba46dce 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -19,6 +19,13 @@
+ 
+ #define TUN_XDP_FLAG 0x1UL
+ 
++#define TUN_MSG_UBUF 1
++#define TUN_MSG_PTR  2
++struct tun_msg_ctl {
++	int type;
++	void *ptr;
++};
++
+ #if defined(CONFIG_TUN) || defined(CONFIG_TUN_MODULE)
+ struct socket *tun_get_socket(struct file *);
+ struct ptr_ring *tun_get_tx_ring(struct file *file);
