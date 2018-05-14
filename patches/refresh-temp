@@ -5,6 +5,9 @@ Date:   2018-05-14 11:09:49 +0800
 
 Refresh of tuntap-introduce
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
