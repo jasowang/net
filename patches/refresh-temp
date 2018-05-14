@@ -3,7 +3,7 @@ Top:    fcaf031ac84f089cdf8f0f099acbb088d43deb92
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
-Refresh of tuntap-introduce
+vhost_net: batch submitting XDP buffers to underlayer sockets
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
