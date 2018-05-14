@@ -1,5 +1,5 @@
 Bottom: eddaa7e5536991a3ed26bb3d9af20bc73479fedb
-Top:    384ca1d08c5a16b2c731c7c9c507b51f977a136b
+Top:    2d4c256dfd1c1162d6ed0da5c3604b45fb62878d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
@@ -88,7 +88,7 @@ index b586b3f..5d16d18 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 0d84de6..f83680a 100644
+index 0d84de6..bcdb3ba 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -118,6 +118,7 @@ struct vhost_net_virtqueue {
@@ -185,17 +185,3 @@ index 0d84de6..f83680a 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -769,12 +790,12 @@ static void handle_tx_zerocopy(struct vhost_net *net)
- 		}
- 
- 		total_len += len;
-+
- 		if (total_len < VHOST_NET_WEIGHT &&
- 		    vhost_has_more_pkts(net, vq)) {
- 			msg.msg_flags |= MSG_MORE;
- 		} else {
- 			msg.msg_flags &= ~MSG_MORE;
--		}
- 
- 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
- 		err = sock->ops->sendmsg(sock, &msg, len);
