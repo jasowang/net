@@ -1,5 +1,5 @@
-Bottom: eccb3a5d57dd6389c5502966547160d8548e0cd9
-Top:    5dd56f3e495be66660e9b2c0ba41dd83faee5a23
+Bottom: dafe44488ed37dc84cb0aa01a169de8ff8f82e0a
+Top:    dc093fb7464b8683c084567ce0106aa7c1baf586
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 4ebac76..4682fcc 100644
+index 5c44299..109a79c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -492,9 +492,95 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
+@@ -489,9 +489,95 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
  	       likely(!vhost_exceeds_maxpend(net));
  }
  
@@ -111,7 +111,7 @@ index 4ebac76..4682fcc 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -512,7 +598,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -509,7 +595,7 @@ static void handle_tx(struct vhost_net *net)
  	size_t hdr_size;
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
@@ -120,7 +120,7 @@ index 4ebac76..4682fcc 100644
  	int sent_pkts = 0;
  
  	mutex_lock(&vq->mutex);
-@@ -527,13 +613,10 @@ static void handle_tx(struct vhost_net *net)
+@@ -524,13 +610,10 @@ static void handle_tx(struct vhost_net *net)
  	vhost_net_disable_vq(net, vq);
  
  	hdr_size = nvq->vhost_hlen;
@@ -135,7 +135,7 @@ index 4ebac76..4682fcc 100644
  
  		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
  						ARRAY_SIZE(vq->iov),
-@@ -559,9 +642,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -556,9 +639,9 @@ static void handle_tx(struct vhost_net *net)
  		if (len < 0)
  			break;
  
@@ -148,7 +148,7 @@ index 4ebac76..4682fcc 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -620,6 +703,16 @@ static void handle_tx(struct vhost_net *net)
+@@ -617,6 +700,16 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
