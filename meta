@@ -1,6 +1,6 @@
 Version: 1
-Previous: b3e76a66efcaf2fb69dc99ebfa9e00f33f993ad0
-Head: 43568e5c8be545cb6fb6854f859f2ca340686c73
+Previous: fbb2d63a11f40e883c317c72d33a5170bdb62fd7
+Head: 7d7d8525b3aef0a05362b3d6fdcb325945ebea63
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   net-core-introduce: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
@@ -16,6 +16,7 @@ Applied:
   vhost-build-xdp: a818e50abeb96daf312b9e63c89745f2490faaa6
   vhost_net-passing-raw-xdp-buff: 22a715d9bb706bf5e741104a7815cf1e05d3697d
   fix-for-flag: 43568e5c8be545cb6fb6854f859f2ca340686c73
+  refresh-temp: 7d7d8525b3aef0a05362b3d6fdcb325945ebea63
 Unapplied:
   tuntap-introduce: bf90ae2a9e70c263f97bdebe29e52097da8b1cd5
   vhost_net-batch-submitting-xdp: 5673b0c6f94eeb200f4df9f714f06d39c127d7fe
