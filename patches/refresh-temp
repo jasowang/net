@@ -1,0 +1,41 @@
+Bottom: 7b2adeb89d37421008f13ae0371051998f4c0ea6
+Top:    88b8781c127102576c0b8a464950f33e4aa814c9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-14 16:05:21 +0800
+
+Refresh of fix-for-flag
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index bc48114..1987a6e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -655,8 +655,13 @@ static void handle_tx_copy(struct vhost_net *net)
+ 
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+ 		err = sock->ops->sendmsg(sock, &msg, len);
+-		if (unlikely(err < 0))
+-			goto err;
++		if (unlikely(err < 0)) {
++			vhost_discard_vq_desc(vq, 1);
++			vhost_net_enable_vq(net, vq);
++			mutex_unlock(&vq->mutex);
++			break;
++		}
++
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+@@ -676,11 +681,6 @@ static void handle_tx_copy(struct vhost_net *net)
+ 					    nheads);
+ 	mutex_unlock(&vq->mutex);
+ 	return;
+-err:
+-	vhost_discard_vq_desc(vq, 1);
+-	vhost_net_enable_vq(net, vq);
+-	mutex_unlock(&vq->mutex);
+-	return;
+ }
+ 
+ /* Expects to be always run from workqueue - which acts as
