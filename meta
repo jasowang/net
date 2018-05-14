@@ -1,8 +1,9 @@
 Version: 1
-Previous: 31a2db45c135d89536f68c6e88ca704a9ff45e98
-Head: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
+Previous: 86d024c9760a4031564300488cf9819fde3d0337
+Head: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
+  net-core-introduce: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
 Unapplied:
   vhost_net-introduce-helper-to: a22d8d6ae428c86fdd261e6da978b0901a85b4ee
   vhost_net-introduce: 371f4e27c8c6e07e174e3a4a90d8cfbb7ec37786
@@ -14,7 +15,6 @@ Unapplied:
   tuntap-tweak-on-the-path-of: f8f1fdb46faec4e450b8713e0914fe897aa84608
   tuntap-split-out-xdp-logic: f1baf15b54d1998c820c0cf1324cea1b01594e0c
   vhost-build-xdp: f4c7d6fb382933723d2cf2b04ca4ed4883cf1d1b
-  net-core-introduce: 8744fd947c32925c7c20957484846bdda6470b65
   vhost_net-passing-raw-xdp-buff: 96bd8239d07968defcfd994f51bafb3f9c85c51c
   fix-for-flag: 0f5a0d48e2673700df459174f804959a4c8df7f9
   tuntap-introduce: bf90ae2a9e70c263f97bdebe29e52097da8b1cd5
