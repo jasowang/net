@@ -1,5 +1,5 @@
-Bottom: 63588a29f6f7717fc09db4d6865a20345bf3d720
-Top:    ed5d288649617a87f699575c15808eb910cb4a31
+Bottom: db210320dc74aa19001708861f68806232fa0d6f
+Top:    388d7eb9d4d4ef175b26e8451855304858976b40
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
@@ -91,7 +91,7 @@ index 1f7fa39..4937235 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 1093c591..ab39ad1 100644
+index c2b4751..6a6ef6a 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -118,6 +118,7 @@ struct vhost_net_virtqueue {
@@ -181,7 +181,7 @@ index 1093c591..ab39ad1 100644
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -665,11 +688,9 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -669,11 +692,9 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -196,7 +196,7 @@ index 1093c591..ab39ad1 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -677,8 +698,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -681,8 +702,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	}
  out:
  	if (nheads)
@@ -204,5 +204,4 @@ index 1093c591..ab39ad1 100644
 -					    nheads);
 +		vhost_tx_batch(net, nvq, sock, &msg, nheads);
  	mutex_unlock(&vq->mutex);
- 	return;
- err:
+ }
