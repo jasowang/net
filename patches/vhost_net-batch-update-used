@@ -1,5 +1,5 @@
-Bottom: dc093fb7464b8683c084567ce0106aa7c1baf586
-Top:    719772f56c930b6a136957149f15a0cafce66089
+Bottom: d12535b6a12be7db49fbafc0b584c413fb675824
+Top:    c6426ccab9c2324110cfdcc1cee7e54ca9e883bc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -10,10 +10,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 109a79c..b4c2291 100644
+index 4682fcc..f0639d7 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -508,6 +508,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -511,6 +511,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	int sent_pkts = 0;
@@ -21,7 +21,7 @@ index 109a79c..b4c2291 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -547,6 +548,9 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -550,6 +551,9 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (len < 0)
  			break;
  
@@ -31,7 +31,7 @@ index 109a79c..b4c2291 100644
  		total_len += len;
  		if (total_len < VHOST_NET_WEIGHT &&
  		    vhost_has_more_pkts(net, vq)) {
-@@ -565,13 +569,20 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -568,13 +572,20 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
