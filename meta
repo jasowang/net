@@ -1,9 +1,9 @@
 Version: 1
-Previous: 8bda411b2b8ab228a2412b2d76488dc564d802af
-Head: b2d6cee117f708d493c020f9f355297321507be7
+Previous: 55bd14a7f3ae2acf907862f4fd4d423d1d18a82f
+Head: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
 Applied:
+  revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
 Unapplied:
-  revert-x86-remove: 9c3912f2a4b80861cd23cb430fb6eaabbb470a5c
   vhost_net-introduce-helper-to: 7881026e4398769072d573cdebadc05ce7eb8b41
   vhost_net-introduce: ca4a11d9b5808d50412e74dd48b29f71d8ef4676
   vhost_net-introduce-0: 5cb3d3b82a0dc02d5d10c896cf5e51df21caf456

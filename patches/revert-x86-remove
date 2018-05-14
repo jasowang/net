@@ -1,5 +1,5 @@
-Bottom: ce4a4a7fcf7881015a9e01f8a2bbec0a9eacf590
-Top:    b236d856e8fd1938439261873d7fc07e29549aca
+Bottom: 2c6975b47034de78fc899b4191260bb2704efc0f
+Top:    8d505aa397edb92ca8a2f03be4f849b02b86f801
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-02 14:20:40 +0800
 
@@ -11,7 +11,7 @@ This reverts commit d0266046ad54e0c964941364cd82a0d0478ce286.
 ---
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index c07f492..b47aab1 100644
+index d51a71d..1a6cfd4 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
 @@ -398,6 +398,17 @@ config X86_FEATURE_NAMES
