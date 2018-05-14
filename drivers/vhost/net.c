@@ -642,7 +642,6 @@ static void handle_tx_copy(struct vhost_net *net)
 			msg.msg_control = &xdp;
 		else
 			msg.msg_control = NULL;
-
 		total_len += len;
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
