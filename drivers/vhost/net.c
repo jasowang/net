@@ -658,7 +658,6 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (unlikely(err < 0)) {
 			vhost_discard_vq_desc(vq, 1);
 			vhost_net_enable_vq(net, vq);
-			mutex_unlock(&vq->mutex);
 			break;
 		}
 
@@ -680,7 +679,6 @@ out:
 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
 					    nheads);
 	mutex_unlock(&vq->mutex);
-	return;
 }
 
 /* Expects to be always run from workqueue - which acts as
