@@ -1,5 +1,5 @@
 Bottom: 88bba080aac2fb2cc0db59233df27aba25bac2f8
-Top:    88bba080aac2fb2cc0db59233df27aba25bac2f8
+Top:    7b2adeb89d37421008f13ae0371051998f4c0ea6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 14:25:10 +0800
 
@@ -10,4 +10,77 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 4102f0f..be8a009 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -3281,6 +3281,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+ 	INIT_LIST_HEAD(&tfile->next);
+ 
+ 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
++	sock_set_flag(&tfile->sk, SOCK_XDP_BUFF);
+ 
+ 	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 80add75..bc48114 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -595,6 +595,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+ 	int sent_pkts = 0;
+ 	s16 nheads = 0;
++	bool can_xdp;
+ 
+ 	mutex_lock(&vq->mutex);
+ 	sock = vq->private_data;
+@@ -608,6 +609,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
+ 
+ 	hdr_size = nvq->vhost_hlen;
++	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
+ 
+ 	for (;;) {
+ 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+@@ -637,11 +639,12 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
+ 		vq->heads[nheads].len = 0;
+ 
+-		err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp);
+-		if (!err)
++		if (can_xdp &&
++		    !vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp))
+ 			msg.msg_control = &xdp;
+ 		else
+ 			msg.msg_control = NULL;
++
+ 		total_len += len;
+ 		if (total_len < VHOST_NET_WEIGHT &&
+ 		    vhost_has_more_pkts(net, vq)) {
+@@ -652,11 +655,8 @@ static void handle_tx_copy(struct vhost_net *net)
+ 
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+ 		err = sock->ops->sendmsg(sock, &msg, len);
+-		if (unlikely(err < 0)) {
+-			vhost_discard_vq_desc(vq, 1);
+-			vhost_net_enable_vq(net, vq);
+-			break;
+-		}
++		if (unlikely(err < 0))
++			goto err;
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+@@ -675,6 +675,12 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+ 					    nheads);
+ 	mutex_unlock(&vq->mutex);
++	return;
++err:
++	vhost_discard_vq_desc(vq, 1);
++	vhost_net_enable_vq(net, vq);
++	mutex_unlock(&vq->mutex);
++	return;
+ }
+ 
+ /* Expects to be always run from workqueue - which acts as
