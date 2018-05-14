@@ -1,6 +1,6 @@
 Version: 1
-Previous: d7db61f3e7bfaacff3924d635f49613bb93015ad
-Head: b67a2db6a8019a67f529085e79febcd51515f6c3
+Previous: 9658b9149dc69d69dd41d4c68e3fd3a9c90ff6dd
+Head: 25e042d300531f6c0530ebd9debc282e6992d9ae
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost_net-introduce-helper-to: a22d8d6ae428c86fdd261e6da978b0901a85b4ee
@@ -16,5 +16,6 @@ Applied:
   vhost_net-passing-raw-xdp-buff: 013e076ab27c6db8b20519e461c0f727512bbc6b
   tuntap-introduce: bf90ae2a9e70c263f97bdebe29e52097da8b1cd5
   refresh-temp: b67a2db6a8019a67f529085e79febcd51515f6c3
+  refresh-temp-0: 25e042d300531f6c0530ebd9debc282e6992d9ae
 Unapplied:
 Hidden:
