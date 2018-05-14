@@ -495,7 +495,11 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
 #define VHOST_NET_HEADROOM 256
 #define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
 
+/* Build XDP buff for underlayer socket and store metadata at front of
+ * the buffer.
+ */
 static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+			       struct socket *sock,
 			       struct iov_iter *from,
 			       struct xdp_buff *xdp)
 {
@@ -510,8 +514,11 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	void *buf;
 	int copied;
 
-	if (len < nvq->sock_hlen)
+	if (unlikely(len < nvq->sock_hlen))
 		return -EFAULT;
+
+	if (sock->sk->sk_sndbuf != INT_MAX)
+		return -ENOSPC;
 
 	if (SKB_DATA_ALIGN(len + pad) +
 	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) > PAGE_SIZE)
@@ -530,7 +537,8 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	 * offset sizeof(int): vnet header
 	 */
 	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset + sizeof(int), sock_hlen, from);
+				     alloc_frag->offset + sizeof(int),
+				     sock_hlen, from);
 	if (copied != sock_hlen)
 		return -EFAULT;
 
