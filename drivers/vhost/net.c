@@ -637,7 +637,7 @@ static void handle_tx_copy(struct vhost_net *net)
 		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
 		vq->heads[nheads].len = 0;
 
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
+		err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp);
 		if (!err)
 			msg.msg_control = &xdp;
 		else
