@@ -1,5 +1,5 @@
 Bottom: f0fbbd388c9413b239906c9d59b2ae132f4a45a9
-Top:    388d7eb9d4d4ef175b26e8451855304858976b40
+Top:    8e1cab6864a3540e69e1fe7c92b6cedfcf559148
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 16:23:55 +0800
 
@@ -10,19 +10,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f0639d7..6a6ef6a 100644
+index f0639d7..95aa32d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -117,6 +117,8 @@ struct vhost_net_virtqueue {
+@@ -117,6 +117,7 @@ struct vhost_net_virtqueue {
  	struct vhost_net_ubuf_ref *ubufs;
  	struct ptr_ring *rx_ring;
  	struct vhost_net_buf rxq;
 +	struct xdp_buff xdp[VHOST_RX_BATCH];
-+	struct vring_used_elem heads[VHOST_RX_BATCH];
  };
  
  struct vhost_net {
-@@ -492,6 +494,115 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
+@@ -492,6 +493,115 @@ static bool vhost_has_more_pkts(struct vhost_net *net,
  	       likely(!vhost_exceeds_maxpend(net));
  }
  
@@ -138,7 +137,7 @@ index f0639d7..6a6ef6a 100644
  static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -512,6 +623,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -512,6 +622,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	int sent_pkts = 0;
  	s16 nheads = 0;
@@ -146,7 +145,7 @@ index f0639d7..6a6ef6a 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -525,6 +637,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -525,6 +636,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	vhost_net_disable_vq(net, vq);
  
  	hdr_size = nvq->vhost_hlen;
@@ -154,7 +153,7 @@ index f0639d7..6a6ef6a 100644
  
  	for (;;) {
  		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
-@@ -554,14 +667,20 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -554,14 +666,20 @@ static void handle_tx_copy(struct vhost_net *net)
  		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
  		vq->heads[nheads].len = 0;
  
@@ -181,7 +180,7 @@ index f0639d7..6a6ef6a 100644
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
-@@ -569,14 +688,13 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -569,14 +687,13 @@ static void handle_tx_copy(struct vhost_net *net)
  			vhost_net_enable_vq(net, vq);
  			break;
  		}
@@ -200,7 +199,7 @@ index f0639d7..6a6ef6a 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -584,8 +702,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -584,8 +701,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	}
  out:
  	if (nheads)
@@ -210,7 +209,7 @@ index f0639d7..6a6ef6a 100644
  	mutex_unlock(&vq->mutex);
  }
  
-@@ -660,16 +777,21 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+@@ -660,16 +776,21 @@ static void handle_tx_zerocopy(struct vhost_net *net)
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
  			struct ubuf_info *ubuf;
@@ -234,7 +233,7 @@ index f0639d7..6a6ef6a 100644
  			ubufs = nvq->ubufs;
  			atomic_inc(&ubufs->refcount);
  			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
-@@ -677,6 +799,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+@@ -677,6 +798,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
  			msg.msg_control = NULL;
  			ubufs = NULL;
  		}
