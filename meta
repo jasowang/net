@@ -1,5 +1,5 @@
 Version: 1
-Previous: b10381151cbb59ca95b41397904591d666b80778
+Previous: 49ef1c1f47e1c383e3e5159d50f42210c9296e93
 Head: 9e8af1b1acd7fcdace321dff208c9f6ddf36e3ff
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
@@ -18,5 +18,4 @@ Applied:
   tuntap-allow-passing-xdp: 997ea149e5b261831adb46cdb0573f1eeed43b1f
   vhost_net-submit-a-brunch-of: 9e8af1b1acd7fcdace321dff208c9f6ddf36e3ff
 Unapplied:
-  vhost_net-batch-submitting-xdp: 97c5b872ffb14ae55d2ac62fa8e49d713f24d816
 Hidden:
