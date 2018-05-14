@@ -1,5 +1,5 @@
 Bottom: f630f326ef99cba10e6aae9c014618e9ede076a1
-Top:    594f3884c31e215a4715569ca4a55d21563fd5b8
+Top:    cf1f25b0e1404c161eb0ab95ac74e2330d486149
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 14:25:10 +0800
 
@@ -23,18 +23,26 @@ index 4102f0f..be8a009 100644
  	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index aff338a..7777b21 100644
+index aff338a..85a2fa9 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -595,6 +595,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	int sent_pkts = 0;
  	s16 nheads = 0;
-+	bool can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
++	bool can_xdp;
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -637,11 +638,15 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -608,6 +609,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
+ 
+ 	hdr_size = nvq->vhost_hlen;
++	can_xdp = sock_flag(sock->sk, SOCK_XDP_BUFF);
+ 
+ 	for (;;) {
+ 		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+@@ -637,11 +639,16 @@ static void handle_tx_copy(struct vhost_net *net)
  		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
  		vq->heads[nheads].len = 0;
  
@@ -45,7 +53,8 @@ index aff338a..7777b21 100644
 -			msg.msg_control = NULL;
 +		msg.msg_control = NULL;
 +		if (can_xdp) {
-+			err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
++			err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter,
++						  &xdp);
 +			if (!err)
 +				msg.msg_control = &xdp;
 +			else if (unlikely(err != -ENOSPC))
@@ -55,7 +64,7 @@ index aff338a..7777b21 100644
  		total_len += len;
  		if (total_len < VHOST_NET_WEIGHT &&
  		    vhost_has_more_pkts(net, vq)) {
-@@ -652,11 +657,8 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -652,11 +659,8 @@ static void handle_tx_copy(struct vhost_net *net)
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
@@ -69,7 +78,7 @@ index aff338a..7777b21 100644
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
-@@ -675,6 +677,12 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -675,6 +679,12 @@ static void handle_tx_copy(struct vhost_net *net)
  		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
  					    nheads);
  	mutex_unlock(&vq->mutex);
