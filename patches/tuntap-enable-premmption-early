@@ -1,5 +1,5 @@
-Bottom: 69674a556007710104b788b7cea6af24d9418297
-Top:    03899fd62c8903ada0161e47de20acbd3cfffd7c
+Bottom: 719772f56c930b6a136957149f15a0cafce66089
+Top:    15f8b1497a0f22129938a4715d159c2e72a58f27
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:44:14 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 44d4f3d..24ecd82 100644
+index 9fbbb32..9ee15cc 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1697,6 +1697,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1687,6 +1687,8 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  			goto err_xdp;
  		}
  	}
@@ -23,7 +23,7 @@ index 44d4f3d..24ecd82 100644
  
  	skb = build_skb(buf, buflen);
  	if (!skb) {
-@@ -1710,9 +1712,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1700,9 +1702,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	get_page(alloc_frag->page);
  	alloc_frag->offset += buflen;
  
