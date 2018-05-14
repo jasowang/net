@@ -5,6 +5,8 @@ Date:   2018-05-14 14:16:53 +0800
 
 net: core: introduce SOCK_XDP_BUFF
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
