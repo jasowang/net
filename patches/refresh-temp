@@ -1,5 +1,5 @@
 Bottom: eddaa7e5536991a3ed26bb3d9af20bc73479fedb
-Top:    fcaf031ac84f089cdf8f0f099acbb088d43deb92
+Top:    f0ee32bf29fd8a4057b15230a1065cf5c3b5f9d1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
@@ -91,7 +91,7 @@ index b586b3f..5d16d18 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 0d84de6..cbd8fc2 100644
+index 0d84de6..bec4109 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -118,6 +118,7 @@ struct vhost_net_virtqueue {
@@ -102,7 +102,16 @@ index 0d84de6..cbd8fc2 100644
  };
  
  struct vhost_net {
-@@ -567,11 +568,36 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+@@ -511,7 +512,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+ 	void *buf;
+ 	int copied;
+ 
+-	if (len < nvq->sock_hlen)
++	if (unlikely(len < nvq->sock_hlen))
+ 		return -EFAULT;
+ 
+ 	if (SKB_DATA_ALIGN(len + pad) +
+@@ -567,11 +568,37 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
  	return 0;
  }
  
@@ -125,6 +134,7 @@ index 0d84de6..cbd8fc2 100644
 +
 +	if (unlikely(err < 0)) {
 +		/* FIXME vq_err() */
++		vq_err(&nvq->vq, "sendmsg err!\n");
 +		return;
 +	}
 +	vhost_add_used_and_signal_n(&net->dev, &nvq->vq, nvq->vq.heads, n);
@@ -140,7 +150,7 @@ index 0d84de6..cbd8fc2 100644
  	unsigned out, in;
  	int head;
  	struct msghdr msg = {
-@@ -586,7 +612,6 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -586,7 +613,6 @@ static void handle_tx_copy(struct vhost_net *net)
  	size_t hdr_size;
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
@@ -148,7 +158,7 @@ index 0d84de6..cbd8fc2 100644
  	int sent_pkts = 0;
  	s16 nheads = 0;
  
-@@ -631,22 +656,19 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -631,22 +657,24 @@ static void handle_tx_copy(struct vhost_net *net)
  		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
  		vq->heads[nheads].len = 0;
  
@@ -166,22 +176,27 @@ index 0d84de6..cbd8fc2 100644
 -			msg.msg_flags |= MSG_MORE;
 -		} else {
 -			msg.msg_flags &= ~MSG_MORE;
-+		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &nvq->xdp[nheads]);
++		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
++					  &nvq->xdp[nheads]);
 +		if (!err) {
-+			if (++nheads < VHOST_RX_BATCH)
-+				goto done;
-+		} else if (err != -ENOSPC) {
++			if (++nheads == VHOST_RX_BATCH) {
++				vhost_tx_batch(net, nvq, sock, &msg, nheads);
++				nheads = 0;
++			}
++			goto done;
++		} else if (unlikely(err != -ENOSPC)) {
 +			vq_err(vq, "Fail to build XDP buffer\n");
 +			break;
  		}
  
 +		vhost_tx_batch(net, nvq, sock, &msg, nheads);
++		msg.msg_control = NULL;
 +		nheads = 0;
 +
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
-@@ -657,11 +679,9 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -657,11 +685,9 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -196,3 +211,12 @@ index 0d84de6..cbd8fc2 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
+@@ -669,8 +695,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	}
+ out:
+ 	if (nheads)
+-		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+-					    nheads);
++		vhost_tx_batch(net, nvq, sock, &msg, nheads);
+ 	mutex_unlock(&vq->mutex);
+ }
