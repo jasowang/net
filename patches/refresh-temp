@@ -1,0 +1,29 @@
+Bottom: 88b8781c127102576c0b8a464950f33e4aa814c9
+Top:    af68676c883701598841cb548a32e813c6746be4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-14 16:05:40 +0800
+
+Refresh of fix-for-flag
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 1987a6e..85e2c31 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -658,7 +658,6 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		if (unlikely(err < 0)) {
+ 			vhost_discard_vq_desc(vq, 1);
+ 			vhost_net_enable_vq(net, vq);
+-			mutex_unlock(&vq->mutex);
+ 			break;
+ 		}
+ 
+@@ -680,7 +679,6 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
+ 					    nheads);
+ 	mutex_unlock(&vq->mutex);
+-	return;
+ }
+ 
+ /* Expects to be always run from workqueue - which acts as
