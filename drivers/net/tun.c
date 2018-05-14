@@ -1603,7 +1603,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     int len, int *skb_xdp)
 {
 	struct page_frag *alloc_frag = &current->task_frag;
-	struct sk_buff *skb;
+	struct sk_buff *skb = NULL;
 	struct bpf_prog *xdp_prog;
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	unsigned int delta = 0;
@@ -1628,6 +1628,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 				     len, from);
 	if (copied != len)
 		return ERR_PTR(-EFAULT);
+
+	get_page(alloc_frag->page);
+	alloc_frag->offset += buflen;
 
 	/* There's a small window that XDP may be set after the check
 	 * of xdp_prog above, this should be rare and for simplicity
@@ -1656,24 +1659,16 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 		switch (act) {
 		case XDP_REDIRECT:
-			get_page(alloc_frag->page);
-			alloc_frag->offset += buflen;
 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
 			xdp_do_flush_map();
 			if (err)
-				goto err_redirect;
-			rcu_read_unlock();
-			preempt_enable();
-			return NULL;
+				goto err_xdp;
+			goto out;
 		case XDP_TX:
-			get_page(alloc_frag->page);
-			alloc_frag->offset += buflen;
-			if (tun_xdp_xmit(tun->dev, &xdp))
-				goto err_redirect;
+			if (tun_xdp_tx(tun->dev, &xdp))
+				goto err_xdp;
 			tun_xdp_flush(tun->dev);
-			rcu_read_unlock();
-			preempt_enable();
-			return NULL;
+			goto out;
 		case XDP_PASS:
 			delta = orig_data - xdp.data;
 			break;
@@ -1692,25 +1687,22 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 
 	skb = build_skb(buf, buflen);
 	if (!skb) {
-		rcu_read_unlock();
-		preempt_enable();
-		return ERR_PTR(-ENOMEM);
+		skb = ERR_PTR(-ENOMEM);
+		goto out;
 	}
 
 	skb_reserve(skb, pad - delta);
-	skb_put(skb, len + delta);
-	get_page(alloc_frag->page);
-	alloc_frag->offset += buflen;
+	skb_put(skb, len);
 
 	return skb;
 
-err_redirect:
-	put_page(alloc_frag->page);
 err_xdp:
+	alloc_frag->offset -= buflen;
+	put_page(alloc_frag->page);
+out:
 	rcu_read_unlock();
 	preempt_enable();
-	this_cpu_inc(tun->pcpu_stats->rx_dropped);
-	return NULL;
+	return skb;
 }
 
 /* Get packet from user space buffer */
