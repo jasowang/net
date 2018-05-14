@@ -1,21 +1,21 @@
 Version: 1
-Previous: 86d024c9760a4031564300488cf9819fde3d0337
-Head: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
+Previous: 1c00e3e04444d448cee8519a8261b017daf13aa0
+Head: 5d13e305164d0caa10c82142b72d7631334594c5
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   net-core-introduce: 83094e760d670067f7e6c19ecd3bdd3e18db33c4
+  vhost_net-introduce-helper-to: 3b1b6066312c1f54854769e63ef078f535c1f206
+  vhost_net-introduce: 9d3e8d58af6d7edd33a2c070c4eda7ba829e633d
+  vhost_net-introduce-0: 0b830a5ac5bf1d1a71a470849d87c5a125c0d562
+  vhost_net-split-out-datacopy: d54c0f2669eb91d49d0d67a3e21a4da7f131725b
+  vhost_net-batch-update-used: a4b3a81836e170f69f426a92cebd630cb7d4fbfc
+  tuntap-enable-premmption-early: 3af4b343d31bdb495cc2f40508b2362c5230d651
+  tuntap-simplify-error-handling: 3ce7221cf483b2cd1a48c1ddaab1449968642298
+  tuntap-tweak-on-the-path-of: 53f9101892f75400cca9fa5d548caf4758823346
+  tuntap-split-out-xdp-logic: daaf3a1056a113a9351a06c3d23f41a3a83f8ad2
+  vhost-build-xdp: a818e50abeb96daf312b9e63c89745f2490faaa6
+  vhost_net-passing-raw-xdp-buff: 5d13e305164d0caa10c82142b72d7631334594c5
 Unapplied:
-  vhost_net-introduce-helper-to: a22d8d6ae428c86fdd261e6da978b0901a85b4ee
-  vhost_net-introduce: 371f4e27c8c6e07e174e3a4a90d8cfbb7ec37786
-  vhost_net-introduce-0: ba8dc2ad6868e0f70b559a9a8505d94b9b093771
-  vhost_net-split-out-datacopy: dcb8b6007562adbe813c8ec824f9d5de696f44a0
-  vhost_net-batch-update-used: 472ea10a692b7f8f4b5513953e7bca7c8dd81eb8
-  tuntap-enable-premmption-early: 9f9c1ba51081c409c6fc0a14fb86489fdaadc998
-  tuntap-simplify-error-handling: 234ec8fc56478c5fb7c35b47f9846a1be08a75d6
-  tuntap-tweak-on-the-path-of: f8f1fdb46faec4e450b8713e0914fe897aa84608
-  tuntap-split-out-xdp-logic: f1baf15b54d1998c820c0cf1324cea1b01594e0c
-  vhost-build-xdp: f4c7d6fb382933723d2cf2b04ca4ed4883cf1d1b
-  vhost_net-passing-raw-xdp-buff: 96bd8239d07968defcfd994f51bafb3f9c85c51c
   fix-for-flag: 0f5a0d48e2673700df459174f804959a4c8df7f9
   tuntap-introduce: bf90ae2a9e70c263f97bdebe29e52097da8b1cd5
   vhost_net-batch-submitting-xdp: 5673b0c6f94eeb200f4df9f714f06d39c127d7fe
