@@ -1,5 +1,5 @@
-Bottom: 7b2adeb89d37421008f13ae0371051998f4c0ea6
-Top:    63588a29f6f7717fc09db4d6865a20345bf3d720
+Bottom: af68676c883701598841cb548a32e813c6746be4
+Top:    db210320dc74aa19001708861f68806232fa0d6f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-26 11:55:00 +0800
 
@@ -132,7 +132,7 @@ index be8a009..1f7fa39 100644
  			   m->msg_flags & MSG_MORE);
  out:
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index bc48114..1093c591 100644
+index 85e2c31..c2b4751 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -117,6 +117,7 @@ struct vhost_net_virtqueue {
@@ -165,7 +165,7 @@ index bc48114..1093c591 100644
  		else
  			msg.msg_control = NULL;
  
-@@ -754,16 +759,21 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+@@ -752,16 +757,21 @@ static void handle_tx_zerocopy(struct vhost_net *net)
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
  			struct ubuf_info *ubuf;
