@@ -3281,6 +3281,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 	INIT_LIST_HEAD(&tfile->next);
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
+	sock_set_flag(&tfile->sk, SOCK_XDP_BUFF);
 
 	memset(&tfile->tx_ring, 0, sizeof(tfile->tx_ring));
 
