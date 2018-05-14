@@ -118,7 +118,6 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct xdp_buff xdp[VHOST_RX_BATCH];
-	struct vring_used_elem heads[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
