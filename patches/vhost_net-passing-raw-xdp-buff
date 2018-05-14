@@ -1,5 +1,5 @@
-Bottom: b00433e6d68ea5d648b4c93a1adb795b543a4fdf
-Top:    7c6a254afc19f3fb9057e0364bc18f58814523e3
+Bottom: f287ce15fd46f11b90f07974dcdd70821bbd8c63
+Top:    350cbc943ba1e9489b615cc35a5564b2f6a548ed
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:43:46 +0800
 
@@ -61,10 +61,10 @@ index 2560378..4102f0f 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 1209e84..144b549 100644
+index 75501d2..aac4d2d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -570,6 +570,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -578,6 +578,7 @@ static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
@@ -72,7 +72,7 @@ index 1209e84..144b549 100644
  	unsigned out, in;
  	int head;
  	struct msghdr msg = {
-@@ -628,6 +629,12 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -636,6 +637,12 @@ static void handle_tx_copy(struct vhost_net *net)
  		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
  		vq->heads[nheads].len = 0;
  
@@ -85,7 +85,7 @@ index 1209e84..144b549 100644
  		total_len += len;
  		if (total_len < VHOST_NET_WEIGHT &&
  		    vhost_has_more_pkts(net, vq)) {
-@@ -751,6 +758,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
+@@ -759,6 +766,7 @@ static void handle_tx_zerocopy(struct vhost_net *net)
  			msg.msg_control = NULL;
  			ubufs = NULL;
  		}
