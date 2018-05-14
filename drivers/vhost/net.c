@@ -790,12 +790,12 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 		}
 
 		total_len += len;
-
 		if (total_len < VHOST_NET_WEIGHT &&
 		    vhost_has_more_pkts(net, vq)) {
 			msg.msg_flags |= MSG_MORE;
 		} else {
 			msg.msg_flags &= ~MSG_MORE;
+		}
 
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
