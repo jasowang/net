@@ -1,6 +1,6 @@
 Version: 1
-Previous: 85147699847ade06c1b863762b929eef53bd86d1
-Head: 1080af5f49d1794b5540092e92dbe867b06d2962
+Previous: 27a0d702e4a73493a2d1f9c81ff2da06f60ea452
+Head: 234ec8fc56478c5fb7c35b47f9846a1be08a75d6
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost_net-introduce-helper-to: a22d8d6ae428c86fdd261e6da978b0901a85b4ee
@@ -9,8 +9,7 @@ Applied:
   vhost_net-split-out-datacopy: dcb8b6007562adbe813c8ec824f9d5de696f44a0
   vhost_net-batch-update-used: 472ea10a692b7f8f4b5513953e7bca7c8dd81eb8
   tuntap-enable-premmption-early: 9f9c1ba51081c409c6fc0a14fb86489fdaadc998
-  tuntap-simplify-error-handling: d2dce9c05ced5c7e2e533562e6f6c1da5e3be205
-  refresh-temp: 1080af5f49d1794b5540092e92dbe867b06d2962
+  tuntap-simplify-error-handling: 234ec8fc56478c5fb7c35b47f9846a1be08a75d6
 Unapplied:
   tuntap-tweak-on-the-path-of: b523d1b03a41b04827da88c5e88a58dfd5201c4a
   tuntap-split: bface6a8603e8ee270c2c33c8eab44b21fbf95ba
