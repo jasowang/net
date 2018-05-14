@@ -1,5 +1,5 @@
 Bottom: d8a3190bd956dce84135211fb4efa7ce833a7563
-Top:    f630f326ef99cba10e6aae9c014618e9ede076a1
+Top:    88bba080aac2fb2cc0db59233df27aba25bac2f8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:43:46 +0800
 
@@ -61,7 +61,7 @@ index 2560378..4102f0f 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 75501d2..aff338a 100644
+index 75501d2..80add75 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -578,6 +578,7 @@ static void handle_tx_copy(struct vhost_net *net)
@@ -76,7 +76,7 @@ index 75501d2..aff338a 100644
  		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
  		vq->heads[nheads].len = 0;
  
-+		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
++		err = vhost_net_build_xdp(nvq, sock, &msg.msg_iter, &xdp);
 +		if (!err)
 +			msg.msg_control = &xdp;
 +		else
