@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
-Head: 2d0894cafec2b7c5b6f0eba8e3f2bb029f035065
+Previous: ea4ffa7f14b05bc49b6c668d397f370e1368356a
+Head: d5f78574a404293bdf6f64688db1986d2e20222c
 Applied:
+  virtio-fix-for-event-index: d5f78574a404293bdf6f64688db1986d2e20222c
 Unapplied:
 Hidden:
