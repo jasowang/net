@@ -982,6 +982,24 @@ unmap_release:
 	return -EIO;
 }
 
+static bool vring_packed_need_event(struct vring_virtqueue *vq,
+				    __u16 off_wrap, __u16 new,
+				    __u16 old)
+{
+    bool wrap = vq->wrap_counter;
+    int off = off_wrap & ~(1 << 15);
+
+    if (new < old) {
+	    new += vq->vring_packed.num;
+	    wrap ^= 1;
+    }
+
+    if (wrap != off_wrap >> 15)
+	    off += vq->vring_packed.num;
+
+    return vring_need_event(off, new, old);
+}
+
 static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);
@@ -1011,7 +1029,8 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
 #endif
 
 	if (flags == VRING_EVENT_F_DESC)
-		needs_kick = vring_need_event(off_wrap & ~(1<<15), new, old);
+		needs_kick = vring_packed_need_event(vq, off_wrap,
+						     new, old);
 	else
 		needs_kick = (flags != VRING_EVENT_F_DISABLE);
 	END_USE(vq);
