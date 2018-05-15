@@ -1,7 +1,8 @@
 Version: 1
-Previous: 7a4a3ba54503a14e2d192088e7f8be8d2e5531d3
-Head: b878f3919b75be7b3b60e8f538246b35c53b129c
+Previous: ed88be4d8e71316d1ace26a4025c6929ccd58d16
+Head: d0bc31098abd37d9ee7365b3229d400db2bcafa8
 Applied:
   virtio-fix-for-event-index: b878f3919b75be7b3b60e8f538246b35c53b129c
+  refresh-temp: d0bc31098abd37d9ee7365b3229d400db2bcafa8
 Unapplied:
 Hidden:
