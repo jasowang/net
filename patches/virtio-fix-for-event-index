@@ -1,5 +1,5 @@
-Bottom: 9fd287607b74155a2e66ec1a8f734d11d5999418
-Top:    acc85403600456599aa0bed3f04d8c7dd155621f
+Bottom: 8c559fa136cafc831ed5dc599edfbe91091d6d6c
+Top:    1bcbefb425fbee88fc3e451039a3a9822decb97f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-15 10:47:39 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
-index d543404..77369e3 100644
+index c92a986..e4b9be5 100644
 --- a/drivers/virtio/virtio_ring.c
 +++ b/drivers/virtio/virtio_ring.c
 @@ -843,6 +843,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
