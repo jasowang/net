@@ -843,8 +843,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		desc = NULL;
 		WARN_ON_ONCE(total_sg > vq->vring_packed.num && !vq->indirect);
 	}
-	printk("vq %d head %u total_sgs %u wrap_counter %u\n",
-		_vq->index, head, total_sg, wrap_counter);
+//	printk("vq %d head %u total_sgs %u wrap_counter %u\n",
+//		_vq->index, head, total_sg, wrap_counter);
 
 	if (desc) {
 		/* Use a single buffer which doesn't continue */
@@ -895,8 +895,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 			if (!indirect && i >= vq->vring_packed.num) {
 				i = 0;
 				vq->wrap_counter ^= 1;
-				printk("vq %d wrap flip to %d nonindirect\n",
-					_vq->index, vq->wrap_counter);
+//				printk("vq %d wrap flip to %d nonindirect\n",
+//					_vq->index, vq->wrap_counter);
 			}
 		}
 	}
@@ -939,8 +939,8 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 		if (n >= vq->vring_packed.num) {
 			n = 0;
 			vq->wrap_counter ^= 1;
-			printk("vq %d wrap counter flip %d\n",
-				_vq->index, vq->wrap_counter);
+//			printk("vq %d wrap counter flip %d\n",
+//				_vq->index, vq->wrap_counter);
 		}
 		vq->next_avail_idx = n;
 	} else
@@ -1037,12 +1037,12 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
 	if (flags == VRING_EVENT_F_DESC) {
 		needs_kick = vring_packed_need_event(vq, off_wrap,
 						     new, old);
-		printk("vq %d old %d new %d event %d wrap %d kick %d\n",
-			_vq->index, old, new, off_wrap & ~(1 << 15),
-			off_wrap >> 15, needs_kick);
+//		printk("vq %d old %d new %d event %d wrap %d kick %d\n",
+//			_vq->index, old, new, off_wrap & ~(1 << 15),
+//			off_wrap >> 15, needs_kick);
 	} else {
 		needs_kick = (flags != VRING_EVENT_F_DISABLE);
-		printk("vq %d needs_kick %d\n", _vq->index, needs_kick);
+//		printk("vq %d needs_kick %d\n", _vq->index, needs_kick);
 	}
 	END_USE(vq);
 	return needs_kick;
@@ -1152,8 +1152,8 @@ static void *virtqueue_get_buf_ctx_packed(struct virtqueue *_vq,
 	vq->last_used_idx += vq->desc_state[i].num;
 	if (vq->last_used_idx >= vq->vring_packed.num)
 		vq->last_used_idx -= vq->vring_packed.num;
-	printk("vq %d last_used_idx to %u\n",
-		_vq->index, vq->last_used_idx);
+//	printk("vq %d last_used_idx to %u\n",
+//		_vq->index, vq->last_used_idx);
 
 	/* If we expect an interrupt for the next entry, tell host
 	 * by writing event index and flush out the write before
@@ -1177,7 +1177,7 @@ static void virtqueue_disable_cb_packed(struct virtqueue *_vq)
 	struct vring_virtqueue *vq = to_vvq(_vq);
 
 	if (vq->event_flags_shadow != VRING_EVENT_F_DISABLE) {
-		printk("vq %d set to disable\n", _vq->index);
+//		printk("vq %d set to disable\n", _vq->index);
 		vq->event_flags_shadow = VRING_EVENT_F_DISABLE;
 		vq->vring_packed.driver->flags = cpu_to_virtio16(_vq->vdev,
 							vq->event_flags_shadow);
@@ -1269,8 +1269,10 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
 		 */
 		used_idx -= vq->vring_packed.num;
 //		wrap_counter ^= 1;
+#if 0
 		printk("vq %d last %u bufs %u event %u used_idx wrap\n",
 			_vq->index, vq->last_used_idx, bufs, used_idx);
+#endif
 	} else if (vq->next_avail_idx < used_idx) {
 		/* Case B
 		 * C              A               B
@@ -1278,24 +1280,30 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
 		 * next_avail     last_used_idx   used_idx
 		 */
 		wrap_counter ^= 1;
+#if 0
 		printk("vq %d last %u bufs %u event %u wrap flip from %d to %dwrap2\n",
 			_vq->index, vq->last_used_idx, bufs, used_idx,
 			vq->wrap_counter, wrap_counter);
+#endif
 	}
+	#if 0
 	else
 		printk("vq %d last %u bufs %u event %u wrap %d delayed\n",
 			_vq->index, vq->last_used_idx, bufs, used_idx,
 			wrap_counter);
+	#endif
 	vq->vring_packed.driver->off_wrap = cpu_to_virtio16(_vq->vdev,
 			used_idx | (wrap_counter << 15));
 
 	if (vq->event_flags_shadow == VRING_EVENT_F_DISABLE) {
+#if 0
 		if (vq->event)
 			printk("vq %d set to desc %u\n",
 				_vq->index,
 				vq->vring_packed.driver->off_wrap);
 		else
 			printk("vq %d set to enable!\n", _vq->index);
+#endif
 		virtio_wmb(vq->weak_barriers);
 		vq->event_flags_shadow = vq->event ? VRING_EVENT_F_DESC :
 						     VRING_EVENT_F_ENABLE;
@@ -1734,7 +1742,7 @@ struct virtqueue *__vring_new_virtqueue(unsigned int index,
 	vq->indirect = virtio_has_feature(vdev, VIRTIO_RING_F_INDIRECT_DESC) &&
 		!context;
 	vq->event = virtio_has_feature(vdev, VIRTIO_RING_F_EVENT_IDX);
-	printk("vq->event is %d\n", vq->event);
+//	printk("vq->event is %d\n", vq->event);
 
 	if (vq->packed) {
 		vq->vring_packed = vring.vring_packed;
