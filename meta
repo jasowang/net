@@ -1,9 +1,9 @@
 Version: 1
-Previous: 3f97e713ccc782509664d1d4d5ca595ffc1997d6
-Head: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
+Previous: c84656d3e010193f34925dc557a789803e8a0cc8
+Head: b3cd346b0c64985905e569d84a41c9bee6637a39
 Applied:
-  debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
 Unapplied:
+  debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
   tuntap: bb256bd9a9eb3de7d2230d16c6c802b925088f88
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
