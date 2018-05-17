@@ -1,0 +1,289 @@
+Bottom: 4663b73541337c68073acb89dcf35d5407545ee9
+Top:    419fe02b71aebb70b00cc41aecc8f7baec516d5b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-17 17:13:35 +0800
+
+Refresh of debug-virtio
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 44d4f3d..7ccbcdb 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1126,6 +1126,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+ 
+ 	rcu_read_unlock();
++	printk("queued %d\n", skb->len);
+ 	return NETDEV_TX_OK;
+ 
+ drop:
+@@ -1133,6 +1134,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	skb_tx_error(skb);
+ 	kfree_skb(skb);
+ 	rcu_read_unlock();
++	printk("drop %d\n", skb->len);
+ 	return NET_XMIT_DROP;
+ }
+ 
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index f34794a..07b2410 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -437,11 +437,16 @@ static int __virtnet_xdp_xmit(struct virtnet_info *vi,
+ 		xdp_return_frame(xdpf_sent);
+ 
+ 	/* virtqueue want to use data area in-front of packet */
+-	if (unlikely(xdpf->metasize > 0))
++	if (unlikely(xdpf->metasize > 0)) {
++		printk("metasize is %d\n", xdpf->metasize);
+ 		return -EOPNOTSUPP;
++	}
+ 
+-	if (unlikely(xdpf->headroom < vi->hdr_len))
++	if (unlikely(xdpf->headroom < vi->hdr_len)) {
++		printk("headroom is %d less than %d\n",
++			xdpf->headroom, vi->hdr_len);
+ 		return -EOVERFLOW;
++	}
+ 
+ 	/* Make room for virtqueue hdr (also change xdpf->headroom?) */
+ 	xdpf->data -= vi->hdr_len;
+@@ -453,8 +458,11 @@ static int __virtnet_xdp_xmit(struct virtnet_info *vi,
+ 	sg_init_one(sq->sg, xdpf->data, xdpf->len);
+ 
+ 	err = virtqueue_add_outbuf(sq->vq, sq->sg, 1, xdpf, GFP_ATOMIC);
+-	if (unlikely(err))
++	if (unlikely(err)) {
++		printk("-ENOSPC\n");
+ 		return -ENOSPC; /* Caller handle free/refcnt */
++	}
++	printk("xdp sent %d\n", xdpf->len);
+ 
+ 	return 0;
+ }
+@@ -516,8 +524,11 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
+ 		int off;
+ 
+ 		buf = virtqueue_get_buf(rq->vq, &buflen);
+-		if (unlikely(!buf))
++		printk("buf len in linearizing %d\n", buflen);
++		if (unlikely(!buf)) {
++			printk("!buf!\n");
+ 			goto err_buf;
++		}
+ 
+ 		p = virt_to_head_page(buf);
+ 		off = buf - page_address(p);
+@@ -526,6 +537,8 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
+ 		 * is sending packet larger than the MTU.
+ 		 */
+ 		if ((page_off + buflen + tailroom) > PAGE_SIZE) {
++			printk("too large page_off %d buflen %d tailroom %d!\n",
++				page_off, buflen, tailroom);
+ 			put_page(p);
+ 			goto err_buf;
+ 		}
+@@ -726,8 +739,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 						      page, offset,
+ 						      VIRTIO_XDP_HEADROOM,
+ 						      &len);
+-			if (!xdp_page)
++			if (!xdp_page) {
++				printk("linearize page fails!\n");
+ 				goto err_xdp;
++			}
+ 			offset = VIRTIO_XDP_HEADROOM;
+ 		} else {
+ 			xdp_page = page;
+@@ -738,8 +753,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		 * the receive path after XDP is loaded. In practice I
+ 		 * was not able to create this condition.
+ 		 */
+-		if (unlikely(hdr->hdr.gso_type))
++		if (unlikely(hdr->hdr.gso_type)) {
++			printk("gso type!\n");
+ 			goto err_xdp;
++		}
+ 
+ 		/* Allow consuming headroom but reserve enough space to push
+ 		 * the descriptor on if we get an XDP_TX return code.
+@@ -770,10 +787,12 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 			if (unlikely(xdp_page != page)) {
+ 				rcu_read_unlock();
+ 				put_page(page);
++				printk("PASS and page to skb!\n");
+ 				head_skb = page_to_skb(vi, rq, xdp_page,
+ 						       offset, len, PAGE_SIZE);
+ 				return head_skb;
+ 			}
++			printk("XDP_PASS\n");
+ 			break;
+ 		case XDP_TX:
+ 			xdpf = convert_to_xdp_frame(&xdp);
+@@ -792,15 +811,17 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+ 		case XDP_REDIRECT:
++			printk("Try to redirect %d\n", len);
+ 			err = xdp_do_redirect(dev, &xdp, xdp_prog);
+ 			if (err) {
++				printk("err in redirect!\n");
+ 				if (unlikely(xdp_page != page))
+ 					put_page(xdp_page);
+ 				goto err_xdp;
+ 			}
+ 			*xdp_xmit = true;
+ 			if (unlikely(xdp_page != page))
+-				goto err_xdp;
++				put_page(page);
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+ 		default:
+@@ -810,6 +831,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		case XDP_DROP:
+ 			if (unlikely(xdp_page != page))
+ 				__free_pages(xdp_page, 0);
++			printk("DROP or ABORTED\n");
+ 			goto err_xdp;
+ 		}
+ 	}
+@@ -817,7 +839,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 
+ 	truesize = mergeable_ctx_to_truesize(ctx);
+ 	if (unlikely(len > truesize)) {
+-		pr_debug("%s: rx error: len %u exceeds truesize %lu\n",
++		printk("%s: rx error: len %u exceeds truesize %lu\n",
+ 			 dev->name, len, (unsigned long)ctx);
+ 		dev->stats.rx_length_errors++;
+ 		goto err_skb;
+@@ -826,12 +848,15 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 	head_skb = page_to_skb(vi, rq, page, offset, len, truesize);
+ 	curr_skb = head_skb;
+ 
+-	if (unlikely(!curr_skb))
++	if (unlikely(!curr_skb)) {
++		printk("no curr_skb\n");
+ 		goto err_skb;
++	}
+ 	while (--num_buf) {
+ 		int num_skb_frags;
+ 
+ 		buf = virtqueue_get_buf_ctx(rq->vq, &len, &ctx);
++		printk("get buf after page to skb %d\n", len);
+ 		if (unlikely(!buf)) {
+ 			pr_debug("%s: rx error: %d buffers out of %d missing\n",
+ 				 dev->name, num_buf,
+@@ -845,7 +870,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 
+ 		truesize = mergeable_ctx_to_truesize(ctx);
+ 		if (unlikely(len > truesize)) {
+-			pr_debug("%s: rx error: len %u exceeds truesize %lu\n",
++			printk("%s: rx error: len %u exceeds truesize %lu\n",
+ 				 dev->name, len, (unsigned long)ctx);
+ 			dev->stats.rx_length_errors++;
+ 			goto err_skb;
+@@ -855,8 +880,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		if (unlikely(num_skb_frags == MAX_SKB_FRAGS)) {
+ 			struct sk_buff *nskb = alloc_skb(0, GFP_ATOMIC);
+ 
+-			if (unlikely(!nskb))
++			if (unlikely(!nskb)) {
++				printk("alloc fail!\n");
+ 				goto err_skb;
++			}
+ 			if (curr_skb == head_skb)
+ 				skb_shinfo(curr_skb)->frag_list = nskb;
+ 			else
+@@ -889,6 +916,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ err_skb:
+ 	put_page(page);
+ 	while (--num_buf) {
++		printk("err_skb!\n");
+ 		buf = virtqueue_get_buf(rq->vq, &len);
+ 		if (unlikely(!buf)) {
+ 			pr_debug("%s: rx error: %d buffers missing\n",
+@@ -1211,12 +1239,14 @@ static int virtnet_receive(struct receive_queue *rq, int budget, bool *xdp_xmit)
+ 
+ 		while (received < budget &&
+ 		       (buf = virtqueue_get_buf_ctx(rq->vq, &len, &ctx))) {
++			printk("receive %d\n", len);
+ 			bytes += receive_buf(vi, rq, buf, len, ctx, xdp_xmit);
+ 			received++;
+ 		}
+ 	} else {
+ 		while (received < budget &&
+ 		       (buf = virtqueue_get_buf(rq->vq, &len)) != NULL) {
++			printk("wow rece %d\n", len);
+ 			bytes += receive_buf(vi, rq, buf, len, NULL, xdp_xmit);
+ 			received++;
+ 		}
+@@ -1303,9 +1333,11 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
+ 		qp = vi->curr_queue_pairs - vi->xdp_queue_pairs +
+ 		     smp_processor_id();
+ 		sq = &vi->sq[qp];
++		printk("kick \n");
+ 		virtqueue_kick(sq->vq);
+ 		xdp_do_flush_map();
+-	}
++	} else
++		printk("no kick \n");
+ 
+ 	return received;
+ }
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 21d464a..1b26652 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -706,6 +706,7 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
+ 	START_USE(vq);
+ 
+ 	if (unlikely(vq->broken)) {
++		printk("broken\n");
+ 		END_USE(vq);
+ 		return NULL;
+ 	}
+@@ -724,10 +725,12 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
+ 	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
+ 
+ 	if (unlikely(i >= vq->vring.num)) {
++		printk("out of range!\n");
+ 		BAD_RING(vq, "id %u out of range\n", i);
+ 		return NULL;
+ 	}
+ 	if (unlikely(!vq->desc_state[i].data)) {
++		printk("not a head!\n");
+ 		BAD_RING(vq, "id %u is not a head!\n", i);
+ 		return NULL;
+ 	}
+@@ -747,7 +750,7 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
+ #ifdef DEBUG
+ 	vq->last_add_time_valid = false;
+ #endif
+-
++	printk("vq %d get len %d\n", _vq->index, *len);
+ 	END_USE(vq);
+ 	return ret;
+ }
+diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
+index 2197421..8b7cd9d 100644
+--- a/samples/bpf/xdp1_kern.c
++++ b/samples/bpf/xdp1_kern.c
+@@ -42,6 +42,8 @@ static int parse_ipv6(void *data, u64 nh_off, void *data_end)
+ SEC("xdp1")
+ int xdp_prog1(struct xdp_md *ctx)
+ {
++	return XDP_PASS;
++#if 0
+ 	void *data_end = (void *)(long)ctx->data_end;
+ 	void *data = (void *)(long)ctx->data;
+ 	struct ethhdr *eth = data;
+@@ -88,6 +90,7 @@ int xdp_prog1(struct xdp_md *ctx)
+ 		*value += 1;
+ 
+ 	return rc;
++#endif
+ }
+ 
+ char _license[] SEC("license") = "GPL";
