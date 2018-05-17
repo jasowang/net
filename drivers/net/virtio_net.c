@@ -696,7 +696,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 {
 	struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
 	u16 num_buf = virtio16_to_cpu(vi->vdev, hdr->num_buffers);
-	struct page *page = virt_to_head_page(buf);
+	struct page *xdp_page, *page = virt_to_head_page(buf);
 	int offset = buf - page_address(page);
 	struct sk_buff *head_skb, *curr_skb;
 	struct bpf_prog *xdp_prog;
@@ -710,7 +710,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	xdp_prog = rcu_dereference(rq->xdp_prog);
 	if (xdp_prog) {
 		struct xdp_frame *xdpf;
-		struct page *xdp_page;
 		struct xdp_buff xdp;
 		void *data;
 		u32 act;
@@ -729,7 +728,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 						      VIRTIO_XDP_HEADROOM,
 						      &len);
 			if (!xdp_page)
-				goto err_xdp;
+				goto err_linearize;
 			offset = VIRTIO_XDP_HEADROOM;
 		} else {
 			xdp_page = page;
@@ -784,8 +783,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			err = __virtnet_xdp_xmit(vi, xdpf);
 			if (unlikely(err)) {
 				trace_xdp_exception(vi->dev, xdp_prog, act);
-				if (unlikely(xdp_page != page))
-					put_page(xdp_page);
 				goto err_xdp;
 			}
 			*xdp_xmit = true;
@@ -795,11 +792,8 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			goto xdp_xmit;
 		case XDP_REDIRECT:
 			err = xdp_do_redirect(dev, &xdp, xdp_prog);
-			if (err) {
-				if (unlikely(xdp_page != page))
-					put_page(xdp_page);
+			if (err)
 				goto err_xdp;
-			}
 			*xdp_xmit = true;
 			if (unlikely(xdp_page != page))
 				put_page(page);
@@ -810,8 +804,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		case XDP_ABORTED:
 			trace_xdp_exception(vi->dev, xdp_prog, act);
 		case XDP_DROP:
-			if (unlikely(xdp_page != page))
-				__free_pages(xdp_page, 0);
 			goto err_xdp;
 		}
 	}
@@ -887,6 +879,9 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	return head_skb;
 
 err_xdp:
+	if (unlikely(xdp_page != page))
+		put_page(xdp_page);
+err_linearize:
 	rcu_read_unlock();
 err_skb:
 	put_page(page);
