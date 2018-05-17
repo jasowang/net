@@ -1,7 +1,8 @@
 Version: 1
-Previous: 68096e8f982f2ba094fa6d5d87be43adbb333e3f
-Head: b3cd346b0c64985905e569d84a41c9bee6637a39
+Previous: 7766b959629039b6929b09ff81b7f7b81ea7cb73
+Head: 9e99d28b81c29c34b43a717120ce73c2b8643da2
 Applied:
+  debug-virtio: 9e99d28b81c29c34b43a717120ce73c2b8643da2
 Unapplied:
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
   tuntap: bb256bd9a9eb3de7d2230d16c6c802b925088f88
