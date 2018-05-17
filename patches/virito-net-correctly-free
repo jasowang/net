@@ -1,0 +1,20 @@
+Bottom: 69f001f944f5ee8e89bd266c06934b7b7506cb74
+Top:    69f001f944f5ee8e89bd266c06934b7b7506cb74
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-17 20:47:39 +0800
+
+virito-net: correctly free xdp_page
+
+We don't drop refcnt for xdp_page for the following error cases:
+
+- we meet gso packets
+- fail to convert to xdp frame
+
+This may leak xdp_age, fixing by moving all the put_page for xdp_page
+to a label and goto it when necessary.
+
+
+
+---
+
+
