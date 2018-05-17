@@ -9,17 +9,17 @@ We should drop the refcnt for xdp page after linearizing during
 errors. Otherwise xdp page will be leaked. Unfortunately, we forget to
 do this for the following cases:
 
-- when we meet gso packets
-- when we fail to convert to xdp frame
+- gso packets
+- fail to convert to xdp frame
 
-This patch fixes this by moving the logic of linearization and
-put_page() under err_xdp label. This will make sure all err path can
-drop the refcnt correctly.
+This patch fixes this by moving the logic of xdp_page free under
+err_xdp label. This will make sure all err path can drop the refcnt
+correctly.
 
 Cc: John Fastabend <john.fastabend@gmail.com>
 Cc: Jesper Dangaard Brouer <brouer@redhat.com>
 Fixes: 72979a6c3590 ("virtio_net: xdp, add slowpath case for non contiguous buffers")
-Fixes: 44fa2dbd47599 ("xdp: transition into using xdp_frame for ndo_xdp_xmit")
+Fixes: 44fa2dbd4759 ("xdp: transition into using xdp_frame for ndo_xdp_xmit")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
