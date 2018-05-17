@@ -11,6 +11,7 @@ will lead the code try to pop the buffers of next packet and drop
 it. Fixing this by set num_buf to 1 if we successfully linearize the
 packet.
 
+Fixes: 4941d472bf95 ("virtio-net: do not reset during XDP set")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
