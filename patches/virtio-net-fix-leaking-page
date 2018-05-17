@@ -1,0 +1,23 @@
+Bottom: 69f001f944f5ee8e89bd266c06934b7b7506cb74
+Top:    69f001f944f5ee8e89bd266c06934b7b7506cb74
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-17 21:05:13 +0800
+
+virtio-net: fix leaking page during XDP error
+
+We should drop the refcnt for xdp page after linearizing during
+errors. Otherwise xdp page will be leaked. Unfortunately, we forget to
+do this for the following cases:
+
+- when we meet gso packets
+- when we fail to convert to xdp frame
+
+This patch fixes this by moving the logic of linearization and
+put_page() under err_xdp label. This will make sure all err path can
+drop the refcnt correctly.
+
+
+
+---
+
+
