@@ -18,7 +18,7 @@ drop the refcnt correctly.
 
 Cc: John Fastabend <john.fastabend@gmail.com>
 Cc:
-Fixes: ("virtio_net: xdp, add slowpath case for non contiguous buffers")
+Fixes: 72979a6c3590 ("virtio_net: xdp, add slowpath case for non contiguous buffers")
 Fixes: 44fa2dbd47599 ("xdp: transition into using xdp_frame for ndo_xdp_xmit")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
