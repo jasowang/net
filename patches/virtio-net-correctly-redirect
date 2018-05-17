@@ -5,6 +5,11 @@ Date:   2018-05-17 17:28:04 +0800
 
 virtio-net: correctly redirect linearized packet
 
+After a linearized packet was redirected by XDP, we should not go for
+the err path which will try to pop buffers for the next packet and
+increase the drop counter. Fixing this by just drop the page refcnt
+for the original page.
+
 
 ---
 
