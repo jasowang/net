@@ -437,11 +437,16 @@ static int __virtnet_xdp_xmit(struct virtnet_info *vi,
 		xdp_return_frame(xdpf_sent);
 
 	/* virtqueue want to use data area in-front of packet */
-	if (unlikely(xdpf->metasize > 0))
+	if (unlikely(xdpf->metasize > 0)) {
+		printk("metasize is %d\n", xdpf->metasize);
 		return -EOPNOTSUPP;
+	}
 
-	if (unlikely(xdpf->headroom < vi->hdr_len))
+	if (unlikely(xdpf->headroom < vi->hdr_len)) {
+		printk("headroom is %d less than %d\n",
+			xdpf->headroom, vi->hdr_len);
 		return -EOVERFLOW;
+	}
 
 	/* Make room for virtqueue hdr (also change xdpf->headroom?) */
 	xdpf->data -= vi->hdr_len;
@@ -453,8 +458,11 @@ static int __virtnet_xdp_xmit(struct virtnet_info *vi,
 	sg_init_one(sq->sg, xdpf->data, xdpf->len);
 
 	err = virtqueue_add_outbuf(sq->vq, sq->sg, 1, xdpf, GFP_ATOMIC);
-	if (unlikely(err))
+	if (unlikely(err)) {
+		printk("-ENOSPC\n");
 		return -ENOSPC; /* Caller handle free/refcnt */
+	}
+	printk("xdp sent %d\n", xdpf->len);
 
 	return 0;
 }
@@ -516,8 +524,11 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
 		int off;
 
 		buf = virtqueue_get_buf(rq->vq, &buflen);
-		if (unlikely(!buf))
+		printk("buf len in linearizing %d\n", buflen);
+		if (unlikely(!buf)) {
+			printk("!buf!\n");
 			goto err_buf;
+		}
 
 		p = virt_to_head_page(buf);
 		off = buf - page_address(p);
@@ -526,6 +537,8 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
 		 * is sending packet larger than the MTU.
 		 */
 		if ((page_off + buflen + tailroom) > PAGE_SIZE) {
+			printk("too large page_off %d buflen %d tailroom %d!\n",
+				page_off, buflen, tailroom);
 			put_page(p);
 			goto err_buf;
 		}
@@ -726,8 +739,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 						      page, offset,
 						      VIRTIO_XDP_HEADROOM,
 						      &len);
-			if (!xdp_page)
+			if (!xdp_page) {
+				printk("linearize page fails!\n");
 				goto err_xdp;
+			}
 			offset = VIRTIO_XDP_HEADROOM;
 		} else {
 			xdp_page = page;
@@ -738,8 +753,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		 * the receive path after XDP is loaded. In practice I
 		 * was not able to create this condition.
 		 */
-		if (unlikely(hdr->hdr.gso_type))
+		if (unlikely(hdr->hdr.gso_type)) {
+			printk("gso type!\n");
 			goto err_xdp;
+		}
 
 		/* Allow consuming headroom but reserve enough space to push
 		 * the descriptor on if we get an XDP_TX return code.
@@ -770,10 +787,12 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			if (unlikely(xdp_page != page)) {
 				rcu_read_unlock();
 				put_page(page);
+				printk("PASS and page to skb!\n");
 				head_skb = page_to_skb(vi, rq, xdp_page,
 						       offset, len, PAGE_SIZE);
 				return head_skb;
 			}
+			printk("XDP_PASS\n");
 			break;
 		case XDP_TX:
 			xdpf = convert_to_xdp_frame(&xdp);
@@ -792,15 +811,17 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			rcu_read_unlock();
 			goto xdp_xmit;
 		case XDP_REDIRECT:
+			printk("Try to redirect %d\n", len);
 			err = xdp_do_redirect(dev, &xdp, xdp_prog);
 			if (err) {
+				printk("err in redirect!\n");
 				if (unlikely(xdp_page != page))
 					put_page(xdp_page);
 				goto err_xdp;
 			}
 			*xdp_xmit = true;
 			if (unlikely(xdp_page != page))
-				goto err_xdp;
+				put_page(page);
 			rcu_read_unlock();
 			goto xdp_xmit;
 		default:
@@ -810,6 +831,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		case XDP_DROP:
 			if (unlikely(xdp_page != page))
 				__free_pages(xdp_page, 0);
+			printk("DROP or ABORTED\n");
 			goto err_xdp;
 		}
 	}
@@ -817,7 +839,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 
 	truesize = mergeable_ctx_to_truesize(ctx);
 	if (unlikely(len > truesize)) {
-		pr_debug("%s: rx error: len %u exceeds truesize %lu\n",
+		printk("%s: rx error: len %u exceeds truesize %lu\n",
 			 dev->name, len, (unsigned long)ctx);
 		dev->stats.rx_length_errors++;
 		goto err_skb;
@@ -826,12 +848,15 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	head_skb = page_to_skb(vi, rq, page, offset, len, truesize);
 	curr_skb = head_skb;
 
-	if (unlikely(!curr_skb))
+	if (unlikely(!curr_skb)) {
+		printk("no curr_skb\n");
 		goto err_skb;
+	}
 	while (--num_buf) {
 		int num_skb_frags;
 
 		buf = virtqueue_get_buf_ctx(rq->vq, &len, &ctx);
+		printk("get buf after page to skb %d\n", len);
 		if (unlikely(!buf)) {
 			pr_debug("%s: rx error: %d buffers out of %d missing\n",
 				 dev->name, num_buf,
@@ -845,7 +870,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 
 		truesize = mergeable_ctx_to_truesize(ctx);
 		if (unlikely(len > truesize)) {
-			pr_debug("%s: rx error: len %u exceeds truesize %lu\n",
+			printk("%s: rx error: len %u exceeds truesize %lu\n",
 				 dev->name, len, (unsigned long)ctx);
 			dev->stats.rx_length_errors++;
 			goto err_skb;
@@ -855,8 +880,10 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		if (unlikely(num_skb_frags == MAX_SKB_FRAGS)) {
 			struct sk_buff *nskb = alloc_skb(0, GFP_ATOMIC);
 
-			if (unlikely(!nskb))
+			if (unlikely(!nskb)) {
+				printk("alloc fail!\n");
 				goto err_skb;
+			}
 			if (curr_skb == head_skb)
 				skb_shinfo(curr_skb)->frag_list = nskb;
 			else
@@ -889,6 +916,7 @@ err_xdp:
 err_skb:
 	put_page(page);
 	while (--num_buf) {
+		printk("err_skb!\n");
 		buf = virtqueue_get_buf(rq->vq, &len);
 		if (unlikely(!buf)) {
 			pr_debug("%s: rx error: %d buffers missing\n",
@@ -1211,12 +1239,14 @@ static int virtnet_receive(struct receive_queue *rq, int budget, bool *xdp_xmit)
 
 		while (received < budget &&
 		       (buf = virtqueue_get_buf_ctx(rq->vq, &len, &ctx))) {
+			printk("receive %d\n", len);
 			bytes += receive_buf(vi, rq, buf, len, ctx, xdp_xmit);
 			received++;
 		}
 	} else {
 		while (received < budget &&
 		       (buf = virtqueue_get_buf(rq->vq, &len)) != NULL) {
+			printk("wow rece %d\n", len);
 			bytes += receive_buf(vi, rq, buf, len, NULL, xdp_xmit);
 			received++;
 		}
@@ -1303,9 +1333,11 @@ static int virtnet_poll(struct napi_struct *napi, int budget)
 		qp = vi->curr_queue_pairs - vi->xdp_queue_pairs +
 		     smp_processor_id();
 		sq = &vi->sq[qp];
+		printk("kick \n");
 		virtqueue_kick(sq->vq);
 		xdp_do_flush_map();
-	}
+	} else
+		printk("no kick \n");
 
 	return received;
 }
