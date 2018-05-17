@@ -1,0 +1,19 @@
+Bottom: c93e2238bbf040aee94664f94184a6137edded12
+Top:    c93e2238bbf040aee94664f94184a6137edded12
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-17 17:43:31 +0800
+
+virtio-net: reset num_buf to 1 after linearizing packet
+
+If we successfully linearize the packets, num_buf were set to zero,
+but this won't work for the error path which assumes at least one. It
+will lead the code try to pop the buffers of next packet and drop
+it. Fixing this by set num_buf to 1 if we successfully linearize the
+packet.
+
+
+
+
+---
+
+
