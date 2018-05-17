@@ -131,6 +131,7 @@ struct vhost_net {
 	/* Flush in progress. Protected by tx vq lock. */
 	bool tx_flush;
 	struct page_frag frag;
+	int refcnt_bias;
 };
 
 static unsigned vhost_net_zcopy_mask __read_mostly;
@@ -461,6 +462,30 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
 
 #define VHOST_NET_HEADROOM 256
 #define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
+#define MAGIC_REFCNT 6400
+
+static int vhost_net_page_frag_refill(struct vhost_net *n,
+				      unsigned int sz, struct page_frag *pfrag,
+				      gfp_t gfp)
+{
+	struct page *orig = pfrag->page;
+	int ret = skb_page_frag_refill(sz, pfrag, gfp);
+
+	if (ret)
+		return ret;
+	if (pfrag->page != orig) {
+		if (orig) {
+			page_ref_sub(page, MAGIC_REFCNT - n->refcnt_bias);
+			n->refcnt_bias = 0;
+		}
+		page_ref_add(page, MAGIC_REFCNT);
+	}
+}
+
+static int vhost_net_get_page(struct vhost_net *n)
+{
+	++n->refcnt_bias;
+}
 
 static int vhost_net_build_xdp(struct vhost_net *n,
 			       struct vhost_net_virtqueue *nvq,
@@ -528,7 +553,7 @@ static int vhost_net_build_xdp(struct vhost_net *n,
 	xdp->data_end = xdp->data + len;
 	*(int *)(xdp->data_hard_start)= buflen;
 
-	get_page(alloc_frag->page);
+	vhost_net_get_page(n);
 	alloc_frag->offset += buflen;
 
 	return 0;
@@ -1106,6 +1131,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	vhost_poll_init(n->poll + VHOST_NET_VQ_RX, handle_rx_net, EPOLLIN, dev);
 
 	n->frag.page = NULL;
+	n->refcnt_bias = 0;
 
 	f->private_data = n;
 
@@ -1183,7 +1209,7 @@ static int vhost_net_release(struct inode *inode, struct file *f)
 	kfree(n->dev.vqs);
 	kvfree(n);
 	if (n->frag.page)
-		put_page(n->frag.page);
+		page_ref_sub(n->frag.page, MAGIC_REFCNT - n->refcnt_bias);
 	return 0;
 }
 
