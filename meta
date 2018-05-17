@@ -1,11 +1,10 @@
 Version: 1
-Previous: 61bd47502136a8e5e9dacf308d553fdd3b00459f
-Head: 72f0d7af2ffd999afcb77927375a9404db6b37e0
+Previous: 986b44951ccd47e222bd32e38e4960a5b0b4b522
+Head: 94ca61a483755f196cb80624941cc2b9a3b15619
 Applied:
   virtio-net-correctly-redirect: d2889d07c8c588377974eaad11cf832a2202e4e8
   virtio-net-correctly-transmit: 11eeadbefa2d2af70b885558a5cdf0b3bd7be1da
-  virtio-net-reset-num_buf-to-1: aa9b731eee052e7a6bdef2bec9343f4e6385ea6a
-  refresh-temp-0: 72f0d7af2ffd999afcb77927375a9404db6b37e0
+  virtio-net-reset-num_buf-to-1: 94ca61a483755f196cb80624941cc2b9a3b15619
 Unapplied:
   debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
