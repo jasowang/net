@@ -10,6 +10,8 @@ the err path which will try to pop buffers for the next packet and
 increase the drop counter. Fixing this by just drop the page refcnt
 for the original page.
 
+Fixes: 186b3c998c50 ("virtio-net: support XDP_REDIRECT")
+Reported-by: David Ahern <dsahern@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
