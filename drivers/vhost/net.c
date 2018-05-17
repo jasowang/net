@@ -130,6 +130,7 @@ struct vhost_net {
 	unsigned tx_zcopy_err;
 	/* Flush in progress. Protected by tx vq lock. */
 	bool tx_flush;
+	struct page_frag frag;
 };
 
 static unsigned vhost_net_zcopy_mask __read_mostly;
@@ -461,12 +462,13 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
 #define VHOST_NET_HEADROOM 256
 #define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
 
-static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+static int vhost_net_build_xdp(struct vhost_net *n,
+			       struct vhost_net_virtqueue *nvq,
 			       struct iov_iter *from,
 			       struct xdp_buff *xdp)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct page_frag *alloc_frag = &current->task_frag;
+	struct page_frag *alloc_frag = &n->frag;
 	struct virtio_net_hdr *gso;
 	size_t len = iov_iter_count(from);
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
@@ -670,7 +672,7 @@ static void handle_tx(struct vhost_net *net)
 			goto flush;
 		}
 
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
+		err = vhost_net_build_xdp(n, nvq, &msg.msg_iter,
 					  &nvq->xdp[nheads]);
 		if (!err) {
 			printk("nheads to %d\n", nheads + 1);
@@ -1103,6 +1105,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	vhost_poll_init(n->poll + VHOST_NET_VQ_TX, handle_tx_net, EPOLLOUT, dev);
 	vhost_poll_init(n->poll + VHOST_NET_VQ_RX, handle_rx_net, EPOLLIN, dev);
 
+	n->frag.page = NULL;
+
 	f->private_data = n;
 
 	return 0;
@@ -1178,6 +1182,8 @@ static int vhost_net_release(struct inode *inode, struct file *f)
 	kfree(n->vqs[VHOST_NET_VQ_RX].rxq.queue);
 	kfree(n->dev.vqs);
 	kvfree(n);
+	if (n->frag.page)
+		put_page(n->frag.page);
 	return 0;
 }
 
