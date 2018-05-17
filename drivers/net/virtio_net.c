@@ -728,6 +728,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 						      &len);
 			if (!xdp_page)
 				goto err_xdp;
+			num_buf = 1;
 			offset = VIRTIO_XDP_HEADROOM;
 		} else {
 			xdp_page = page;
