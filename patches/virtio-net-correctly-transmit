@@ -1,0 +1,17 @@
+Bottom: bae4ddc1e280471886b38e134fd6d42c57ada52a
+Top:    bae4ddc1e280471886b38e134fd6d42c57ada52a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-17 17:35:33 +0800
+
+virtio-net: correctly transmit XDP buff after linearizing
+
+We should not go for the error path after successfully transmitting a
+XDP buffer after linearizing. Since the error path may try to pop and
+drop next packet and increase the drop counters. Fixing this by simply
+drop the refcnt of original page and go for xmit path.
+
+
+
+---
+
+
