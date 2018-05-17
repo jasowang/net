@@ -1,9 +1,9 @@
 Version: 1
-Previous: 9a96b249d84f5dda7dd313047d4334c4ba33efc2
-Head: efffd0de22efff4a3d0e1224aac6a452010aa064
+Previous: 21cca59f73bc8a80dc71b1c04caeb86a2272d6e4
+Head: 557eb28f48bd6749764c5a9fd03925273730d22f
 Applied:
   virtio-net-correctly-redirect: d2889d07c8c588377974eaad11cf832a2202e4e8
-  virtio-net-correctly-transmit: efffd0de22efff4a3d0e1224aac6a452010aa064
+  virtio-net-correctly-transmit: 557eb28f48bd6749764c5a9fd03925273730d22f
 Unapplied:
   debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
