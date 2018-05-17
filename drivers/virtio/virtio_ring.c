@@ -706,6 +706,7 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
 	START_USE(vq);
 
 	if (unlikely(vq->broken)) {
+		printk("broken\n");
 		END_USE(vq);
 		return NULL;
 	}
@@ -724,10 +725,12 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
 	*len = virtio32_to_cpu(_vq->vdev, vq->vring.used->ring[last_used].len);
 
 	if (unlikely(i >= vq->vring.num)) {
+		printk("out of range!\n");
 		BAD_RING(vq, "id %u out of range\n", i);
 		return NULL;
 	}
 	if (unlikely(!vq->desc_state[i].data)) {
+		printk("not a head!\n");
 		BAD_RING(vq, "id %u is not a head!\n", i);
 		return NULL;
 	}
@@ -747,7 +750,7 @@ void *virtqueue_get_buf_ctx(struct virtqueue *_vq, unsigned int *len,
 #ifdef DEBUG
 	vq->last_add_time_valid = false;
 #endif
-
+	printk("vq %d get len %d\n", _vq->index, *len);
 	END_USE(vq);
 	return ret;
 }

@@ -42,6 +42,8 @@ static int parse_ipv6(void *data, u64 nh_off, void *data_end)
 SEC("xdp1")
 int xdp_prog1(struct xdp_md *ctx)
 {
+	return XDP_PASS;
+#if 0
 	void *data_end = (void *)(long)ctx->data_end;
 	void *data = (void *)(long)ctx->data;
 	struct ethhdr *eth = data;
@@ -88,6 +90,7 @@ int xdp_prog1(struct xdp_md *ctx)
 		*value += 1;
 
 	return rc;
+#endif
 }
 
 char _license[] SEC("license") = "GPL";

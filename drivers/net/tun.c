@@ -1126,6 +1126,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 
 	rcu_read_unlock();
+	printk("queued %d\n", skb->len);
 	return NETDEV_TX_OK;
 
 drop:
@@ -1133,6 +1134,7 @@ drop:
 	skb_tx_error(skb);
 	kfree_skb(skb);
 	rcu_read_unlock();
+	printk("drop %d\n", skb->len);
 	return NET_XMIT_DROP;
 }
 
