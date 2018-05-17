@@ -11,7 +11,7 @@ drop next packet and increase the drop counters. Fixing this by simply
 drop the refcnt of original page and go for xmit path.
 
 Fixes: 72979a6c3590 ("virtio_net: xdp, add slowpath case for non contiguous buffers")
-Cc:
+Cc: John Fastabend <john.fastabend@gmail.com>
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
