@@ -10,6 +10,7 @@ XDP buffer after linearizing. Since the error path may try to pop and
 drop next packet and increase the drop counters. Fixing this by simply
 drop the refcnt of original page and go for xmit path.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
