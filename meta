@@ -1,7 +1,8 @@
 Version: 1
-Previous: c84656d3e010193f34925dc557a789803e8a0cc8
-Head: b3cd346b0c64985905e569d84a41c9bee6637a39
+Previous: 6e2bbf20e54efb3a9e9894bc42e54043d53f539d
+Head: b75372971799b00b2514748a338b8596d4e0f4a0
 Applied:
+  virtio-net-correctly-redirect: b75372971799b00b2514748a338b8596d4e0f4a0
 Unapplied:
   debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
