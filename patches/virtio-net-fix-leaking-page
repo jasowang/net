@@ -16,6 +16,7 @@ This patch fixes this by moving the logic of linearization and
 put_page() under err_xdp label. This will make sure all err path can
 drop the refcnt correctly.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
