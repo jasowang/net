@@ -3195,6 +3195,7 @@ static long tun_chr_compat_ioctl(struct file *file,
 static int tun_chr_fasync(int fd, struct file *file, int on)
 {
 	struct tun_file *tfile = file->private_data;
+	struct sock *sk = &tfile->socket.sk;
 	int ret;
 
 	if ((ret = fasync_helper(fd, file, on, &tfile->fasync)) < 0)
@@ -3203,8 +3204,11 @@ static int tun_chr_fasync(int fd, struct file *file, int on)
 	if (on) {
 		__f_setown(file, task_pid(current), PIDTYPE_PID, 0);
 		tfile->flags |= TUN_FASYNC;
-	} else
+		sock_set_flag(sk, SOCK_FASYNC);
+	} else {
 		tfile->flags &= ~TUN_FASYNC;
+		sock_reset_flag(sk, SOCK_FASYNC);
+	}
 	ret = 0;
 out:
 	return ret;
