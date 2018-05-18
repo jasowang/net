@@ -1,8 +1,9 @@
 Version: 1
-Previous: 347e1b8eb8a8a952affbfa9ba6ee6f47cd8d1015
-Head: 5494191f5ac5d57f3c0a9ffb9415c26dd9a9bb67
+Previous: 0b10e18ef5071121dc90ff9b4bd547876a3b4c4c
+Head: 91c046cc47f9a2df062915528cabf350b03ba3db
 Applied:
   vhost-synchronize-cleanup-will: 5494191f5ac5d57f3c0a9ffb9415c26dd9a9bb67
+  refresh-temp-0: 91c046cc47f9a2df062915528cabf350b03ba3db
 Unapplied:
   virtio-net-correctly-redirect: d2889d07c8c588377974eaad11cf832a2202e4e8
   virtio-net-correctly-transmit: 11eeadbefa2d2af70b885558a5cdf0b3bd7be1da
