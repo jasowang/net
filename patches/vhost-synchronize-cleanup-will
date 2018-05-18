@@ -1,5 +1,5 @@
 Bottom: 4663b73541337c68073acb89dcf35d5407545ee9
-Top:    4663b73541337c68073acb89dcf35d5407545ee9
+Top:    a9d2855a17c2ff5fc0343570583a154d2d5afa36
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-18 09:50:31 +0800
 
@@ -10,4 +10,23 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index f3bd8e9..00d6bcd 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -981,6 +981,7 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ {
+ 	int ret = 0;
+ 
++	mutex_lock(&dev->mutex);
+ 	vhost_dev_lock_vqs(dev);
+ 	switch (msg->type) {
+ 	case VHOST_IOTLB_UPDATE:
+@@ -1016,6 +1017,7 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ 	}
+ 
+ 	vhost_dev_unlock_vqs(dev);
++	mutex_unlock(&dev->mutex);
+ 	return ret;
+ }
+ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
