@@ -1,5 +1,5 @@
 Bottom: 32c2df5f18d5e8672b01c37f8fd7f9854e5906bb
-Top:    0eb130b4ba359ebb23009327f88447b508a575ab
+Top:    c881c2618ad83e3c43a73e6f27af18b7e1124f98
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-17 17:43:31 +0800
 
@@ -18,16 +18,14 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 93ec469..910d2e7 100644
+index 93ec469..d9637ec 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -536,6 +536,10 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
+@@ -536,6 +536,8 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
  		put_page(p);
  	}
  
-+	/* receive_mergeable() assumes there's at least one buffer, so
-+	 * align with it.
-+	 */
++	/* receive_mergeable() assumes there's at least one buffer */
 +	*num_buf = 1;
  	/* Headroom does not contribute to packet length */
  	*len = page_off - VIRTIO_XDP_HEADROOM;
