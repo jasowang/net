@@ -1,5 +1,5 @@
-Bottom: 69f001f944f5ee8e89bd266c06934b7b7506cb74
-Top:    33ae4488b2aa6b838b262896443091c5540b25b0
+Bottom: c881c2618ad83e3c43a73e6f27af18b7e1124f98
+Top:    047005c42efc49fce79783d3de68bfc18a20519a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-17 21:05:13 +0800
 
@@ -26,10 +26,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 910d2e7..48883b7 100644
+index d9637ec..3aaa302 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -698,7 +698,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -696,7 +696,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  {
  	struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
  	u16 num_buf = virtio16_to_cpu(vi->vdev, hdr->num_buffers);
@@ -38,7 +38,7 @@ index 910d2e7..48883b7 100644
  	int offset = buf - page_address(page);
  	struct sk_buff *head_skb, *curr_skb;
  	struct bpf_prog *xdp_prog;
-@@ -712,7 +712,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -710,7 +710,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  	xdp_prog = rcu_dereference(rq->xdp_prog);
  	if (xdp_prog) {
  		struct xdp_frame *xdpf;
@@ -46,7 +46,7 @@ index 910d2e7..48883b7 100644
  		struct xdp_buff xdp;
  		void *data;
  		u32 act;
-@@ -731,7 +730,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -729,7 +728,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  						      VIRTIO_XDP_HEADROOM,
  						      &len);
  			if (!xdp_page)
@@ -55,7 +55,7 @@ index 910d2e7..48883b7 100644
  			offset = VIRTIO_XDP_HEADROOM;
  		} else {
  			xdp_page = page;
-@@ -786,8 +785,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -784,8 +783,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  			err = __virtnet_xdp_xmit(vi, xdpf);
  			if (unlikely(err)) {
  				trace_xdp_exception(vi->dev, xdp_prog, act);
@@ -64,7 +64,7 @@ index 910d2e7..48883b7 100644
  				goto err_xdp;
  			}
  			*xdp_xmit = true;
-@@ -797,11 +794,8 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -795,11 +792,8 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  			goto xdp_xmit;
  		case XDP_REDIRECT:
  			err = xdp_do_redirect(dev, &xdp, xdp_prog);
@@ -77,7 +77,7 @@ index 910d2e7..48883b7 100644
  			*xdp_xmit = true;
  			if (unlikely(xdp_page != page))
  				put_page(page);
-@@ -812,8 +806,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -810,8 +804,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  		case XDP_ABORTED:
  			trace_xdp_exception(vi->dev, xdp_prog, act);
  		case XDP_DROP:
@@ -86,7 +86,7 @@ index 910d2e7..48883b7 100644
  			goto err_xdp;
  		}
  	}
-@@ -889,6 +881,9 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+@@ -887,6 +879,9 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
  	return head_skb;
  
  err_xdp:
