@@ -5,11 +5,11 @@ Date:   2018-05-17 17:43:31 +0800
 
 virtio-net: reset num_buf to 1 after linearizing packet
 
-If we successfully linearize the packets, num_buf were set to zero,
-but this won't work for the error path which assumes at least one. It
-will lead the code try to pop the buffers of next packet and drop
-it. Fixing this by set num_buf to 1 if we successfully linearize the
-packet.
+If we successfully linearize the packets, num_buf were set to zero
+which was wrong since we now have only 1 buffer to be used for e.g in
+the error path of receive_mergeable(). Zero num_buf will lead the code
+try to pop the buffers of next packet and drop it. Fixing this by set
+num_buf to 1 if we successfully linearize the packet.
 
 Fixes: 4941d472bf95 ("virtio-net: do not reset during XDP set")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
