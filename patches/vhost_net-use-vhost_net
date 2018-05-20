@@ -1,5 +1,5 @@
 Bottom: f0ee32bf29fd8a4057b15230a1065cf5c3b5f9d1
-Top:    5d8a805bb77b155cef6b7c249c4420df5085cd85
+Top:    780a23b7bf3dc726f266d981f01381e60f6c4224
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-17 10:55:42 +0800
 
@@ -12,7 +12,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index bec4109..2cea3f1 100644
+index bec4109..23067c7 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -133,6 +133,7 @@ struct vhost_net {
@@ -39,6 +39,15 @@ index bec4109..2cea3f1 100644
  	struct virtio_net_hdr *gso;
  	size_t len = iov_iter_count(from);
  	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+@@ -658,7 +660,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		vq->heads[nheads].len = 0;
+ 
+ 		total_len += len;
+-		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
++		err = vhost_net_build_xdp(net, nvq, &msg.msg_iter,
+ 					  &nvq->xdp[nheads]);
+ 		if (!err) {
+ 			if (++nheads == VHOST_RX_BATCH) {
 @@ -1208,6 +1210,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  	vhost_poll_init(n->poll + VHOST_NET_VQ_TX, handle_tx_net, EPOLLOUT, dev);
  	vhost_poll_init(n->poll + VHOST_NET_VQ_RX, handle_rx_net, EPOLLIN, dev);
