@@ -660,7 +660,7 @@ static void handle_tx_copy(struct vhost_net *net)
 		vq->heads[nheads].len = 0;
 
 		total_len += len;
-		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
+		err = vhost_net_build_xdp(net, nvq, &msg.msg_iter,
 					  &nvq->xdp[nheads]);
 		if (!err) {
 			if (++nheads == VHOST_RX_BATCH) {
