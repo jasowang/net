@@ -5,8 +5,19 @@ Date:   2018-04-26 11:55:00 +0800
 
 tuntap: introduce tun_msg_control
 
+This patch introduces a tun specific msg_control format.
+
+struct tun_msg_ctl {
+       int type;
+       void *ptr;
+};
+
+Only two types were supported now, one is UBUF which is used by
+zerocopy vhost_net, another is pointer to XDP buff. This could be
+used or extended to support receiving an array of XDP buffs in the
+future.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-(cherry picked from commit fe2ca0f3ed7d3ef40dacadb68418c432562360ac)
 
 
 ---
