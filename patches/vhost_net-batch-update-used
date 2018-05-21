@@ -3,9 +3,17 @@ Top:    c6426ccab9c2324110cfdcc1cee7e54ca9e883bc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
-vhost_net: batch update used ring for datacopy
+vhost_net: batch update used ring for datacopy TX
+
+Like commit e2b3b35eb989 ("vhost_net: batch used ring update in rx"),
+this patches implements batch used ring update for datacopy TX
+(zerocopy has already done some kind of batching).
+
+Testpmd transmission from guest to ixgbe via XDP_REDIRECT shows about
+15% improvement from 2.8Mpps to 3.2Mpps.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
