@@ -1,6 +1,6 @@
 Version: 1
-Previous: f0161082d00b93d4f64f259a0f6caefcb02c02bd
-Head: fed30e00e9a5df1210b13d32b520147f718024b6
+Previous: 6706e0fce66150e3620480c4803de60093d3ad5a
+Head: 45be163f3855ea4110d6e438b69fe1bbbcf3882f
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost_net-introduce-helper-to: a22d8d6ae428c86fdd261e6da978b0901a85b4ee
