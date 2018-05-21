@@ -1,10 +1,11 @@
 Version: 1
-Previous: c39d2d0ab18f32c28e4804c9560f1a59d2ecd2a1
-Head: e75b7cf6b83ecdc76bd04da76cb9cb85131d8a84
+Previous: 2a39e69718e221ff5f6227f1fc3b95a104ac4363
+Head: 08e1d544aa96d1018869b61521b9944657865ef7
 Applied:
   virtio-net-correctly-redirect: 52f1cef7b2ef0606d71b91949fe439abd883e043
   virtio-net-correctly-transmit: 2a781bbeafa9e498bef55d40969b113d6cc29cd2
   virtio-net-reset-num_buf-to-1: e75b7cf6b83ecdc76bd04da76cb9cb85131d8a84
+  virtio-net-fix-leaking-page-0: 08e1d544aa96d1018869b61521b9944657865ef7
 Unapplied:
   virtio-net-fix-leaking-page: 28221a37cb16c318877d69438a72e6687d9dfe1a
   vhost-synchronize-cleanup-will: aab8007576b535d54ada650fd7f4508dc9fb3f20

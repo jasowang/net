@@ -1,0 +1,20 @@
+Bottom: a436a7c6e63d808104953e50bcf6f9135af7b645
+Top:    a436a7c6e63d808104953e50bcf6f9135af7b645
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-21 15:56:31 +0800
+
+virtio-net: fix leaking page during mergeable XDP
+
+We forget to drop reference for the original page when
+
+- we fail to convert XDP buff to XDP frame
+- we meet gso packet
+
+So fixing by drop the refcnt for the original page early just after we
+successfully linearize the page. This can also help to reduce code
+duplication.
+
+
+---
+
+
