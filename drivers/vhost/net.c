@@ -120,6 +120,7 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
+	struct xdp_buff xdp[VHOST_NET_BATCH];
 };
 
 struct vhost_net {
@@ -615,6 +616,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct xdp_buff xdp;
 	unsigned out, in;
 	int head;
 	struct msghdr msg = {
@@ -626,6 +628,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 	};
 	size_t len, total_len = 0, batch_len = 0;
 	int err;
+	struct tun_msg_ctl ctl;
 	int sent_pkts = 0;
 
 	for (;;) {
@@ -650,6 +653,14 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
 		vq->heads[nvq->done_idx].len = 0;
 		batch_len += len;
+
+		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
+		if (!err) {
+			ctl.type = TUN_MSG_PTR;
+			ctl.ptr = &xdp;
+			msg.msg_control = &ctl;
+		} else
+			msg.msg_control = NULL;
 
 		total_len += len;
 		if (tx_can_batch(vq, total_len))
@@ -730,7 +741,12 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
 		if (zcopy_used) {
 			struct ubuf_info *ubuf;
+			struct tun_msg_ctl ctl;
+
 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+
+			ctl.type = TUN_MSG_UBUF;
+			ctl.ptr = ubuf;
 
 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
@@ -738,8 +754,8 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 			ubuf->ctx = nvq->ubufs;
 			ubuf->desc = nvq->upend_idx;
 			refcount_set(&ubuf->refcnt, 1);
-			msg.msg_control = ubuf;
-			msg.msg_controllen = sizeof(ubuf);
+			msg.msg_control = &ctl;
+			msg.msg_controllen = sizeof(ctl);
 			ubufs = nvq->ubufs;
 			atomic_inc(&ubufs->refcount);
 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
@@ -747,6 +763,7 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 			msg.msg_control = NULL;
 			ubufs = NULL;
 		}
+
 		total_len += len;
 		if (tx_can_batch(vq, total_len) &&
 		    likely(!vhost_exceeds_maxpend(net))) {
