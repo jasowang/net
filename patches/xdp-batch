@@ -16,7 +16,7 @@ done by batching XDP buffs in vhost and submit them when:
 With this tun XDP can benefit from e.g batch transmission during
 XDP_REDIRECT or XDP_TX.
 
-Tests shows 34.4% improvement on TX pps (from ~2.9Mpps to 3.9Mpps)
+Tests shows 21% improvement on TX pps (from ~3.2Mpps to ~3.9Mpps)
 while transmitting through testpmd from guest to host by
 xdp_redirect_map between tap0 and ixgbe.
 
