@@ -536,8 +536,6 @@ static struct page *xdp_linearize_page(struct receive_queue *rq,
 		put_page(p);
 	}
 
-	/* receive_mergeable() assumes there's at least one buffer */
-	*num_buf = 1;
 	/* Headroom does not contribute to packet length */
 	*len = page_off - VIRTIO_XDP_HEADROOM;
 	return page;
@@ -730,6 +728,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 						      &len);
 			if (!xdp_page)
 				goto err_xdp;
+			num_buf = 1;
 			offset = VIRTIO_XDP_HEADROOM;
 		} else {
 			xdp_page = page;
