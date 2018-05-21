@@ -12,6 +12,8 @@ underlayer socket (e.g TUN). TUN can choose to do XDP or call
 build_skb() to build skb. To support build skb, vnet header were also
 stored into the header of the XDP buff.
 
+TODO: reserve headroom based on the TUN XDP.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
