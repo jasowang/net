@@ -14,6 +14,10 @@ So fixing by drop the refcnt for the original page early just after we
 successfully linearize the page instead of put_page everywhere. This
 can also help to reduce code duplication.
 
+Cc: John Fastabend <john.fastabend@gmail.com>
+Cc: Jesper Dangaard Brouer <brouer@redhat.com>
+Fixes: 72979a6c3590 ("virtio_net: xdp, add slowpath case for non contiguous buffers")
+Fixes: 44fa2dbd4759 ("xdp: transition into using xdp_frame for ndo_xdp_xmit")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
