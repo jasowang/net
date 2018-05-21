@@ -767,7 +767,9 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 			 * adjusted
 			 */
 			len = xdp.data_end - xdp.data + vi->hdr_len;
-			break;
+			truesize = PAGE_SIZE;
+			rcu_read_unlock();
+			goto create_skb;
 		case XDP_TX:
 			xdpf = convert_to_xdp_frame(&xdp);
 			if (unlikely(!xdpf))
@@ -805,6 +807,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 		goto err_skb;
 	}
 
+create_skb:
 	head_skb = page_to_skb(vi, rq, page, offset, len, truesize);
 	curr_skb = head_skb;
 
