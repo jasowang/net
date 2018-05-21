@@ -11,8 +11,10 @@ We forget to drop reference for the original page when
 - we meet gso packet
 
 So fixing by drop the refcnt for the original page early just after we
-successfully linearize the page instead of put_page everywhere. This
-can also help to reduce code duplication.
+successfully linearize the page instead of put_page everywhere. For
+the XDP_PASS after linearizing, thanks to the previous patch, we can
+just goto the normal page_to_skb() path. This can also help to reduce
+code duplication.
 
 Cc: John Fastabend <john.fastabend@gmail.com>
 Cc: Jesper Dangaard Brouer <brouer@redhat.com>
