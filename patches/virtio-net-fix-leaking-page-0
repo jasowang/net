@@ -11,8 +11,8 @@ We forget to drop reference for the original page when
 - we meet gso packet
 
 So fixing by drop the refcnt for the original page early just after we
-successfully linearize the page. This can also help to reduce code
-duplication.
+successfully linearize the page instead of put_page everywhere. This
+can also help to reduce code duplication.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
