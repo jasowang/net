@@ -3,9 +3,17 @@ Top:    b00433e6d68ea5d648b4c93a1adb795b543a4fdf
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:29:30 +0800
 
-vhost: build xdp
+vhost: build xdp buffs
+
+This patch implement build XDP buffers in vhost_net. The idea is do
+userspace copy in vhost_net and build XDP buff based on the
+page. Vhost_net can then submit one or an array of XDP buffs to
+underlayer socket (e.g TUN). TUN can choose to do XDP or call
+build_skb() to build skb. To support build skb, vnet header were also
+stored into the header of the XDP buff.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
