@@ -5,6 +5,21 @@ Date:   2018-05-14 11:09:49 +0800
 
 vhost_net: batch submitting XDP buffers to underlayer sockets
 
+This patch implements XDP batching for vhost_net with tun. This is
+done by batching XDP buffs in vhost and submit them when:
+
+- vhost_net can not build XDP buff (mostly because of the size of packet)
+- #batched exceeds the limitation (VHOST_NET_RX_BATCH).
+- tun accept a batch of XDP buff through msg_control and process them
+  in a batch
+
+With this tun XDP can benefit from e.g batch transmission during
+XDP_REDIRECT or XDP_TX.
+
+Tests shows 34.4% improvement on TX pps (from ~2.9Mpps to 3.9Mpps)
+while transmitting through testpmd from guest to host by
+xdp_redirect_map between tap0 and ixgbe.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
