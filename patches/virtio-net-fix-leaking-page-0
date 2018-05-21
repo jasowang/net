@@ -14,6 +14,8 @@ So fixing by drop the refcnt for the original page early just after we
 successfully linearize the page. This can also help to reduce code
 duplication.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
