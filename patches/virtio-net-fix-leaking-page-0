@@ -1,5 +1,5 @@
 Bottom: a436a7c6e63d808104953e50bcf6f9135af7b645
-Top:    a436a7c6e63d808104953e50bcf6f9135af7b645
+Top:    5b5114d55bfe47e2faea9759ee0711168cd4a684
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-21 15:56:31 +0800
 
@@ -19,4 +19,85 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index c57d588..75a0368 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -730,8 +730,8 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 				goto err_xdp;
+ 			num_buf = 1;
+ 			offset = VIRTIO_XDP_HEADROOM;
+-		} else {
+-			xdp_page = page;
++			put_page(page);
++			page = xdp_page;
+ 		}
+ 
+ 		/* Transient failure which in theory could occur if
+@@ -745,7 +745,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		/* Allow consuming headroom but reserve enough space to push
+ 		 * the descriptor on if we get an XDP_TX return code.
+ 		 */
+-		data = page_address(xdp_page) + offset;
++		data = page_address(page) + offset;
+ 		xdp.data_hard_start = data - VIRTIO_XDP_HEADROOM + vi->hdr_len;
+ 		xdp.data = data + vi->hdr_len;
+ 		xdp_set_data_meta_invalid(&xdp);
+@@ -761,20 +761,12 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 			 * skb and avoid using offset
+ 			 */
+ 			offset = xdp.data -
+-					page_address(xdp_page) - vi->hdr_len;
++					page_address(page) - vi->hdr_len;
+ 
+ 			/* recalculate len if xdp.data or xdp.data_end were
+ 			 * adjusted
+ 			 */
+ 			len = xdp.data_end - xdp.data + vi->hdr_len;
+-			/* We can only create skb based on xdp_page. */
+-			if (unlikely(xdp_page != page)) {
+-				rcu_read_unlock();
+-				put_page(page);
+-				head_skb = page_to_skb(vi, rq, xdp_page,
+-						       offset, len, PAGE_SIZE);
+-				return head_skb;
+-			}
+ 			break;
+ 		case XDP_TX:
+ 			xdpf = convert_to_xdp_frame(&xdp);
+@@ -783,25 +775,16 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 			err = __virtnet_xdp_xmit(vi, xdpf);
+ 			if (unlikely(err)) {
+ 				trace_xdp_exception(vi->dev, xdp_prog, act);
+-				if (unlikely(xdp_page != page))
+-					put_page(xdp_page);
+ 				goto err_xdp;
+ 			}
+ 			*xdp_xmit = true;
+-			if (unlikely(xdp_page != page))
+-				put_page(page);
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+ 		case XDP_REDIRECT:
+ 			err = xdp_do_redirect(dev, &xdp, xdp_prog);
+-			if (err) {
+-				if (unlikely(xdp_page != page))
+-					put_page(xdp_page);
++			if (err)
+ 				goto err_xdp;
+-			}
+ 			*xdp_xmit = true;
+-			if (unlikely(xdp_page != page))
+-				put_page(page);
+ 			rcu_read_unlock();
+ 			goto xdp_xmit;
+ 		default:
+@@ -809,8 +792,6 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
+ 		case XDP_ABORTED:
+ 			trace_xdp_exception(vi->dev, xdp_prog, act);
+ 		case XDP_DROP:
+-			if (unlikely(xdp_page != page))
+-				__free_pages(xdp_page, 0);
+ 			goto err_xdp;
+ 		}
+ 	}
