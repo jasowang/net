@@ -1415,10 +1415,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 			break;
 		}
 		vq->last_avail_idx = s.num;
+#if 0
 		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED)) {
 			vq->last_avail_wrap_counter = s.num >> 31;
 			vq->avail_wrap_counter = vq->last_avail_wrap_counter;
 		}
+#endif
 		/* Forget the cached index value. */
 		vq->avail_idx = vq->last_avail_idx;
 		break;
