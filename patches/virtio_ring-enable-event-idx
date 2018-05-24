@@ -5,6 +5,8 @@ Date:   2018-05-24 20:56:20 +0800
 
 virtio_ring: enable event idx for enable_cb()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
