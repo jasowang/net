@@ -1010,6 +1010,12 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
 	 * the list are made available. */
 	virtio_wmb(vq->weak_barriers);
 	vq->vring_packed.desc[head].flags = head_flags;
+	printk("vq %d add %d wrap %u used %u vq avail %u vq used %u\n",
+		_vq->index, head,
+		head_flags & (1 << 7),
+		head_flags & (1 << 15),
+		vq->avail_wrap_counter,
+		vq->used_wrap_counter);
 	vq->num_added += descs_used;
 
 	pr_debug("Added buffer head %i to %p\n", head, vq);
@@ -1076,6 +1082,12 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
 		needs_kick = vring_need_event(event_idx, new, old);
 	else
 		needs_kick = (flags != VRING_EVENT_F_DISABLE);
+
+	printk("vq %d needs_kick %d desc %d last_used %u next avail %u\n",
+		_vq->index, needs_kick, flags == VRING_EVENT_F_DESC,
+		vq->last_used_idx, vq->next_avail_idx);
+	printk("old %u new %u off %u warp %u\n",
+		old, new, off_wrap & ~(1 << 15), off_wrap >> 15);
 	END_USE(vq);
 	return needs_kick;
 }
@@ -1132,7 +1144,8 @@ static inline bool more_used_packed(const struct vring_virtqueue *vq)
 	avail = !!(flags & VRING_DESC_F_AVAIL(1));
 	used = !!(flags & VRING_DESC_F_USED(1));
 
-	return avail == used && used == vq->used_wrap_counter;
+// Is avail == used still needed?
+	return used == vq->used_wrap_counter;
 }
 
 static void *virtqueue_get_buf_ctx_packed(struct virtqueue *_vq,
@@ -1152,9 +1165,15 @@ static void *virtqueue_get_buf_ctx_packed(struct virtqueue *_vq,
 
 	if (!more_used_packed(vq)) {
 		pr_debug("No more buffers in queue\n");
+		printk("vq %d, lats_used %d no new used wrap %u avail warp %u\n",
+			_vq->index, vq->last_used_idx,vq->used_wrap_counter,
+			vq->avail_wrap_counter);
 		END_USE(vq);
 		return NULL;
 	}
+	printk("vq %d, last_used %d (vq)used wrap %u vq avail wrap %u\n",
+		_vq->index, vq->last_used_idx, vq->used_wrap_counter,
+		vq->avail_wrap_counter);
 
 	/* Only get used elements after they have been exposed by host. */
 	virtio_rmb(vq->weak_barriers);
@@ -1226,6 +1245,10 @@ static unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue *_vq)
 			vq->last_used_idx |
 			((u16)vq->used_wrap_counter << 15));
 
+	printk("enable cb vq %d last used idx %u, used wrap %u avail wrap %u\n",
+		_vq->index, vq->last_used_idx, vq->used_wrap_counter,
+		vq->avail_wrap_counter);
+
 	if (vq->event_flags_shadow == VRING_EVENT_F_DISABLE) {
 		virtio_wmb(vq->weak_barriers);
 		// XXX XXX XXX
@@ -1257,7 +1280,10 @@ static bool virtqueue_poll_packed(struct virtqueue *_vq, unsigned last_used_idx)
 	avail = !!(flags & VRING_DESC_F_AVAIL(1));
 	used = !!(flags & VRING_DESC_F_USED(1));
 
-	return avail == used && used == vq->used_wrap_counter;
+	printk("vq %d poll last used %u avail %d used %d vq used_wrap %d ? %d\n",
+		_vq->index, last_used_idx, avail, used, vq->used_wrap_counter,
+		used == vq->used_wrap_counter);
+	return used == vq->used_wrap_counter;
 }
 
 static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)

@@ -1114,6 +1114,7 @@ static bool try_fill_recv(struct virtnet_info *vi, struct receive_queue *rq,
 		if (err)
 			break;
 	} while (rq->vq->num_free);
+	printk("refill done err is %d\n", err);
 	virtqueue_kick(rq->vq);
 	return !oom;
 }
