@@ -1232,10 +1232,9 @@ static unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue *_vq)
 		// Setting VRING_EVENT_F_DESC in this function
 		// will break netperf test for now.
 		// Will need to look into this.
-#if 0
 		vq->event_flags_shadow = vq->event ? VRING_EVENT_F_DESC :
 						     VRING_EVENT_F_ENABLE;
-#else
+#if 0
 		vq->event_flags_shadow = VRING_EVENT_F_ENABLE;
 #endif
 		vq->vring_packed.driver->flags = cpu_to_virtio16(_vq->vdev,
