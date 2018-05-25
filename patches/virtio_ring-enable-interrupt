@@ -1,5 +1,5 @@
 Bottom: d923e46fe2fc4bc1a982272bd59f8b7db2bb88f4
-Top:    d923e46fe2fc4bc1a982272bd59f8b7db2bb88f4
+Top:    9d08dea1f8ffcde2c925c38b9bbfdb01a139c3ad
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-25 13:52:40 +0800
 
@@ -8,4 +8,56 @@ virtio_ring: enable interrupt by default
 
 ---
 
-
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 9d2da55..ee0da78 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -1401,8 +1401,10 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	/* Free up any pending old buffers before queueing new ones. */
+ 	free_old_xmit_skbs(sq);
+ 
+-	if (use_napi && kick)
++	if (use_napi && kick) {
++		printk("enable cb!\n");
+ 		virtqueue_enable_cb_delayed(sq->vq);
++	}
+ 
+ 	/* timestamp packet in software */
+ 	skb_tx_timestamp(skb);
+@@ -1437,8 +1439,12 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	 * Since most packets only take 1 or 2 ring slots, stopping the queue
+ 	 * early means 16 slots are typically wasted.
+ 	 */
++	if (sq->vq->num_free < 128)
++		printk("num_free %d\n", sq->vq->num_free);
++
+ 	if (sq->vq->num_free < 2+MAX_SKB_FRAGS) {
+ 		netif_stop_subqueue(dev, qnum);
++		printk("enable cb!\n");
+ 		if (!use_napi &&
+ 		    unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
+ 			/* More just got used, free them then recheck. */
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index ea85014..152ba27 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -1280,6 +1280,8 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
+ 	else
+ 		bufs = (vq->next_avail_idx - vq->last_used_idx) * 3 / 4;
+ 
++	printk("bufs is %d\n", bufs);
++
+ 	wrap_counter = vq->used_wrap_counter;
+ 
+ 	used_idx = vq->last_used_idx + bufs;
+@@ -1738,7 +1740,9 @@ struct virtqueue *__vring_new_virtqueue(unsigned int index,
+ 		vq->next_avail_idx = 0;
+ 		vq->avail_wrap_counter = 1;
+ 		vq->used_wrap_counter = 1;
+-		vq->event_flags_shadow = 0;
++		vq->event_flags_shadow = VRING_EVENT_F_ENABLE;
++		vq->vring_packed.driver->flags =
++			cpu_to_virtio16(vdev, VRING_EVENT_F_ENABLE);
+ 
+ 		memset(vq->desc_state_packed, 0,
+ 			num * sizeof(struct vring_desc_state_packed));
