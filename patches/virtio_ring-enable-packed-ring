@@ -1,0 +1,25 @@
+Bottom: 537288d9591c308e3149cfcdcf5b281b7ea59605
+Top:    3b49c589c7eb0924305bfeaea7e6128f4674e746
+Author: Tiwei Bie <tiwei.bie@intel.com>
+Date:   2018-05-22 16:16:48 +0800
+
+virtio_ring: enable packed ring
+
+Signed-off-by: Tiwei Bie <tiwei.bie@intel.com>
+
+
+---
+
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 28b2a7b..5c3087f 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -1955,6 +1955,8 @@ void vring_transport_features(struct virtio_device *vdev)
+ 			break;
+ 		case VIRTIO_F_IOMMU_PLATFORM:
+ 			break;
++		case VIRTIO_F_RING_PACKED:
++			break;
+ 		default:
+ 			/* We don't understand this bit. */
+ 			__virtio_clear_bit(vdev, i);

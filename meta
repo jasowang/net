@@ -1,7 +1,12 @@
 Version: 1
-Previous: 6545d8ef3301933ae44bdcc92034f039a869aae2
+Previous: 24bf83daa90eeb5db0de4c43af73cabaa2ca77cb
 Head: c3d7567ebaa6635de2b0275c49fd0172c404fc48
 Applied:
+  virtio-add-packed-ring: 5676b08d2dd364a7aabf3699326524e9ee7a06cc
+  virtio_ring-support-creating: f22838658073a194365512704b74f1f8f75be313
+  virtio_ring-add-packed-ring: 668467406b8e9f7df14dae593e7abcda13a97dad
+  virtio_ring-add-event-idx: 752f0b68d5f70dd4b6855f57c6245ad0b51c7972
+  virtio_ring-enable-packed-ring: c3d7567ebaa6635de2b0275c49fd0172c404fc48
 Unapplied:
   virtio_ring-enable-event-idx: dbdbf3540131256b1aacb3e7054240d03db5a65d
   virtio_ring-enable-interrupt: e94d458ef2d80f768e6893f13dbfbba5fd951ae1
