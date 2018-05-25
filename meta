@@ -1,9 +1,10 @@
 Version: 1
-Previous: d0e3a905ec1357b5a9c4bb863a37781dd2e55216
-Head: 23e0a64fc03166c72fee36541e253ec04be48de2
+Previous: 81ebd061b60e0ee4faec4a4c59bdd17eb98ca2a5
+Head: 543bec31bcce56923d7ff2b94e08a3c2c98bf911
 Applied:
   virtio_ring-enable-event-idx: dbdbf3540131256b1aacb3e7054240d03db5a65d
   virtio_ring-enable-interrupt: 23e0a64fc03166c72fee36541e253ec04be48de2
+  refresh-temp: 543bec31bcce56923d7ff2b94e08a3c2c98bf911
 Unapplied:
   debug: 46697631694af211d12b8597eb7f196b7edd2759
 Hidden:
