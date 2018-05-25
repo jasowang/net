@@ -1401,8 +1401,10 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Free up any pending old buffers before queueing new ones. */
 	free_old_xmit_skbs(sq);
 
-	if (use_napi && kick)
+	if (use_napi && kick) {
+		printk("enable cb!\n");
 		virtqueue_enable_cb_delayed(sq->vq);
+	}
 
 	/* timestamp packet in software */
 	skb_tx_timestamp(skb);
@@ -1437,8 +1439,12 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	 * Since most packets only take 1 or 2 ring slots, stopping the queue
 	 * early means 16 slots are typically wasted.
 	 */
+	if (sq->vq->num_free < 128)
+		printk("num_free %d\n", sq->vq->num_free);
+
 	if (sq->vq->num_free < 2+MAX_SKB_FRAGS) {
 		netif_stop_subqueue(dev, qnum);
+		printk("enable cb!\n");
 		if (!use_napi &&
 		    unlikely(!virtqueue_enable_cb_delayed(sq->vq))) {
 			/* More just got used, free them then recheck. */
