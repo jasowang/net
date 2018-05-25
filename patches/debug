@@ -1,5 +1,5 @@
-Bottom: 3b49c589c7eb0924305bfeaea7e6128f4674e746
-Top:    982c1ad637c323702d8836a6590b940890f764db
+Bottom: 9d08dea1f8ffcde2c925c38b9bbfdb01a139c3ad
+Top:    8e36d46828bfa40ac40982080a204cb1eaeea643
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-24 20:55:46 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9d2da55..c459d32 100644
+index ee0da78..7619de3 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -1114,6 +1114,7 @@ static bool try_fill_recv(struct virtnet_info *vi, struct receive_queue *rq,
@@ -23,7 +23,7 @@ index 9d2da55..c459d32 100644
  	return !oom;
  }
 diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
-index 5c3087f..39664d4 100644
+index 152ba27..cea7f1f 100644
 --- a/drivers/virtio/virtio_ring.c
 +++ b/drivers/virtio/virtio_ring.c
 @@ -1010,6 +1010,12 @@ static inline int virtqueue_add_packed(struct virtqueue *_vq,
@@ -78,7 +78,7 @@ index 5c3087f..39664d4 100644
  
  	/* Only get used elements after they have been exposed by host. */
  	virtio_rmb(vq->weak_barriers);
-@@ -1226,16 +1245,19 @@ static unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue *_vq)
+@@ -1226,6 +1245,10 @@ static unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue *_vq)
  			vq->last_used_idx |
  			((u16)vq->used_wrap_counter << 15));
  
@@ -89,18 +89,7 @@ index 5c3087f..39664d4 100644
  	if (vq->event_flags_shadow == VRING_EVENT_F_DISABLE) {
  		virtio_wmb(vq->weak_barriers);
  		// XXX XXX XXX
- 		// Setting VRING_EVENT_F_DESC in this function
- 		// will break netperf test for now.
- 		// Will need to look into this.
--#if 0
- 		vq->event_flags_shadow = vq->event ? VRING_EVENT_F_DESC :
- 						     VRING_EVENT_F_ENABLE;
--#else
-+#if 0
- 		vq->event_flags_shadow = VRING_EVENT_F_ENABLE;
- #endif
- 		vq->vring_packed.driver->flags = cpu_to_virtio16(_vq->vdev,
-@@ -1258,7 +1280,10 @@ static bool virtqueue_poll_packed(struct virtqueue *_vq, unsigned last_used_idx)
+@@ -1257,7 +1280,10 @@ static bool virtqueue_poll_packed(struct virtqueue *_vq, unsigned last_used_idx)
  	avail = !!(flags & VRING_DESC_F_AVAIL(1));
  	used = !!(flags & VRING_DESC_F_USED(1));
  
