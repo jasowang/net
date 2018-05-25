@@ -1280,6 +1280,8 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
 	else
 		bufs = (vq->next_avail_idx - vq->last_used_idx) * 3 / 4;
 
+	printk("bufs is %d\n", bufs);
+
 	wrap_counter = vq->used_wrap_counter;
 
 	used_idx = vq->last_used_idx + bufs;
@@ -1738,7 +1740,9 @@ struct virtqueue *__vring_new_virtqueue(unsigned int index,
 		vq->next_avail_idx = 0;
 		vq->avail_wrap_counter = 1;
 		vq->used_wrap_counter = 1;
-		vq->event_flags_shadow = 0;
+		vq->event_flags_shadow = VRING_EVENT_F_ENABLE;
+		vq->vring_packed.driver->flags =
+			cpu_to_virtio16(vdev, VRING_EVENT_F_ENABLE);
 
 		memset(vq->desc_state_packed, 0,
 			num * sizeof(struct vring_desc_state_packed));
