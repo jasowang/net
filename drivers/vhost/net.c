@@ -467,16 +467,8 @@ static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
 
 	iov_iter_init(iter, WRITE, vq->iov, out, len);
 	iov_iter_advance(iter, hdr_size);
-	/* Sanity check */
-	if (!iov_iter_count(iter)) {
-		vq_err(vq, "Unexpected header len for TX: "
-			"%zd expected %zd\n",
-			len, hdr_size);
-		return -EFAULT;
-	}
-	len = iov_iter_count(iter);
 
-	return len;
+	return iov_iter_count(iter);
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -542,9 +534,14 @@ static void handle_tx(struct vhost_net *net)
 			break;
 		}
 
+		/* Sanity check */
 		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
-		if (len < 0)
+		if (!len) {
+			vq_err(vq, "Unexpected header len for TX: "
+			"%zd expected %zd\n",
+			len, hdr_size);
 			break;
+		}
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
