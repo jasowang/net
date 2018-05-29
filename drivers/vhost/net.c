@@ -494,7 +494,6 @@ static void handle_tx_copy(struct vhost_net *net)
 	int err;
 	size_t hdr_size;
 	struct socket *sock;
-	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	int sent_pkts = 0;
 
 	mutex_lock(&vq->mutex);
@@ -531,11 +530,17 @@ static void handle_tx_copy(struct vhost_net *net)
 			break;
 		}
 
+		/* Sanity check */
 		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
-		if (len < 0)
+		if (!len) {
+			vq_err(vq, "Unexpected header len for TX: "
+			"%zd expected %zd\n",
+			len, hdr_size);
 			break;
+		}
 
 		total_len += len;
+
 		if (total_len < VHOST_NET_WEIGHT &&
 		    !vhost_vq_avail_empty(&net->dev, vq))
 			msg.msg_flags |= MSG_MORE;
