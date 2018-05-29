@@ -1,7 +1,16 @@
 Version: 1
-Previous: 51d07a04f16a42c4781d54892425bd986fcead64
+Previous: 29db0fb209251d8c34ed951115ee611b653ee328
 Head: 0f166905650bb914b16b6149bc539dead1f6c37f
 Applied:
+  vhost-move-get_rx_bufs-to: b368a8da5b400670be2692a6cb93aa386f09d11c
+  vhost-hide-used-ring-layout: 3edc5a639d90830d26dc147109367a0286648922
+  vhost-do-not-use: 95a3e5039201f1d7220962b563928d9b17ef0f6c
+  vhost_net-do-not-explicitly: 3ece12d81abf2ab781da0c3971e19ef39c1a3fd8
+  vhost-vhost_put_user-can: 80df49db3b87e21aca25b6fe1224355bb71d0b2b
+  virtio-introduce-packed-ring: 96ed5ba05b7b2c6c837c9193318c1bb779a63dea
+  vhost-packed-ring-support: bde55df056e14bdcb43e8814d16e405fa04df1e9
+  vhost-event-suppression-for: 2c06de9f5b636d5553d93a0741604e4a1f22c32b
+  vhost-bypass-wrap-counter-in: 0f166905650bb914b16b6149bc539dead1f6c37f
 Unapplied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost_net-introduce-helper-to: 88d0f2ffb756f281c2a0f0603bbf7789fef908d6

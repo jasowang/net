@@ -1,0 +1,89 @@
+Bottom: dea4698b9a06fe97716cacbb5d1c7562ca7cb99d
+Top:    0ce6740eed67c87da819c4e55904bcf79e56d4d9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-16 20:32:17 +0800
+
+vhost_net: do not explicitly manipulate vhost_used_elem
+
+Two helpers of setting/getting used len were introduced to avoid
+explicitly manipulating vhost_used_elem in zerocopy code. This will be
+used to hide used_elem internals and simplify packed ring
+implementation.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 590eb50..8b98ae5 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -344,9 +344,10 @@ static void vhost_zerocopy_signal_used(struct vhost_net *net,
+ 	int j = 0;
+ 
+ 	for (i = nvq->done_idx; i != nvq->upend_idx; i = (i + 1) % UIO_MAXIOV) {
+-		if (vq->heads[i].elem.len == VHOST_DMA_FAILED_LEN)
++		if (vhost_get_used_len(vq, &vq->heads[i]) ==
++		    VHOST_DMA_FAILED_LEN)
+ 			vhost_net_tx_err(net);
+-		if (VHOST_DMA_IS_DONE(vq->heads[i].elem.len)) {
++		if (VHOST_DMA_IS_DONE(vhost_get_used_len(vq, &vq->heads[i]))) {
+ 			vq->heads[i].elem.len = VHOST_DMA_CLEAR_LEN;
+ 			++j;
+ 		} else
+@@ -545,10 +546,8 @@ static void handle_tx(struct vhost_net *net)
+ 			struct ubuf_info *ubuf;
+ 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+ 
+-			vq->heads[nvq->upend_idx].elem.id =
+-				cpu_to_vhost32(vq, used.elem.id);
+-			vq->heads[nvq->upend_idx].elem.len =
+-				VHOST_DMA_IN_PROGRESS;
++			vhost_set_used_len(vq, &used, VHOST_DMA_IN_PROGRESS);
++			vq->heads[nvq->upend_idx] = used;
+ 			ubuf->callback = vhost_zerocopy_callback;
+ 			ubuf->ctx = nvq->ubufs;
+ 			ubuf->desc = nvq->upend_idx;
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index afd4119..2ef1859 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2064,11 +2064,19 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+ }
+ EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
+ 
+-static void vhost_set_used_len(struct vhost_virtqueue *vq,
+-			       struct vhost_used_elem *used, int len)
++void vhost_set_used_len(struct vhost_virtqueue *vq,
++			struct vhost_used_elem *used, int len)
+ {
+ 	used->elem.len = cpu_to_vhost32(vq, len);
+ }
++EXPORT_SYMBOL_GPL(vhost_set_used_len);
++
++int vhost_get_used_len(struct vhost_virtqueue *vq,
++		       struct vhost_used_elem *used)
++{
++	return vhost32_to_cpu(vq, used->elem.len);
++}
++EXPORT_SYMBOL_GPL(vhost_get_used_len);
+ 
+ /* This is a multi-buffer version of vhost_get_desc, that works if
+  *	vq has read descriptors only.
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 8dea44b..604821b 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -198,6 +198,11 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+ 		   unsigned *log_num,
+ 		   unsigned int quota,
+ 		   s16 *count);
++void vhost_set_used_len(struct vhost_virtqueue *vq,
++			struct vhost_used_elem *used,
++			int len);
++int vhost_get_used_len(struct vhost_virtqueue *vq,
++		       struct vhost_used_elem *used);
+ void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
+ 
+ int vhost_vq_init_access(struct vhost_virtqueue *);
