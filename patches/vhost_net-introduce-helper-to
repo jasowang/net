@@ -1,5 +1,5 @@
 Bottom: 8d505aa397edb92ca8a2f03be4f849b02b86f801
-Top:    33ced229dca2f6f7b4adfad658db394d69d37cd7
+Top:    0bfae419db1837fa39a04121a12cfe350184d7a8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 10:48:35 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c4b49fc..15d191a 100644
+index c4b49fc..bc7e6f3 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -459,6 +459,26 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
+@@ -459,6 +459,18 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
  	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
  }
  
@@ -26,22 +26,14 @@ index c4b49fc..15d191a 100644
 +
 +	iov_iter_init(iter, WRITE, vq->iov, out, len);
 +	iov_iter_advance(iter, hdr_size);
-+	/* Sanity check */
-+	if (!iov_iter_count(iter)) {
-+		vq_err(vq, "Unexpected header len for TX: "
-+			"%zd expected %zd\n",
-+			len, hdr_size);
-+		return -EFAULT;
-+	}
-+	len = iov_iter_count(iter);
 +
-+	return len;
++	return iov_iter_count(iter);
 +}
 +
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -521,18 +541,10 @@ static void handle_tx(struct vhost_net *net)
+@@ -521,18 +533,15 @@ static void handle_tx(struct vhost_net *net)
  			       "out %d, int %d\n", out, in);
  			break;
  		}
@@ -49,16 +41,18 @@ index c4b49fc..15d191a 100644
 -		len = iov_length(vq->iov, out);
 -		iov_iter_init(&msg.msg_iter, WRITE, vq->iov, out, len);
 -		iov_iter_advance(&msg.msg_iter, hdr_size);
--		/* Sanity check */
++
+ 		/* Sanity check */
 -		if (!msg_data_left(&msg)) {
--			vq_err(vq, "Unexpected header len for TX: "
++		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
++		if (!len) {
+ 			vq_err(vq, "Unexpected header len for TX: "
 -			       "%zd expected %zd\n",
 -			       len, hdr_size);
-+
-+		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
-+		if (len < 0)
++			"%zd expected %zd\n",
++			len, hdr_size);
  			break;
--		}
+ 		}
 -		len = msg_data_left(&msg);
  
  		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
