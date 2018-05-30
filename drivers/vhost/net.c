@@ -626,12 +626,9 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
-	zcopy = nvq->ubufs;
-
 	for (;;) {
 		/* Release DMAs done buffers first */
-		if (zcopy)
-			vhost_zerocopy_signal_used(net, vq);
+		vhost_zerocopy_signal_used(net, vq);
 
 		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
