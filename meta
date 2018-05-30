@@ -1,6 +1,6 @@
 Version: 1
-Previous: b81aacd995b31372071677ff4ad33d495a200a96
-Head: 64b577c3c4eea6d88194b75fcede4a12cd0a4cb2
+Previous: dc4d296537941a909334920b7665a8cbb4ac9c6f
+Head: 816ec4d866fadf09e6b248c65fc8a9bc4cab8b7f
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost-move-get_rx_bufs-to: 519a09efaa2c0c564aa77fba2b51d4ddd40a4ef7
@@ -15,6 +15,7 @@ Applied:
   vhost_net-introduce-helper-to: 523df3fcf076f09d8a333b592c98ee2a7b3209ff
   vhost_net-introduce: 5748969b7d2300f1d4f6cda4f7901dbbf7a4a2d4
   vhost_net-split-out-datacopy: 64b577c3c4eea6d88194b75fcede4a12cd0a4cb2
+  refresh-temp: 816ec4d866fadf09e6b248c65fc8a9bc4cab8b7f
 Unapplied:
   vhost_net-introduce-0: 25c28860cdf1a990052ac81885cf1b661fcc2222
   vhost_net-batch-update-used: b23c089ca9f1232db4949737f94a98af9c64afae
