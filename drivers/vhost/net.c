@@ -530,7 +530,6 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_used_elem used;
 	unsigned out, in;
 	struct msghdr msg = {
 		.msg_name = NULL,
@@ -557,7 +556,8 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
-		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
+		err = get_tx_bufs(net, nvq, vq->heads + nheads,
+				  &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
@@ -569,9 +569,6 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (unlikely(err < 0))
 			break;
 
-		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
-		vq->heads[nheads].len = 0;
-
 		total_len += len;
 		if (tx_can_batch(vq, total_len))
 			msg.msg_flags |= MSG_MORE;
@@ -581,7 +578,7 @@ static void handle_tx_copy(struct vhost_net *net)
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
-			vhost_discard_vq_desc(vq, &used, 1);
+			vhost_discard_vq_desc(vq, vq->heads, 1);
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
