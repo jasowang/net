@@ -1,5 +1,5 @@
 Bottom: 0fbd482b4ee9145e92516bfd2b006a040a50fb35
-Top:    db1711d77333c4af49851bef860eb92c73f5f70f
+Top:    e83e7c8d2e5b7f53343b6082d1d22205630a4e4f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,10 +15,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 0d99b78..33e6428 100644
+index 0d99b78..b2e1f2b 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -520,9 +520,82 @@ static int get_tx_bufs(struct vhost_net *net,
+@@ -520,9 +520,78 @@ static int get_tx_bufs(struct vhost_net *net,
  	return ret;
  }
  
@@ -37,7 +37,6 @@ index 0d99b78..33e6428 100644
 +	};
 +	size_t len, total_len = 0;
 +	int err;
-+	size_t hdr_size;
 +	struct socket *sock;
 +	int sent_pkts = 0;
 +
@@ -51,8 +50,6 @@ index 0d99b78..33e6428 100644
 +
 +	vhost_disable_notify(&net->dev, vq);
 +	vhost_net_disable_vq(net, vq);
-+
-+	hdr_size = nvq->vhost_hlen;
 +
 +	for (;;) {
 +		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
@@ -68,7 +65,6 @@ index 0d99b78..33e6428 100644
 +			break;
 +
 +		total_len += len;
-+
 +		if (total_len < VHOST_NET_WEIGHT &&
 +		    !vhost_vq_avail_empty(&net->dev, vq))
 +			msg.msg_flags |= MSG_MORE;
@@ -102,7 +98,7 @@ index 0d99b78..33e6428 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -539,7 +612,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -539,7 +608,7 @@ static void handle_tx(struct vhost_net *net)
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	struct vhost_used_elem used;
@@ -111,7 +107,7 @@ index 0d99b78..33e6428 100644
  	int sent_pkts = 0;
  
  	mutex_lock(&vq->mutex);
-@@ -553,12 +626,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -553,12 +622,9 @@ static void handle_tx(struct vhost_net *net)
  	vhost_disable_notify(&net->dev, vq);
  	vhost_net_disable_vq(net, vq);
  
@@ -125,7 +121,7 @@ index 0d99b78..33e6428 100644
  
  		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
  		if (err == -ENOSPC) {
-@@ -572,9 +642,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -572,9 +638,9 @@ static void handle_tx(struct vhost_net *net)
  		if (unlikely(err < 0))
  			break;
  
@@ -138,7 +134,7 @@ index 0d99b78..33e6428 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -634,6 +704,16 @@ static void handle_tx(struct vhost_net *net)
+@@ -634,6 +700,16 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
