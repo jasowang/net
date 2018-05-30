@@ -1,5 +1,5 @@
-Bottom: cf40b459fb2ecd8ac9ed8f91c27e5617fa66d47c
-Top:    74e739fe725c331e57a9930c716b3360dfa86b14
+Bottom: 4c021453c0d96c78203a04a7646c0d078c9ee118
+Top:    8b7c472e1868951105a7de65aa8c0e6ff76dd985
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-16 20:32:16 +0800
 
@@ -124,7 +124,7 @@ index 654c71f..ac11412 100644
  		if (ret == -ENOSPC) {
  			if (unlikely(vhost_enable_notify(&vs->dev, vq))) {
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index e069adc..afd4119 100644
+index 296bd5e..2b2a776 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -728,41 +728,6 @@ static bool memory_access_ok(struct vhost_dev *d, struct vhost_umem *umem,
@@ -169,7 +169,7 @@ index e069adc..afd4119 100644
  static int vhost_copy_from_user(struct vhost_virtqueue *vq, void *to,
  				void __user *from, unsigned size)
  {
-@@ -1955,7 +1920,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1958,7 +1923,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
   * never a valid descriptor number) if none was found.  A negative code is
   * returned on error. */
  int vhost_get_vq_desc(struct vhost_virtqueue *vq,
@@ -178,7 +178,7 @@ index e069adc..afd4119 100644
  		      struct iovec iov[], unsigned int iov_size,
  		      unsigned int *out_num, unsigned int *in_num,
  		      struct vhost_log *log, unsigned int *log_num)
-@@ -2006,7 +1971,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2009,7 +1974,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		return -EFAULT;
  	}
  
@@ -187,7 +187,7 @@ index e069adc..afd4119 100644
  	head = vhost16_to_cpu(vq, ring_head);
  
  	/* If their number is silly, that's an error. */
-@@ -2100,9 +2065,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2103,9 +2068,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
  static void vhost_set_used_len(struct vhost_virtqueue *vq,
@@ -199,7 +199,7 @@ index e069adc..afd4119 100644
  }
  
  /* This is a multi-buffer version of vhost_get_desc, that works if
-@@ -2116,7 +2081,7 @@ static void vhost_set_used_len(struct vhost_virtqueue *vq,
+@@ -2119,7 +2084,7 @@ static void vhost_set_used_len(struct vhost_virtqueue *vq,
   *	returns number of buffer heads allocated, negative on error
   */
  int vhost_get_bufs(struct vhost_virtqueue *vq,
@@ -208,7 +208,7 @@ index e069adc..afd4119 100644
  		   int datalen,
  		   unsigned *iovcount,
  		   struct vhost_log *log,
-@@ -2189,7 +2154,7 @@ EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
+@@ -2192,7 +2157,7 @@ EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
  /* After we've used one of their buffers, we tell them about it.  We'll then
   * want to notify the guest, using eventfd. */
@@ -217,7 +217,7 @@ index e069adc..afd4119 100644
  		   int len)
  {
  	vhost_set_used_len(vq, used, len);
-@@ -2198,27 +2163,26 @@ int vhost_add_used(struct vhost_virtqueue *vq, struct vring_used_elem *used,
+@@ -2201,27 +2166,26 @@ int vhost_add_used(struct vhost_virtqueue *vq, struct vring_used_elem *used,
  EXPORT_SYMBOL_GPL(vhost_add_used);
  
  static int __vhost_add_used_n(struct vhost_virtqueue *vq,
@@ -252,7 +252,7 @@ index e069adc..afd4119 100644
  	}
  	if (unlikely(vq->log_used)) {
  		/* Make sure data is seen before log. */
-@@ -2242,7 +2206,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2245,7 +2209,7 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  
  /* After we've used one of their buffers, we tell them about it.  We'll then
   * want to notify the guest, using eventfd. */
@@ -261,7 +261,7 @@ index e069adc..afd4119 100644
  		     unsigned count)
  {
  	int start, n, r;
-@@ -2326,7 +2290,7 @@ EXPORT_SYMBOL_GPL(vhost_signal);
+@@ -2329,7 +2293,7 @@ EXPORT_SYMBOL_GPL(vhost_signal);
  /* And here's the combo meal deal.  Supersize me! */
  void vhost_add_used_and_signal(struct vhost_dev *dev,
  			       struct vhost_virtqueue *vq,
@@ -270,7 +270,7 @@ index e069adc..afd4119 100644
  {
  	vhost_add_used(vq, used, len);
  	vhost_signal(dev, vq);
-@@ -2336,7 +2300,7 @@ EXPORT_SYMBOL_GPL(vhost_add_used_and_signal);
+@@ -2339,7 +2303,7 @@ EXPORT_SYMBOL_GPL(vhost_add_used_and_signal);
  /* multi-buffer version of vhost_add_used_and_signal */
  void vhost_add_used_and_signal_n(struct vhost_dev *dev,
  				 struct vhost_virtqueue *vq,
