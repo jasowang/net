@@ -1,12 +1,12 @@
 Version: 1
-Previous: 8f45e43933cc47106f327246a5d59d66873a0322
-Head: be375723b88a0b6a196913507a2edfc8aaa7b7c0
+Previous: 60f7363e355a5bdf56299467696336dbeb5d4e23
+Head: 706821cbfa04c9ccf66ddb3c645f84b8fbb32cf7
 Applied:
   vhost-move-get_rx_bufs-to: bc8fdb699986204a356997e696ffb67fa74f16fd
   vhost-hide-used-ring-layout: d4cfbf3cb13f37033a78ef959435e7c5226bba9d
   vhost-do-not-use: be375723b88a0b6a196913507a2edfc8aaa7b7c0
+  vhost_net-do-not-explicitly: 706821cbfa04c9ccf66ddb3c645f84b8fbb32cf7
 Unapplied:
-  vhost_net-do-not-explicitly: e023fd55caf324082962509facc80c59afebceeb
   vhost-vhost_put_user-can: c23a9a79f4b8a0b3c70fa8a00b2d8ec8d97c80e6
   virtio-introduce-packed-ring: 27588ed6abb6ffcb4ab3721ecd2480bd619a559b
   vhost-packed-ring-support: 255ee78fca1d6d6df93ad7092931e034666f4edf
