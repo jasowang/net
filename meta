@@ -1,9 +1,9 @@
 Version: 1
-Previous: dc3ffc5d531fac6f5ec933610debd60a095d0955
-Head: ae40832e53c33fab2755571dabc1378117bc50d4
+Previous: 4371d73da8f6be7fba978ac0c37aca3598014351
+Head: bcc43efa4791fd9b0a1794501a2b75434b4275d1
 Applied:
+  revert-x86-remove: bcc43efa4791fd9b0a1794501a2b75434b4275d1
 Unapplied:
-  revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
   vhost-move-get_rx_bufs-to: 519a09efaa2c0c564aa77fba2b51d4ddd40a4ef7
   vhost-hide-used-ring-layout: b795b0198a86226a3f7d9bf279052f630577f939
   vhost-do-not-use: eb9dfa68423c9ec59a36aecf7a39d796b22b6371
