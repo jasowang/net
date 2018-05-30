@@ -1,5 +1,5 @@
-Bottom: 9fe722dfabc0905732a34fb93e31d839e267c8d2
-Top:    cf40b459fb2ecd8ac9ed8f91c27e5617fa66d47c
+Bottom: f2f1bafd9c4deb19c98ce88a375b1e6e3922c260
+Top:    4c021453c0d96c78203a04a7646c0d078c9ee118
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-16 20:32:15 +0800
 
@@ -358,10 +358,10 @@ index 7ad5709..654c71f 100644
  		 * Dispatch cmd descriptor for cmwq execution in process
  		 * context provided by vhost_scsi_workqueue.  This also ensures
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 6b455f6..e069adc 100644
+index 096a688..296bd5e 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1955,6 +1955,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1958,6 +1958,7 @@ static int get_indirect(struct vhost_virtqueue *vq,
   * never a valid descriptor number) if none was found.  A negative code is
   * returned on error. */
  int vhost_get_vq_desc(struct vhost_virtqueue *vq,
@@ -369,7 +369,7 @@ index 6b455f6..e069adc 100644
  		      struct iovec iov[], unsigned int iov_size,
  		      unsigned int *out_num, unsigned int *in_num,
  		      struct vhost_log *log, unsigned int *log_num)
-@@ -1987,7 +1988,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -1990,7 +1991,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		 * invalid.
  		 */
  		if (vq->avail_idx == last_avail_idx)
@@ -378,7 +378,7 @@ index 6b455f6..e069adc 100644
  
  		/* Only get avail ring entries after they have been
  		 * exposed by guest.
-@@ -2005,6 +2006,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2008,6 +2009,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  		return -EFAULT;
  	}
  
@@ -386,7 +386,7 @@ index 6b455f6..e069adc 100644
  	head = vhost16_to_cpu(vq, ring_head);
  
  	/* If their number is silly, that's an error. */
-@@ -2093,10 +2095,16 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2096,10 +2098,16 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	/* Assume notifications from guest are disabled at this point,
  	 * if they aren't we would need to update avail_event index. */
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
@@ -404,7 +404,7 @@ index 6b455f6..e069adc 100644
  /* This is a multi-buffer version of vhost_get_desc, that works if
   *	vq has read descriptors only.
   * @vq		- the relevant virtqueue
-@@ -2113,13 +2121,13 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+@@ -2116,13 +2124,13 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
  		   unsigned *iovcount,
  		   struct vhost_log *log,
  		   unsigned *log_num,
@@ -421,7 +421,7 @@ index 6b455f6..e069adc 100644
  	/* len is always initialized before use since we are always called with
  	 * datalen > 0.
  	 */
-@@ -2130,17 +2138,12 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+@@ -2133,17 +2141,12 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
  			r = -ENOBUFS;
  			goto err;
  		}
@@ -440,7 +440,7 @@ index 6b455f6..e069adc 100644
  		if (unlikely(out || in <= 0)) {
  			vq_err(vq, "unexpected descriptor format for RX: "
  				"out %d, in %d\n", out, in);
-@@ -2151,24 +2154,26 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+@@ -2154,24 +2157,26 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
  			nlogs += *log_num;
  			log += *log_num;
  		}
@@ -472,7 +472,7 @@ index 6b455f6..e069adc 100644
  err:
  	vhost_discard_vq_desc(vq, headcount);
  	return r;
-@@ -2184,14 +2189,11 @@ EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
+@@ -2187,14 +2192,11 @@ EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
  /* After we've used one of their buffers, we tell them about it.  We'll then
   * want to notify the guest, using eventfd. */
@@ -491,7 +491,7 @@ index 6b455f6..e069adc 100644
  }
  EXPORT_SYMBOL_GPL(vhost_add_used);
  
-@@ -2324,9 +2326,9 @@ EXPORT_SYMBOL_GPL(vhost_signal);
+@@ -2327,9 +2329,9 @@ EXPORT_SYMBOL_GPL(vhost_signal);
  /* And here's the combo meal deal.  Supersize me! */
  void vhost_add_used_and_signal(struct vhost_dev *dev,
  			       struct vhost_virtqueue *vq,
