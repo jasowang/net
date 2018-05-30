@@ -1,5 +1,5 @@
-Bottom: 8d505aa397edb92ca8a2f03be4f849b02b86f801
-Top:    9fe722dfabc0905732a34fb93e31d839e267c8d2
+Bottom: 06ceaf7cdf20f5a4150c186827927a38e6aa8904
+Top:    f2f1bafd9c4deb19c98ce88a375b1e6e3922c260
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-16 20:32:14 +0800
 
@@ -117,10 +117,10 @@ index c4b49fc..6a89e11 100644
  		if (unlikely(headcount < 0))
  			goto out;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f3bd8e9..6b455f6 100644
+index f0be5f3..096a688 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -2097,6 +2097,84 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2100,6 +2100,84 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
