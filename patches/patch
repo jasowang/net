@@ -3,6 +3,7 @@ Top:    0fbd482b4ee9145e92516bfd2b006a040a50fb35
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-30 15:48:27 +0800
 
+vhost_net: introduce get_tx_bufs()
 
 
 ---
