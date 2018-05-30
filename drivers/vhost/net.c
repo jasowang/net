@@ -535,11 +535,12 @@ static void handle_tx(struct vhost_net *net)
 		.msg_flags = MSG_DONTWAIT,
 	};
 	size_t len, total_len = 0;
+	int err;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	struct vhost_used_elem used;
 	bool zcopy, zcopy_used;
-	int err, sent_pkts = 0;
+	int sent_pkts = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
