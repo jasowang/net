@@ -1,5 +1,5 @@
-Bottom: b3e029f05a17fe5daa53be00c39104f09019e81d
-Top:    8dce33df924ac151c520dc718ffec5517ae93c40
+Bottom: 19e1b2d5daefb222ba1b4b8c7d9d406d6a6ab2fc
+Top:    12e3b3848c4ed13c01872bfe7e73c34224e5f2e6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-23 10:51:51 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 54490cc..b37f42e 100644
+index 112f680..500ee47 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1412,10 +1412,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
+@@ -1415,10 +1415,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
  			break;
  		}
  		vq->last_avail_idx = s.num;
