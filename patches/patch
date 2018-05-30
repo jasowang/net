@@ -5,6 +5,8 @@ Date:   2018-05-30 15:48:27 +0800
 
 vhost_net: introduce get_tx_bufs()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
