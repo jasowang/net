@@ -485,8 +485,8 @@ static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_used_elem used;
 	unsigned out, in;
-	int head;
 	struct msghdr msg = {
 		.msg_name = NULL,
 		.msg_namelen = 0,
@@ -514,20 +514,20 @@ static void handle_tx_copy(struct vhost_net *net)
 	hdr_size = nvq->vhost_hlen;
 
 	for (;;) {
-		head = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
 						ARRAY_SIZE(vq->iov),
 						&out, &in);
-		/* On error, stop handling until the next kick. */
-		if (unlikely(head < 0))
-			break;
 		/* Nothing new?  Wait for eventfd to tell us they refilled. */
-		if (head == vq->num) {
+		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
 			break;
 		}
+		/* On error, stop handling until the next kick. */
+		if (unlikely(err < 0))
+			break;
 		if (in) {
 			vq_err(vq, "Unexpected descriptor format for TX: "
 			       "out %d, int %d\n", out, in);
@@ -554,14 +554,14 @@ static void handle_tx_copy(struct vhost_net *net)
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
-			vhost_discard_vq_desc(vq, 1);
+			vhost_discard_vq_desc(vq, &used, 1);
 			vhost_net_enable_vq(net, vq);
 			break;
 		}
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
