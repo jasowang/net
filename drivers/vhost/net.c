@@ -535,7 +535,6 @@ static void handle_tx_copy(struct vhost_net *net)
 	};
 	size_t len, total_len = 0;
 	int err;
-	size_t hdr_size;
 	struct socket *sock;
 	int sent_pkts = 0;
 
@@ -549,8 +548,6 @@ static void handle_tx_copy(struct vhost_net *net)
 
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
-
-	hdr_size = nvq->vhost_hlen;
 
 	for (;;) {
 		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
@@ -566,7 +563,6 @@ static void handle_tx_copy(struct vhost_net *net)
 			break;
 
 		total_len += len;
-
 		if (total_len < VHOST_NET_WEIGHT &&
 		    !vhost_vq_avail_empty(&net->dev, vq))
 			msg.msg_flags |= MSG_MORE;
