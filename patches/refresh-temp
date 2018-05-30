@@ -1,0 +1,36 @@
+Bottom: 0fbd482b4ee9145e92516bfd2b006a040a50fb35
+Top:    0717b1b012ab8386ebe7b79eb2ccce10a27004b4
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-30 15:59:27 +0800
+
+Refresh of vhost_net-introduce-1
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 0d99b78..f94e457 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -520,6 +520,12 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	return ret;
+ }
+ 
++static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
++{
++	return total_len < VHOST_NET_WEIGHT &&
++	       !vhost_vq_avail_empty(vq->dev, vq);
++}
++
+ /* Expects to be always run from workqueue - which acts as
+  * read-size critical section for our kind of RCU. */
+ static void handle_tx(struct vhost_net *net)
+@@ -597,8 +603,7 @@ static void handle_tx(struct vhost_net *net)
+ 			ubufs = NULL;
+ 		}
+ 		total_len += len;
+-		if (total_len < VHOST_NET_WEIGHT &&
+-		    !vhost_vq_avail_empty(&net->dev, vq) &&
++		if (tx_can_batch(vq, total_len) &&
+ 		    likely(!vhost_exceeds_maxpend(net))) {
+ 			msg.msg_flags |= MSG_MORE;
+ 		} else {
