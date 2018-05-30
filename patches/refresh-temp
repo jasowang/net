@@ -1,0 +1,22 @@
+Bottom: 0fbd482b4ee9145e92516bfd2b006a040a50fb35
+Top:    158a3197c18b458cfc9345e2705006f4b25fdca9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-30 16:24:50 +0800
+
+Refresh of patch
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 0d99b78..96c06a4 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -497,7 +497,7 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	if (ret)
+ 		goto err;
+ 
+-	if (in) {
++	if (*in) {
+ 		vq_err(vq, "Unexpected descriptor format for TX: "
+ 			"out %d, int %d\n", *out, *in);
+ 		ret = -EFAULT;
