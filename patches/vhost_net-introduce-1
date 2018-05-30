@@ -5,6 +5,8 @@ Date:   2018-05-30 15:59:24 +0800
 
 vhost_net: introduce tx_can_batch()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
