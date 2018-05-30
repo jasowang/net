@@ -1,5 +1,5 @@
-Bottom: 046e4676a006ca3268911dd3b7b03c08cbf6d7ea
-Top:    4aa2afdcc43a292c5dd27e872b1ca837217b7ca5
+Bottom: b02a0691576eb73f7af023b7efa781185aa17715
+Top:    26ee268d4db2b2dd840d2cf996244d18b580eb3b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-16 20:32:18 +0800
 
@@ -16,7 +16,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 2ef1859..8304c30 100644
+index e0fcfec..4031a8f 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -811,7 +811,7 @@ static inline void __user *__vhost_get_user(struct vhost_virtqueue *vq,
@@ -37,7 +37,7 @@ index 2ef1859..8304c30 100644
  		if (to != NULL) \
  			ret = __put_user(x, to); \
  		else \
-@@ -1680,7 +1680,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
+@@ -1683,7 +1683,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
  {
  	void __user *used;
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->used_flags),
@@ -46,7 +46,7 @@ index 2ef1859..8304c30 100644
  		return -EFAULT;
  	if (unlikely(vq->log_used)) {
  		/* Make sure the flag is seen before log. */
-@@ -1699,7 +1699,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
+@@ -1702,7 +1702,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
  static int vhost_update_avail_event(struct vhost_virtqueue *vq, u16 avail_event)
  {
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->avail_idx),
@@ -55,7 +55,7 @@ index 2ef1859..8304c30 100644
  		return -EFAULT;
  	if (unlikely(vq->log_used)) {
  		void __user *used;
-@@ -2182,12 +2182,12 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2185,12 +2185,12 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	used = vq->used->ring + start;
  	for (i = 0; i < count; i++) {
  		if (unlikely(vhost_put_user(vq, heads[i].elem.id,
@@ -70,7 +70,7 @@ index 2ef1859..8304c30 100644
  			vq_err(vq, "Failed to write used len");
  			return -EFAULT;
  		}
-@@ -2233,7 +2233,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
+@@ -2236,7 +2236,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
  	/* Make sure buffer is written before we update index. */
  	smp_wmb();
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->last_used_idx),
