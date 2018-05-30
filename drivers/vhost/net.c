@@ -481,6 +481,45 @@ static bool vhost_exceeds_weight(int pkts, int total_len)
 	       pkts >= VHOST_NET_PKT_WEIGHT;
 }
 
+static int get_tx_bufs(struct vhost_net *net,
+		       struct vhost_net_virtqueue *nvq,
+		       struct vhost_used_elem *used,
+		       struct msghdr *msg,
+		       unsigned int *out, unsigned int *in,
+		       size_t *len)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	int ret;
+
+	ret = vhost_net_tx_get_vq_desc(net, vq, used, vq->iov,
+				       ARRAY_SIZE(vq->iov),
+				       out, in);
+	if (ret)
+		goto err;
+
+	if (in) {
+		vq_err(vq, "Unexpected descriptor format for TX: "
+			"out %d, int %d\n", *out, *in);
+		ret = -EFAULT;
+		goto err;
+	}
+
+	/* Sanity check */
+	*len = init_iov_iter(vq, &msg->msg_iter, nvq->vhost_hlen, *out);
+	if (*len == 0) {
+		vq_err(vq, "Unexpected header len for TX: "
+			"%zd expected %zd\n",
+			*len, nvq->vhost_hlen);
+		ret = -EFAULT;
+		goto err;
+	}
+
+	return 0;
+err:
+	*len = 0;
+	return ret;
+}
+
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
@@ -496,13 +535,11 @@ static void handle_tx(struct vhost_net *net)
 		.msg_flags = MSG_DONTWAIT,
 	};
 	size_t len, total_len = 0;
-	int err;
-	size_t hdr_size;
 	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	struct vhost_used_elem used;
 	bool zcopy, zcopy_used;
-	int sent_pkts = 0;
+	int err, sent_pkts = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -515,7 +552,6 @@ static void handle_tx(struct vhost_net *net)
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
-	hdr_size = nvq->vhost_hlen;
 	zcopy = nvq->ubufs;
 
 	for (;;) {
@@ -523,11 +559,7 @@ static void handle_tx(struct vhost_net *net)
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
 
-
-		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
-					       ARRAY_SIZE(vq->iov),
-					       &out, &in);
-		/* Nothing new?  Wait for eventfd to tell us they refilled. */
+		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
 				vhost_disable_notify(&net->dev, vq);
@@ -538,20 +570,6 @@ static void handle_tx(struct vhost_net *net)
 		/* On error, stop handling until the next kick. */
 		if (unlikely(err < 0))
 			break;
-		if (in) {
-			vq_err(vq, "Unexpected descriptor format for TX: "
-			       "out %d, int %d\n", out, in);
-			break;
-		}
-
-		/* Sanity check */
-		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
-		if (!len) {
-			vq_err(vq, "Unexpected header len for TX: "
-			"%zd expected %zd\n",
-			len, hdr_size);
-			break;
-		}
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
