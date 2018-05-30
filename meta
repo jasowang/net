@@ -1,5 +1,5 @@
 Version: 1
-Previous: 6f452bab8b868a23775a7a0c3fe6544e79324e2c
+Previous: 8cb9c398db83dbf2fb7592e80108afb449b15a27
 Head: b860b269c2ee6c88afa5cfcae042385c643bc63d
 Applied:
   revert-x86-remove: 9e15a1e4aa4c7167f75eb23332673d777bb5d76e
@@ -18,7 +18,6 @@ Applied:
   vhost_net-introduce-1: ca22ec1a7dfb8b4c285c5ca1f68d7e099964c5bd
   vhost_net-split-out-datacopy: b860b269c2ee6c88afa5cfcae042385c643bc63d
 Unapplied:
-  vhost_net-introduce-0: 25c28860cdf1a990052ac81885cf1b661fcc2222
   vhost_net-batch-update-used: b23c089ca9f1232db4949737f94a98af9c64afae
   tuntap-enable-premmption-early: c2e2961f1fecea0878c938d3cdfa32f7d57dcc97
   tuntap-simplify-error-handling: 67498924bf94ace98143c50e0e057f4d11ef0a65
