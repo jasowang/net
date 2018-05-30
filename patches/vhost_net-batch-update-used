@@ -1,5 +1,5 @@
 Bottom: aab0bbd1fadee0d49fecedf8a212d86713bddd50
-Top:    793337d82e50376e7e039061db207030a868bf59
+Top:    f454e914464eb52edeed1102c34b7211914dfae5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,10 +18,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c494902..ea2926a 100644
+index c494902..fa0622c 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -543,6 +543,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -530,7 +530,6 @@ static void handle_tx_copy(struct vhost_net *net)
+ {
+ 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+-	struct vhost_used_elem used;
+ 	unsigned out, in;
+ 	struct msghdr msg = {
+ 		.msg_name = NULL,
+@@ -543,6 +542,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	int err;
  	struct socket *sock;
  	int sent_pkts = 0;
@@ -29,17 +37,25 @@ index c494902..ea2926a 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -568,6 +569,9 @@ static void handle_tx_copy(struct vhost_net *net)
- 		if (unlikely(err < 0))
- 			break;
+@@ -556,7 +556,8 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
  
-+		vq->heads[nheads].id = cpu_to_vhost32(vq, head);
-+		vq->heads[nheads].len = 0;
-+
- 		total_len += len;
- 		if (tx_can_batch(vq, total_len))
- 			msg.msg_flags |= MSG_MORE;
-@@ -584,13 +588,20 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	for (;;) {
+-		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
++		err = get_tx_bufs(net, nvq, vq->heads + nheads,
++				  &msg, &out, &in, &len);
+ 		if (err == -ENOSPC) {
+ 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+ 				vhost_disable_notify(&net->dev, vq);
+@@ -577,20 +578,27 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
+ 		err = sock->ops->sendmsg(sock, &msg, len);
+ 		if (unlikely(err < 0)) {
+-			vhost_discard_vq_desc(vq, &used, 1);
++			vhost_discard_vq_desc(vq, vq->heads, 1);
+ 			vhost_net_enable_vq(net, vq);
+ 			break;
+ 		}
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
