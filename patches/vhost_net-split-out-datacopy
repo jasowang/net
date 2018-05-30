@@ -1,5 +1,5 @@
-Bottom: 0717b1b012ab8386ebe7b79eb2ccce10a27004b4
-Top:    3edea69808d21285f6abf1024259cbca7ec974d2
+Bottom: 78e0bf7d1fbee75a3687da22c41aed921b2f4ac9
+Top:    aab0bbd1fadee0d49fecedf8a212d86713bddd50
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f94e457..4d16771 100644
+index e6ebb53..c494902 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -526,9 +526,77 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
