@@ -1,5 +1,5 @@
-Bottom: 9b52534eb6fadafb4d6438180b8ca6125494a7d2
-Top:    b3e029f05a17fe5daa53be00c39104f09019e81d
+Bottom: a1c4cf53fc71eca9e6775772443d65a3db63ad68
+Top:    19e1b2d5daefb222ba1b4b8c7d9d406d6a6ab2fc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-28 12:05:50 +0800
 
@@ -14,10 +14,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 292782d..54490cc 100644
+index a36e5ad2..112f680 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
-@@ -1109,10 +1109,15 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
+@@ -1112,10 +1112,15 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
  			       struct vring_used __user *used)
  {
  	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
@@ -35,7 +35,7 @@ index 292782d..54490cc 100644
  }
  
  static int vq_access_ok_split(struct vhost_virtqueue *vq, unsigned int num,
-@@ -1187,14 +1192,27 @@ static bool iotlb_access_ok(struct vhost_virtqueue *vq,
+@@ -1190,14 +1195,27 @@ static bool iotlb_access_ok(struct vhost_virtqueue *vq,
  	return true;
  }
  
@@ -67,7 +67,7 @@ index 292782d..54490cc 100644
  	return iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)(uintptr_t)vq->desc,
  			       num * sizeof(*vq->desc), VHOST_ADDR_DESC) &&
  	       iotlb_access_ok(vq, VHOST_ACCESS_RO, (u64)(uintptr_t)vq->avail,
-@@ -1206,6 +1224,17 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
+@@ -1209,6 +1227,17 @@ int vq_iotlb_prefetch(struct vhost_virtqueue *vq)
  			       num * sizeof(*vq->used->ring) + s,
  			       VHOST_ADDR_USED);
  }
@@ -85,7 +85,7 @@ index 292782d..54490cc 100644
  EXPORT_SYMBOL_GPL(vq_iotlb_prefetch);
  
  /* Can we log writes? */
-@@ -1727,6 +1756,50 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
+@@ -1730,6 +1759,50 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
  	return 0;
  }
  
@@ -136,7 +136,7 @@ index 292782d..54490cc 100644
  static int vhost_update_avail_event(struct vhost_virtqueue *vq, u16 avail_event)
  {
  	if (vhost_put_user(vq, cpu_to_vhost16(vq, vq->avail_idx),
-@@ -2680,16 +2753,13 @@ int vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2683,16 +2756,13 @@ int vhost_add_used_n(struct vhost_virtqueue *vq,
  }
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
@@ -155,7 +155,7 @@ index 292782d..54490cc 100644
  	/* Flush out used index updates. This is paired
  	 * with the barrier that the Guest executes when enabling
  	 * interrupts. */
-@@ -2722,6 +2792,64 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2725,6 +2795,64 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	return vring_need_event(vhost16_to_cpu(vq, event), new, old);
  }
  
@@ -220,7 +220,7 @@ index 292782d..54490cc 100644
  /* This actually signals the guest, using eventfd. */
  void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  {
-@@ -2799,10 +2927,34 @@ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
+@@ -2802,10 +2930,34 @@ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
  				       struct vhost_virtqueue *vq)
  {
  	struct vring_desc_packed *d = vq->desc_packed + vq->avail_idx;
@@ -257,7 +257,7 @@ index 292782d..54490cc 100644
  
  	/* They could have slipped one in as we were doing that: make
  	 * sure it's written, then check again. */
-@@ -2868,7 +3020,18 @@ EXPORT_SYMBOL_GPL(vhost_enable_notify);
+@@ -2871,7 +3023,18 @@ EXPORT_SYMBOL_GPL(vhost_enable_notify);
  static void vhost_disable_notify_packed(struct vhost_dev *dev,
  					struct vhost_virtqueue *vq)
  {
