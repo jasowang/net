@@ -5,6 +5,8 @@ Date:   2018-05-31 17:42:26 +0800
 
 vhost_net: allocate vhost_net_virtqueue separately
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
