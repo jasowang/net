@@ -1,5 +1,5 @@
 Bottom: ced29266dfd77edb5f0878cbaa2993b4d79f6f49
-Top:    d161032eb960e0f799cbf18a6a555cff0b9da667
+Top:    98729052cb05217bf6462e4de6412c7b107fb219
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-31 17:27:45 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 45238fc..a4f7f64 100644
+index 45238fc..2f7e3bb 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -1012,18 +1012,21 @@ static void vhost_net_flush_vq(struct vhost_net *n, int index)
@@ -36,8 +36,9 @@ index 45238fc..a4f7f64 100644
 +		vhost_net_ubuf_put_and_wait(nvq->ubufs);
 +		mutex_lock(&vq->mutex);
  		n->tx_flush = false;
- 		atomic_set(&n->vqs[VHOST_NET_VQ_TX].ubufs->refcount, 1);
+-		atomic_set(&n->vqs[VHOST_NET_VQ_TX].ubufs->refcount, 1);
 -		mutex_unlock(&n->vqs[VHOST_NET_VQ_TX].vq.mutex);
++		atomic_set(&nvq->ubufs->refcount, 1);
 +		mutex_unlock(&vq->mutex);
  	}
  }
