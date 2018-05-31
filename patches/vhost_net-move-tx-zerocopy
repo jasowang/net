@@ -1,5 +1,5 @@
-Bottom: ced29266dfd77edb5f0878cbaa2993b4d79f6f49
-Top:    48d31c69ca4ae3a5bc74ba56b5e095d1a2ba3f5b
+Bottom: d161032eb960e0f799cbf18a6a555cff0b9da667
+Top:    5622585ae3a1262e6ab63cce9e618161ad1a939d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-31 17:24:40 +0800
 
@@ -9,7 +9,7 @@ vhost_net: move tx zerocopy statics to vhost_net_virtqueue
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 45238fc..0c4d1e0 100644
+index a4f7f64..31973c8 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -118,11 +118,6 @@ struct vhost_net_virtqueue {
@@ -102,7 +102,7 @@ index 45238fc..0c4d1e0 100644
  		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
  		    unlikely(++sent_pkts >= VHOST_NET_PKT_WEIGHT)) {
  			vhost_poll_queue(&vq->poll);
-@@ -1193,9 +1194,9 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
+@@ -1196,9 +1197,9 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
  		oldubufs = nvq->ubufs;
  		nvq->ubufs = ubufs;
  
