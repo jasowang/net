@@ -1,8 +1,7 @@
 Version: 1
-Previous: ef1baded021603a699e73d33a8ac3bf9ecbfb5fa
-Head: 4f9dba4f6a597e12d75c4e9d723d7247571ecca4
+Previous: ca1e5c56acf87c79eee56ac8d7ac2d4f4ebb6cd4
+Head: f5697a8bc057fc74055649e7c6c3d6a06a719b62
 Applied:
-  vhost_net-move-poll-from: 95abdbc66febe402cfdd5f99132287234996519e
-  refresh-temp: 4f9dba4f6a597e12d75c4e9d723d7247571ecca4
+  vhost_net-move-poll-from: f5697a8bc057fc74055649e7c6c3d6a06a719b62
 Unapplied:
 Hidden:
