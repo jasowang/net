@@ -1,0 +1,113 @@
+Bottom: c6a29e3fae36d74a50376ed44f46e697d23290ba
+Top:    5448016e3be57a2c043716afe810e4cf720c2dec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-31 17:42:28 +0800
+
+Refresh of vhost_net-allocate
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index a77b742..a331d1b 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -131,7 +131,7 @@ struct vhost_net_virtqueue {
+ 
+ struct vhost_net {
+ 	struct vhost_dev dev;
+-	struct vhost_net_virtqueue vqs[VHOST_NET_VQ_MAX];
++	struct vhost_net_virtqueue *vqs[VHOST_NET_VQ_MAX];
+ };
+ 
+ static unsigned vhost_net_zcopy_mask __read_mostly;
+@@ -933,12 +933,21 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	struct vhost_net *n;
+ 	struct vhost_dev *dev;
+ 	struct vhost_virtqueue **vqs;
++	struct vhost_net_virtqueue *nvqs;
+ 	void **queue;
+ 	int i;
+ 
+ 	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
+ 	if (!n)
+ 		goto err;
++
++	nvqs = kmalloc(sizeof *nvqs * 2, GFP_KERNEL);
++	if (!nvqs)
++		goto err_nvqs;
++
++	n->vqs[VHOST_NET_VQ_RX] = nvqs;
++	n->vqs[VHOST_NET_VQ_TX] = nvqs + 1;
++
+ 	vqs = kmalloc(VHOST_NET_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
+ 	if (!vqs)
+ 		goto err_vqs;
+@@ -953,23 +962,23 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	dev = &n->dev;
+ 	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX].vq;
+ 	vqs[VHOST_NET_VQ_RX] = &n->vqs[VHOST_NET_VQ_RX].vq;
+-	n->vqs[VHOST_NET_VQ_TX].vq.handle_kick = handle_tx_kick;
+-	n->vqs[VHOST_NET_VQ_RX].vq.handle_kick = handle_rx_kick;
++	n->vqs[VHOST_NET_VQ_TX]->vq.handle_kick = handle_tx_kick;
++	n->vqs[VHOST_NET_VQ_RX]->vq.handle_kick = handle_rx_kick;
+ 	for (i = 0; i < VHOST_NET_VQ_MAX; i++) {
+-		n->vqs[i].ubufs = NULL;
+-		n->vqs[i].ubuf_info = NULL;
+-		n->vqs[i].upend_idx = 0;
+-		n->vqs[i].done_idx = 0;
+-		n->vqs[i].vhost_hlen = 0;
+-		n->vqs[i].sock_hlen = 0;
+-		n->vqs[i].rx_ring = NULL;
++		n->vqs[i]->ubufs = NULL;
++		n->vqs[i]->ubuf_info = NULL;
++		n->vqs[i]->upend_idx = 0;
++		n->vqs[i]->done_idx = 0;
++		n->vqs[i]->vhost_hlen = 0;
++		n->vqs[i]->sock_hlen = 0;
++		n->vqs[i]->rx_ring = NULL;
+ 		vhost_net_buf_init(&n->vqs[i].rxq);
+ 	}
+ 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
+ 
+-	vhost_poll_init(&n->vqs[VHOST_NET_VQ_TX].poll,
++	vhost_poll_init(&n->vqs[VHOST_NET_VQ_TX]->poll,
+ 			handle_tx_net, EPOLLOUT, dev);
+-	vhost_poll_init(&n->vqs[VHOST_NET_VQ_RX].poll,
++	vhost_poll_init(&n->vqs[VHOST_NET_VQ_RX]->poll,
+ 			handle_rx_net, EPOLLIN, dev);
+ 
+ 	f->private_data = n;
+@@ -980,6 +989,8 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	kfree(vqs);
+ err_vqs:
+ 	kvfree(n);
++err_nvqs:
++	kfree(nvqs);
+ err:
+ 	return -ENOMEM;
+ }
+@@ -1004,19 +1015,19 @@ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
+ static void vhost_net_stop(struct vhost_net *n, struct socket **tx_sock,
+ 			   struct socket **rx_sock)
+ {
+-	*tx_sock = vhost_net_stop_vq(n, &n->vqs[VHOST_NET_VQ_TX].vq);
+-	*rx_sock = vhost_net_stop_vq(n, &n->vqs[VHOST_NET_VQ_RX].vq);
++	*tx_sock = vhost_net_stop_vq(n, &n->vqs[VHOST_NET_VQ_TX]->vq);
++	*rx_sock = vhost_net_stop_vq(n, &n->vqs[VHOST_NET_VQ_RX]->vq);
+ }
+ 
+ static void vhost_net_flush_vq(struct vhost_net *n, int index)
+ {
+-	vhost_poll_flush(&n->vqs[index].poll);
+-	vhost_poll_flush(&n->vqs[index].vq.poll);
++	vhost_poll_flush(&n->vqs[index]->poll);
++	vhost_poll_flush(&n->vqs[index]->vq.poll);
+ }
+ 
+ static void vhost_net_flush(struct vhost_net *n)
+ {
+-	struct vhost_net_virtqueue *nvq = &n->vqs[VHOST_NET_VQ_TX];
++	struct vhost_net_virtqueue *nvq = n->vqs[VHOST_NET_VQ_TX];
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+ 
+ 	vhost_net_flush_vq(n, VHOST_NET_VQ_TX);
