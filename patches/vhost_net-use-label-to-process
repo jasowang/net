@@ -1,5 +1,5 @@
 Bottom: ec22d268002ea0e37bbebe94a52c5909a8afa69b
-Top:    ec22d268002ea0e37bbebe94a52c5909a8afa69b
+Top:    c6a29e3fae36d74a50376ed44f46e697d23290ba
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-31 17:38:28 +0800
 
@@ -10,4 +10,48 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5091c46..a77b742 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -938,20 +938,16 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 
+ 	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
+ 	if (!n)
+-		return -ENOMEM;
++		goto err;
+ 	vqs = kmalloc(VHOST_NET_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
+-	if (!vqs) {
+-		kvfree(n);
+-		return -ENOMEM;
+-	}
++	if (!vqs)
++		goto err_vqs;
+ 
+ 	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(void *),
+ 			      GFP_KERNEL);
+-	if (!queue) {
+-		kfree(vqs);
+-		kvfree(n);
+-		return -ENOMEM;
+-	}
++	if (!queue)
++		goto err_queue;
++
+ 	n->vqs[VHOST_NET_VQ_RX].rxq.queue = queue;
+ 
+ 	dev = &n->dev;
+@@ -979,6 +975,13 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 	f->private_data = n;
+ 
+ 	return 0;
++
++err_queue:
++	kfree(vqs);
++err_vqs:
++	kvfree(n);
++err:
++	return -ENOMEM;
+ }
+ 
+ static struct socket *vhost_net_stop_vq(struct vhost_net *n,
