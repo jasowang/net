@@ -118,11 +118,6 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct vhost_poll poll;
-};
-
-struct vhost_net {
-	struct vhost_dev dev;
-	struct vhost_net_virtqueue vqs[VHOST_NET_VQ_MAX];
 	/* Number of TX recently submitted.
 	 * Protected by tx vq lock. */
 	unsigned tx_packets;
@@ -131,6 +126,12 @@ struct vhost_net {
 	unsigned tx_zcopy_err;
 	/* Flush in progress. Protected by tx vq lock. */
 	bool tx_flush;
+
+};
+
+struct vhost_net {
+	struct vhost_dev dev;
+	struct vhost_net_virtqueue vqs[VHOST_NET_VQ_MAX];
 };
 
 static unsigned vhost_net_zcopy_mask __read_mostly;
@@ -301,27 +302,27 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 
 }
 
-static void vhost_net_tx_packet(struct vhost_net *net)
+static void vhost_net_tx_packet(struct vhost_net_virtqueue *nvq)
 {
-	++net->tx_packets;
-	if (net->tx_packets < 1024)
+	++nvq->tx_packets;
+	if (nvq->tx_packets < 1024)
 		return;
-	net->tx_packets = 0;
-	net->tx_zcopy_err = 0;
+	nvq->tx_packets = 0;
+	nvq->tx_zcopy_err = 0;
 }
 
-static void vhost_net_tx_err(struct vhost_net *net)
+static void vhost_net_tx_err(struct vhost_net_virtqueue *nvq)
 {
-	++net->tx_zcopy_err;
+	++nvq->tx_zcopy_err;
 }
 
-static bool vhost_net_tx_select_zcopy(struct vhost_net *net)
+static bool vhost_net_tx_select_zcopy(struct vhost_net_virtqueue *nvq)
 {
 	/* TX flush waits for outstanding DMAs to be done.
 	 * Don't start new DMAs.
 	 */
-	return !net->tx_flush &&
-		net->tx_packets / 64 >= net->tx_zcopy_err;
+	return !nvq->tx_flush &&
+		nvq->tx_packets / 64 >= nvq->tx_zcopy_err;
 }
 
 static bool vhost_sock_zcopy(struct socket *sock)
@@ -345,7 +346,7 @@ static void vhost_zerocopy_signal_used(struct vhost_net *net,
 
 	for (i = nvq->done_idx; i != nvq->upend_idx; i = (i + 1) % UIO_MAXIOV) {
 		if (vq->heads[i].len == VHOST_DMA_FAILED_LEN)
-			vhost_net_tx_err(net);
+			vhost_net_tx_err(nvq);
 		if (VHOST_DMA_IS_DONE(vq->heads[i].len)) {
 			vq->heads[i].len = VHOST_DMA_CLEAR_LEN;
 			++j;
@@ -536,7 +537,7 @@ static void handle_tx(struct vhost_net *net)
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
-				   && vhost_net_tx_select_zcopy(net);
+				   && vhost_net_tx_select_zcopy(nvq);
 
 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
 		if (zcopy_used) {
@@ -587,7 +588,7 @@ static void handle_tx(struct vhost_net *net)
 			vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		else
 			vhost_zerocopy_signal_used(net, vq);
-		vhost_net_tx_packet(net);
+		vhost_net_tx_packet(nvq);
 		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
 		    unlikely(++sent_pkts >= VHOST_NET_PKT_WEIGHT)) {
 			vhost_poll_queue(&vq->poll);
@@ -1196,9 +1197,9 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 		oldubufs = nvq->ubufs;
 		nvq->ubufs = ubufs;
 
-		n->tx_packets = 0;
-		n->tx_zcopy_err = 0;
-		n->tx_flush = false;
+		nvq->tx_packets = 0;
+		nvq->tx_zcopy_err = 0;
+		nvq->tx_flush = false;
 	}
 
 	mutex_unlock(&vq->mutex);
