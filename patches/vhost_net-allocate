@@ -1,5 +1,5 @@
-Bottom: c6a29e3fae36d74a50376ed44f46e697d23290ba
-Top:    5448016e3be57a2c043716afe810e4cf720c2dec
+Bottom: 00f72e2077916a5f938bdf55dcecd46c5f0d5523
+Top:    b99ea2f2df44f786bb9a1e649774f10988dbf47d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-31 17:42:26 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index a77b742..a331d1b 100644
+index 5b36371..09517ed 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -131,7 +131,7 @@ struct vhost_net_virtqueue {
