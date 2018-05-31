@@ -117,12 +117,12 @@ struct vhost_net_virtqueue {
 	struct vhost_net_ubuf_ref *ubufs;
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
+	struct vhost_poll poll;
 };
 
 struct vhost_net {
 	struct vhost_dev dev;
 	struct vhost_net_virtqueue vqs[VHOST_NET_VQ_MAX];
-	struct vhost_poll poll[VHOST_NET_VQ_MAX];
 	/* Number of TX recently submitted.
 	 * Protected by tx vq lock. */
 	unsigned tx_packets;
@@ -406,7 +406,7 @@ static void vhost_net_disable_vq(struct vhost_net *n,
 {
 	struct vhost_net_virtqueue *nvq =
 		container_of(vq, struct vhost_net_virtqueue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
+	struct vhost_poll *poll = &nvq->poll;
 	if (!vq->private_data)
 		return;
 	vhost_poll_stop(poll);
@@ -417,7 +417,7 @@ static int vhost_net_enable_vq(struct vhost_net *n,
 {
 	struct vhost_net_virtqueue *nvq =
 		container_of(vq, struct vhost_net_virtqueue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
+	struct vhost_poll *poll = &nvq->poll;
 	struct socket *sock;
 
 	sock = vq->private_data;
@@ -909,15 +909,21 @@ static void handle_rx_kick(struct vhost_work *work)
 
 static void handle_tx_net(struct vhost_work *work)
 {
-	struct vhost_net *net = container_of(work, struct vhost_net,
-					     poll[VHOST_NET_VQ_TX].work);
+	struct vhost_net_virtqueue *nvq =
+		container_of(work, struct vhost_net_virtqueue, poll.work);
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_net *net = container_of(vq->dev, struct vhost_net, dev);
+
 	handle_tx(net);
 }
 
 static void handle_rx_net(struct vhost_work *work)
 {
-	struct vhost_net *net = container_of(work, struct vhost_net,
-					     poll[VHOST_NET_VQ_RX].work);
+	struct vhost_net_virtqueue *nvq =
+		container_of(work, struct vhost_net_virtqueue, poll.work);
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_net *net = container_of(vq->dev, struct vhost_net, dev);
+
 	handle_rx(net);
 }
 
@@ -964,8 +970,10 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
-	vhost_poll_init(n->poll + VHOST_NET_VQ_TX, handle_tx_net, EPOLLOUT, dev);
-	vhost_poll_init(n->poll + VHOST_NET_VQ_RX, handle_rx_net, EPOLLIN, dev);
+	vhost_poll_init(&n->vqs[VHOST_NET_VQ_TX].poll,
+			handle_tx_net, EPOLLOUT, dev);
+	vhost_poll_init(&n->vqs[VHOST_NET_VQ_RX].poll,
+			handle_rx_net, EPOLLIN, dev);
 
 	f->private_data = n;
 
@@ -998,7 +1006,7 @@ static void vhost_net_stop(struct vhost_net *n, struct socket **tx_sock,
 
 static void vhost_net_flush_vq(struct vhost_net *n, int index)
 {
-	vhost_poll_flush(n->poll + index);
+	vhost_poll_flush(&n->vqs[index].poll);
 	vhost_poll_flush(&n->vqs[index].vq.poll);
 }
 
