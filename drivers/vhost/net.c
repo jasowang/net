@@ -1020,12 +1020,12 @@ static void vhost_net_flush(struct vhost_net *n)
 	vhost_net_flush_vq(n, VHOST_NET_VQ_RX);
 	if (nvq->ubufs) {
 		mutex_lock(&vq->mutex);
-		n->tx_flush = true;
+		nvq->tx_flush = true;
 		mutex_unlock(&vq->mutex);
 		/* Wait for all lower device DMAs done. */
 		vhost_net_ubuf_put_and_wait(nvq->ubufs);
 		mutex_lock(&vq->mutex);
-		n->tx_flush = false;
+		nvq->tx_flush = false;
 		atomic_set(&n->vqs[VHOST_NET_VQ_TX].ubufs->refcount, 1);
 		mutex_unlock(&vq->mutex);
 	}
