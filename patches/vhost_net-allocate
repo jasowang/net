@@ -1,0 +1,11 @@
+Bottom: c6a29e3fae36d74a50376ed44f46e697d23290ba
+Top:    c6a29e3fae36d74a50376ed44f46e697d23290ba
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-31 17:42:26 +0800
+
+vhost_net: allocate vhost_net_virtqueue separately
+
+
+---
+
+
