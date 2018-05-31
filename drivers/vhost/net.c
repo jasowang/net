@@ -938,20 +938,16 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 
 	n = kvmalloc(sizeof *n, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
 	if (!n)
-		return -ENOMEM;
+		goto err;
 	vqs = kmalloc(VHOST_NET_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
-	if (!vqs) {
-		kvfree(n);
-		return -ENOMEM;
-	}
+	if (!vqs)
+		goto err_vqs;
 
 	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(void *),
 			      GFP_KERNEL);
-	if (!queue) {
-		kfree(vqs);
-		kvfree(n);
-		return -ENOMEM;
-	}
+	if (!queue)
+		goto err_queue;
+
 	n->vqs[VHOST_NET_VQ_RX].rxq.queue = queue;
 
 	dev = &n->dev;
@@ -979,6 +975,13 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	f->private_data = n;
 
 	return 0;
+
+err_queue:
+	kfree(vqs);
+err_vqs:
+	kvfree(n);
+err:
+	return -ENOMEM;
 }
 
 static struct socket *vhost_net_stop_vq(struct vhost_net *n,
