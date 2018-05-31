@@ -1,0 +1,11 @@
+Bottom: ced29266dfd77edb5f0878cbaa2993b4d79f6f49
+Top:    ced29266dfd77edb5f0878cbaa2993b4d79f6f49
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-31 17:27:45 +0800
+
+vhost_net: simplify vhost_net_flush()
+
+
+---
+
+
