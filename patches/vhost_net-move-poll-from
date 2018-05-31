@@ -5,6 +5,8 @@ Date:   2018-05-31 17:19:36 +0800
 
 vhost_net: move poll from vhost_net to vhost_net_virtqueue
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

@@ -1,7 +1,7 @@
 Version: 1
-Previous: 372827dd27d1d82bd7575370d0a190143cd82a4d
-Head: f5e32b38033dbf3321be60bff8d3836e8fa46b59
+Previous: ddec668be9f6dc31919a955841d13024e71205ac
+Head: 257a57ddc59919b987ba716c5e657d2b06f5bda8
 Applied:
-  vhost_net-move-poll-from: f5e32b38033dbf3321be60bff8d3836e8fa46b59
+  vhost_net-move-poll-from: 257a57ddc59919b987ba716c5e657d2b06f5bda8
 Unapplied:
 Hidden:
