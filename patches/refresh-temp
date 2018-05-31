@@ -1,0 +1,21 @@
+Bottom: 19e86784bed1fc608d00ac497037bb3631f18912
+Top:    ced29266dfd77edb5f0878cbaa2993b4d79f6f49
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-05-31 17:19:51 +0800
+
+Refresh of vhost_net-move-poll-from
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 133b28c..45238fc 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -123,7 +123,6 @@ struct vhost_net_virtqueue {
+ struct vhost_net {
+ 	struct vhost_dev dev;
+ 	struct vhost_net_virtqueue vqs[VHOST_NET_VQ_MAX];
+-//	struct vhost_poll poll[VHOST_NET_VQ_MAX];
+ 	/* Number of TX recently submitted.
+ 	 * Protected by tx vq lock. */
+ 	unsigned tx_packets;
