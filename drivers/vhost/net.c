@@ -259,8 +259,8 @@ static void vhost_net_clear_ubuf_info(struct vhost_net *n)
 	int i;
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
-		kfree(n->vqs[i].ubuf_info);
-		n->vqs[i].ubuf_info = NULL;
+		kfree(n->vqs[i]->ubuf_info);
+		n->vqs[i]->ubuf_info = NULL;
 	}
 }
 
@@ -273,9 +273,9 @@ static int vhost_net_set_ubuf_info(struct vhost_net *n)
 		zcopy = vhost_net_zcopy_mask & (0x1 << i);
 		if (!zcopy)
 			continue;
-		n->vqs[i].ubuf_info = kmalloc(sizeof(*n->vqs[i].ubuf_info) *
-					      UIO_MAXIOV, GFP_KERNEL);
-		if  (!n->vqs[i].ubuf_info)
+		n->vqs[i]->ubuf_info = kmalloc(sizeof(*n->vqs[i]->ubuf_info) *
+					       UIO_MAXIOV, GFP_KERNEL);
+		if  (!n->vqs[i]->ubuf_info)
 			goto err;
 	}
 	return 0;
@@ -292,12 +292,12 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 	vhost_net_clear_ubuf_info(n);
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; i++) {
-		n->vqs[i].done_idx = 0;
-		n->vqs[i].upend_idx = 0;
-		n->vqs[i].ubufs = NULL;
-		n->vqs[i].vhost_hlen = 0;
-		n->vqs[i].sock_hlen = 0;
-		vhost_net_buf_init(&n->vqs[i].rxq);
+		n->vqs[i]->done_idx = 0;
+		n->vqs[i]->upend_idx = 0;
+		n->vqs[i]->ubufs = NULL;
+		n->vqs[i]->vhost_hlen = 0;
+		n->vqs[i]->sock_hlen = 0;
+		vhost_net_buf_init(&n->vqs[i]->rxq);
 	}
 
 }
@@ -453,7 +453,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 
 static bool vhost_exceeds_maxpend(struct vhost_net *net)
 {
-	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_net_virtqueue *nvq = net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 
 	return (nvq->upend_idx + UIO_MAXIOV - nvq->done_idx) % UIO_MAXIOV >
@@ -464,7 +464,7 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
  * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
 {
-	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_net_virtqueue *nvq = net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned out, in;
 	int head;
@@ -632,8 +632,8 @@ static int sk_has_rx_data(struct sock *sk)
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 {
-	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
-	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_net_virtqueue *rvq = net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_net_virtqueue *nvq = net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int len = peek_head_len(rvq, sk);
@@ -749,7 +749,7 @@ err:
  * read-size critical section for our kind of RCU. */
 static void handle_rx(struct vhost_net *net)
 {
-	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_RX];
+	struct vhost_net_virtqueue *nvq = net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned uninitialized_var(in), log;
 	struct vhost_log *vq_log;
@@ -957,11 +957,11 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 	if (!queue)
 		goto err_queue;
 
-	n->vqs[VHOST_NET_VQ_RX].rxq.queue = queue;
+	n->vqs[VHOST_NET_VQ_RX]->rxq.queue = queue;
 
 	dev = &n->dev;
-	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX].vq;
-	vqs[VHOST_NET_VQ_RX] = &n->vqs[VHOST_NET_VQ_RX].vq;
+	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX]->vq;
+	vqs[VHOST_NET_VQ_RX] = &n->vqs[VHOST_NET_VQ_RX]->vq;
 	n->vqs[VHOST_NET_VQ_TX]->vq.handle_kick = handle_tx_kick;
 	n->vqs[VHOST_NET_VQ_RX]->vq.handle_kick = handle_rx_kick;
 	for (i = 0; i < VHOST_NET_VQ_MAX; i++) {
@@ -972,7 +972,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i]->vhost_hlen = 0;
 		n->vqs[i]->sock_hlen = 0;
 		n->vqs[i]->rx_ring = NULL;
-		vhost_net_buf_init(&n->vqs[i].rxq);
+		vhost_net_buf_init(&n->vqs[i]->rxq);
 	}
 	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
@@ -1050,6 +1050,7 @@ static int vhost_net_release(struct inode *inode, struct file *f)
 	struct vhost_net *n = f->private_data;
 	struct socket *tx_sock;
 	struct socket *rx_sock;
+	int i;
 
 	vhost_net_stop(n, &tx_sock, &rx_sock);
 	vhost_net_flush(n);
@@ -1065,8 +1066,10 @@ static int vhost_net_release(struct inode *inode, struct file *f)
 	/* We do an extra flush before freeing memory,
 	 * since jobs can re-queue themselves. */
 	vhost_net_flush(n);
-	kfree(n->vqs[VHOST_NET_VQ_RX].rxq.queue);
+	kfree(n->vqs[VHOST_NET_VQ_RX]->rxq.queue);
 	kfree(n->dev.vqs);
+	for (i = 0; i < VHOST_NET_VQ_MAX; i++)
+		kfree(n->vqs[i]);
 	kvfree(n);
 	return 0;
 }
@@ -1171,8 +1174,8 @@ static long vhost_net_set_backend(struct vhost_net *n, unsigned index, int fd)
 		r = -ENOBUFS;
 		goto err;
 	}
-	vq = &n->vqs[index].vq;
-	nvq = &n->vqs[index];
+	vq = &n->vqs[index]->vq;
+	nvq = n->vqs[index];
 	mutex_lock(&vq->mutex);
 
 	/* Verify that ring has been setup correctly. */
@@ -1306,11 +1309,11 @@ static int vhost_net_set_features(struct vhost_net *n, u64 features)
 	}
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
-		mutex_lock(&n->vqs[i].vq.mutex);
-		n->vqs[i].vq.acked_features = features;
-		n->vqs[i].vhost_hlen = vhost_hlen;
-		n->vqs[i].sock_hlen = sock_hlen;
-		mutex_unlock(&n->vqs[i].vq.mutex);
+		mutex_lock(&n->vqs[i]->vq.mutex);
+		n->vqs[i]->vq.acked_features = features;
+		n->vqs[i]->vhost_hlen = vhost_hlen;
+		n->vqs[i]->sock_hlen = sock_hlen;
+		mutex_unlock(&n->vqs[i]->vq.mutex);
 	}
 	mutex_unlock(&n->dev.mutex);
 	return 0;
