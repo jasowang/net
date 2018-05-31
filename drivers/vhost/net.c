@@ -1025,7 +1025,7 @@ static void vhost_net_flush(struct vhost_net *n)
 		vhost_net_ubuf_put_and_wait(nvq->ubufs);
 		mutex_lock(&vq->mutex);
 		n->tx_flush = false;
-		atomic_set(&n->vqs[VHOST_NET_VQ_TX].ubufs->refcount, 1);
+		atomic_set(&nvq->ubufs->refcount, 1);
 		mutex_unlock(&vq->mutex);
 	}
 }
