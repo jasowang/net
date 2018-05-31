@@ -5,6 +5,8 @@ Date:   2018-05-31 17:27:45 +0800
 
 vhost_net: simplify vhost_net_flush()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

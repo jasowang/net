@@ -1,9 +1,9 @@
 Version: 1
-Previous: 42a421d02151c7aa44ca61d2dc0d277dcad78892
-Head: 918c2093196161f75cb86ddc4e3610db2d8157f1
+Previous: 1de22382d8bb505f8f0b87ee41ee72db7859e506
+Head: 391a15cfce7e33710c5d86279f848dafe7d9abe0
 Applied:
   vhost_net-move-poll-from: f5697a8bc057fc74055649e7c6c3d6a06a719b62
-  vhost_net-simplify: 918c2093196161f75cb86ddc4e3610db2d8157f1
+  vhost_net-simplify: 391a15cfce7e33710c5d86279f848dafe7d9abe0
 Unapplied:
   vhost_net-move-tx-zerocopy: 82fabfd47b40a73c610dd6b809133d69062ec7b4
 Hidden:
