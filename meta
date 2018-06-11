@@ -1,9 +1,8 @@
 Version: 1
-Previous: a741b8222d2e8f6d8277b4578f58e56d4d566310
+Previous: 4faa87546f726348d66c1748cdda738c1c8f24bc
 Head: 3a979e8c07e3ee9933016368db0a55943b00a089
 Applied:
 Unapplied:
-  tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
   tuntap: bb256bd9a9eb3de7d2230d16c6c802b925088f88
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
