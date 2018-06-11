@@ -1,9 +1,8 @@
 Version: 1
-Previous: b280aa5e85148042e8758a9386ee1ff5c010d2dc
+Previous: efd555a65cab716e75848c76d0b23ccc93faedf3
 Head: 3a979e8c07e3ee9933016368db0a55943b00a089
 Applied:
 Unapplied:
-  vhost-synchronize-cleanup-will: aab8007576b535d54ada650fd7f4508dc9fb3f20
   virito-net-correctly-free: b8d6f1c60179699c8bc35fc7b4e25a5c621b4624
   debug-virtio: 8728f63fc02280a07c56c7e8bc13f2c5e723ac13
   tun-fix-use-after-free-for: 4a167e4e808a6eb067599c472610becfb30203ce
