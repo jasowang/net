@@ -5,6 +5,8 @@ Date:   2018-06-11 14:47:05 +0800
 
 vhost_net: better naming in vhost_net_rx_peeK_head_len()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 

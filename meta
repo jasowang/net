@@ -1,8 +1,8 @@
 Version: 1
-Previous: e93b1197ecf51ad0c4632f0a5cf6db94855be76e
-Head: 76bb872895b36e50e94a208c81de4c5c57bf96cf
+Previous: 4f6ffceb36d60e439773c236787d9d3160e79acd
+Head: bb0c47a3a3249537886e9139683bb27d9d50fd44
 Applied:
-  vhost_net-better-naming-in: 76bb872895b36e50e94a208c81de4c5c57bf96cf
+  vhost_net-better-naming-in: bb0c47a3a3249537886e9139683bb27d9d50fd44
 Unapplied:
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
