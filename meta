@@ -1,9 +1,8 @@
 Version: 1
-Previous: 44daf23955302269d8dab6fca0dd24f7d9561ec1
-Head: 72f3fbfdc57e7cfea860c4265e60240efc6c9bc3
+Previous: 45b5926be9958a7eb07de2551b386a0e66690c99
+Head: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
 Applied:
-  vhost_net-use-rxq-s-timeout: 74a3ad6ff970c240fdc51465b08ec88742bfb47c
-  refresh-temp-0: 72f3fbfdc57e7cfea860c4265e60240efc6c9bc3
+  vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
 Unapplied:
   vhost_net-better-naming-in: 8bd44292b56571e4a5348b42cff47e0ae2023081
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
