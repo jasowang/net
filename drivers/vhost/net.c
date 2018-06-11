@@ -648,10 +648,11 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_virtqueue *rq = &rvq->vq;
 	unsigned long uninitialized_var(endtime);
 	int len = peek_head_len(rvq, sk);
 
-	if (!len && vq->busyloop_timeout) {
+	if (!len && rq->busyloop_timeout) {
 		/* Flush batched heads first */
 		vhost_rx_signal_used(rvq);
 		/* Both tx vq and rx socket were polled here */
@@ -659,7 +660,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 		vhost_disable_notify(&net->dev, vq);
 
 		preempt_disable();
-		endtime = busy_clock() + vq->busyloop_timeout;
+		endtime = busy_clock() + rq->busyloop_timeout;
 
 		while (vhost_can_busy_poll(&net->dev, endtime) &&
 		       !sk_has_rx_data(sk) &&
