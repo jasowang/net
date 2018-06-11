@@ -5,6 +5,8 @@ Date:   2018-06-11 14:51:21 +0800
 
 vhost_net: use rxq's timeout when polling it
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
