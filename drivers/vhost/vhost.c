@@ -988,11 +988,9 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
 	case VHOST_IOTLB_UPDATE:
 		if (!dev->iotlb) {
 			ret = -EFAULT;
-			printk("no iotlb!\n");
 			break;
 		}
 		if (!umem_access_ok(msg->uaddr, msg->size, msg->perm)) {
-			printk("umem access fail!\n");
 			ret = -EFAULT;
 			break;
 		}
@@ -1000,7 +998,6 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
 		if (vhost_new_umem_range(dev->iotlb, msg->iova, msg->size,
 					 msg->iova + msg->size - 1,
 					 msg->uaddr, msg->perm)) {
-			printk("no memory!\n");
 			ret = -ENOMEM;
 			break;
 		}
@@ -1023,7 +1020,6 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
 	vhost_dev_unlock_vqs(dev);
 	mutex_unlock(&dev->mutex);
 
-	printk("ret is %d\n", ret);
 	return ret;
 }
 ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
@@ -1040,7 +1036,6 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 	switch (type) {
 	case VHOST_IOTLB_MSG:
 		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
-		printk("v1! offset is %d\n", offset);
 		break;
 	case VHOST_IOTLB_MSG_V2:
 		offset = sizeof(__u32);
@@ -1054,8 +1049,6 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 	ret = copy_from_iter(&msg, sizeof(msg), from);
 	if (ret != sizeof(msg))
 		goto done;
-	printk("iova %llx size %llx uaddr %llx perm %llx type %d\n",
-		msg.iova, msg.size, msg.uaddr, msg.perm, msg.type);
 	if (vhost_process_iotlb_msg(dev, &msg)) {
 		ret = -EFAULT;
 		goto done;
@@ -1064,7 +1057,6 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 	ret = (type == VHOST_IOTLB_MSG) ? sizeof(struct vhost_msg) :
 		                          sizeof(struct vhost_msg_v2);
 done:
-	printk("ret in write %d\n", ret);
 	return ret;
 }
 EXPORT_SYMBOL(vhost_chr_write_iter);
@@ -1130,7 +1122,6 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 				kfree(node);
 				return ret;
 			}
-			printk("v2 read!\n");
 		} else {
 			ret = copy_to_iter(&node->msg, size, to);
 
@@ -1138,7 +1129,6 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 				kfree(node);
 				return ret;
 			}
-			printk("v1 read!\n");
 		}
 
 		vhost_enqueue_msg(dev, &dev->pending_list, node);
