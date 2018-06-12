@@ -5,6 +5,8 @@ Date:   2018-06-12 10:28:55 +0800
 
 vhost: introduce new ioctls to set/get backend features
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
