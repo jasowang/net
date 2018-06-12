@@ -1,0 +1,23 @@
+Bottom: 0ff03a64529aeffbf03f6000853f1152ec7c52e4
+Top:    06018e80e8f1ab2e975d92782ea074aa82651bda
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-12 16:55:31 +0800
+
+Refresh of vhost-introduce-new-ioctls-to
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 98015a1..d69a591 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1035,6 +1035,9 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 
+ 	switch (type) {
+ 	case VHOST_IOTLB_MSG:
++		/* There maybe a hole after type for V1 message type,
++		 * so skip it here.
++		 */
+ 		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
+ 		break;
+ 	case VHOST_IOTLB_MSG_V2:
