@@ -3,9 +3,9 @@ Top:    0ff03a64529aeffbf03f6000853f1152ec7c52e4
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
-vhost: switch to use new IOTLB message format
+vhost: switch to use new message format
 
-We use to have IOTLB message like:
+We use to have message like:
 
 struct vhost_msg {
 	int type;
