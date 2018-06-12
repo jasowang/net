@@ -7,6 +7,7 @@ vhost_net: disable tx polling
 
 TCP_RR shows about 10% drop.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
