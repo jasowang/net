@@ -1,5 +1,5 @@
 Bottom: ae736c374725c2c2ef1ee2e01ba44a1dd7026a30
-Top:    0ff03a64529aeffbf03f6000853f1152ec7c52e4
+Top:    06018e80e8f1ab2e975d92782ea074aa82651bda
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -98,7 +98,7 @@ index e7cf7d2..1882341 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 895eaa2..98015a1 100644
+index 895eaa2..d69a591 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -109,7 +109,7 @@ index 895eaa2..98015a1 100644
  	vq->log_base = NULL;
  	vq->error_ctx = NULL;
  	vq->kick = NULL;
-@@ -1024,28 +1025,37 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
+@@ -1024,28 +1025,40 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
  ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
  			     struct iov_iter *from)
  {
@@ -135,6 +135,9 @@ index 895eaa2..98015a1 100644
 -		err = vhost_process_iotlb_msg(dev, &node.msg.iotlb);
 -		if (err)
 -			ret = err;
++		/* There maybe a hole after type for V1 message type,
++		 * so skip it here.
++		 */
 +		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
 +		break;
 +	case VHOST_IOTLB_MSG_V2:
@@ -160,7 +163,7 @@ index 895eaa2..98015a1 100644
  done:
  	return ret;
  }
-@@ -1104,11 +1114,21 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+@@ -1104,11 +1117,21 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
  		finish_wait(&dev->wait, &wait);
  
  	if (node) {
@@ -186,7 +189,7 @@ index 895eaa2..98015a1 100644
  		}
  
  		vhost_enqueue_msg(dev, &dev->pending_list, node);
-@@ -1128,7 +1148,13 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+@@ -1128,7 +1151,13 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
  	if (!node)
  		return -ENOMEM;
  
