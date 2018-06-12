@@ -78,8 +78,7 @@ enum {
 };
 
 enum {
-	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_LOG_ALL |
-				      1ULL << VHOST_BACKEND_F_VIRTIO_NET_HDR)
+	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_IOTLB_V2)
 };
 
 enum {
@@ -1269,15 +1268,17 @@ done:
 
 static int vhost_net_set_backend_features(struct vhost_net *n, u64 features)
 {
-	switch (features) {
-	case VHOST_BACKEND_F_LOG_ALL:
-	case VHOST_BACKEND_F_VIRTIO_NET_HDR:
-		break;
-	default:
-		return -EFAULT;
-	}
+	int i;
 
-	if ((features
+	mutex_lock(&n->dev.mutex);
+	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
+		mutex_lock(&n->vqs[i].vq.mutex);
+		n->vqs[i].vq.acked_backend_features = features;
+		mutex_unlock(&n->vqs[i].vq.mutex);
+	}
+	mutex_unlock(&n->dev.mutex);
+
+	return 0;
 }
 
 static int vhost_net_set_features(struct vhost_net *n, u64 features)
@@ -1375,6 +1376,12 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
 		if (copy_to_user(featurep, &features, sizeof features))
 			return -EFAULT;
 		return 0;
+	case VHOST_SET_BACKEND_FEATURES:
+		if (copy_from_user(&features, featurep, sizeof features))
+			return -EFAULT;
+		if (features & ~VHOST_NET_BACKEND_FEATURES)
+			return -EOPNOTSUPP;
+		return vhost_net_set_backend_features(n, features);
 	case VHOST_RESET_OWNER:
 		return vhost_net_reset_owner(n);
 	case VHOST_SET_OWNER:
