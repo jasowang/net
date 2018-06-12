@@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->log_addr = -1ull;
 	vq->private_data = NULL;
 	vq->acked_features = 0;
+	vq->acked_backend_features = 0;
 	vq->log_base = NULL;
 	vq->error_ctx = NULL;
 	vq->kick = NULL;
@@ -1024,27 +1025,32 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
 ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 			     struct iov_iter *from)
 {
-	struct vhost_msg_node node;
-	unsigned size = sizeof(struct vhost_msg);
-	size_t ret;
-	int err;
+	struct vhost_iotlb_msg msg;
+	size_t offset;
+	int type, ret;
 
-	if (iov_iter_count(from) < size)
-		return 0;
-	ret = copy_from_iter(&node.msg, size, from);
-	if (ret != size)
+	ret = copy_from_iter(&type, sizeof(type), from);
+	if (ret != sizeof(type))
 		goto done;
 
-	switch (node.msg.type) {
+	switch (type) {
 	case VHOST_IOTLB_MSG:
-		err = vhost_process_iotlb_msg(dev, &node.msg.iotlb);
-		if (err)
-			ret = err;
+		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
+		break;
+	case VHOST_IOTLB_MSG_V2:
+		offset = sizeof(__u32);
 		break;
 	default:
 		ret = -EINVAL;
-		break;
+		goto done;
 	}
+
+	iov_iter_advance(from, offset);
+	ret = copy_from_iter(&msg, from, sizeof(msg));
+	if (ret != sizeof(msg))
+		goto done;
+	if (vhost_process_iotlb_msg(dev, &msg))
+		ret = -EFAULT;
 
 done:
 	return ret;
@@ -1104,11 +1110,21 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 		finish_wait(&dev->wait, &wait);
 
 	if (node) {
-		ret = copy_to_iter(&node->msg, size, to);
+		if (node->msg.type == VHOST_IOTLB_MSG_V2) {
+			ret = copy_to_iter(&node->msg_v2, sizeof(node->msg_v2),
+					   to);
+			if (ret != sizeof(node->msg_v2) ||
+			    node->msg_v2.type != VHOST_IOTLB_MISS) {
+				kfree(node);
+				return ret;
+			}
+		} else {
+			ret = copy_to_iter(&node->msg, size, to);
 
-		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
-			kfree(node);
-			return ret;
+			if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
+				kfree(node);
+				return ret;
+			}
 		}
 
 		vhost_enqueue_msg(dev, &dev->pending_list, node);
@@ -1128,7 +1144,13 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	if (!node)
 		return -ENOMEM;
 
-	msg = &node->msg.iotlb;
+	if (vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_V2)) {
+		node->msg_v2.type = VHOST_IOTLB_MSG_V2;
+		msg = &node->msg_v2.iotlb;
+	} else {
+		msg = &node->msg.iotlb;
+	}
+
 	msg->type = VHOST_IOTLB_MISS;
 	msg->iova = iova;
 	msg->perm = access;
