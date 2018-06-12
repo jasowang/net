@@ -1,5 +1,5 @@
 Bottom: ae736c374725c2c2ef1ee2e01ba44a1dd7026a30
-Top:    ae736c374725c2c2ef1ee2e01ba44a1dd7026a30
+Top:    fcabe9ab9266d8c6b70a468919656b4afa9a1fe8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 17:04:38 +0800
 
@@ -12,4 +12,45 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e7cf7d2..2a10502 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -646,35 +646,23 @@ static void vhost_rx_signal_used(struct vhost_net_virtqueue *nvq)
+ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ {
+ 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
+-	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+-	struct vhost_virtqueue *vq = &nvq->vq;
++	struct vhost_virtqueue *vq = &rvq->vq;
+ 	unsigned long uninitialized_var(endtime);
+ 	int len = peek_head_len(rvq, sk);
+ 
+ 	if (!len && vq->busyloop_timeout) {
+ 		/* Flush batched heads first */
+ 		vhost_rx_signal_used(rvq);
+-		/* Both tx vq and rx socket were polled here */
+-		mutex_lock_nested(&vq->mutex, 1);
+-		vhost_disable_notify(&net->dev, vq);
+ 
+ 		preempt_disable();
+ 		endtime = busy_clock() + vq->busyloop_timeout;
+ 
+ 		while (vhost_can_busy_poll(&net->dev, endtime) &&
+-		       !sk_has_rx_data(sk) &&
+-		       vhost_vq_avail_empty(&net->dev, vq))
++		       !sk_has_rx_data(sk))
+ 			cpu_relax();
+ 
+ 		preempt_enable();
+ 
+-		if (!vhost_vq_avail_empty(&net->dev, vq))
+-			vhost_poll_queue(&vq->poll);
+-		else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+-			vhost_disable_notify(&net->dev, vq);
+-			vhost_poll_queue(&vq->poll);
+-		}
+-
+ 		mutex_unlock(&vq->mutex);
+ 
+ 		len = peek_head_len(rvq, sk);
