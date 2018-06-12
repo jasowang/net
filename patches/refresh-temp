@@ -1,0 +1,238 @@
+Bottom: 14b67c1075e914ae2beec65071829b54e0fb3090
+Top:    102fa9023c56c17508c1e93402ed71a566a29a2a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-12 13:59:53 +0800
+
+Refresh of vhost-introduce-new-ioctls-to
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 16c1d1e..1882341 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -78,8 +78,7 @@ enum {
+ };
+ 
+ enum {
+-	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_LOG_ALL |
+-				      1ULL << VHOST_BACKEND_F_VIRTIO_NET_HDR)
++	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_IOTLB_V2)
+ };
+ 
+ enum {
+@@ -1269,15 +1268,17 @@ static long vhost_net_reset_owner(struct vhost_net *n)
+ 
+ static int vhost_net_set_backend_features(struct vhost_net *n, u64 features)
+ {
+-	switch (features) {
+-	case VHOST_BACKEND_F_LOG_ALL:
+-	case VHOST_BACKEND_F_VIRTIO_NET_HDR:
+-		break;
+-	default:
+-		return -EFAULT;
++	int i;
++
++	mutex_lock(&n->dev.mutex);
++	for (i = 0; i < VHOST_NET_VQ_MAX; ++i) {
++		mutex_lock(&n->vqs[i].vq.mutex);
++		n->vqs[i].vq.acked_backend_features = features;
++		mutex_unlock(&n->vqs[i].vq.mutex);
+ 	}
++	mutex_unlock(&n->dev.mutex);
+ 
+-	if ((features
++	return 0;
+ }
+ 
+ static int vhost_net_set_features(struct vhost_net *n, u64 features)
+@@ -1375,6 +1376,12 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
+ 		if (copy_to_user(featurep, &features, sizeof features))
+ 			return -EFAULT;
+ 		return 0;
++	case VHOST_SET_BACKEND_FEATURES:
++		if (copy_from_user(&features, featurep, sizeof features))
++			return -EFAULT;
++		if (features & ~VHOST_NET_BACKEND_FEATURES)
++			return -EOPNOTSUPP;
++		return vhost_net_set_backend_features(n, features);
+ 	case VHOST_RESET_OWNER:
+ 		return vhost_net_reset_owner(n);
+ 	case VHOST_SET_OWNER:
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 895eaa2..da00c94 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
+ 	vq->log_addr = -1ull;
+ 	vq->private_data = NULL;
+ 	vq->acked_features = 0;
++	vq->acked_backend_features = 0;
+ 	vq->log_base = NULL;
+ 	vq->error_ctx = NULL;
+ 	vq->kick = NULL;
+@@ -1024,28 +1025,33 @@ static int vhost_process_iotlb_msg(struct vhost_dev *dev,
+ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
+ 			     struct iov_iter *from)
+ {
+-	struct vhost_msg_node node;
+-	unsigned size = sizeof(struct vhost_msg);
+-	size_t ret;
+-	int err;
++	struct vhost_iotlb_msg msg;
++	size_t offset;
++	int type, ret;
+ 
+-	if (iov_iter_count(from) < size)
+-		return 0;
+-	ret = copy_from_iter(&node.msg, size, from);
+-	if (ret != size)
++	ret = copy_from_iter(&type, sizeof(type), from);
++	if (ret != sizeof(type))
+ 		goto done;
+ 
+-	switch (node.msg.type) {
++	switch (type) {
+ 	case VHOST_IOTLB_MSG:
+-		err = vhost_process_iotlb_msg(dev, &node.msg.iotlb);
+-		if (err)
+-			ret = err;
++		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
++		break;
++	case VHOST_IOTLB_MSG_V2:
++		offset = sizeof(__u32);
+ 		break;
+ 	default:
+ 		ret = -EINVAL;
+-		break;
++		goto done;
+ 	}
+ 
++	iov_iter_advance(from, offset);
++	ret = copy_from_iter(&msg, from, sizeof(msg));
++	if (ret != sizeof(msg))
++		goto done;
++	if (vhost_process_iotlb_msg(dev, &msg))
++		ret = -EFAULT;
++
+ done:
+ 	return ret;
+ }
+@@ -1104,11 +1110,21 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+ 		finish_wait(&dev->wait, &wait);
+ 
+ 	if (node) {
+-		ret = copy_to_iter(&node->msg, size, to);
++		if (node->msg.type == VHOST_IOTLB_MSG_V2) {
++			ret = copy_to_iter(&node->msg_v2, sizeof(node->msg_v2),
++					   to);
++			if (ret != sizeof(node->msg_v2) ||
++			    node->msg_v2.type != VHOST_IOTLB_MISS) {
++				kfree(node);
++				return ret;
++			}
++		} else {
++			ret = copy_to_iter(&node->msg, size, to);
+ 
+-		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
+-			kfree(node);
+-			return ret;
++			if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
++				kfree(node);
++				return ret;
++			}
+ 		}
+ 
+ 		vhost_enqueue_msg(dev, &dev->pending_list, node);
+@@ -1128,7 +1144,13 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+ 	if (!node)
+ 		return -ENOMEM;
+ 
+-	msg = &node->msg.iotlb;
++	if (vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_V2)) {
++		node->msg_v2.type = VHOST_IOTLB_MSG_V2;
++		msg = &node->msg_v2.iotlb;
++	} else {
++		msg = &node->msg.iotlb;
++	}
++
+ 	msg->type = VHOST_IOTLB_MISS;
+ 	msg->iova = iova;
+ 	msg->perm = access;
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index 6c844b9..466ef75 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -132,6 +132,7 @@ struct vhost_virtqueue {
+ 	struct vhost_umem *iotlb;
+ 	void *private_data;
+ 	u64 acked_features;
++	u64 acked_backend_features;
+ 	/* Log write descriptors */
+ 	void __user *log_base;
+ 	struct vhost_log *log;
+@@ -147,7 +148,10 @@ struct vhost_virtqueue {
+ };
+ 
+ struct vhost_msg_node {
+-  struct vhost_msg msg;
++  union {
++	  struct vhost_msg msg;
++	  struct vhost_msg_v2 msg_v2;
++  };
+   struct vhost_virtqueue *vq;
+   struct list_head node;
+ };
+@@ -238,6 +242,11 @@ static inline bool vhost_has_feature(struct vhost_virtqueue *vq, int bit)
+ 	return vq->acked_features & (1ULL << bit);
+ }
+ 
++static inline bool vhost_backend_has_feature(struct vhost_virtqueue *vq, int bit)
++{
++	return vq->acked_backend_features & (1ULL << bit);
++}
++
+ #ifdef CONFIG_VHOST_CROSS_ENDIAN_LEGACY
+ static inline bool vhost_is_little_endian(struct vhost_virtqueue *vq)
+ {
+diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
+index 1286977..3463db2 100644
+--- a/include/uapi/linux/vhost.h
++++ b/include/uapi/linux/vhost.h
+@@ -65,6 +65,7 @@ struct vhost_iotlb_msg {
+ };
+ 
+ #define VHOST_IOTLB_MSG 0x1
++#define VHOST_IOTLB_MSG_V2 0x2
+ 
+ struct vhost_msg {
+ 	int type;
+@@ -74,6 +75,15 @@ struct vhost_msg {
+ 	};
+ };
+ 
++struct vhost_msg_v2 {
++	int type;
++	__u32 reserved;
++	union {
++		struct vhost_iotlb_msg iotlb;
++		__u8 padding[64];
++	};
++};
++
+ struct vhost_memory_region {
+ 	__u64 guest_phys_addr;
+ 	__u64 memory_size; /* bytes */
+@@ -162,10 +172,8 @@ struct vhost_memory {
+ 
+ /* Set or get vhost backend capability */
+ 
+-/* Log all write descriptors. Can be changed while device is active. */
+-#define VHOST_BACKEND_F_LOG_ALL 1
+-/* vhost-net should add virtio_net_hdr for RX, and strip for TX packets. */
+-#define VHOST_BACKEND_F_VIRTIO_NET_HDR 2
++/* Use IOTLB message type V2 */
++#define VHOST_BACKEND_F_IOTLB_V2 0x1
+ 
+ #define VHOST_SET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x25, __u64)
+ #define VHOST_GET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x26, __u64)
