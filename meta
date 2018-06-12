@@ -1,8 +1,9 @@
 Version: 1
-Previous: d178903f89f4b00322c2c14a0c47ddcbef914948
-Head: d5f261776fabfe1fb0ecfc8ec4266bd6a96b9fd3
+Previous: 61654544e829b1d33d68eec2468969995d52b6ec
+Head: c3e26392e2f1078889217d7dfe0149f2c86dd613
 Applied:
   vhost_net-disable-tx-polling: d5f261776fabfe1fb0ecfc8ec4266bd6a96b9fd3
+  refresh-temp-0: c3e26392e2f1078889217d7dfe0149f2c86dd613
 Unapplied:
   vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
   vhost_net-better-naming-in: 8bd44292b56571e4a5348b42cff47e0ae2023081
