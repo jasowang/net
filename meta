@@ -1,9 +1,9 @@
 Version: 1
-Previous: 45b5926be9958a7eb07de2551b386a0e66690c99
-Head: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
+Previous: 9500a4d352ed3d699d3204ae81ffb562b8e9f5be
+Head: 3a979e8c07e3ee9933016368db0a55943b00a089
 Applied:
-  vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
 Unapplied:
+  vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
   vhost_net-better-naming-in: 8bd44292b56571e4a5348b42cff47e0ae2023081
   vhost_net-vmapped-metadata: 2714dbeb874d579adff0ad99814da08aabb7eaf3
   virtio-support-packed-ring: f1fc0ab517865f6e73b0519aecf2f69020c512d8
