@@ -160,6 +160,16 @@ struct vhost_memory {
 #define VHOST_GET_VRING_BUSYLOOP_TIMEOUT _IOW(VHOST_VIRTIO, 0x24,	\
 					 struct vhost_vring_state)
 
+/* Set or get vhost backend capability */
+
+/* Log all write descriptors. Can be changed while device is active. */
+#define VHOST_BACKEND_F_LOG_ALL 1
+/* vhost-net should add virtio_net_hdr for RX, and strip for TX packets. */
+#define VHOST_BACKEND_F_VIRTIO_NET_HDR 2
+
+#define VHOST_SET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x25, __u64)
+#define VHOST_GET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x26, __u64)
+
 /* VHOST_NET specific defines */
 
 /* Attach virtio net ring to a raw socket, or tap device.
