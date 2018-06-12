@@ -78,6 +78,11 @@ enum {
 };
 
 enum {
+	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_LOG_ALL |
+				      1ULL << VHOST_BACKEND_F_VIRTIO_NET_HDR)
+};
+
+enum {
 	VHOST_NET_VQ_RX = 0,
 	VHOST_NET_VQ_TX = 1,
 	VHOST_NET_VQ_MAX = 2,
@@ -1262,6 +1267,19 @@ done:
 	return err;
 }
 
+static int vhost_net_set_backend_features(struct vhost_net *n, u64 features)
+{
+	switch (features) {
+	case VHOST_BACKEND_F_LOG_ALL:
+	case VHOST_BACKEND_F_VIRTIO_NET_HDR:
+		break;
+	default:
+		return -EFAULT;
+	}
+
+	if ((features
+}
+
 static int vhost_net_set_features(struct vhost_net *n, u64 features)
 {
 	size_t vhost_hlen, sock_hlen, hdr_len;
@@ -1352,6 +1370,11 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
 		if (features & ~VHOST_NET_FEATURES)
 			return -EOPNOTSUPP;
 		return vhost_net_set_features(n, features);
+	case VHOST_GET_BACKEND_FEATURES:
+		features = VHOST_NET_BACKEND_FEATURES;
+		if (copy_to_user(featurep, &features, sizeof features))
+			return -EFAULT;
+		return 0;
 	case VHOST_RESET_OWNER:
 		return vhost_net_reset_owner(n);
 	case VHOST_SET_OWNER:
