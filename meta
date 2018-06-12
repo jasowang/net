@@ -1,8 +1,7 @@
 Version: 1
-Previous: 010e20715108c87ed2587b27e873bd11ef913cbc
-Head: d25a7ef378a4fcba92eda338bc4f0ec2cb744034
+Previous: 54367a4948e8d84a5cf208e09a31ecd8959008b2
+Head: c88f70f1e9cd6e515c639016b131cc7d2f78ebe8
 Applied:
-  vhost-introduce-new-ioctls-to: 112f9a3b8f9938d816f6be15137e94a3db5dec40
-  refresh-temp: d25a7ef378a4fcba92eda338bc4f0ec2cb744034
+  vhost-introduce-new-ioctls-to: c88f70f1e9cd6e515c639016b131cc7d2f78ebe8
 Unapplied:
 Hidden:
