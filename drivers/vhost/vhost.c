@@ -1035,6 +1035,9 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 
 	switch (type) {
 	case VHOST_IOTLB_MSG:
+		/* There maybe a hole after type for V1 message type,
+		 * so skip it here.
+		 */
 		offset = offsetof(struct vhost_msg, iotlb) - sizeof(int);
 		break;
 	case VHOST_IOTLB_MSG_V2:
