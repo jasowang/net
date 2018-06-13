@@ -208,7 +208,7 @@ int vhost_log_write(struct vhost_virtqueue *vq, struct vhost_log *log,
 		    unsigned int log_num, u64 len);
 int vq_iotlb_prefetch(struct vhost_virtqueue *vq);
 
-struct vhost_msg_node *vhost_new_msg(struct vhost_virtqueue *vq, int type);
+struct vhost_msg_node *vhost_new_msg(struct vhost_virtqueue *vq);
 void vhost_enqueue_msg(struct vhost_dev *dev,
 		       struct list_head *head,
 		       struct vhost_msg_node *node);

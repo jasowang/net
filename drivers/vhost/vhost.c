@@ -1120,8 +1120,7 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 		if (node->msg.type == VHOST_IOTLB_MSG_V2) {
 			ret = copy_to_iter(&node->msg_v2, sizeof(node->msg_v2),
 					   to);
-			if (ret != sizeof(node->msg_v2) ||
-			    node->msg_v2.type != VHOST_IOTLB_MISS) {
+			if (ret != sizeof(node->msg_v2)) {
 				kfree(node);
 				return ret;
 			}
@@ -1147,7 +1146,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	struct vhost_msg_node *node;
 	struct vhost_iotlb_msg *msg;
 
-	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
+	node = vhost_new_msg(vq);
 	if (!node)
 		return -ENOMEM;
 
@@ -2369,13 +2368,12 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 EXPORT_SYMBOL_GPL(vhost_disable_notify);
 
 /* Create a new message. */
-struct vhost_msg_node *vhost_new_msg(struct vhost_virtqueue *vq, int type)
+struct vhost_msg_node *vhost_new_msg(struct vhost_virtqueue *vq)
 {
 	struct vhost_msg_node *node = kmalloc(sizeof *node, GFP_KERNEL);
 	if (!node)
 		return NULL;
 	node->vq = vq;
-	node->msg.type = type;
 	return node;
 }
 EXPORT_SYMBOL_GPL(vhost_new_msg);
