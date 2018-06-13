@@ -1,0 +1,15 @@
+Bottom: ae736c374725c2c2ef1ee2e01ba44a1dd7026a30
+Top:    ae736c374725c2c2ef1ee2e01ba44a1dd7026a30
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-13 14:30:18 +0800
+
+vhost: correctly assign vhost message type
+
+Type of message should not be VHOST_IOTLB_MISS but
+VHOST_IOTLB_MSG. Previous code work by chance since their value is
+equal.
+
+
+---
+
+
