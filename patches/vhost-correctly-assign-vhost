@@ -9,6 +9,8 @@ Type of message should not be VHOST_IOTLB_MISS but
 VHOST_IOTLB_MSG. Previous code work by chance since their value is
 equal.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
