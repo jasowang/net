@@ -1,0 +1,23 @@
+Bottom: 5217b749fa9f6b49522903b024fefe25e42f242e
+Top:    7632de8b454652b291d2dd5a0101964980540399
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-13 14:30:59 +0800
+
+Refresh of vhost-correctly-assign-vhost
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 0493ba0..f74f84e 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1106,7 +1106,8 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+ 	if (node) {
+ 		ret = copy_to_iter(&node->msg, size, to);
+ 
+-		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
++		if (ret != size ||
++		    node->msg.iotlb.type != VHOST_IOTLB_MISS) {
+ 			kfree(node);
+ 			return ret;
+ 		}
