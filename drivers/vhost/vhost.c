@@ -1106,7 +1106,8 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
 	if (node) {
 		ret = copy_to_iter(&node->msg, size, to);
 
-		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
+		if (ret != size ||
+		    node->msg.iotlb.type != VHOST_IOTLB_MISS) {
 			kfree(node);
 			return ret;
 		}
@@ -1124,7 +1125,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	struct vhost_msg_node *node;
 	struct vhost_iotlb_msg *msg;
 
-	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
+	node = vhost_new_msg(vq, VHOST_IOTLB_MSG);
 	if (!node)
 		return -ENOMEM;
 
