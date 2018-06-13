@@ -1,5 +1,5 @@
 Bottom: 9ed101fe5347328c2760ffed78bc25ea0735f758
-Top:    e40e4f75c85b14743e1a2e7743661406a22e31c8
+Top:    056c1c54b51f67c0475b3720b1aec753683bb978
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -43,14 +43,14 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index e7cf7d2..1882341 100644
+index e7cf7d2..f897aea 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -78,6 +78,10 @@ enum {
  };
  
  enum {
-+	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_IOTLB_V2)
++	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_MSG_V2)
 +};
 +
 +enum {
@@ -98,7 +98,7 @@ index e7cf7d2..1882341 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index f74f84e..dde2ba2 100644
+index f74f84e..c24abca 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -200,7 +200,7 @@ index f74f84e..dde2ba2 100644
  	struct vhost_dev *dev = vq->dev;
  	struct vhost_msg_node *node;
  	struct vhost_iotlb_msg *msg;
-+	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_V2);
++	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_MSG_V2);
  
 -	node = vhost_new_msg(vq, VHOST_IOTLB_MSG);
 +	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
@@ -255,7 +255,7 @@ index 6c844b9..466ef75 100644
  static inline bool vhost_is_little_endian(struct vhost_virtqueue *vq)
  {
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
-index c51f8e5..3463db2 100644
+index c51f8e5..613412b 100644
 --- a/include/uapi/linux/vhost.h
 +++ b/include/uapi/linux/vhost.h
 @@ -65,6 +65,7 @@ struct vhost_iotlb_msg {
@@ -288,8 +288,8 @@ index c51f8e5..3463db2 100644
  
 +/* Set or get vhost backend capability */
 +
-+/* Use IOTLB message type V2 */
-+#define VHOST_BACKEND_F_IOTLB_V2 0x1
++/* Use message type V2 */
++#define VHOST_BACKEND_F_MSG_V2 0x1
 +
 +#define VHOST_SET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x25, __u64)
 +#define VHOST_GET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x26, __u64)
