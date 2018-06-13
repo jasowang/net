@@ -1,8 +1,8 @@
 Version: 1
-Previous: b404d619f518a7bea669cc0580e12f56104f8ba2
-Head: 55bfcd6a0bd7113e7285c69ad51188f9cc068c97
+Previous: 8013945b205ccabecf8efe5bd45f51b949d5ebe4
+Head: 3a979e8c07e3ee9933016368db0a55943b00a089
 Applied:
-  vhost-introduce-new-ioctls-to: 55bfcd6a0bd7113e7285c69ad51188f9cc068c97
 Unapplied:
+  vhost-introduce-new-ioctls-to: 55bfcd6a0bd7113e7285c69ad51188f9cc068c97
   vhost_net-a-100-busy-polling: fdecb73a8644cf3a10bc082ab26bd065c6e0fb3f
 Hidden:
