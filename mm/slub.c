@@ -1658,6 +1658,17 @@ out:
 	return page;
 }
 
+static void early_gfp_check(gfp_t flags)
+{
+	if (unlikely(flags & GFP_SLAB_BUG_MASK)) {
+		gfp_t invalid_mask = flags & GFP_SLAB_BUG_MASK;
+		pr_warn("Unexpected early gfp: %#x (%pGg). Fixing up to gfp: %#x (%pGg). Fix your code!\n",
+				invalid_mask, &invalid_mask, flags, &flags);
+		dump_stack();
+	}
+
+}
+
 static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 {
 	if (unlikely(flags & GFP_SLAB_BUG_MASK)) {
@@ -2631,6 +2642,8 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 	void *p;
 	unsigned long flags;
 
+	early_gfp_check(gfpflags);
+
 	local_irq_save(flags);
 #ifdef CONFIG_PREEMPT
 	/*
@@ -2663,6 +2676,8 @@ static __always_inline void *slab_alloc_node(struct kmem_cache *s,
 	struct kmem_cache_cpu *c;
 	struct page *page;
 	unsigned long tid;
+
+	early_gfp_check(gfpflags);
 
 	s = slab_pre_alloc_hook(s, gfpflags);
 	if (!s)
