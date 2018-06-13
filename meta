@@ -1,9 +1,8 @@
 Version: 1
-Previous: d20940c2be422b14ebd1619405436363d13be450
-Head: b28fda5b4bae606b6426e1e8334f7ab0fd2ce236
+Previous: 303dc29ede6672ad1d85a239ee11a58bae5c9d6b
+Head: 550392256092cda5363965ff09b40d3e6bf21319
 Applied:
-  vhost-introduce-new-ioctls-to: ab7a6f6bdb4b75658f5bbaa33820de7b5f16d9ad
-  refresh-temp: b28fda5b4bae606b6426e1e8334f7ab0fd2ce236
+  vhost-introduce-new-ioctls-to: 550392256092cda5363965ff09b40d3e6bf21319
 Unapplied:
   vhost_net-a-100-busy-polling: fdecb73a8644cf3a10bc082ab26bd065c6e0fb3f
 Hidden:
