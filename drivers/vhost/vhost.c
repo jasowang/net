@@ -1124,7 +1124,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	struct vhost_msg_node *node;
 	struct vhost_iotlb_msg *msg;
 
-	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
+	node = vhost_new_msg(vq, VHOST_IOTLB_MSG);
 	if (!node)
 		return -ENOMEM;
 
