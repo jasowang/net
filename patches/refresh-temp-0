@@ -1,0 +1,50 @@
+Bottom: e40e4f75c85b14743e1a2e7743661406a22e31c8
+Top:    056c1c54b51f67c0475b3720b1aec753683bb978
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-13 15:26:19 +0800
+
+Refresh of vhost-introduce-new-ioctls-to
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 1882341..f897aea 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -78,7 +78,7 @@ enum {
+ };
+ 
+ enum {
+-	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_IOTLB_V2)
++	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_MSG_V2)
+ };
+ 
+ enum {
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index dde2ba2..c24abca 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1151,7 +1151,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+ 	struct vhost_dev *dev = vq->dev;
+ 	struct vhost_msg_node *node;
+ 	struct vhost_iotlb_msg *msg;
+-	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_V2);
++	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_MSG_V2);
+ 
+ 	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
+ 	if (!node)
+diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
+index 3463db2..613412b 100644
+--- a/include/uapi/linux/vhost.h
++++ b/include/uapi/linux/vhost.h
+@@ -172,8 +172,8 @@ struct vhost_memory {
+ 
+ /* Set or get vhost backend capability */
+ 
+-/* Use IOTLB message type V2 */
+-#define VHOST_BACKEND_F_IOTLB_V2 0x1
++/* Use message type V2 */
++#define VHOST_BACKEND_F_MSG_V2 0x1
+ 
+ #define VHOST_SET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x25, __u64)
+ #define VHOST_GET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x26, __u64)
