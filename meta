@@ -1,9 +1,10 @@
 Version: 1
-Previous: 8cf6fffbcf27f4e5ffd9a2658faf8567d7a57e73
-Head: 99f4b75739eaefb563b6a261b9db0330a30762db
+Previous: f817c088bbe606dffe689f71cd21b123238e31b4
+Head: a67830cf6161e0d0e9bc6bcbf1fc8f46ff92a630
 Applied:
   vhost-correctly-assign-vhost: c0a29538df0df952a4c8ee371d6c952f2adc70f1
   vhost-introduce-new-ioctls-to: 99f4b75739eaefb563b6a261b9db0330a30762db
+  refresh-temp-0: a67830cf6161e0d0e9bc6bcbf1fc8f46ff92a630
 Unapplied:
   refresh-temp: 681f7da985133da3c4596dafd08cf89051c2f4a9
   vhost_net-a-100-busy-polling: fdecb73a8644cf3a10bc082ab26bd065c6e0fb3f
