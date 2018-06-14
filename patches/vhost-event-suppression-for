@@ -1,5 +1,5 @@
-Bottom: a1c4cf53fc71eca9e6775772443d65a3db63ad68
-Top:    19e1b2d5daefb222ba1b4b8c7d9d406d6a6ab2fc
+Bottom: 2f2ce7e1897ae6577949e7baed4cb4061c488062
+Top:    dbdd058e44503c17c9505cf7c3cd6e57c950b41e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-28 12:05:50 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a36e5ad2..112f680 100644
+index 658a4ba..3513e92 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1112,10 +1112,15 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
