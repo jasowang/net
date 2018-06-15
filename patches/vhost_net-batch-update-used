@@ -1,5 +1,5 @@
-Bottom: f3ecbd5423398435de108deab21c24ad394c24a0
-Top:    7fe90ea05d2e1eabc3397571bbedad294fac5b6a
+Bottom: 2dbecaf1bc5f1e204adb1f048a0218cd94b52b51
+Top:    1a4e10831adca2403c991742325b3d9767e9815d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,10 +18,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c494902..fa0622c 100644
+index 9d8a1c8..5996c42 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -530,7 +530,6 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -532,7 +532,6 @@ static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
@@ -29,7 +29,7 @@ index c494902..fa0622c 100644
  	unsigned out, in;
  	struct msghdr msg = {
  		.msg_name = NULL,
-@@ -543,6 +542,7 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -545,6 +544,7 @@ static void handle_tx_copy(struct vhost_net *net)
  	int err;
  	struct socket *sock;
  	int sent_pkts = 0;
@@ -37,7 +37,7 @@ index c494902..fa0622c 100644
  
  	mutex_lock(&vq->mutex);
  	sock = vq->private_data;
-@@ -556,7 +556,8 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -558,7 +558,8 @@ static void handle_tx_copy(struct vhost_net *net)
  	vhost_net_disable_vq(net, vq);
  
  	for (;;) {
@@ -47,7 +47,7 @@ index c494902..fa0622c 100644
  		if (err == -ENOSPC) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
  				vhost_disable_notify(&net->dev, vq);
-@@ -577,20 +578,27 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -579,20 +580,27 @@ static void handle_tx_copy(struct vhost_net *net)
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
