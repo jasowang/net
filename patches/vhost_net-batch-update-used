@@ -1,5 +1,5 @@
-Bottom: 2dbecaf1bc5f1e204adb1f048a0218cd94b52b51
-Top:    1a4e10831adca2403c991742325b3d9767e9815d
+Bottom: 9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
+Top:    2743183194ceda35c528afdfc1ab5a57c12231d8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 9d8a1c8..5996c42 100644
+index 8a5cc05..800d728 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -532,7 +532,6 @@ static void handle_tx_copy(struct vhost_net *net)
