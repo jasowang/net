@@ -1,0 +1,13 @@
+Bottom: 9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
+Top:    9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-15 12:01:27 +0800
+
+vhost_net: rename VHOST_RX_BATCH to VHOST_NET_BATCH
+
+A more generic name which is suitable for TX as well.
+
+
+---
+
+
