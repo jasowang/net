@@ -700,13 +700,10 @@ static void handle_tx(struct vhost_net *net)
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
-	if (vhost_sock_zcopy(sock)) {
-		printk("zcopy!\n");
+	if (vhost_sock_zcopy(sock))
 		handle_tx_zerocopy(net, sock);
-	} else {
-		printk("data copy!\n");
+	else
 		handle_tx_copy(net, sock);
-	}
 
 out:
 	mutex_unlock(&vq->mutex);
@@ -743,7 +740,7 @@ static int sk_has_rx_data(struct sock *sk)
 	return skb_queue_empty(&sk->sk_receive_queue);
 }
 
-static void vhost_rx_signal_used(struct vhost_net_virtqueue *nvq)
+static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
 	struct vhost_dev *dev = vq->dev;
@@ -767,7 +764,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
 
 	if (!len && tvq->busyloop_timeout) {
 		/* Flush batched heads first */
-		vhost_rx_signal_used(rnvq);
+		vhost_net_signal_used(rnvq);
 		/* Both tx vq and rx socket were polled here */
 		mutex_lock_nested(&tvq->mutex, 1);
 		vhost_disable_notify(&net->dev, tvq);
@@ -1010,7 +1007,7 @@ static void handle_rx(struct vhost_net *net)
 		}
 		nvq->done_idx += headcount;
 		if (nvq->done_idx > VHOST_RX_BATCH)
-			vhost_rx_signal_used(nvq);
+			vhost_net_signal_used(nvq);
 		if (unlikely(vq_log))
 			vhost_log_write(vq, vq_log, log, vhost_len);
 		total_len += vhost_len;
@@ -1024,7 +1021,7 @@ static void handle_rx(struct vhost_net *net)
 	else
 		vhost_net_enable_vq(net, vq);
 out:
-	vhost_rx_signal_used(nvq);
+	vhost_net_signal_used(nvq);
 	mutex_unlock(&vq->mutex);
 }
 
