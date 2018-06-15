@@ -1,5 +1,5 @@
-Bottom: 71ade4121885b04ea0de0dbaa533777ad4d904b5
-Top:    f3ecbd5423398435de108deab21c24ad394c24a0
+Bottom: ea4844c237cc0f6ab6006fc361a6cb0fad1b3d0c
+Top:    2dbecaf1bc5f1e204adb1f048a0218cd94b52b51
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,10 +15,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index e6ebb53..c494902 100644
+index 1e6163f..9d8a1c8 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -526,9 +526,77 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -528,9 +528,77 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
@@ -97,7 +97,7 @@ index e6ebb53..c494902 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -545,7 +613,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -547,7 +615,7 @@ static void handle_tx(struct vhost_net *net)
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
  	struct vhost_used_elem used;
@@ -106,7 +106,7 @@ index e6ebb53..c494902 100644
  	int sent_pkts = 0;
  
  	mutex_lock(&vq->mutex);
-@@ -559,12 +627,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -561,12 +629,9 @@ static void handle_tx(struct vhost_net *net)
  	vhost_disable_notify(&net->dev, vq);
  	vhost_net_disable_vq(net, vq);
  
@@ -120,7 +120,7 @@ index e6ebb53..c494902 100644
  
  		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
  		if (err == -ENOSPC) {
-@@ -578,9 +643,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -580,9 +645,9 @@ static void handle_tx(struct vhost_net *net)
  		if (unlikely(err < 0))
  			break;
  
@@ -133,7 +133,7 @@ index e6ebb53..c494902 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -639,6 +704,16 @@ static void handle_tx(struct vhost_net *net)
+@@ -641,6 +706,16 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
