@@ -528,6 +528,18 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
 	       !vhost_vq_avail_empty(vq->dev, vq);
 }
 
+static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_dev *dev = vq->dev;
+
+	if (!nvq->done_idx)
+		return;
+
+	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
+	nvq->done_idx = 0;
+}
+
 static void handle_tx_copy(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
@@ -544,7 +556,6 @@ static void handle_tx_copy(struct vhost_net *net)
 	int err;
 	struct socket *sock;
 	int sent_pkts = 0;
-	s16 nheads = 0;
 
 	mutex_lock(&vq->mutex);
 	sock = vq->private_data;
@@ -558,7 +569,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
-		err = get_tx_bufs(net, nvq, vq->heads + nheads,
+		err = get_tx_bufs(net, nvq, vq->heads + nvq->done_idx,
 				  &msg, &out, &in, &len);
 		if (err == -ENOSPC) {
 			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
@@ -587,20 +598,15 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (++nheads == VHOST_RX_BATCH) {
-			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-						    nheads);
-			nheads = 0;
-		}
+		if (++nvq->done_idx >= VHOST_RX_BATCH)
+			vhost_net_signal_used(nvq);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
 	}
 out:
-	if (nheads)
-		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-					    nheads);
+	vhost_net_signal_used(nvq);
 	mutex_unlock(&vq->mutex);
 }
 
@@ -753,18 +759,6 @@ static int sk_has_rx_data(struct sock *sk)
 		return sock->ops->peek_len(sock);
 
 	return skb_queue_empty(&sk->sk_receive_queue);
-}
-
-static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
-{
-	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_dev *dev = vq->dev;
-
-	if (!nvq->done_idx)
-		return;
-
-	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
-	nvq->done_idx = 0;
 }
 
 static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
