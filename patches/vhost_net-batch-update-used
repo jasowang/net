@@ -1,5 +1,5 @@
 Bottom: 9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
-Top:    2743183194ceda35c528afdfc1ab5a57c12231d8
+Top:    931b084fec462ccd2927eef560d634690ad2e0d8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,10 +18,26 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 8a5cc05..800d728 100644
+index 8a5cc05..703c6a0 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -532,7 +532,6 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -528,11 +528,22 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+ 	       !vhost_vq_avail_empty(vq->dev, vq);
+ }
+ 
++static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
++{
++	struct vhost_virtqueue *vq = &nvq->vq;
++	struct vhost_dev *dev = vq->dev;
++
++	if (!nvq->done_idx)
++		return;
++
++	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
++	nvq->done_idx = 0;
++}
++
+ static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
@@ -29,25 +45,17 @@ index 8a5cc05..800d728 100644
  	unsigned out, in;
  	struct msghdr msg = {
  		.msg_name = NULL,
-@@ -545,6 +544,7 @@ static void handle_tx_copy(struct vhost_net *net)
- 	int err;
- 	struct socket *sock;
- 	int sent_pkts = 0;
-+	s16 nheads = 0;
- 
- 	mutex_lock(&vq->mutex);
- 	sock = vq->private_data;
-@@ -558,7 +558,8 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -558,7 +569,8 @@ static void handle_tx_copy(struct vhost_net *net)
  	vhost_net_disable_vq(net, vq);
  
  	for (;;) {
 -		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
-+		err = get_tx_bufs(net, nvq, vq->heads + nheads,
++		err = get_tx_bufs(net, nvq, vq->heads + nvq->done_idx,
 +				  &msg, &out, &in, &len);
  		if (err == -ENOSPC) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
  				vhost_disable_notify(&net->dev, vq);
-@@ -579,20 +580,27 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -579,20 +591,22 @@ static void handle_tx_copy(struct vhost_net *net)
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
@@ -60,19 +68,34 @@ index 8a5cc05..800d728 100644
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
 -		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
-+		if (++nheads == VHOST_RX_BATCH) {
-+			vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-+						    nheads);
-+			nheads = 0;
-+		}
++		if (++nvq->done_idx >= VHOST_RX_BATCH)
++			vhost_net_signal_used(nvq);
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
  		}
  	}
  out:
-+	if (nheads)
-+		vhost_add_used_and_signal_n(&net->dev, vq, vq->heads,
-+					    nheads);
++	vhost_net_signal_used(nvq);
  	mutex_unlock(&vq->mutex);
  }
+ 
+@@ -747,18 +761,6 @@ static int sk_has_rx_data(struct sock *sk)
+ 	return skb_queue_empty(&sk->sk_receive_queue);
+ }
+ 
+-static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+-{
+-	struct vhost_virtqueue *vq = &nvq->vq;
+-	struct vhost_dev *dev = vq->dev;
+-
+-	if (!nvq->done_idx)
+-		return;
+-
+-	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
+-	nvq->done_idx = 0;
+-}
+-
+ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ {
+ 	struct vhost_net_virtqueue *rvq = &net->vqs[VHOST_NET_VQ_RX];
