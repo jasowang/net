@@ -1,0 +1,11 @@
+Bottom: 2dbecaf1bc5f1e204adb1f048a0218cd94b52b51
+Top:    2dbecaf1bc5f1e204adb1f048a0218cd94b52b51
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-15 11:54:24 +0800
+
+vhost_net: rename vhost_rx_signale_used() to vhost_net_signal_used()
+
+
+---
+
+
