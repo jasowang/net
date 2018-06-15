@@ -1,5 +1,5 @@
-Bottom: 24fece08d0e8ec15b633e325c742da6a6cd02377
-Top:    ccd3510a0eb15c0a11291821dc933e99e21dc7da
+Bottom: a7585d066f79762dc7500746fdd32cc8f86f8620
+Top:    7e54739b6f60a5612e279b80f217391b9d3c3f26
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 10:54:47 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 41d99b0..60139e8 100644
+index 5b8f5df..ecaf45ed 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -475,6 +475,12 @@ static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
+@@ -477,6 +477,12 @@ static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
  	return iov_iter_count(iter);
  }
  
@@ -27,7 +27,7 @@ index 41d99b0..60139e8 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -571,7 +577,6 @@ static void handle_tx(struct vhost_net *net)
+@@ -573,7 +579,6 @@ static void handle_tx(struct vhost_net *net)
  			msg.msg_control = NULL;
  			ubufs = NULL;
  		}
@@ -35,7 +35,7 @@ index 41d99b0..60139e8 100644
  		total_len += len;
  		if (total_len < VHOST_NET_WEIGHT &&
  		    !vhost_vq_avail_empty(&net->dev, vq) &&
-@@ -601,8 +606,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -603,8 +608,7 @@ static void handle_tx(struct vhost_net *net)
  		else
  			vhost_zerocopy_signal_used(net, vq);
  		vhost_net_tx_packet(net);
@@ -45,7 +45,7 @@ index 41d99b0..60139e8 100644
  			vhost_poll_queue(&vq->poll);
  			break;
  		}
-@@ -814,8 +818,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -826,8 +830,7 @@ static void handle_rx(struct vhost_net *net)
  		if (unlikely(vq_log))
  			vhost_log_write(vq, vq_log, log, vhost_len);
  		total_len += vhost_len;
