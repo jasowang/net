@@ -1,5 +1,5 @@
-Bottom: 12e3b3848c4ed13c01872bfe7e73c34224e5f2e6
-Top:    24fece08d0e8ec15b633e325c742da6a6cd02377
+Bottom: ad24fd2b472eec95ebc510c5703c3693e1f95396
+Top:    a7585d066f79762dc7500746fdd32cc8f86f8620
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 10:48:35 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 78226d4..41d99b0 100644
+index 1bdd956..5b8f5df 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -463,6 +463,18 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
+@@ -465,6 +465,18 @@ static bool vhost_exceeds_maxpend(struct vhost_net *net)
  	       min_t(unsigned int, VHOST_MAX_PEND, vq->num >> 2);
  }
  
@@ -33,7 +33,7 @@ index 78226d4..41d99b0 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -525,18 +537,15 @@ static void handle_tx(struct vhost_net *net)
+@@ -527,18 +539,15 @@ static void handle_tx(struct vhost_net *net)
  			       "out %d, int %d\n", out, in);
  			break;
  		}
