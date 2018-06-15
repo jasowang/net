@@ -1,5 +1,5 @@
 Bottom: b90b251fefd5362059d6db6a83ab722ab623d564
-Top:    4253af2f9a77446b05486a74c729fd6f610e5010
+Top:    d341020fd4b03e608601335b88d0d98a31807868
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c9364aa..19cda45 100644
+index c9364aa..d3a8aa2 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -528,11 +528,22 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
@@ -68,7 +68,7 @@ index c9364aa..19cda45 100644
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
 -		vhost_add_used_and_signal(&net->dev, vq, &used, 0);
-+		if (++nvq->done_idx >= VHOST_RX_BATCH)
++		if (++nvq->done_idx >= VHOST_NET_BATCH)
 +			vhost_net_signal_used(nvq);
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
