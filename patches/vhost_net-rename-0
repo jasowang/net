@@ -1,5 +1,5 @@
 Bottom: 9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
-Top:    9a256d61bf6ac0f4d381846b18c4a8bcb3251bb2
+Top:    b90b251fefd5362059d6db6a83ab722ab623d564
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-15 12:01:27 +0800
 
@@ -12,4 +12,43 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 8a5cc05..c9364aa 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -95,7 +95,7 @@ struct vhost_net_ubuf_ref {
+ 	struct vhost_virtqueue *vq;
+ };
+ 
+-#define VHOST_RX_BATCH 64
++#define VHOST_NET_BATCH 64
+ struct vhost_net_buf {
+ 	void **queue;
+ 	int tail;
+@@ -169,7 +169,7 @@ static int vhost_net_buf_produce(struct vhost_net_virtqueue *nvq)
+ 
+ 	rxq->head = 0;
+ 	rxq->tail = ptr_ring_consume_batched(nvq->rx_ring, rxq->queue,
+-					      VHOST_RX_BATCH);
++					      VHOST_NET_BATCH);
+ 	return rxq->tail;
+ }
+ 
+@@ -924,7 +924,7 @@ static void handle_rx(struct vhost_net *net)
+ 			goto out;
+ 		}
+ 		nvq->done_idx += headcount;
+-		if (nvq->done_idx > VHOST_RX_BATCH)
++		if (nvq->done_idx > VHOST_NET_BATCH)
+ 			vhost_net_signal_used(nvq);
+ 		if (unlikely(vq_log))
+ 			vhost_log_write(vq, vq_log, log, vhost_len);
+@@ -989,7 +989,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+ 		return -ENOMEM;
+ 	}
+ 
+-	queue = kmalloc_array(VHOST_RX_BATCH, sizeof(void *),
++	queue = kmalloc_array(VHOST_NET_BATCH, sizeof(void *),
+ 			      GFP_KERNEL);
+ 	if (!queue) {
+ 		kfree(vqs);
