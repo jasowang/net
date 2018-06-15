@@ -1,0 +1,22 @@
+Bottom: 4253af2f9a77446b05486a74c729fd6f610e5010
+Top:    d341020fd4b03e608601335b88d0d98a31807868
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-15 12:04:23 +0800
+
+Refresh of vhost_net-batch-update-used
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 19cda45..d3a8aa2 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -598,7 +598,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+-		if (++nvq->done_idx >= VHOST_RX_BATCH)
++		if (++nvq->done_idx >= VHOST_NET_BATCH)
+ 			vhost_net_signal_used(nvq);
+ 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
+ 			vhost_poll_queue(&vq->poll);
