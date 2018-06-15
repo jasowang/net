@@ -5,6 +5,8 @@ Date:   2018-06-15 11:54:24 +0800
 
 vhost_net: rename vhost_rx_signale_used() to vhost_net_signal_used()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
