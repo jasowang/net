@@ -2461,17 +2461,8 @@ static int tun_ptr_peek_len(void *ptr)
 static int tun_peek_len(struct socket *sock)
 {
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
-	struct tun_struct *tun;
-	int ret = 0;
 
-	tun = tun_get(tfile);
-	if (!tun)
-		return 0;
-
-	ret = PTR_RING_PEEK_CALL(&tfile->tx_ring, tun_ptr_peek_len);
-	tun_put(tun);
-
-	return ret;
+	return PTR_RING_PEEK_CALL(&tfile->tx_ring, tun_ptr_peek_len);
 }
 
 /* Ops structure to mimic raw sockets with tun */
