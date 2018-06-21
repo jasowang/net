@@ -5,6 +5,8 @@ Date:   2018-06-21 14:37:01 +0800
 
 vhost_net: poll for avail rx
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
