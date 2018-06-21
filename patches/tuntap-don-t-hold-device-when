@@ -9,6 +9,8 @@ There's no need to hold refcnt of the device during peeking, since
 device are loosely coupled with socket. So remove the code for a more
 efficient peeking for e.g vhost busy polling.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
