@@ -5,6 +5,9 @@ Date:   2018-06-21 14:37:01 +0800
 
 vhost_net: poll for avail rx
 
+Add polling for available rx, this may help for the reduce the rx kick
+when guest is doing rx buffer refilling.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
