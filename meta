@@ -1,11 +1,12 @@
 Version: 1
-Previous: d23f2a7345a2252b65510f7b7b1e76077d7ebf40
-Head: cf67a265272addcab20dbbbd67df2a62ca0d2fb8
+Previous: 0d59a44137c7527fbbae300a20bc789e866f6456
+Head: e5db6551c85b132e602d06ae9a96fa8d3ca9aca3
 Applied:
   slab-early: ded99f62ed86a52e08dc43bc889aa3e348eb456b
   vhost-correctly-assign-vhost: 85681798d05bb67f1c49c8fa30024657ba730a19
   vhost-introduce-new-ioctls-to: acba950b1555b6636c0c05a26e79f44b5f6356a8
   tuntap-don-t-hold-device-when: cf67a265272addcab20dbbbd67df2a62ca0d2fb8
+  vhost_net-better-variable-name: e5db6551c85b132e602d06ae9a96fa8d3ca9aca3
 Unapplied:
   refresh-temp: 681f7da985133da3c4596dafd08cf89051c2f4a9
   vhost_net-a-100-busy-polling: fdecb73a8644cf3a10bc082ab26bd065c6e0fb3f

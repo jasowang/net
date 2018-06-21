@@ -1,0 +1,15 @@
+Bottom: f079a6c58202017e01841a142e7311cf0b9bee96
+Top:    f079a6c58202017e01841a142e7311cf0b9bee96
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-21 14:33:14 +0800
+
+vhost_net: better variable name in vhost_net_rx_peek_head_len()
+
+Add a 't' or 'r' as the prefix of vhost_net_virtqueue and
+vhost_virtqueue. This will make the code more readable and ease the
+future reviewing.
+
+
+---
+
+
