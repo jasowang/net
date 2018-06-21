@@ -1,6 +1,6 @@
 Version: 1
-Previous: 56ff95a8110677398ab35a73dc6a2297edddfa67
-Head: 3a979e8c07e3ee9933016368db0a55943b00a089
+Previous: 10247145a03e6188323daf639c5bfb2f400d85ed
+Head: f0dc7f9c6dd99891611fca5849cbc4c6965b690e
 Applied:
 Unapplied:
   vhost_net-disable-tx-polling: ba3e8a046aca917339c8edfd728c6b4c85bce12c
