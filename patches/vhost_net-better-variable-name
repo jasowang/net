@@ -9,6 +9,8 @@ Add a 't' or 'r' as the prefix of vhost_net_virtqueue and
 vhost_virtqueue. This will make the code more readable and ease the
 future reviewing.
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
