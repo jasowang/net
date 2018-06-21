@@ -1,5 +1,5 @@
 Bottom: fee6d643e0110161228af958caf3445190a39ea9
-Top:    fee6d643e0110161228af958caf3445190a39ea9
+Top:    a50241108474dc0802273c61bb6b2b17dd8db29e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-21 14:37:01 +0800
 
@@ -10,4 +10,24 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 35f0dfe..7dd05b6 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -656,7 +656,8 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 	unsigned long uninitialized_var(endtime);
+ 	int len = peek_head_len(rnq, sk);
+ 
+-	if (!len && rvq->busyloop_timeout) {
++	if ((!len || vhost_vq_avail_empty(&net->dev, rvq))
++	    && rvq->busyloop_timeout) {
+ 		/* Flush batched heads first */
+ 		vhost_rx_signal_used(rnq);
+ 		/* Both tx vq and rx socket were polled here */
+@@ -668,6 +669,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
+ 
+ 		while (vhost_can_busy_poll(&net->dev, endtime) &&
+ 		       !sk_has_rx_data(sk) &&
++		       vhost_vq_avail_empty(&net->dev, rvq) &&
+ 		       vhost_vq_avail_empty(&net->dev, tvq))
+ 			cpu_relax();
