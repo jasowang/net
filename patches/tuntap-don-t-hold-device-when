@@ -1,0 +1,15 @@
+Bottom: 056c1c54b51f67c0475b3720b1aec753683bb978
+Top:    056c1c54b51f67c0475b3720b1aec753683bb978
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-06-21 14:26:45 +0800
+
+tuntap: don't hold device when peeking packet length
+
+There's no need to hold refcnt of the device during peeking, since
+device are loosely coupled with socket. So remove the code for a more
+efficient peeking for e.g vhost busy polling.
+
+
+---
+
+
