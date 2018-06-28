@@ -431,17 +431,33 @@ static int vhost_net_enable_vq(struct vhost_net *n,
 	return vhost_poll_start(poll, sock->file);
 }
 
+static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+{
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct vhost_dev *dev = vq->dev;
+
+	if (!nvq->done_idx)
+		return;
+
+	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
+	nvq->done_idx = 0;
+}
+
 static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
-				    struct vhost_virtqueue *vq,
+				    struct vhost_net_virtqueue *nvq,
 				    struct vhost_used_elem *used_elem,
 				    struct iovec iov[], unsigned int iov_size,
 				    unsigned int *out_num, unsigned int *in_num)
 {
 	unsigned long uninitialized_var(endtime);
+	struct vhost_virtqueue *vq = &nvq->vq;
 	int r = vhost_get_vq_desc(vq, used_elem, vq->iov, ARRAY_SIZE(vq->iov),
 				  out_num, in_num, NULL, NULL);
 
 	if (r == -ENOSPC && vq->busyloop_timeout) {
+		/* FLush batched heads first */
+		if (!nvq->ubufs)
+			vhost_net_signal_used(nvq);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(vq->dev, endtime) &&
@@ -493,7 +509,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, vq, used, vq->iov,
+	ret = vhost_net_tx_get_vq_desc(net, nvq, used, vq->iov,
 				       ARRAY_SIZE(vq->iov),
 				       out, in);
 	if (ret)
@@ -526,18 +542,6 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
 {
 	return total_len < VHOST_NET_WEIGHT &&
 	       !vhost_vq_avail_empty(vq->dev, vq);
-}
-
-static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
-{
-	struct vhost_virtqueue *vq = &nvq->vq;
-	struct vhost_dev *dev = vq->dev;
-
-	if (!nvq->done_idx)
-		return;
-
-	vhost_add_used_and_signal_n(dev, vq, vq->heads, nvq->done_idx);
-	nvq->done_idx = 0;
 }
 
 static void handle_tx_copy(struct vhost_net *net)
