@@ -1,5 +1,5 @@
 Bottom: 6db5fe541bbec8b268b3c31165dcde13df897516
-Top:    380d7c324c1b61cf69033ede8c6c11f3c99c23fa
+Top:    d139533518ec366831cc17d52a2edd1e035adb4b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -98,7 +98,7 @@ index 29756d8..23a478e 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a502f1a..34c02f6 100644
+index a502f1a..4abf8d1 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -163,7 +163,7 @@ index a502f1a..34c02f6 100644
  done:
  	return ret;
  }
-@@ -1107,13 +1120,32 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
+@@ -1107,13 +1120,28 @@ ssize_t vhost_chr_read_iter(struct vhost_dev *dev, struct iov_iter *to,
  		finish_wait(&dev->wait, &wait);
  
  	if (node) {
@@ -185,12 +185,9 @@ index a502f1a..34c02f6 100644
 +			break;
 +		}
  
-+<<<<<<< current
- 		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
-+=======
+-		if (ret != size || node->msg.type != VHOST_IOTLB_MISS) {
 +		ret = copy_to_iter(start, size, to);
 +		if (ret != size || msg->type != VHOST_IOTLB_MISS) {
-+>>>>>>> patched
  			kfree(node);
  			return ret;
  		}
@@ -198,7 +195,7 @@ index a502f1a..34c02f6 100644
  		vhost_enqueue_msg(dev, &dev->pending_list, node);
  	}
  
-@@ -1126,12 +1158,23 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+@@ -1126,12 +1154,23 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
  	struct vhost_dev *dev = vq->dev;
  	struct vhost_msg_node *node;
  	struct vhost_iotlb_msg *msg;
