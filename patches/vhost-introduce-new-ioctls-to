@@ -1,5 +1,5 @@
 Bottom: 6db5fe541bbec8b268b3c31165dcde13df897516
-Top:    d139533518ec366831cc17d52a2edd1e035adb4b
+Top:    122c6a6fa8538ddc3b72a2843ce7b6e30ae00681
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -98,7 +98,7 @@ index 29756d8..23a478e 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a502f1a..4abf8d1 100644
+index a502f1a..25f2cc5 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -195,17 +195,14 @@ index a502f1a..4abf8d1 100644
  		vhost_enqueue_msg(dev, &dev->pending_list, node);
  	}
  
-@@ -1126,12 +1154,23 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
+@@ -1126,12 +1154,19 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
  	struct vhost_dev *dev = vq->dev;
  	struct vhost_msg_node *node;
  	struct vhost_iotlb_msg *msg;
 +	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_MSG_V2);
  
-+<<<<<<< current
- 	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
-+=======
+-	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
 +	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
-+>>>>>>> patched
  	if (!node)
  		return -ENOMEM;
  
