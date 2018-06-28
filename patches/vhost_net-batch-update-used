@@ -1,5 +1,5 @@
 Bottom: b90b251fefd5362059d6db6a83ab722ab623d564
-Top:    d341020fd4b03e608601335b88d0d98a31807868
+Top:    b337953c607cce683d7443d76143c5ea8cbd0a02
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,11 +18,11 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c9364aa..d3a8aa2 100644
+index c9364aa..294dd14 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -528,11 +528,22 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
- 	       !vhost_vq_avail_empty(vq->dev, vq);
+@@ -431,17 +431,33 @@ static int vhost_net_enable_vq(struct vhost_net *n,
+ 	return vhost_poll_start(poll, sock->file);
  }
  
 +static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
@@ -37,7 +37,35 @@ index c9364aa..d3a8aa2 100644
 +	nvq->done_idx = 0;
 +}
 +
- static void handle_tx_copy(struct vhost_net *net)
+ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+-				    struct vhost_virtqueue *vq,
++				    struct vhost_net_virtqueue *nvq,
+ 				    struct vhost_used_elem *used_elem,
+ 				    struct iovec iov[], unsigned int iov_size,
+ 				    unsigned int *out_num, unsigned int *in_num)
+ {
+ 	unsigned long uninitialized_var(endtime);
++	struct vhost_virtqueue *vq = &nvq->vq;
+ 	int r = vhost_get_vq_desc(vq, used_elem, vq->iov, ARRAY_SIZE(vq->iov),
+ 				  out_num, in_num, NULL, NULL);
+ 
+ 	if (r == -ENOSPC && vq->busyloop_timeout) {
++		/* FLush batched heads first */
++		if (!nvq->ubufs)
++			vhost_net_signal_used(nvq);
+ 		preempt_disable();
+ 		endtime = busy_clock() + vq->busyloop_timeout;
+ 		while (vhost_can_busy_poll(vq->dev, endtime) &&
+@@ -493,7 +509,7 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+ 	int ret;
+ 
+-	ret = vhost_net_tx_get_vq_desc(net, vq, used, vq->iov,
++	ret = vhost_net_tx_get_vq_desc(net, nvq, used, vq->iov,
+ 				       ARRAY_SIZE(vq->iov),
+ 				       out, in);
+ 	if (ret)
+@@ -532,7 +548,6 @@ static void handle_tx_copy(struct vhost_net *net)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
@@ -45,7 +73,7 @@ index c9364aa..d3a8aa2 100644
  	unsigned out, in;
  	struct msghdr msg = {
  		.msg_name = NULL,
-@@ -558,7 +569,8 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -558,7 +573,8 @@ static void handle_tx_copy(struct vhost_net *net)
  	vhost_net_disable_vq(net, vq);
  
  	for (;;) {
@@ -55,7 +83,7 @@ index c9364aa..d3a8aa2 100644
  		if (err == -ENOSPC) {
  			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
  				vhost_disable_notify(&net->dev, vq);
-@@ -579,20 +591,22 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -579,20 +595,22 @@ static void handle_tx_copy(struct vhost_net *net)
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
  		if (unlikely(err < 0)) {
@@ -80,7 +108,7 @@ index c9364aa..d3a8aa2 100644
  	mutex_unlock(&vq->mutex);
  }
  
-@@ -747,18 +761,6 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -747,18 +765,6 @@ static int sk_has_rx_data(struct sock *sk)
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
