@@ -1156,11 +1156,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	struct vhost_iotlb_msg *msg;
 	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_MSG_V2);
 
-<<<<<<< current
-	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
-=======
 	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
->>>>>>> patched
 	if (!node)
 		return -ENOMEM;
 
