@@ -1,5 +1,5 @@
 Bottom: 6db5fe541bbec8b268b3c31165dcde13df897516
-Top:    122c6a6fa8538ddc3b72a2843ce7b6e30ae00681
+Top:    281dea9ff424123572c068eacb1debfa0efcd8c1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -43,14 +43,14 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 29756d8..23a478e 100644
+index 29756d8..4a123e8 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -78,6 +78,10 @@ enum {
  };
  
  enum {
-+	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_MSG_V2)
++	VHOST_NET_BACKEND_FEATURES = (1ULL << VHOST_BACKEND_F_IOTLB_MSG_V2)
 +};
 +
 +enum {
@@ -98,7 +98,7 @@ index 29756d8..23a478e 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a502f1a..25f2cc5 100644
+index a502f1a..9501d4c 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -199,7 +199,7 @@ index a502f1a..25f2cc5 100644
  	struct vhost_dev *dev = vq->dev;
  	struct vhost_msg_node *node;
  	struct vhost_iotlb_msg *msg;
-+	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_MSG_V2);
++	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_MSG_V2);
  
 -	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
 +	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
@@ -254,7 +254,7 @@ index 6c844b9..466ef75 100644
  static inline bool vhost_is_little_endian(struct vhost_virtqueue *vq)
  {
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
-index c51f8e5..613412b 100644
+index c51f8e5..c176e9d 100644
 --- a/include/uapi/linux/vhost.h
 +++ b/include/uapi/linux/vhost.h
 @@ -65,6 +65,7 @@ struct vhost_iotlb_msg {
@@ -288,7 +288,7 @@ index c51f8e5..613412b 100644
 +/* Set or get vhost backend capability */
 +
 +/* Use message type V2 */
-+#define VHOST_BACKEND_F_MSG_V2 0x1
++#define VHOST_BACKEND_F_IOTLB_MSG_V2 0x1
 +
 +#define VHOST_SET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x25, __u64)
 +#define VHOST_GET_BACKEND_FEATURES _IOW(VHOST_VIRTIO, 0x26, __u64)
