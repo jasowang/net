@@ -75,7 +75,11 @@
  */
 #define VIRTIO_F_IOMMU_PLATFORM		33
 
+<<<<<<< current
 /* This feature indicates support for the packed virtqueue layout. */
+=======
+/* Packed virtqueue layout */
+>>>>>>> patched
 #define VIRTIO_F_RING_PACKED		34
 
 /*
