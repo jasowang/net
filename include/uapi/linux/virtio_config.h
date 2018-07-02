@@ -75,6 +75,8 @@
  */
 #define VIRTIO_F_IOMMU_PLATFORM		33
 
+#define VIRTIO_F_RING_PACKED		34
+
 /*
  * Does the device support Single Root I/O Virtualization?
  */
