@@ -323,7 +323,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
-	vq->used_wrap_counter = true;
+	vq->last_used_wrap_counter = true;
 	vq->last_avail_wrap_counter = true;
 	vq->avail_wrap_counter = true;
 	vq->umem = NULL;
@@ -1431,13 +1431,13 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 		}
 		vq->last_used_idx = s.num;
 		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
-			vq->used_wrap_counter = wrap_counter;
+			vq->last_used_wrap_counter = wrap_counter;
 		break;
 	case VHOST_GET_VRING_USED_BASE:
 		s.index = idx;
 		s.num = vq->last_used_idx;
 		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
-			s.num |= vq->used_wrap_counter << 31;
+			s.num |= vq->last_used_wrap_counter << 31;
 		if (copy_to_user(argp, &s, sizeof s))
 			r = -EFAULT;
 		break;
@@ -2664,7 +2664,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 				   unsigned int count)
 {
 	u16 last_used_idx = vq->last_used_idx + heads[0].count;
-	u16 wrap_counter = vq->used_wrap_counter;
+	u16 wrap_counter = vq->last_used_wrap_counter;
 	int i, ret;
 
 	for (i = 1; i < count; i++) {
@@ -2682,7 +2682,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 	}
 
 	ret = vhost_add_used_packed(vq, &heads[0], vq->last_used_idx,
-				    vq->used_wrap_counter);
+				    vq->last_used_wrap_counter);
 	if (unlikely(ret))
 		return ret;
 
@@ -2692,7 +2692,7 @@ static int vhost_add_used_n_packed(struct vhost_virtqueue *vq,
 	}
 
 	vq->last_used_idx = last_used_idx;
-	vq->used_wrap_counter = wrap_counter;
+	vq->last_used_wrap_counter = wrap_counter;
 
 	return 0;
 }
