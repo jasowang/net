@@ -210,8 +210,8 @@ void vhost_set_used_len(struct vhost_virtqueue *vq,
 			int len);
 int vhost_get_used_len(struct vhost_virtqueue *vq,
 		       struct vhost_used_elem *used);
-void vhost_discard_vq_desc(struct vhost_virtqueue *,
-			   struct vhost_used_elem *,
+void vhost_discard_vq_desc(struct vhost_virtqueue *vq,
+			   struct vhost_used_elem *elem,
 			   int n);
 
 int vhost_vq_init_access(struct vhost_virtqueue *);

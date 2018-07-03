@@ -161,9 +161,11 @@ struct vhost_memory {
 					 struct vhost_vring_state)
 
 /* Base value where queue looks for used descriptors */
-#define VHOST_SET_VRING_USED_BASE _IOW(VHOST_VIRTIO, 0x25, struct vhost_vring_state)
+#define VHOST_SET_VRING_USED_BASE _IOW(VHOST_VIRTIO, 0x25,	\
+                                  struct vhost_vring_state)
 /* Get accessor: reads index, writes value in num */
-#define VHOST_GET_VRING_USED_BASE _IOWR(VHOST_VIRTIO, 0x26, struct vhost_vring_state)
+#define VHOST_GET_VRING_USED_BASE _IOWR(VHOST_VIRTIO, 0x26,	\
+                                  struct vhost_vring_state)
 
 /* VHOST_NET specific defines */
 
