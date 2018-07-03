@@ -2095,7 +2095,8 @@ static int get_indirect_packed(struct vhost_virtqueue *vq,
 			 * to come before any input descriptors.
 			 */
 			if (unlikely(*in_num)) {
-				vq_err(vq, "Indirect descriptor has out after in: idx %d\n", i);
+				vq_err(vq, "Indirect descriptor has out after in: idx %d\n",
+				       i);
 				return -EINVAL;
 			}
 			*out_num += ret;
@@ -2208,7 +2209,8 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
 						  log_num, &desc);
 			if (unlikely(ret < 0)) {
 				if (ret != -EAGAIN)
-					vq_err(vq, "Failure detected in indirect descriptor at idx %d\n", i);
+					vq_err(vq, "Failure detected in indirect descriptor at idx %d\n",
+					       i);
 				return ret;
 			}
 			goto next;
