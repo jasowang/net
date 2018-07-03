@@ -1,0 +1,27 @@
+Bottom: c95c3acfc039fcf6241aec13380acffcea2a284c
+Top:    3bda1d473574480ac5946926a133f56c16a77a5c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-03 12:53:00 +0800
+
+Refresh of vhost-fix
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 317e653..399cf39 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2710,9 +2710,11 @@ static int vhost_add_used_packed(struct vhost_virtqueue *vq,
+ 		return -EFAULT;
+ 	}
+ 
+-	/* Update flags after descriptor id and len is wrote */
+-	if (idx == 0)
++	if (idx == vq->last_used_idx) {
++		/* Make sure descriptor id and len is written before
++		   flags for the first used buffer. */
+ 		smp_wmb();
++	}
+ 
+ 	ret = vhost_put_user(vq, get_desc_flags(vq, wrap_counter,
+ 						used->elem.len),
