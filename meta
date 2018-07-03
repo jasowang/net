@@ -1,6 +1,6 @@
 Version: 1
-Previous: 3d9f7cde2d93d44e110578b0d43d54a8b8163df3
-Head: c8f768b2124cdd19b29bcb60815f48f91721f72c
+Previous: e885092091d633ccfbadd9238de2a5a5b66942e1
+Head: 5987e5784babeb2715cf0c62ecd23b7eaf64aba4
 Applied:
   vhost-hide-used-ring-layout: 094dea711bd57fd0166250b3a3d10515ee06c61d
   vhost-do-not-use: 53b8bfd7edd5a97f369d26e5333c2719cb1c4850
@@ -10,6 +10,7 @@ Applied:
   vhost-packed-ring-support: 58ba806a0c18a63efb7317e48d59dbd1deda9c5f
   better-name: 6c1eccc7f5cd58efc41817c2a4734730a268f47d
   vhost-event-suppression-for: c8f768b2124cdd19b29bcb60815f48f91721f72c
+  fix: 5987e5784babeb2715cf0c62ecd23b7eaf64aba4
 Unapplied:
   vhost-bypass-wrap_counter: 5bb1483c67d5a0b815e52088e5ec2927280130ab
 Hidden:
