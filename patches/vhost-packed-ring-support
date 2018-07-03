@@ -1,5 +1,5 @@
 Bottom: fba92ac0a5a0d0d8c05d6e7bdafc513c6699b1d4
-Top:    96cc1f97e4aee2e4c2cc9e1822033fd81b8ebca3
+Top:    20bb643d3772961e3baded397146b545c09c3535
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-03 12:55:15 +0800
 
@@ -83,7 +83,7 @@ index eada5a6..90d9efb 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..f85a3f3 100644
+index 060a431..477494f 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -160,7 +160,7 @@ index 060a431..f85a3f3 100644
  		if (s.num > 0xffff) {
  			r = -EINVAL;
  			break;
-@@ -1367,10 +1397,47 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
+@@ -1367,10 +1397,48 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
  		vq->last_avail_idx = s.num;
  		/* Forget the cached index value. */
  		vq->avail_idx = vq->last_avail_idx;
@@ -179,7 +179,8 @@ index 060a431..f85a3f3 100644
 +		break;
 +	case VHOST_SET_VRING_USED_BASE:
 +		/* Moving base with an active backend?
-+		 * You don't want to do that. */
++		 * You don't want to do that.
++		 */
 +		if (vq->private_data) {
 +			r = -EBUSY;
 +			break;
@@ -208,7 +209,7 @@ index 060a431..f85a3f3 100644
  		if (copy_to_user(argp, &s, sizeof s))
  			r = -EFAULT;
  		break;
-@@ -1734,6 +1801,9 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
+@@ -1734,6 +1802,9 @@ int vhost_vq_init_access(struct vhost_virtqueue *vq)
  
  	vhost_init_is_le(vq);
  
@@ -218,7 +219,7 @@ index 060a431..f85a3f3 100644
  	r = vhost_update_used_flags(vq);
  	if (r)
  		goto err;
-@@ -1807,7 +1877,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
+@@ -1807,7 +1878,8 @@ static int translate_desc(struct vhost_virtqueue *vq, u64 addr, u32 len,
  /* Each buffer in the virtqueues is actually a chain of descriptors.  This
   * function returns the next descriptor in the chain,
   * or -1U if we're at the end. */
@@ -228,7 +229,7 @@ index 060a431..f85a3f3 100644
  {
  	unsigned int next;
  
-@@ -1820,11 +1891,17 @@ static unsigned next_desc(struct vhost_virtqueue *vq, struct vring_desc *desc)
+@@ -1820,11 +1892,17 @@ static unsigned next_desc(struct vhost_virtqueue *vq, struct vring_desc *desc)
  	return next;
  }
  
@@ -251,7 +252,7 @@ index 060a431..f85a3f3 100644
  {
  	struct vring_desc desc;
  	unsigned int i = 0, count, found = 0;
-@@ -1914,23 +1991,300 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1914,23 +1992,299 @@ static int get_indirect(struct vhost_virtqueue *vq,
  			}
  			*out_num += ret;
  		}
@@ -287,8 +288,7 @@ index 060a431..f85a3f3 100644
 +
 +	/* Sanity check */
 +	if (unlikely(len % sizeof(desc))) {
-+		vq_err(vq, "Invalid length in indirect descriptor: "
-+		       "len 0x%llx not multiple of 0x%zx\n",
++		vq_err(vq, "Invalid length in indirect descriptor: len 0x%llx not multiple of 0x%zx\n",
 +		       (unsigned long long)len,
 +		       sizeof desc);
 +		return -EINVAL;
