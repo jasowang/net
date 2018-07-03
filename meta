@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5c2d30984f4b209a4a30bc529de9c86ac5e16824
-Head: 510db4afafc90ed7ee2b46da6e1730b52995e8fc
+Previous: a7846e76c53d8f85c360b42685c2a5d567a98259
+Head: 84ae8f3cdc43a4e8a2a4426327454093fe55f2c7
 Applied:
   vhost-move-get_rx_bufs-to: 1b3a9043ec8e4d5498cdaf12a4b1229adedf3bdf
   vhost-hide-used-ring-layout: 8e5d41d6c802017f2b144e5ea643931a53586ae9
@@ -10,7 +10,7 @@ Applied:
   virtio-introduce-packed-ring: 01c62cc36c56ce88bb6550df4e872f422048bbfa
   vhost-packed-ring-support: 578702a18f594ec2a5772e87b077eb4145fd2d72
   vhost-event-suppression-for: 510db4afafc90ed7ee2b46da6e1730b52995e8fc
+  vhost-bypass-wrap_counter: 84ae8f3cdc43a4e8a2a4426327454093fe55f2c7
 Unapplied:
-  vhost-bypass-wrap_counter: 76eeddb3ab5773c27bac11107b0dd95d641212ac
   tuntap-bypass: ee71311e027d2cf57a347275b368d6d0afce6259
 Hidden:
