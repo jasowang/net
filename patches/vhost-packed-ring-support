@@ -1,7 +1,7 @@
 Bottom: f56da0bca13f52b0570917ee4e8e4669b25ef8ba
-Top:    8e323a10e54f84f02c9bb23e0080b2fc35bd6cbf
+Top:    f5a7977c8e575fb50880ac5c83b4e8c1e36a32cc
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-02 17:54:19 +0800
+Date:   2018-07-03 11:41:39 +0800
 
 vhost: packed ring support
 
@@ -23,7 +23,6 @@ implemented. It will be done on top with another patch.
 For more information of packed ring, please refer Virtio spec.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -84,14 +83,14 @@ index eada5a6..90d9efb 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..c117121 100644
+index 060a431..38f079b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
  	vhost_reset_is_le(vq);
  	vhost_disable_cross_endian(vq);
  	vq->busyloop_timeout = 0;
-+	vq->used_wrap_counter = true;
++	vq->last_used_wrap_counter = true;
 +	vq->last_avail_wrap_counter = true;
 +	vq->avail_wrap_counter = true;
  	vq->umem = NULL;
@@ -199,13 +198,13 @@ index 060a431..c117121 100644
 +		}
 +		vq->last_used_idx = s.num;
 +		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
-+			vq->used_wrap_counter = wrap_counter;
++			vq->last_used_wrap_counter = wrap_counter;
 +		break;
 +	case VHOST_GET_VRING_USED_BASE:
 +		s.index = idx;
 +		s.num = vq->last_used_idx;
 +		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
-+			s.num |= vq->used_wrap_counter << 31;
++			s.num |= vq->last_used_wrap_counter << 31;
  		if (copy_to_user(argp, &s, sizeof s))
  			r = -EFAULT;
  		break;
@@ -710,7 +709,7 @@ index 060a431..c117121 100644
 +				   unsigned int count)
 +{
 +	u16 last_used_idx = vq->last_used_idx + heads[0].count;
-+	u16 wrap_counter = vq->used_wrap_counter;
++	u16 wrap_counter = vq->last_used_wrap_counter;
 +	int i, ret;
 +
 +	for (i = 1; i < count; i++) {
@@ -728,7 +727,7 @@ index 060a431..c117121 100644
 +	}
 +
 +	ret = vhost_add_used_packed(vq, &heads[0], vq->last_used_idx,
-+				    vq->used_wrap_counter);
++				    vq->last_used_wrap_counter);
 +	if (unlikely(ret))
 +		return ret;
 +
@@ -738,7 +737,7 @@ index 060a431..c117121 100644
 +	}
 +
 +	vq->last_used_idx = last_used_idx;
-+	vq->used_wrap_counter = wrap_counter;
++	vq->last_used_wrap_counter = wrap_counter;
 +
 +	return 0;
 +}
@@ -902,7 +901,7 @@ index 060a431..c117121 100644
  
  /* Create a new message. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 604821b..7543a46 100644
+index 604821b..5b7786f 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -36,6 +36,7 @@ struct vhost_poll {
@@ -929,7 +928,7 @@ index 604821b..7543a46 100644
  	bool user_be;
  #endif
  	u32 busyloop_timeout;
-+	bool used_wrap_counter;
++	bool last_used_wrap_counter;
 +	bool avail_wrap_counter;
 +	bool last_avail_wrap_counter;
  };
