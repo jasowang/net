@@ -1412,7 +1412,8 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 		break;
 	case VHOST_SET_VRING_USED_BASE:
 		/* Moving base with an active backend?
-		 * You don't want to do that. */
+		 * You don't want to do that.
+		 */
 		if (vq->private_data) {
 			r = -EBUSY;
 			break;
@@ -2009,8 +2010,7 @@ static int get_indirect_packed(struct vhost_virtqueue *vq,
 
 	/* Sanity check */
 	if (unlikely(len % sizeof(desc))) {
-		vq_err(vq, "Invalid length in indirect descriptor: "
-		       "len 0x%llx not multiple of 0x%zx\n",
+		vq_err(vq, "Invalid length in indirect descriptor: len 0x%llx not multiple of 0x%zx\n",
 		       (unsigned long long)len,
 		       sizeof desc);
 		return -EINVAL;
