@@ -2710,9 +2710,11 @@ static int vhost_add_used_packed(struct vhost_virtqueue *vq,
 		return -EFAULT;
 	}
 
-	/* Update flags after descriptor id and len is wrote */
-	if (idx == 0)
+	if (idx == vq->last_used_idx) {
+		/* Make sure descriptor id and len is written before
+		   flags for the first used buffer. */
 		smp_wmb();
+	}
 
 	ret = vhost_put_user(vq, get_desc_flags(vq, wrap_counter,
 						used->elem.len),
