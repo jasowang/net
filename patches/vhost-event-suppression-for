@@ -1,7 +1,7 @@
 Bottom: f5a7977c8e575fb50880ac5c83b4e8c1e36a32cc
-Top:    9225856745e61bcd24dfd092549bb1966b8d7f49
+Top:    897542f65e7684f0419c117bc1c1daed5472b65c
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-02 17:55:05 +0800
+Date:   2018-07-03 10:46:33 +0800
 
 vhost: event suppression for packed ring
 
@@ -14,11 +14,10 @@ For more information, please refer Virtio spec.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
-
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 38f079b..7a4c6e6 100644
+index 38f079b..079280a 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1115,10 +1115,15 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
@@ -209,7 +208,7 @@ index 38f079b..7a4c6e6 100644
 +	if (unlikely(!v))
 +		return true;
 +
-+	return vhost_vring_packed_need_event(vq, vq->used_wrap_counter,
++	return vhost_vring_packed_need_event(vq, vq->last_used_wrap_counter,
 +					     off_wrap, new, old);
 +}
 +
