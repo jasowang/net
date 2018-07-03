@@ -1,5 +1,5 @@
 Bottom: fba92ac0a5a0d0d8c05d6e7bdafc513c6699b1d4
-Top:    7e8d54516318cd806149d7b70d58b2e8b9ae4a1f
+Top:    96cc1f97e4aee2e4c2cc9e1822033fd81b8ebca3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-03 12:55:15 +0800
 
@@ -83,7 +83,7 @@ index eada5a6..90d9efb 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..1c295dd 100644
+index 060a431..f85a3f3 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -654,7 +654,7 @@ index 060a431..1c295dd 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2219,10 +2613,98 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2219,10 +2613,102 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -680,7 +680,8 @@ index 060a431..1c295dd 100644
 +
 +	if (idx == vq->last_used_idx) {
 +		/* Make sure descriptor id and len is written before
-+		   flags for the first used buffer. */
++		 * flags for the first used buffer.
++		 */
 +		smp_wmb();
 +	}
 +
@@ -714,6 +715,9 @@ index 060a431..1c295dd 100644
 +	u16 wrap_counter = vq->last_used_wrap_counter;
 +	int i, ret;
 +
++	/* Update used elems other than first to save unnecessary
++	 * memory barriers.
++	 */
 +	for (i = 1; i < count; i++) {
 +		if (last_used_idx >= vq->num) {
 +			last_used_idx -= vq->num;
@@ -755,7 +759,7 @@ index 060a431..1c295dd 100644
  {
  	int start, n, r;
  
-@@ -2254,6 +2736,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
+@@ -2254,6 +2740,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
  	}
  	return r;
  }
@@ -775,7 +779,7 @@ index 060a431..1c295dd 100644
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
  static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
-@@ -2261,6 +2756,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2261,6 +2760,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__u16 old, new;
  	__virtio16 event;
  	bool v;
@@ -787,7 +791,7 @@ index 060a431..1c295dd 100644
  	/* Flush out used index updates. This is paired
  	 * with the barrier that the Guest executes when enabling
  	 * interrupts. */
-@@ -2323,7 +2823,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
+@@ -2323,7 +2827,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
  EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
  
  /* return true if we're sure that avaiable ring is empty */
@@ -797,7 +801,7 @@ index 060a431..1c295dd 100644
  {
  	__virtio16 avail_idx;
  	int r;
-@@ -2338,10 +2839,58 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2338,10 +2843,58 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	return vq->avail_idx == vq->last_avail_idx;
  }
@@ -858,7 +862,7 @@ index 060a431..1c295dd 100644
  {
  	__virtio16 avail_idx;
  	int r;
-@@ -2376,10 +2925,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2376,10 +2929,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	return vhost16_to_cpu(vq, avail_idx) != vq->avail_idx;
  }
@@ -886,7 +890,7 @@ index 060a431..1c295dd 100644
  {
  	int r;
  
-@@ -2393,6 +2957,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2393,6 +2961,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  			       &vq->used->flags, r);
  	}
  }
