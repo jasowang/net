@@ -1,6 +1,6 @@
 Version: 1
-Previous: 888f254a4f83e0fe4fdee5a94400da66423ad2b3
-Head: d68ff712df1c036c70212746130f4b210ce26a4e
+Previous: f98e5c700a866c266f918d77c503af89fb60261a
+Head: d92253e68ea5e6e2c5dde1499b943c1fce76fe83
 Applied:
   vhost-move-get_rx_bufs-to: 1b3a9043ec8e4d5498cdaf12a4b1229adedf3bdf
   vhost-hide-used-ring-layout: 8e5d41d6c802017f2b144e5ea643931a53586ae9
@@ -11,7 +11,7 @@ Applied:
   vhost-packed-ring-support: 0a8fb0498d2f139c3aa4ea625bfe468d228858ed
   style-fix: 44045afe172268de1814b24408dbef21488bf18b
   vhost-event-suppression-for: d68ff712df1c036c70212746130f4b210ce26a4e
+  vhost-bypass-wrap_counter: d92253e68ea5e6e2c5dde1499b943c1fce76fe83
 Unapplied:
-  vhost-bypass-wrap_counter: 1e7166e99e5684ec6c1dc931b0799393bc28b126
   tuntap-bypass: ee71311e027d2cf57a347275b368d6d0afce6259
 Hidden:
