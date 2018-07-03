@@ -5,6 +5,8 @@ Date:   2018-07-03 12:52:56 +0800
 
 vhost: fix
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
