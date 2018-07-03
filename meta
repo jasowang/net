@@ -1,6 +1,6 @@
 Version: 1
-Previous: b8dbc5f03b6fcf00ef7ce2caadeb053d2ab0f6ed
-Head: c160c2deb4a41f070b49258d5f2f642fbbd76b90
+Previous: f5c39cddc5f42f834af71a373c0c4e8164ba9cf4
+Head: ee71311e027d2cf57a347275b368d6d0afce6259
 Applied:
   vhost-hide-used-ring-layout: 094dea711bd57fd0166250b3a3d10515ee06c61d
   vhost-do-not-use: 53b8bfd7edd5a97f369d26e5333c2719cb1c4850
@@ -11,7 +11,6 @@ Applied:
   better-name: 6c1eccc7f5cd58efc41817c2a4734730a268f47d
   vhost-event-suppression-for: 13ae66dd12350f8c797b1cee12c577199548697e
   vhost-bypass-wrap_counter: 76eeddb3ab5773c27bac11107b0dd95d641212ac
-  tuntap-bypass: 13ddb8bd10f237a884a50f7e89a2b04f6339911e
-  refresh-temp: c160c2deb4a41f070b49258d5f2f642fbbd76b90
+  tuntap-bypass: ee71311e027d2cf57a347275b368d6d0afce6259
 Unapplied:
 Hidden:
