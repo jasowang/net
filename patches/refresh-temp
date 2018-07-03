@@ -1,0 +1,43 @@
+Bottom: 5f3120717ead04fc23c6b6ed919a05c1704cb1bc
+Top:    47199aa4596011390fffe8c68af5e49a0d320f85
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-03 11:28:34 +0800
+
+Refresh of tuntap-bypass
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index a192a01..99db3e0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2396,15 +2396,28 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ 	int ret;
+ 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
+ 	struct tun_struct *tun = tun_get(tfile);
++	struct tun_pcpu_stats *stats;
+ 
+ 	if (!tun)
+ 		return -EBADFD;
+ 
++#if 0
+ 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
+ 			   m->msg_flags & MSG_DONTWAIT,
+ 			   m->msg_flags & MSG_MORE);
+ 	tun_put(tun);
+-	return ret;
++#endif
++
++	stats = get_cpu_ptr(tun->pcpu_stats);
++	u64_stats_update_begin(&stats->syncp);
++	stats->rx_packets++;
++	stats->rx_bytes += total_len;
++	u64_stats_update_end(&stats->syncp);
++	put_cpu_ptr(stats);
++
++	tun_put(tun);
++
++	return total_len;
+ }
+ 
+ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
