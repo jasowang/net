@@ -2396,15 +2396,28 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 	int ret;
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun = tun_get(tfile);
+	struct tun_pcpu_stats *stats;
 
 	if (!tun)
 		return -EBADFD;
 
+#if 0
 	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
 			   m->msg_flags & MSG_DONTWAIT,
 			   m->msg_flags & MSG_MORE);
 	tun_put(tun);
-	return ret;
+#endif
+
+	stats = get_cpu_ptr(tun->pcpu_stats);
+	u64_stats_update_begin(&stats->syncp);
+	stats->rx_packets++;
+	stats->rx_bytes += total_len;
+	u64_stats_update_end(&stats->syncp);
+	put_cpu_ptr(stats);
+
+	tun_put(tun);
+
+	return total_len;
 }
 
 static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
