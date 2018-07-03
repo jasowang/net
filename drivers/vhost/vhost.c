@@ -2907,7 +2907,7 @@ static bool vhost_notify_packed(struct vhost_dev *dev,
 	if (unlikely(!v))
 		return true;
 
-	return vhost_vring_packed_need_event(vq, vq->used_wrap_counter,
+	return vhost_vring_packed_need_event(vq, vq->last_used_wrap_counter,
 					     off_wrap, new, old);
 }
 
