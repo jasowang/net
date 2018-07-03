@@ -1,0 +1,75 @@
+Bottom: d1c2c3a62b52c571de29193935f16b0f5cf56a85
+Top:    f56da0bca13f52b0570917ee4e8e4669b25ef8ba
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-02 17:54:02 +0800
+
+virtio: introduce packed ring defines
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/include/uapi/linux/virtio_config.h b/include/uapi/linux/virtio_config.h
+index 449132c..947f6a3 100644
+--- a/include/uapi/linux/virtio_config.h
++++ b/include/uapi/linux/virtio_config.h
+@@ -75,6 +75,8 @@
+  */
+ #define VIRTIO_F_IOMMU_PLATFORM		33
+ 
++#define VIRTIO_F_RING_PACKED		34
++
+ /*
+  * Does the device support Single Root I/O Virtualization?
+  */
+diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
+index 6d5d5fa..71c7a46 100644
+--- a/include/uapi/linux/virtio_ring.h
++++ b/include/uapi/linux/virtio_ring.h
+@@ -43,6 +43,8 @@
+ #define VRING_DESC_F_WRITE	2
+ /* This means the buffer contains a list of buffer descriptors. */
+ #define VRING_DESC_F_INDIRECT	4
++#define VRING_DESC_F_AVAIL      7
++#define VRING_DESC_F_USED	15
+ 
+ /* The Host uses this in used->flags to advise the Guest: don't kick me when
+  * you add a buffer.  It's unreliable, so it's simply an optimization.  Guest
+@@ -62,6 +64,36 @@
+  * at the end of the used ring. Guest should ignore the used->flags field. */
+ #define VIRTIO_RING_F_EVENT_IDX		29
+ 
++struct vring_desc_packed {
++	/* Buffer Address. */
++	__virtio64 addr;
++	/* Buffer Length. */
++	__virtio32 len;
++	/* Buffer ID. */
++	__virtio16 id;
++	/* The flags depending on descriptor type. */
++	__virtio16 flags;
++};
++
++/* Enable events */
++#define RING_EVENT_FLAGS_ENABLE 0x0
++/* Disable events */
++#define RING_EVENT_FLAGS_DISABLE 0x1
++/*
++ * Enable events for a specific descriptor
++ * (as specified by Descriptor Ring Change Event Offset/Wrap Counter).
++ * Only valid if VIRTIO_F_RING_EVENT_IDX has been negotiated.
++ */
++#define RING_EVENT_FLAGS_DESC 0x2
++/* The value 0x3 is reserved */
++
++struct vring_packed_desc_event {
++	/* Descriptor Ring Change Event Offset and Wrap Counter */
++	__virtio16 off_wrap;
++	/* Descriptor Ring Change Event Flags */
++	__virtio16 flags;
++};
++
+ /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
+ struct vring_desc {
+ 	/* Address (guest-physical). */
