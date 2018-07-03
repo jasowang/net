@@ -1,7 +1,7 @@
 Bottom: fba92ac0a5a0d0d8c05d6e7bdafc513c6699b1d4
-Top:    20bb643d3772961e3baded397146b545c09c3535
+Top:    a51fc86c8b3ed1bce6877badf02b729eee8de9a6
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-03 12:55:15 +0800
+Date:   2018-07-03 13:12:48 +0800
 
 vhost: packed ring support
 
@@ -83,7 +83,7 @@ index eada5a6..90d9efb 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..477494f 100644
+index 060a431..215d72b 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -174,7 +174,7 @@ index 060a431..477494f 100644
  		s.num = vq->last_avail_idx;
 +		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED))
 +			s.num |= vq->last_avail_wrap_counter << 31;
-+		if (copy_to_user(argp, &s, sizeof s))
++		if (copy_to_user(argp, &s, sizeof(s)))
 +			r = -EFAULT;
 +		break;
 +	case VHOST_SET_VRING_USED_BASE:
@@ -185,7 +185,7 @@ index 060a431..477494f 100644
 +			r = -EBUSY;
 +			break;
 +		}
-+		if (copy_from_user(&s, argp, sizeof s)) {
++		if (copy_from_user(&s, argp, sizeof(s))) {
 +			r = -EFAULT;
 +			break;
 +		}
@@ -252,7 +252,7 @@ index 060a431..477494f 100644
  {
  	struct vring_desc desc;
  	unsigned int i = 0, count, found = 0;
-@@ -1914,23 +1992,299 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1914,23 +1992,298 @@ static int get_indirect(struct vhost_virtqueue *vq,
  			}
  			*out_num += ret;
  		}
@@ -290,7 +290,7 @@ index 060a431..477494f 100644
 +	if (unlikely(len % sizeof(desc))) {
 +		vq_err(vq, "Invalid length in indirect descriptor: len 0x%llx not multiple of 0x%zx\n",
 +		       (unsigned long long)len,
-+		       sizeof desc);
++		       sizeof(desc));
 +		return -EINVAL;
 +	}
 +
@@ -306,12 +306,14 @@ index 060a431..477494f 100644
 +	iov_iter_init(&from, READ, vq->indirect, ret, len);
 +
 +	/* We will use the result as an address to read from, so most
-+	 * architectures only need a compiler barrier here. */
++	 * architectures only need a compiler barrier here.
++	 */
 +	read_barrier_depends();
 +
-+	count = len / sizeof desc;
++	count = len / sizeof(desc);
 +	/* Buffers are chained via a 16 bit next field, so
-+	 * we can have at most 2^16 of these. */
++	 * we can have at most 2^16 of these.
++	 */
 +	if (unlikely(count > USHRT_MAX + 1)) {
 +		vq_err(vq, "Indirect buffer length too big: %d\n",
 +		       indirect->len);
@@ -319,10 +321,10 @@ index 060a431..477494f 100644
 +	}
 +
 +	do {
-+		unsigned iov_count = *in_num + *out_num;
++		unsigned int iov_count = *in_num + *out_num;
++
 +		if (unlikely(++found > count)) {
-+			vq_err(vq, "Loop detected: last one at %u "
-+			       "indirect size %u\n",
++			vq_err(vq, "Loop detected: last one at %u indirect size %u\n",
 +			       i, count);
 +			return -EINVAL;
 +		}
@@ -330,14 +332,14 @@ index 060a431..477494f 100644
 +						  &from))) {
 +			vq_err(vq, "Failed indirect descriptor: idx %d, %zx\n",
 +			       i, (size_t)vhost64_to_cpu(vq, indirect->addr)
-+				  + i * sizeof desc);
++				  + i * sizeof(desc));
 +			return -EINVAL;
 +		}
 +		if (unlikely(desc.flags &
 +			     cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT))) {
 +			vq_err(vq, "Nested indirect descriptor: idx %d, %zx\n",
 +			       i, (size_t)vhost64_to_cpu(vq, indirect->addr)
-+				  + i * sizeof desc);
++				  + i * sizeof(desc));
 +			return -EINVAL;
 +		}
 +
@@ -352,8 +354,7 @@ index 060a431..477494f 100644
 +				     iov_size - iov_count, access);
 +		if (unlikely(ret < 0)) {
 +			if (ret != -EAGAIN)
-+				vq_err(vq, "Translation failure %d "
-+					   "indirect idx %d\n",
++				vq_err(vq, "Translation failure %d indirect idx %d\n",
 +				       ret, i);
 +			return ret;
 +		}
@@ -369,10 +370,10 @@ index 060a431..477494f 100644
 +			}
 +		} else {
 +			/* If it's an output descriptor, they're all supposed
-+			 * to come before any input descriptors. */
++			 * to come before any input descriptors.
++			 */
 +			if (unlikely(*in_num)) {
-+				vq_err(vq, "Indirect descriptor "
-+				       "has out after in: idx %d\n", i);
++				vq_err(vq, "Indirect descriptor has out after in: idx %d\n", i);
 +				return -EINVAL;
 +			}
 +			*out_num += ret;
@@ -415,12 +416,12 @@ index 060a431..477494f 100644
 +					  bool wrap, __u16 off_wrap, __u16 new,
 +					  __u16 old)
 +{
-+    int off = off_wrap & ~(1 << 15);
++	int off = off_wrap & ~(1 << 15);
 +
-+    if (wrap != off_wrap >> 15)
-+	    off -= vq->num;
++	if (wrap != off_wrap >> 15)
++		off -= vq->num;
 +
-+    return vring_need_event(off, new, old);
++	return vring_need_event(off, new, old);
 +}
 +
 +static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
@@ -455,7 +456,8 @@ index 060a431..477494f 100644
 +			return -EFAULT;
 +		}
 +
-+		if (!desc_is_avail(vq, vq->last_avail_wrap_counter, desc.flags)) {
++		if (!desc_is_avail(vq, vq->last_avail_wrap_counter,
++				   desc.flags)) {
 +			/* If there's nothing new since last we looked, return
 +			 * invalid.
 +			 */
@@ -484,9 +486,7 @@ index 060a431..477494f 100644
 +						  log_num, &desc);
 +			if (unlikely(ret < 0)) {
 +				if (ret != -EAGAIN)
-+					vq_err(vq, "Failure detected "
-+						   "in indirect descriptor "
-+						   "at idx %d\n", i);
++					vq_err(vq, "Failure detected in indirect descriptor at idx %d\n", i);
 +				return ret;
 +			}
 +			goto next;
@@ -532,8 +532,7 @@ index 060a431..477494f 100644
 +
 +next:
 +		if (unlikely(++used->count > vq->num)) {
-+			vq_err(vq, "Loop detected: last one at %u "
-+			       "vq size %u head %u\n",
++			vq_err(vq, "Loop detected: last one at %u vq size %u head %u\n",
 +			       i, vq->num, used->elem.id);
 +			return -EINVAL;
 +		}
@@ -566,7 +565,7 @@ index 060a431..477494f 100644
  {
  	struct vring_desc desc;
  	unsigned int i, head, found = 0;
-@@ -2015,9 +2369,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2015,9 +2368,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			return -EFAULT;
  		}
  		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
@@ -579,7 +578,7 @@ index 060a431..477494f 100644
  			if (unlikely(ret < 0)) {
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
-@@ -2059,7 +2413,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2059,7 +2412,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			}
  			*out_num += ret;
  		}
@@ -588,7 +587,7 @@ index 060a431..477494f 100644
  
  	/* On success, increment avail index. */
  	vq->last_avail_idx++;
-@@ -2069,6 +2423,31 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2069,6 +2422,31 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
  	return 0;
  }
@@ -620,7 +619,7 @@ index 060a431..477494f 100644
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
  void vhost_set_used_len(struct vhost_virtqueue *vq,
-@@ -2155,15 +2534,30 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+@@ -2155,15 +2533,30 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
  	*count = headcount;
  	return 0;
  err:
@@ -654,7 +653,7 @@ index 060a431..477494f 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2219,10 +2613,102 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2219,10 +2612,102 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -685,9 +684,9 @@ index 060a431..477494f 100644
 +		smp_wmb();
 +	}
 +
-+	ret = vhost_put_user(vq, get_desc_flags(vq, wrap_counter,
-+						used->elem.len),
-+		             &desc->flags, VHOST_ADDR_DESC);
++	ret = vhost_put_user(vq,
++			     get_desc_flags(vq, wrap_counter, used->elem.len),
++			     &desc->flags, VHOST_ADDR_DESC);
 +	if (unlikely(ret)) {
 +		vq_err(vq, "Failed to update flags: idx %d addr %p\n",
 +		       vq->last_used_idx, desc);
@@ -759,7 +758,7 @@ index 060a431..477494f 100644
  {
  	int start, n, r;
  
-@@ -2254,6 +2740,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
+@@ -2254,6 +2739,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
  	}
  	return r;
  }
@@ -779,7 +778,7 @@ index 060a431..477494f 100644
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
  static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
-@@ -2261,6 +2760,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2261,6 +2759,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__u16 old, new;
  	__virtio16 event;
  	bool v;
@@ -791,7 +790,7 @@ index 060a431..477494f 100644
  	/* Flush out used index updates. This is paired
  	 * with the barrier that the Guest executes when enabling
  	 * interrupts. */
-@@ -2323,7 +2827,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
+@@ -2323,7 +2826,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
  EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
  
  /* return true if we're sure that avaiable ring is empty */
@@ -801,7 +800,7 @@ index 060a431..477494f 100644
  {
  	__virtio16 avail_idx;
  	int r;
-@@ -2338,10 +2843,58 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2338,10 +2842,59 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	return vq->avail_idx == vq->last_avail_idx;
  }
@@ -844,7 +843,8 @@ index 060a431..477494f 100644
 +	/* TODO: enable notification through device area */
 +
 +	/* They could have slipped one in as we were doing that: make
-+	 * sure it's written, then check again. */
++	 * sure it's written, then check again.
++	 */
 +	smp_mb();
 +
 +	ret = vhost_get_user(vq, flags, &d->flags, VHOST_ADDR_DESC);
@@ -907,7 +907,7 @@ index 060a431..477494f 100644
  
  /* Create a new message. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 604821b..5b7786f 100644
+index 604821b..db09958 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -36,6 +36,7 @@ struct vhost_poll {
@@ -945,24 +945,26 @@ index 604821b..5b7786f 100644
  int vhost_get_used_len(struct vhost_virtqueue *vq,
  		       struct vhost_used_elem *used);
 -void vhost_discard_vq_desc(struct vhost_virtqueue *, int n);
-+void vhost_discard_vq_desc(struct vhost_virtqueue *,
-+			   struct vhost_used_elem *,
++void vhost_discard_vq_desc(struct vhost_virtqueue *vq,
++			   struct vhost_used_elem *elem,
 +			   int n);
  
  int vhost_vq_init_access(struct vhost_virtqueue *);
  int vhost_add_used(struct vhost_virtqueue *vq,
 diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
-index c51f8e5..7c21da9 100644
+index c51f8e5..4c7c32d 100644
 --- a/include/uapi/linux/vhost.h
 +++ b/include/uapi/linux/vhost.h
-@@ -160,6 +160,11 @@ struct vhost_memory {
+@@ -160,6 +160,13 @@ struct vhost_memory {
  #define VHOST_GET_VRING_BUSYLOOP_TIMEOUT _IOW(VHOST_VIRTIO, 0x24,	\
  					 struct vhost_vring_state)
  
 +/* Base value where queue looks for used descriptors */
-+#define VHOST_SET_VRING_USED_BASE _IOW(VHOST_VIRTIO, 0x25, struct vhost_vring_state)
++#define VHOST_SET_VRING_USED_BASE _IOW(VHOST_VIRTIO, 0x25,	\
++                                  struct vhost_vring_state)
 +/* Get accessor: reads index, writes value in num */
-+#define VHOST_GET_VRING_USED_BASE _IOWR(VHOST_VIRTIO, 0x26, struct vhost_vring_state)
++#define VHOST_GET_VRING_USED_BASE _IOWR(VHOST_VIRTIO, 0x26,	\
++                                  struct vhost_vring_state)
 +
  /* VHOST_NET specific defines */
  
