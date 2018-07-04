@@ -1,9 +1,9 @@
 Version: 1
-Previous: 59da439890868d688fbd41f711de633890358fd3
-Head: 00f553660a7f524a3b913cb5cf6c5f33f9638f09
+Previous: 1676db301e4edeb64734e08cf456dd1f126651a3
+Head: 1b3a9043ec8e4d5498cdaf12a4b1229adedf3bdf
 Applied:
-Unapplied:
   vhost-move-get_rx_bufs-to: 1b3a9043ec8e4d5498cdaf12a4b1229adedf3bdf
+Unapplied:
   vhost-hide-used-ring-layout: 8e5d41d6c802017f2b144e5ea643931a53586ae9
   vhost-do-not-use: be64709965462a3f8a7c6838333cb6d72b68de5a
   vhost_net-do-not-explicitly: 25d442c7005e69c53db850f6b0e01c2c772bc26e
