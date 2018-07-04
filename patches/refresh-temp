@@ -1,0 +1,22 @@
+Bottom: 3be187d247167d2802cee942024368889d963a3f
+Top:    875f715f793c186277eb279e7c4c7f3187f5f59c
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 13:36:00 +0800
+
+Refresh of virtio-introduce-packed-ring
+
+---
+
+diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
+index f096db4..0203a35 100644
+--- a/include/uapi/linux/virtio_ring.h
++++ b/include/uapi/linux/virtio_ring.h
+@@ -64,7 +64,7 @@
+  * at the end of the used ring. Guest should ignore the used->flags field. */
+ #define VIRTIO_RING_F_EVENT_IDX		29
+ 
+-struct vring_desc_packed {
++struct vring_packed_desc {
+ 	/* Buffer Address. */
+ 	__virtio64 addr;
+ 	/* Buffer Length. */
