@@ -1,7 +1,7 @@
 Bottom: 875f715f793c186277eb279e7c4c7f3187f5f59c
-Top:    521866c5795dfed0de7e73bb64ef4d5807b60a9a
+Top:    3ecdaa45a3968a883aebbd0be675efdb8fde4989
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-04 13:34:59 +0800
+Date:   2018-07-04 13:45:09 +0800
 
 vhost: packed ring support
 
@@ -73,7 +73,7 @@ index eada5a6..994711b 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..d64caf4 100644
+index 060a431..63b79e8 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -99,7 +99,7 @@ index 060a431..d64caf4 100644
 +			       struct vring_avail __user *avail,
 +			       struct vring_used __user *used)
 +{
-+	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
++	struct vring_packed_desc *packed = (struct vring_packed_desc *)desc;
 +
 +	/* TODO: check device area and driver area */
 +	return access_ok(VERIFY_READ, packed, num * sizeof(*packed)) &&
@@ -229,7 +229,7 @@ index 060a431..d64caf4 100644
 -			struct vhost_log *log, unsigned int *log_num,
 -			struct vring_desc *indirect)
 +static unsigned next_desc_packed(struct vhost_virtqueue *vq,
-+				 struct vring_desc_packed *desc)
++				 struct vring_packed_desc *desc)
 +{
 +	return desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT);
 +}
@@ -268,9 +268,9 @@ index 060a431..d64caf4 100644
 +			       struct iovec iov[], unsigned int iov_size,
 +			       unsigned int *out_num, unsigned int *in_num,
 +			       struct vhost_log *log, unsigned int *log_num,
-+			       struct vring_desc_packed *indirect)
++			       struct vring_packed_desc *indirect)
 +{
-+	struct vring_desc_packed desc;
++	struct vring_packed_desc desc;
 +	unsigned int i = 0, count, found = 0;
 +	u32 len = vhost32_to_cpu(vq, indirect->len);
 +	struct iov_iter from;
@@ -420,7 +420,7 @@ index 060a431..d64caf4 100644
 +				    struct vhost_log *log,
 +				    unsigned int *log_num)
 +{
-+	struct vring_desc_packed desc;
++	struct vring_packed_desc desc;
 +	int ret, access, i;
 +	u16 last_avail_idx = vq->last_avail_idx;
 +	u16 off_wrap = vq->avail_idx | (vq->avail_wrap_counter << 15);
@@ -433,7 +433,7 @@ index 060a431..d64caf4 100644
 +	used->count = 0;
 +
 +	do {
-+		struct vring_desc_packed *d = vq->desc_packed +
++		struct vring_packed_desc *d = vq->desc_packed +
 +					      vq->last_avail_idx;
 +		unsigned int iov_count = *in_num + *out_num;
 +
@@ -651,7 +651,7 @@ index 060a431..d64caf4 100644
 +				 struct vhost_used_elem *used,
 +				 int idx, bool wrap_counter)
 +{
-+	struct vring_desc_packed __user *desc = vq->desc_packed + idx;
++	struct vring_packed_desc __user *desc = vq->desc_packed + idx;
 +	int ret;
 +
 +	ret = vhost_put_user(vq, used->elem.id, &desc->id, VHOST_ADDR_DESC);
@@ -798,7 +798,7 @@ index 060a431..d64caf4 100644
 +static bool vhost_vq_avail_empty_packed(struct vhost_dev *dev,
 +					struct vhost_virtqueue *vq)
 +{
-+	struct vring_desc_packed *d = vq->desc_packed + vq->avail_idx;
++	struct vring_packed_desc *d = vq->desc_packed + vq->avail_idx;
 +	__virtio16 flags;
 +	int ret;
 +
@@ -826,7 +826,7 @@ index 060a431..d64caf4 100644
 +static bool vhost_enable_notify_packed(struct vhost_dev *dev,
 +				       struct vhost_virtqueue *vq)
 +{
-+	struct vring_desc_packed *d = vq->desc_packed + vq->avail_idx;
++	struct vring_packed_desc *d = vq->desc_packed + vq->avail_idx;
 +	__virtio16 flags;
 +	int ret;
 +
@@ -897,7 +897,7 @@ index 060a431..d64caf4 100644
  
  /* Create a new message. */
 diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
-index 604821b..db09958 100644
+index 604821b..73c2a78 100644
 --- a/drivers/vhost/vhost.h
 +++ b/drivers/vhost/vhost.h
 @@ -36,6 +36,7 @@ struct vhost_poll {
@@ -915,7 +915,7 @@ index 604821b..db09958 100644
 -	struct vring_desc __user *desc;
 +	union {
 +		struct vring_desc __user *desc;
-+		struct vring_desc_packed __user *desc_packed;
++		struct vring_packed_desc __user *desc_packed;
 +	};
  	struct vring_avail __user *avail;
  	struct vring_used __user *used;
