@@ -5,6 +5,8 @@ Date:   2018-07-04 17:28:35 +0800
 
 virtio-net: switch to use netif_receive_skb_list()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
