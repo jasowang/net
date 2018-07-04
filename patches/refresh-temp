@@ -1,0 +1,26 @@
+Bottom: 337e07af97e5d1d7fe8e983d743bb88ce5bc11ea
+Top:    9bf30d99a42e8daf03484699880a3a38bf6eb093
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 10:58:35 +0800
+
+Refresh of vhost-move-get_rx_bufs-to
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 712b134..15d1fb5 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -735,9 +735,9 @@ static void handle_rx(struct vhost_net *net)
+ 	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
+ 		sock_len += sock_hlen;
+ 		vhost_len = sock_len + vhost_hlen;
+-		headcount = get_rx_bufs(vq, vq->heads + nvq->done_idx,
+-					vhost_len, &in, vq_log, &log,
+-					likely(mergeable) ? UIO_MAXIOV : 1);
++		headcount = vhost_get_bufs(vq, vq->heads + nvq->done_idx,
++					   vhost_len, &in, vq_log, &log,
++					   likely(mergeable) ? UIO_MAXIOV : 1);
+ 		/* On error, stop handling until the next kick. */
+ 		if (unlikely(headcount < 0))
+ 			goto out;
