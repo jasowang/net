@@ -1,5 +1,5 @@
-Bottom: ec2ab85affbca8af09a3b230afcf812b60f7fb85
-Top:    bb201088ae09855c47dffa55b76a602e03a6f62b
+Bottom: 8d34dc7478e2f935378c6aa843c3807bd332b540
+Top:    29a597da3fdf57d2c60d22b25dab52fdd8113edc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-02 17:55:49 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index cccbc82..aa2e9b1 100644
+index 26e21af..f3697b5 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -1426,10 +1426,12 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
