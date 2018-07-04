@@ -1,5 +1,5 @@
 Bottom: 341bbfede37c0f5fd3207f80bd5f5bd045dbef21
-Top:    69bc80db6e3360c69b2be2547bfb9aa3137c0156
+Top:    37ffac957be4d7a2fc9f2dbdfc8f4ed2ef3b692e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-04 17:37:31 +0800
 
@@ -11,18 +11,19 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a192a01..2290639 100644
+index a192a01..13447f7 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -186,6 +186,7 @@ struct tun_file {
+@@ -186,6 +186,8 @@ struct tun_file {
  	struct tun_struct *detached;
  	struct ptr_ring tx_ring;
  	struct xdp_rxq_info xdp_rxq;
 +	struct list_head rx_list;
++	int rx_batched;
  };
  
  struct tun_flow_entry {
-@@ -1562,11 +1563,11 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1562,11 +1564,11 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  			   struct sk_buff *skb, int more)
  {
  	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
@@ -36,35 +37,41 @@ index a192a01..2290639 100644
  		local_bh_disable();
  		netif_receive_skb(skb);
  		local_bh_enable();
-@@ -1575,21 +1576,16 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1574,12 +1576,14 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 	}
  
  	spin_lock(&queue->lock);
- 	if (!more || skb_queue_len(queue) == rx_batched) {
+-	if (!more || skb_queue_len(queue) == rx_batched) {
 -		__skb_queue_head_init(&process_queue);
 -		skb_queue_splice_tail_init(queue, &process_queue);
++	if (!more || tfile->rx_batched == rx_batched) {
++		INIT_LIST_HEAD(&head);
 +		list_splice_tail_init(&tfile->rx_list, &list);
++		tfile->rx_batched = 0;
  		rcv = true;
  	} else {
 -		__skb_queue_tail(queue, skb);
++		++tfile->rx_batched;
 +		list_add_tail(&skb->list, &tfile->rx_list);
  	}
  	spin_unlock(&queue->lock);
  
- 	if (rcv) {
--		struct sk_buff *nskb;
--
+@@ -1587,9 +1591,8 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 		struct sk_buff *nskb;
+ 
  		local_bh_disable();
 -		while ((nskb = __skb_dequeue(&process_queue)))
--			netif_receive_skb(nskb);
++		list_for_each_entry(nskb, &tfile->rx_list, list)
+ 			netif_receive_skb(nskb);
 -		netif_receive_skb(skb);
-+		netif_receive_skb_list(&list);
  		local_bh_enable();
  	}
  }
-@@ -3258,6 +3254,7 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -3258,6 +3261,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
 +	INIT_LIST_HEAD(&tfile->rx_list);
++	tfile->rx_batched = 0;
  
  	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
