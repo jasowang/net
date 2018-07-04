@@ -3,7 +3,7 @@ Top:    ec2ab85affbca8af09a3b230afcf812b60f7fb85
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-04 12:07:48 +0800
 
-vhost: support packed ring
+vhost: enable packed virtqueues
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
