@@ -1,0 +1,38 @@
+Bottom: 37ffac957be4d7a2fc9f2dbdfc8f4ed2ef3b692e
+Top:    2c049c3efd617431a4c27043b6cc8b0a55fc5e69
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 20:57:01 +0800
+
+Refresh of tuntap-switch-to-use
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 13447f7..e2598f9 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1577,7 +1577,7 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 
+ 	spin_lock(&queue->lock);
+ 	if (!more || tfile->rx_batched == rx_batched) {
+-		INIT_LIST_HEAD(&head);
++		INIT_LIST_HEAD(&list);
+ 		list_splice_tail_init(&tfile->rx_list, &list);
+ 		tfile->rx_batched = 0;
+ 		rcv = true;
+@@ -1588,11 +1588,13 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+ 	spin_unlock(&queue->lock);
+ 
+ 	if (rcv) {
+-		struct sk_buff *nskb;
++		struct sk_buff *nskb, *tmp;
+ 
+ 		local_bh_disable();
+-		list_for_each_entry(nskb, &tfile->rx_list, list)
++		list_for_each_entry_safe(nskb, tmp, &list, list) {
++			list_del(&nskb->list);
+ 			netif_receive_skb(nskb);
++		}
+ 		local_bh_enable();
+ 	}
+ }
