@@ -1,0 +1,101 @@
+Bottom: 521866c5795dfed0de7e73bb64ef4d5807b60a9a
+Top:    3ecdaa45a3968a883aebbd0be675efdb8fde4989
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 13:38:49 +0800
+
+Refresh of vhost-vring_packed_desc
+
+---
+
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index d64caf4..63b79e8 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -1114,7 +1114,7 @@ static int vq_access_ok_packed(struct vhost_virtqueue *vq, unsigned int num,
+ 			       struct vring_avail __user *avail,
+ 			       struct vring_used __user *used)
+ {
+-	struct vring_desc_packed *packed = (struct vring_desc_packed *)desc;
++	struct vring_packed_desc *packed = (struct vring_packed_desc *)desc;
+ 
+ 	/* TODO: check device area and driver area */
+ 	return access_ok(VERIFY_READ, packed, num * sizeof(*packed)) &&
+@@ -1893,7 +1893,7 @@ static unsigned next_desc_split(struct vhost_virtqueue *vq,
+ }
+ 
+ static unsigned next_desc_packed(struct vhost_virtqueue *vq,
+-				 struct vring_desc_packed *desc)
++				 struct vring_packed_desc *desc)
+ {
+ 	return desc->flags & cpu_to_vhost16(vq, VRING_DESC_F_NEXT);
+ }
+@@ -2000,9 +2000,9 @@ static int get_indirect_packed(struct vhost_virtqueue *vq,
+ 			       struct iovec iov[], unsigned int iov_size,
+ 			       unsigned int *out_num, unsigned int *in_num,
+ 			       struct vhost_log *log, unsigned int *log_num,
+-			       struct vring_desc_packed *indirect)
++			       struct vring_packed_desc *indirect)
+ {
+-	struct vring_desc_packed desc;
++	struct vring_packed_desc desc;
+ 	unsigned int i = 0, count, found = 0;
+ 	u32 len = vhost32_to_cpu(vq, indirect->len);
+ 	struct iov_iter from;
+@@ -2152,7 +2152,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 				    struct vhost_log *log,
+ 				    unsigned int *log_num)
+ {
+-	struct vring_desc_packed desc;
++	struct vring_packed_desc desc;
+ 	int ret, access, i;
+ 	u16 last_avail_idx = vq->last_avail_idx;
+ 	u16 off_wrap = vq->avail_idx | (vq->avail_wrap_counter << 15);
+@@ -2165,7 +2165,7 @@ static int vhost_get_vq_desc_packed(struct vhost_virtqueue *vq,
+ 	used->count = 0;
+ 
+ 	do {
+-		struct vring_desc_packed *d = vq->desc_packed +
++		struct vring_packed_desc *d = vq->desc_packed +
+ 					      vq->last_avail_idx;
+ 		unsigned int iov_count = *in_num + *out_num;
+ 
+@@ -2616,7 +2616,7 @@ static int vhost_add_used_packed(struct vhost_virtqueue *vq,
+ 				 struct vhost_used_elem *used,
+ 				 int idx, bool wrap_counter)
+ {
+-	struct vring_desc_packed __user *desc = vq->desc_packed + idx;
++	struct vring_packed_desc __user *desc = vq->desc_packed + idx;
+ 	int ret;
+ 
+ 	ret = vhost_put_user(vq, used->elem.id, &desc->id, VHOST_ADDR_DESC);
+@@ -2846,7 +2846,7 @@ static bool vhost_vq_avail_empty_split(struct vhost_dev *dev,
+ static bool vhost_vq_avail_empty_packed(struct vhost_dev *dev,
+ 					struct vhost_virtqueue *vq)
+ {
+-	struct vring_desc_packed *d = vq->desc_packed + vq->avail_idx;
++	struct vring_packed_desc *d = vq->desc_packed + vq->avail_idx;
+ 	__virtio16 flags;
+ 	int ret;
+ 
+@@ -2872,7 +2872,7 @@ EXPORT_SYMBOL_GPL(vhost_vq_avail_empty);
+ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
+ 				       struct vhost_virtqueue *vq)
+ {
+-	struct vring_desc_packed *d = vq->desc_packed + vq->avail_idx;
++	struct vring_packed_desc *d = vq->desc_packed + vq->avail_idx;
+ 	__virtio16 flags;
+ 	int ret;
+ 
+diff --git a/drivers/vhost/vhost.h b/drivers/vhost/vhost.h
+index db09958..73c2a78 100644
+--- a/drivers/vhost/vhost.h
++++ b/drivers/vhost/vhost.h
+@@ -94,7 +94,7 @@ struct vhost_virtqueue {
+ 	unsigned int num;
+ 	union {
+ 		struct vring_desc __user *desc;
+-		struct vring_desc_packed __user *desc_packed;
++		struct vring_packed_desc __user *desc_packed;
+ 	};
+ 	struct vring_avail __user *avail;
+ 	struct vring_used __user *used;
