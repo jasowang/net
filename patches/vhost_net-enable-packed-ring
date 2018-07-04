@@ -5,6 +5,8 @@ Date:   2018-07-04 11:45:45 +0800
 
 vhost_net: enable packed ring
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
