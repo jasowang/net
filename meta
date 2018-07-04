@@ -1,6 +1,6 @@
 Version: 1
-Previous: 4a80fa16190258611b4a9f7b6553657f9957acaf
-Head: f6b503a27d59711dac2e0700c237eea76c972034
+Previous: a42e52e2265c446c6f9e987d718861aae5d1c51a
+Head: 8a545dc436d25f40848bc77a3549fe9dacd04984
 Applied:
   vhost-move-get_rx_bufs-to: f5239557c2ed81bdf7e19db1de06699bbec41981
   vhost-hide-used-ring-layout: f3208cf56db8804792abd6216efd5a0efa782efe
@@ -9,8 +9,7 @@ Applied:
   vhost-vhost_put_user-can: 6627c741969911854688558dccde3253c49ef214
   virtio-introduce-packed-ring: 774bacb97f73f7a0172926a7fa5ad041ebaa5073
   vhost-packed-ring-support: 974a9d65460e09082539fef022f952e6ff67138b
-  vhost-switch-to-use-new-flags: d98e27c2c2eb509077d3e9864734395c070da23b
-  refresh-temp: f6b503a27d59711dac2e0700c237eea76c972034
+  vhost-switch-to-use-new-flags: 8a545dc436d25f40848bc77a3549fe9dacd04984
 Unapplied:
   vhost-event-suppression-for: af8cbd1151ccdad24b97e636968ac77c6acd12f0
   vhost-support-packed-ring: 4db84b996ce7097d762e955e0cae5dc693b0b012

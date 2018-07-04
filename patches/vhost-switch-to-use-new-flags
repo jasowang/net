@@ -1,5 +1,5 @@
 Bottom: 3213444294284bdbc3dad5d9b749c224b94d05ec
-Top:    3213444294284bdbc3dad5d9b749c224b94d05ec
+Top:    37650ea90e0f13e4345e05305c2344e75acccd47
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-04 13:31:25 +0800
 
@@ -10,4 +10,37 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
+index 0f3f07c..d64caf4 100644
+--- a/drivers/vhost/vhost.c
++++ b/drivers/vhost/vhost.c
+@@ -2106,12 +2106,10 @@ static int get_indirect_packed(struct vhost_virtqueue *vq,
+ 	return 0;
+ }
+ 
+-#define DESC_AVAIL (1 << VRING_DESC_F_AVAIL)
+-#define DESC_USED  (1 << VRING_DESC_F_USED)
+ static bool desc_is_avail(struct vhost_virtqueue *vq, bool wrap_counter,
+ 			  __virtio16 flags)
+ {
+-	bool avail = flags & cpu_to_vhost16(vq, DESC_AVAIL);
++	bool avail = flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
+ 
+ 	return avail == wrap_counter;
+ }
+@@ -2122,11 +2120,11 @@ static __virtio16 get_desc_flags(struct vhost_virtqueue *vq,
+ 	__virtio16 flags = 0;
+ 
+ 	if (wrap_counter) {
+-		flags |= cpu_to_vhost16(vq, DESC_AVAIL);
+-		flags |= cpu_to_vhost16(vq, DESC_USED);
++		flags |= cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
++		flags |= cpu_to_vhost16(vq, VRING_DESC_F_USED);
+ 	} else {
+-		flags &= ~cpu_to_vhost16(vq, DESC_AVAIL);
+-		flags &= ~cpu_to_vhost16(vq, DESC_USED);
++		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
++		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_USED);
+ 	}
+ 
+ 	if (write)
