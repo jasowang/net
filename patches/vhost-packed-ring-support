@@ -1,7 +1,7 @@
 Bottom: 3be187d247167d2802cee942024368889d963a3f
-Top:    3213444294284bdbc3dad5d9b749c224b94d05ec
+Top:    37650ea90e0f13e4345e05305c2344e75acccd47
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-03 13:12:48 +0800
+Date:   2018-07-04 13:34:59 +0800
 
 vhost: packed ring support
 
@@ -73,7 +73,7 @@ index eada5a6..994711b 100644
  		}
  		nvq->done_idx += headcount;
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index 060a431..0f3f07c 100644
+index 060a431..d64caf4 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -323,6 +323,9 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -242,7 +242,7 @@ index 060a431..0f3f07c 100644
  {
  	struct vring_desc desc;
  	unsigned int i = 0, count, found = 0;
-@@ -1914,23 +1992,300 @@ static int get_indirect(struct vhost_virtqueue *vq,
+@@ -1914,23 +1992,298 @@ static int get_indirect(struct vhost_virtqueue *vq,
  			}
  			*out_num += ret;
  		}
@@ -374,12 +374,10 @@ index 060a431..0f3f07c 100644
 +	return 0;
 +}
 +
-+#define DESC_AVAIL (1 << VRING_DESC_F_AVAIL)
-+#define DESC_USED  (1 << VRING_DESC_F_USED)
 +static bool desc_is_avail(struct vhost_virtqueue *vq, bool wrap_counter,
 +			  __virtio16 flags)
 +{
-+	bool avail = flags & cpu_to_vhost16(vq, DESC_AVAIL);
++	bool avail = flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
 +
 +	return avail == wrap_counter;
 +}
@@ -390,11 +388,11 @@ index 060a431..0f3f07c 100644
 +	__virtio16 flags = 0;
 +
 +	if (wrap_counter) {
-+		flags |= cpu_to_vhost16(vq, DESC_AVAIL);
-+		flags |= cpu_to_vhost16(vq, DESC_USED);
++		flags |= cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
++		flags |= cpu_to_vhost16(vq, VRING_DESC_F_USED);
 +	} else {
-+		flags &= ~cpu_to_vhost16(vq, DESC_AVAIL);
-+		flags &= ~cpu_to_vhost16(vq, DESC_USED);
++		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
++		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_USED);
 +	}
 +
 +	if (write)
@@ -557,7 +555,7 @@ index 060a431..0f3f07c 100644
  {
  	struct vring_desc desc;
  	unsigned int i, head, found = 0;
-@@ -2015,9 +2370,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2015,9 +2368,9 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			return -EFAULT;
  		}
  		if (desc.flags & cpu_to_vhost16(vq, VRING_DESC_F_INDIRECT)) {
@@ -570,7 +568,7 @@ index 060a431..0f3f07c 100644
  			if (unlikely(ret < 0)) {
  				if (ret != -EAGAIN)
  					vq_err(vq, "Failure detected "
-@@ -2059,7 +2414,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2059,7 +2412,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  			}
  			*out_num += ret;
  		}
@@ -579,7 +577,7 @@ index 060a431..0f3f07c 100644
  
  	/* On success, increment avail index. */
  	vq->last_avail_idx++;
-@@ -2069,6 +2424,31 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
+@@ -2069,6 +2422,31 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
  	BUG_ON(!(vq->used_flags & VRING_USED_F_NO_NOTIFY));
  	return 0;
  }
@@ -611,7 +609,7 @@ index 060a431..0f3f07c 100644
  EXPORT_SYMBOL_GPL(vhost_get_vq_desc);
  
  void vhost_set_used_len(struct vhost_virtqueue *vq,
-@@ -2155,15 +2535,30 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
+@@ -2155,15 +2533,30 @@ int vhost_get_bufs(struct vhost_virtqueue *vq,
  	*count = headcount;
  	return 0;
  err:
@@ -645,7 +643,7 @@ index 060a431..0f3f07c 100644
  }
  EXPORT_SYMBOL_GPL(vhost_discard_vq_desc);
  
-@@ -2219,10 +2614,102 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
+@@ -2219,10 +2612,102 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
  	return 0;
  }
  
@@ -750,7 +748,7 @@ index 060a431..0f3f07c 100644
  {
  	int start, n, r;
  
-@@ -2254,6 +2741,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
+@@ -2254,6 +2739,19 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vhost_used_elem *heads,
  	}
  	return r;
  }
@@ -770,7 +768,7 @@ index 060a431..0f3f07c 100644
  EXPORT_SYMBOL_GPL(vhost_add_used_n);
  
  static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
-@@ -2261,6 +2761,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2261,6 +2759,11 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  	__u16 old, new;
  	__virtio16 event;
  	bool v;
@@ -782,7 +780,7 @@ index 060a431..0f3f07c 100644
  	/* Flush out used index updates. This is paired
  	 * with the barrier that the Guest executes when enabling
  	 * interrupts. */
-@@ -2323,7 +2828,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
+@@ -2323,7 +2826,8 @@ void vhost_add_used_and_signal_n(struct vhost_dev *dev,
  EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
  
  /* return true if we're sure that avaiable ring is empty */
@@ -792,7 +790,7 @@ index 060a431..0f3f07c 100644
  {
  	__virtio16 avail_idx;
  	int r;
-@@ -2338,10 +2844,59 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2338,10 +2842,59 @@ bool vhost_vq_avail_empty(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	return vq->avail_idx == vq->last_avail_idx;
  }
@@ -854,7 +852,7 @@ index 060a431..0f3f07c 100644
  {
  	__virtio16 avail_idx;
  	int r;
-@@ -2376,10 +2931,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2376,10 +2929,25 @@ bool vhost_enable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  
  	return vhost16_to_cpu(vq, avail_idx) != vq->avail_idx;
  }
@@ -882,7 +880,7 @@ index 060a431..0f3f07c 100644
  {
  	int r;
  
-@@ -2393,6 +2963,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
+@@ -2393,6 +2961,15 @@ void vhost_disable_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
  			       &vq->used->flags, r);
  	}
  }
