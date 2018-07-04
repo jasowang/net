@@ -1,5 +1,5 @@
 Bottom: fba92ac0a5a0d0d8c05d6e7bdafc513c6699b1d4
-Top:    93993b952dd7409cf7520a2df27a564d07c761a4
+Top:    ed4516d4ed4181f231acbe1a75694580487d7162
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-03 13:12:48 +0800
 
@@ -27,20 +27,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index eada5a6..90d9efb 100644
+index eada5a6..994711b 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -74,7 +74,8 @@ enum {
- 	VHOST_NET_FEATURES = VHOST_FEATURES |
- 			 (1ULL << VHOST_NET_F_VIRTIO_NET_HDR) |
- 			 (1ULL << VIRTIO_NET_F_MRG_RXBUF) |
--			 (1ULL << VIRTIO_F_IOMMU_PLATFORM)
-+			 (1ULL << VIRTIO_F_IOMMU_PLATFORM) |
-+			 (1ULL << VIRTIO_F_RING_PACKED)
- };
- 
- enum {
-@@ -583,7 +584,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -583,7 +583,7 @@ static void handle_tx(struct vhost_net *net)
  				nvq->upend_idx = ((unsigned)nvq->upend_idx - 1)
  					% UIO_MAXIOV;
  			}
@@ -49,7 +39,7 @@ index eada5a6..90d9efb 100644
  			vhost_net_enable_vq(net, vq);
  			break;
  		}
-@@ -736,10 +737,12 @@ static void handle_rx(struct vhost_net *net)
+@@ -736,10 +736,12 @@ static void handle_rx(struct vhost_net *net)
  	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
  
  	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk))) {
@@ -64,7 +54,7 @@ index eada5a6..90d9efb 100644
  				     likely(mergeable) ? UIO_MAXIOV : 1,
  				     &headcount);
  		/* OK, now we need to know about added descriptors. */
-@@ -784,7 +787,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -784,7 +786,7 @@ static void handle_rx(struct vhost_net *net)
  		if (unlikely(err != sock_len)) {
  			pr_debug("Discarded rx packet: "
  				 " len %d, expected %zd\n", err, sock_len);
@@ -73,7 +63,7 @@ index eada5a6..90d9efb 100644
  			continue;
  		}
  		/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
-@@ -808,7 +811,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -808,7 +810,7 @@ static void handle_rx(struct vhost_net *net)
  		    copy_to_iter(&num_buffers, sizeof num_buffers,
  				 &fixup) != sizeof num_buffers) {
  			vq_err(vq, "Failed num_buffers write");
