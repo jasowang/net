@@ -94,7 +94,7 @@ struct vhost_virtqueue {
 	unsigned int num;
 	union {
 		struct vring_desc __user *desc;
-		struct vring_desc_packed __user *desc_packed;
+		struct vring_packed_desc __user *desc_packed;
 	};
 	struct vring_avail __user *avail;
 	struct vring_used __user *used;
