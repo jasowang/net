@@ -186,6 +186,8 @@ struct tun_file {
 	struct tun_struct *detached;
 	struct ptr_ring tx_ring;
 	struct xdp_rxq_info xdp_rxq;
+	struct list_head rx_list;
+	int rx_batched;
 };
 
 struct tun_flow_entry {
@@ -1562,11 +1564,11 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 			   struct sk_buff *skb, int more)
 {
 	struct sk_buff_head *queue = &tfile->sk.sk_write_queue;
-	struct sk_buff_head process_queue;
+	struct list_head list;
 	u32 rx_batched = tun->rx_batched;
 	bool rcv = false;
 
-	if (!rx_batched || (!more && skb_queue_empty(queue))) {
+	if (!rx_batched || (!more && list_empty(&tfile->rx_list))) {
 		local_bh_disable();
 		netif_receive_skb(skb);
 		local_bh_enable();
@@ -1574,22 +1576,25 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	}
 
 	spin_lock(&queue->lock);
-	if (!more || skb_queue_len(queue) == rx_batched) {
-		__skb_queue_head_init(&process_queue);
-		skb_queue_splice_tail_init(queue, &process_queue);
+	if (!more || tfile->rx_batched == rx_batched) {
+		INIT_LIST_HEAD(&list);
+		list_splice_tail_init(&tfile->rx_list, &list);
+		tfile->rx_batched = 0;
 		rcv = true;
 	} else {
-		__skb_queue_tail(queue, skb);
+		++tfile->rx_batched;
+		list_add_tail(&skb->list, &tfile->rx_list);
 	}
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
-		struct sk_buff *nskb;
+		struct sk_buff *nskb, *tmp;
 
 		local_bh_disable();
-		while ((nskb = __skb_dequeue(&process_queue)))
+		list_for_each_entry_safe(nskb, tmp, &list, list) {
+			list_del(&nskb->list);
 			netif_receive_skb(nskb);
-		netif_receive_skb(skb);
+		}
 		local_bh_enable();
 	}
 }
@@ -3258,6 +3263,8 @@ static int tun_chr_open(struct inode *inode, struct file * file)
 
 	file->private_data = tfile;
 	INIT_LIST_HEAD(&tfile->next);
+	INIT_LIST_HEAD(&tfile->rx_list);
+	tfile->rx_batched = 0;
 
 	sock_set_flag(&tfile->sk, SOCK_ZEROCOPY);
 
