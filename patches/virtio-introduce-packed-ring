@@ -1,5 +1,5 @@
 Bottom: 86b4d44e8f51e07e1be1551273485281da6f6294
-Top:    fba92ac0a5a0d0d8c05d6e7bdafc513c6699b1d4
+Top:    3be187d247167d2802cee942024368889d963a3f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-02 17:54:02 +0800
 
@@ -24,15 +24,15 @@ index 449132c..947f6a3 100644
   * Does the device support Single Root I/O Virtualization?
   */
 diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
-index 6d5d5fa..71c7a46 100644
+index 6d5d5fa..f096db4 100644
 --- a/include/uapi/linux/virtio_ring.h
 +++ b/include/uapi/linux/virtio_ring.h
 @@ -43,6 +43,8 @@
  #define VRING_DESC_F_WRITE	2
  /* This means the buffer contains a list of buffer descriptors. */
  #define VRING_DESC_F_INDIRECT	4
-+#define VRING_DESC_F_AVAIL      7
-+#define VRING_DESC_F_USED	15
++#define VRING_DESC_F_AVAIL	(1 << 7)
++#define VRING_DESC_F_USED	(1 << 15)
  
  /* The Host uses this in used->flags to advise the Guest: don't kick me when
   * you add a buffer.  It's unreliable, so it's simply an optimization.  Guest
