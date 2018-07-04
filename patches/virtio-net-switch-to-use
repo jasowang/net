@@ -1,0 +1,11 @@
+Bottom: 341bbfede37c0f5fd3207f80bd5f5bd045dbef21
+Top:    341bbfede37c0f5fd3207f80bd5f5bd045dbef21
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 17:28:35 +0800
+
+virtio-net: switch to use netif_receive_skb_list()
+
+
+---
+
+
