@@ -1,0 +1,11 @@
+Bottom: 3213444294284bdbc3dad5d9b749c224b94d05ec
+Top:    3213444294284bdbc3dad5d9b749c224b94d05ec
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-04 13:31:25 +0800
+
+vhost: switch to use new flags
+
+
+---
+
+
