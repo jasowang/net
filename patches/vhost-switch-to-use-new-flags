@@ -5,6 +5,8 @@ Date:   2018-07-04 13:31:25 +0800
 
 vhost: switch to use new flags
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
