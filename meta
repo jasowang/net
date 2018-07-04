@@ -1,9 +1,9 @@
 Version: 1
-Previous: 3c879c217b3fce40c45ea44398492f8fa485e9fa
-Head: d0e77f494a63f8cc7f8484c4d46a2daa826d03f8
+Previous: 43e524ec922fd0e549106eade71da9ba56e07f75
+Head: f145b0a707ac2abbc40c107b10cb3969b9d7e7ad
 Applied:
-  tuntap-switch-to-use: d0e77f494a63f8cc7f8484c4d46a2daa826d03f8
 Unapplied:
+  tuntap-switch-to-use: d0e77f494a63f8cc7f8484c4d46a2daa826d03f8
   virtio-net-switch-to-use: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
   vhost_net-disable-tx-polling: ba3e8a046aca917339c8edfd728c6b4c85bce12c
   vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
