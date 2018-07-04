@@ -1,9 +1,9 @@
 Version: 1
-Previous: 44f064763d1bb01d8c3a1ed171c75d7362fcb039
-Head: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
+Previous: 4f2c5b72bab6703414793aacb7b8f2c14017a558
+Head: f145b0a707ac2abbc40c107b10cb3969b9d7e7ad
 Applied:
-  virtio-net-switch-to-use: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
 Unapplied:
+  virtio-net-switch-to-use: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
   vhost_net-disable-tx-polling: ba3e8a046aca917339c8edfd728c6b4c85bce12c
   vhost_net-use-rxq-s-timeout: 1bda33e520d5494c1fcbdc71d35e0f1fab3cceae
   vhost_net-better-naming-in: 8bd44292b56571e4a5348b42cff47e0ae2023081
