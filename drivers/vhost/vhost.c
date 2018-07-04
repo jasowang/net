@@ -2887,16 +2887,16 @@ static bool vhost_notify_packed(struct vhost_dev *dev,
 
 	if (!vhost_has_feature(vq, VIRTIO_RING_F_EVENT_IDX))
 		return event_flags !=
-		       cpu_to_vhost16(vq, RING_EVENT_FLAGS_DISABLE);
+		       cpu_to_vhost16(vq, VRING_EVENT_F_DISABLE);
 
 	old = vq->signalled_used;
 	v = vq->signalled_used_valid;
 	new = vq->signalled_used = vq->last_used_idx;
 	vq->signalled_used_valid = true;
 
-	if (event_flags != cpu_to_vhost16(vq, RING_EVENT_FLAGS_DESC))
+	if (event_flags != cpu_to_vhost16(vq, VRING_EVENT_F_DESC))
 		return event_flags !=
-		       cpu_to_vhost16(vq, RING_EVENT_FLAGS_DISABLE);
+		       cpu_to_vhost16(vq, VRING_EVENT_F_DISABLE);
 
 	/* Read desc event flags before event_off and event_wrap */
 	smp_rmb();
@@ -3001,7 +3001,7 @@ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
 				       struct vhost_virtqueue *vq)
 {
 	struct vring_packed_desc *d = vq->desc_packed + vq->avail_idx;
-	__virtio16 flags = cpu_to_vhost16(vq, RING_EVENT_FLAGS_ENABLE);
+	__virtio16 flags = cpu_to_vhost16(vq, VRING_EVENT_F_ENABLE);
 	int ret;
 
 	if (!(vq->used_flags & VRING_USED_F_NO_NOTIFY))
@@ -3020,7 +3020,7 @@ static bool vhost_enable_notify_packed(struct vhost_dev *dev,
 		}
 		/* Make sure off_wrap is wrote before flags */
 		smp_wmb();
-		flags = cpu_to_vhost16(vq, RING_EVENT_FLAGS_DESC);
+		flags = cpu_to_vhost16(vq, VRING_EVENT_F_DESC);
 	}
 
 	ret = vhost_update_device_flags(vq, flags);
@@ -3102,7 +3102,7 @@ static void vhost_disable_notify_packed(struct vhost_dev *dev,
 		return;
 	vq->used_flags |= VRING_USED_F_NO_NOTIFY;
 
-	flags = cpu_to_vhost16(vq, RING_EVENT_FLAGS_DISABLE);
+	flags = cpu_to_vhost16(vq, VRING_EVENT_F_DISABLE);
 	r = vhost_update_device_flags(vq, flags);
 	if (r)
 		vq_err(vq, "Failed to enable notification at %p: %d\n",
