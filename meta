@@ -1,8 +1,9 @@
 Version: 1
-Previous: fcdf677779bfe6f398e45f8720a1bcf9af3078fb
-Head: bd190d926a90ebe88cfc472e7478f8925e1fdb9d
+Previous: 78c05b86984f02dfc4c42f2a6ea666d7b6a78e3a
+Head: 1dddb4275a94e2c922792888fba8169bc00d989d
 Applied:
   tuntap-switch-to-use: bd190d926a90ebe88cfc472e7478f8925e1fdb9d
+  refresh-temp-0: 1dddb4275a94e2c922792888fba8169bc00d989d
 Unapplied:
   virtio-net-switch-to-use: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
   vhost_net-disable-tx-polling: ba3e8a046aca917339c8edfd728c6b4c85bce12c
