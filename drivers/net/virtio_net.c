@@ -944,7 +944,7 @@ xdp_xmit:
 
 static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 		       void *buf, unsigned int len, void **ctx,
-		       unsigned int *xdp_xmit)
+		       unsigned int *xdp_xmit, struct list_head *rx_list)
 {
 	struct net_device *dev = vi->dev;
 	struct sk_buff *skb;
@@ -993,7 +993,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 	pr_debug("Receiving skb proto 0x%04x len %i type %i\n",
 		 ntohs(skb->protocol), skb->len, skb->pkt_type);
 
-	napi_gro_receive(&rq->napi, skb);
+	list_add_tail(&skb->list, rx_list);
 	return ret;
 
 frame_err:
@@ -1241,21 +1241,26 @@ static int virtnet_receive(struct receive_queue *rq, int budget,
 			   unsigned int *xdp_xmit)
 {
 	struct virtnet_info *vi = rq->vq->vdev->priv;
+	struct list_head rx_list;
 	unsigned int len, received = 0, bytes = 0;
 	void *buf;
+
+	INIT_LIST_HEAD(&rx_list);
 
 	if (!vi->big_packets || vi->mergeable_rx_bufs) {
 		void *ctx;
 
 		while (received < budget &&
 		       (buf = virtqueue_get_buf_ctx(rq->vq, &len, &ctx))) {
-			bytes += receive_buf(vi, rq, buf, len, ctx, xdp_xmit);
+			bytes += receive_buf(vi, rq, buf, len, ctx,
+					     xdp_xmit, &rx_list);
 			received++;
 		}
 	} else {
 		while (received < budget &&
 		       (buf = virtqueue_get_buf(rq->vq, &len)) != NULL) {
-			bytes += receive_buf(vi, rq, buf, len, NULL, xdp_xmit);
+			bytes += receive_buf(vi, rq, buf, len, NULL,
+					     xdp_xmit, &rx_list);
 			received++;
 		}
 	}
@@ -1269,6 +1274,8 @@ static int virtnet_receive(struct receive_queue *rq, int budget,
 	rq->stats.bytes += bytes;
 	rq->stats.packets += received;
 	u64_stats_update_end(&rq->stats.syncp);
+
+	netif_receive_skb_list(&rx_list);
 
 	return received;
 }
