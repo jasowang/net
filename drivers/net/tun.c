@@ -1577,7 +1577,7 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 
 	spin_lock(&queue->lock);
 	if (!more || tfile->rx_batched == rx_batched) {
-		INIT_LIST_HEAD(&head);
+		INIT_LIST_HEAD(&list);
 		list_splice_tail_init(&tfile->rx_list, &list);
 		tfile->rx_batched = 0;
 		rcv = true;
@@ -1588,11 +1588,13 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
-		struct sk_buff *nskb;
+		struct sk_buff *nskb, *tmp;
 
 		local_bh_disable();
-		list_for_each_entry(nskb, &tfile->rx_list, list)
+		list_for_each_entry_safe(nskb, tmp, &list, list) {
+			list_del(&nskb->list);
 			netif_receive_skb(nskb);
+		}
 		local_bh_enable();
 	}
 }
