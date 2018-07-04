@@ -75,6 +75,7 @@
  */
 #define VIRTIO_F_IOMMU_PLATFORM		33
 
+/* Packed virtqueue layout */
 #define VIRTIO_F_RING_PACKED		34
 
 /*
