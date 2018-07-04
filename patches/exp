@@ -1,5 +1,5 @@
 Bottom: 341bbfede37c0f5fd3207f80bd5f5bd045dbef21
-Top:    57e0de0a85d88d3a29c050879e1efff780e734d2
+Top:    e38edb9a0acc6cfa5f5dbdc45d89aac2bf5729c0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-04 21:34:08 +0800
 
@@ -9,7 +9,7 @@ tun: exp
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a192a01..3af7374 100644
+index a192a01..c67db25 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -186,6 +186,8 @@ struct tun_file {
@@ -35,7 +35,7 @@ index a192a01..3af7374 100644
  		local_bh_disable();
  		netif_receive_skb(skb);
  		local_bh_enable();
-@@ -1574,22 +1576,25 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
+@@ -1574,22 +1576,27 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
  	}
  
  	spin_lock(&queue->lock);
@@ -57,6 +57,8 @@ index a192a01..3af7374 100644
  	if (rcv) {
 -		struct sk_buff *nskb;
 +		struct sk_buff *nskb, *tmp;
++
++		list_add_tail(&skb->list, &list);
  
  		local_bh_disable();
 -		while ((nskb = __skb_dequeue(&process_queue)))
@@ -69,7 +71,7 @@ index a192a01..3af7374 100644
  		local_bh_enable();
  	}
  }
-@@ -3259,6 +3264,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
+@@ -3259,6 +3266,9 @@ static int tun_chr_open(struct inode *inode, struct file * file)
  	file->private_data = tfile;
  	INIT_LIST_HEAD(&tfile->next);
  

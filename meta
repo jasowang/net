@@ -1,9 +1,8 @@
 Version: 1
-Previous: 23eda2f521fdf813271de6ccbc05b25218bb9123
-Head: e93c76a229ef75cad25274f91e8539bc8b2ac83c
+Previous: a616aef515227243429a4a27fd2f0d1b4f5746f0
+Head: cf9842eb049f80690ba3b0ca2a41ce45775ef20f
 Applied:
-  exp: 59378094bc841db6731f14b5efa3de370417fef5
-  refresh-temp-0: e93c76a229ef75cad25274f91e8539bc8b2ac83c
+  exp: cf9842eb049f80690ba3b0ca2a41ce45775ef20f
 Unapplied:
   tuntap-switch-to-use: d0e77f494a63f8cc7f8484c4d46a2daa826d03f8
   virtio-net-switch-to-use: b560f80fbbb8c18eb8b1f727e59cdb09a8ed2c8d
