@@ -76,15 +76,15 @@ struct vring_packed_desc {
 };
 
 /* Enable events */
-#define RING_EVENT_FLAGS_ENABLE 0x0
+#define VRING_EVENT_F_ENABLE 0x0
 /* Disable events */
-#define RING_EVENT_FLAGS_DISABLE 0x1
+#define VRING_EVENT_F_DISABLE 0x1
 /*
  * Enable events for a specific descriptor
  * (as specified by Descriptor Ring Change Event Offset/Wrap Counter).
  * Only valid if VIRTIO_F_RING_EVENT_IDX has been negotiated.
  */
-#define RING_EVENT_FLAGS_DESC 0x2
+#define VRING_EVENT_F_DESC 0x2
 /* The value 0x3 is reserved */
 
 struct vring_packed_desc_event {
