@@ -1590,6 +1590,8 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	if (rcv) {
 		struct sk_buff *nskb, *tmp;
 
+		list_add_tail(&skb->list, &list);
+
 		local_bh_disable();
 		list_for_each_entry_safe(nskb, tmp, &list, list) {
 			list_del_init(&nskb->list);
