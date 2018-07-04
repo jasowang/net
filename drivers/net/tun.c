@@ -1576,8 +1576,7 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 
 	spin_lock(&queue->lock);
 	if (!more || skb_queue_len(queue) == rx_batched) {
-		list = tfile->rx_list;
-		INIT_LIST_HEAD(&tfile->rx_list);
+		list_splice_tail_init(&tfile->rx_list, &list);
 		rcv = true;
 	} else {
 		list_add_tail(&skb->list, &tfile->rx_list);
