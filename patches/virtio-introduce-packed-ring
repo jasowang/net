@@ -1,5 +1,5 @@
 Bottom: 86b4d44e8f51e07e1be1551273485281da6f6294
-Top:    875f715f793c186277eb279e7c4c7f3187f5f59c
+Top:    bc2d4f2ec8f6697f9f35af406826f461df658b16
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-02 17:54:02 +0800
 
@@ -24,7 +24,7 @@ index 449132c..947f6a3 100644
   * Does the device support Single Root I/O Virtualization?
   */
 diff --git a/include/uapi/linux/virtio_ring.h b/include/uapi/linux/virtio_ring.h
-index 6d5d5fa..0203a35 100644
+index 6d5d5fa..000430b 100644
 --- a/include/uapi/linux/virtio_ring.h
 +++ b/include/uapi/linux/virtio_ring.h
 @@ -43,6 +43,8 @@
@@ -52,15 +52,15 @@ index 6d5d5fa..0203a35 100644
 +};
 +
 +/* Enable events */
-+#define RING_EVENT_FLAGS_ENABLE 0x0
++#define VRING_EVENT_F_ENABLE 0x0
 +/* Disable events */
-+#define RING_EVENT_FLAGS_DISABLE 0x1
++#define VRING_EVENT_F_DISABLE 0x1
 +/*
 + * Enable events for a specific descriptor
 + * (as specified by Descriptor Ring Change Event Offset/Wrap Counter).
 + * Only valid if VIRTIO_F_RING_EVENT_IDX has been negotiated.
 + */
-+#define RING_EVENT_FLAGS_DESC 0x2
++#define VRING_EVENT_F_DESC 0x2
 +/* The value 0x3 is reserved */
 +
 +struct vring_packed_desc_event {
