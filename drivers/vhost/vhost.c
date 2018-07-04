@@ -2106,12 +2106,10 @@ static int get_indirect_packed(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-#define DESC_AVAIL (1 << VRING_DESC_F_AVAIL)
-#define DESC_USED  (1 << VRING_DESC_F_USED)
 static bool desc_is_avail(struct vhost_virtqueue *vq, bool wrap_counter,
 			  __virtio16 flags)
 {
-	bool avail = flags & cpu_to_vhost16(vq, DESC_AVAIL);
+	bool avail = flags & cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
 
 	return avail == wrap_counter;
 }
@@ -2122,11 +2120,11 @@ static __virtio16 get_desc_flags(struct vhost_virtqueue *vq,
 	__virtio16 flags = 0;
 
 	if (wrap_counter) {
-		flags |= cpu_to_vhost16(vq, DESC_AVAIL);
-		flags |= cpu_to_vhost16(vq, DESC_USED);
+		flags |= cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
+		flags |= cpu_to_vhost16(vq, VRING_DESC_F_USED);
 	} else {
-		flags &= ~cpu_to_vhost16(vq, DESC_AVAIL);
-		flags &= ~cpu_to_vhost16(vq, DESC_USED);
+		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_AVAIL);
+		flags &= ~cpu_to_vhost16(vq, VRING_DESC_F_USED);
 	}
 
 	if (write)
