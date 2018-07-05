@@ -223,6 +223,7 @@ struct virtnet_info {
 	struct failover *failover;
 
 	struct dentry *ddir;
+	struct list_head bpf_bound_progs;
 };
 
 struct padded_vnet_hdr {
@@ -237,6 +238,15 @@ struct padded_vnet_hdr {
 
 #define DRV_NAME "virtio-net"
 struct dentry *virtnet_ddir;
+
+struct virtnet_bpf_bound_prog {
+	struct virtnet_info *vi;
+	struct bpf_prog *prog;
+	struct dentry *ddir;
+	const char *state;
+	bool is_loaded;
+	struct list_head l;
+};
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -2379,6 +2389,7 @@ static int virtnet_init(struct net_device *dev)
 	vi->ddir = debugfs_create_dir(netdev_name(dev), virtnet_ddir);
 	if (IS_ERR_OR_NULL(vi->ddir))
 		return -ENOMEM;
+	INIT_LIST_HEAD(&vi->bpf_bound_progs);
 
 	return 0;
 }
