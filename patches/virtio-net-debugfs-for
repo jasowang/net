@@ -3,7 +3,9 @@ Top:    0248c35a9bb009e90b0833384e4f4edb633f5a98
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 15:38:58 +0800
 
-virtio-net: debugfs for debugging
+virtio-net: create debugfs
+
+For future XDP offload support and debugging.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
