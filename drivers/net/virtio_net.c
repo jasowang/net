@@ -32,6 +32,7 @@
 #include <linux/filter.h>
 #include <linux/netdevice.h>
 #include <linux/pci.h>
+#include <linux/debugfs.h>
 #include <net/route.h>
 #include <net/xdp.h>
 #include <net/net_failover.h>
@@ -220,6 +221,8 @@ struct virtnet_info {
 
 	/* failover when STANDBY feature enabled */
 	struct failover *failover;
+
+	struct dentry *ddir;
 };
 
 struct padded_vnet_hdr {
@@ -231,6 +234,9 @@ struct padded_vnet_hdr {
 	 */
 	char padding[4];
 };
+
+#define DRV_NAME "virtio-net"
+struct dentry *virtnet_ddir;
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -2366,7 +2372,25 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
 	return 0;
 }
 
+static int virtnet_init(struct net_device *dev)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+
+	vi->ddir = debugfs_create_dir(netdev_name(dev), virtnet_ddir);
+	if (IS_ERR_OR_NULL(vi->ddir))
+		return -ENOMEM;
+
+	return 0;
+}
+
+static void virtnet_uninit(struct net_device *dev)
+{
+	return;
+}
+
 static const struct net_device_ops virtnet_netdev = {
+	.ndo_init            = virtnet_init,
+	.ndo_uninit          = virtnet_uninit,
 	.ndo_open            = virtnet_open,
 	.ndo_stop   	     = virtnet_close,
 	.ndo_start_xmit      = start_xmit,
@@ -3101,6 +3125,10 @@ static __init int virtio_net_driver_init(void)
 {
 	int ret;
 
+	virtnet_ddir = debugfs_create_dir(DRV_NAME, NULL);
+	if (IS_ERR_OR_NULL(virtnet_ddir))
+		return -ENOMEM;
+
 	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN, "virtio/net:online",
 				      virtnet_cpu_online,
 				      virtnet_cpu_down_prep);
@@ -3121,6 +3149,7 @@ err_virtio:
 err_dead:
 	cpuhp_remove_multi_state(virtionet_online);
 out:
+	debugfs_remove_recursive(virtnet_ddir);
 	return ret;
 }
 module_init(virtio_net_driver_init);
@@ -3130,6 +3159,7 @@ static __exit void virtio_net_driver_exit(void)
 	unregister_virtio_driver(&virtio_net_driver);
 	cpuhp_remove_multi_state(CPUHP_VIRT_NET_DEAD);
 	cpuhp_remove_multi_state(virtionet_online);
+	debugfs_remove_recursive(virtnet_ddir);
 }
 module_exit(virtio_net_driver_exit);
 
