@@ -33,6 +33,7 @@
 #include <linux/netdevice.h>
 #include <linux/pci.h>
 #include <linux/debugfs.h>
+#include <linux/bpf_verifier.h>
 #include <net/route.h>
 #include <net/xdp.h>
 #include <net/net_failover.h>
@@ -2362,9 +2363,42 @@ static u32 virtnet_xdp_query(struct net_device *dev)
 	return 0;
 }
 
+static int
+virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+			int prev_insn)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	state = env->prog->aux->offload->dev_priv;
+	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
+		msleep(state->vi->bpf_bind_verifier_delay);
+
+	if (insn_idx == env->prog->len - 1)
+		pr_vlog(env, "Hello from virtio-net!\n");
+
+	return 0;
+}
+
+static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
+	.insn_hook = virtnet_bpf_verify_insn,
+};
+
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
+	struct virtnet_info *vi;
+	int err;
+
 	switch (bpf->command) {
+	case BPF_OFFLOAD_VERIFIER_PREP:
+		if (!vi->bpf_bind_accept)
+			return -EOPNOTSUPP;
+
+		err = virtnet_bpf_create_prog(vi, bpf->verifier.prog);
+		if (err)
+			return err;
+
+		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
+		return 0;
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
 	case XDP_QUERY_PROG:
