@@ -221,6 +221,8 @@ struct virtnet_info {
 
 	/* failover when STANDBY feature enabled */
 	struct failover *failover;
+
+	struct dentry *ddir;
 };
 
 struct padded_vnet_hdr {
@@ -2370,7 +2372,25 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
 	return 0;
 }
 
+static int virtnet_init(struct net_device *dev)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+
+	vi->ddir = debugfs_create_dir(netdev_name(dev), virtnet_ddir);
+	if (IS_ERR_OR_NULL(vi->ddir))
+		return -ENOMEM;
+
+	return 0;
+}
+
+static void virtnet_uninit(struct net_device *dev)
+{
+	return;
+}
+
 static const struct net_device_ops virtnet_netdev = {
+	.ndo_init            = virtnet_init,
+	.ndo_uninit          = virtnet_uninit,
 	.ndo_open            = virtnet_open,
 	.ndo_stop   	     = virtnet_close,
 	.ndo_start_xmit      = start_xmit,
