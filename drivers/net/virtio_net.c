@@ -2385,6 +2385,9 @@ static int virtnet_init(struct net_device *dev)
 
 static void virtnet_uninit(struct net_device *dev)
 {
+	struct virtnet_info *vi = netdev_priv(dev);
+
+	debugfs_remove_recursive(vi->ddir);
 	return;
 }
 
