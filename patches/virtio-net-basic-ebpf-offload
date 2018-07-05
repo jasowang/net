@@ -1,5 +1,5 @@
 Bottom: 80d8d6c32238302049f42b9b7d74d6e43692bd55
-Top:    2e13bffb2fa34354d452a59946f2ed202b0beca9
+Top:    e91512029766912c118c85d6404a6ccab46023a2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:11:53 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ece9784..288707d 100644
+index ece9784..121c2dd 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -33,6 +33,7 @@
@@ -22,10 +22,13 @@ index ece9784..288707d 100644
  #include <net/route.h>
  #include <net/xdp.h>
  #include <net/net_failover.h>
-@@ -223,6 +224,19 @@ struct virtnet_info {
+@@ -223,6 +224,22 @@ struct virtnet_info {
  	struct failover *failover;
  
  	struct dentry *ddir;
++
++	u32 xdp_flags;
++	int xdp_prog_mode;
 +
 +	struct bpf_prog *bpf_offloaded;
 +	u32 bpf_offloaded_id;
@@ -42,7 +45,7 @@ index ece9784..288707d 100644
  };
  
  struct padded_vnet_hdr {
-@@ -238,6 +252,18 @@ struct padded_vnet_hdr {
+@@ -238,6 +255,20 @@ struct padded_vnet_hdr {
  #define DRV_NAME "virtio-net"
  struct dentry *virtnet_ddir;
  
@@ -55,13 +58,15 @@ index ece9784..288707d 100644
 +	struct list_head l;
 +};
 +
-+#define pr_vlog(env, fmt, ...)	\
++#define VIRTNET_EA(extack, msg)	NL_SET_ERR_MSG_MOD((extack), msg)
++
++#define pr_vlog(env, fmt, ...)						\
 +	bpf_verifier_log_write(env, "[netdevsim] " fmt, ##__VA_ARGS__)
 +
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2342,9 +2368,121 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+@@ -2342,15 +2373,238 @@ static u32 virtnet_xdp_query(struct net_device *dev)
  	return 0;
  }
  
@@ -155,6 +160,110 @@ index ece9784..288707d 100644
 +	.insn_hook = virtnet_bpf_verify_insn,
 +};
 +
++static int
++virtnet_setup_prog_hw_checks(struct virtnet_info *vi, struct netdev_bpf *bpf)
++{
++	struct virtnet_bpf_bound_prog *state;
++
++	if (!bpf->prog)
++		return 0;
++
++	if (!bpf->prog->aux->offload) {
++		VIRTNET_EA(bpf->extack, "xdpoffload of non-bound program");
++		return -EINVAL;
++	}
++	if (bpf->prog->aux->offload->netdev != vi->netdev) {
++		VIRTNET_EA(bpf->extack, "program bound to different dev");
++		return -EINVAL;
++	}
++
++	state = bpf->prog->aux->offload->dev_priv;
++	if (WARN_ON(strcmp(state->state, "xlated"))) {
++		VIRTNET_EA(bpf->extack, "offloading program in bad state");
++		return -EINVAL;
++	}
++	return 0;
++}
++
++static void virtnet_prog_set_loaded(struct bpf_prog *prog, bool loaded)
++{
++	struct virtnet_bpf_bound_prog *state;
++
++	if (!prog || !prog->aux->offload)
++		return;
++
++	state = prog->aux->offload->dev_priv;
++	state->is_loaded = loaded;
++}
++
++static int
++virtnet_bpf_offload(struct virtnet_info *vi, struct bpf_prog *prog,
++		    bool oldprog)
++{
++	virtnet_prog_set_loaded(vi->bpf_offloaded, false);
++
++	WARN(!!vi->bpf_offloaded != oldprog,
++	     "bad offload state, expected offload %sto be active",
++	     oldprog ? "" : "not ");
++	vi->bpf_offloaded = prog;
++	vi->bpf_offloaded_id = prog ? prog->aux->id : 0;
++	virtnet_prog_set_loaded(prog, true);
++
++	return 0;
++}
++
++static bool virtnet_xdp_offload_active(struct virtnet_info *vi)
++{
++	return vi->xdp_prog_mode == XDP_ATTACHED_HW;
++}
++
++static int virtnet_xdp_offload_prog(struct virtnet_info *vi,
++				    struct netdev_bpf *bpf)
++{
++	if (!virtnet_xdp_offload_active(vi) && !bpf->prog)
++		return 0;
++	if (!virtnet_xdp_offload_active(vi) && bpf->prog && vi->bpf_offloaded) {
++		VIRTNET_EA(bpf->extack, "TC program is already loaded");
++		return -EBUSY;
++	}
++
++	return virtnet_bpf_offload(vi, bpf->prog, nsim_xdp_offload_active(ns));
++}
++
++static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
++{
++	int err;
++
++	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
++		VIRTNET_EA(bpf->extack, "program loaded with different flags");
++		return -EBUSY;
++	}
++
++	if (!vi->bpf_xdpoffload_accept) {
++		VIRTNET_EA(bpf->extack, "XDP offload disabled in DebugFS");
++		return -EOPNOTSUPP;
++	}
++
++	err = virtnet_xdp_offload_prog(ns, bpf);
++	if (err)
++		return err;
++
++	if (vi->xdp_prog)
++		bpf_prog_put(vi->xdp_prog);
++
++	vi->xdp_prog = bpf->prog;
++	vi->xdp_flags = bpf->flags;
++
++	if (!bpf->prog)
++		vi->xdp_prog_mode = XDP_ATTACHED_NONE;
++	else if (bpf->command == XDP_SETUP_PROG)
++		vi->xdp_prog_mode = XDP_ATTACHED_DRV;
++	else
++		vi->xdp_prog_mode = XDP_ATTACHED_HW;
++
++	return 0;
++}
++
  static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
  {
 +	struct virtnet_info *vi = netdev_priv(dev);
@@ -183,7 +292,21 @@ index ece9784..288707d 100644
  	case XDP_SETUP_PROG:
  		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
  	case XDP_QUERY_PROG:
-@@ -2372,6 +2510,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
++		bpf->prog_attached = vi->xdp_prog_mode;
+ 		bpf->prog_id = virtnet_xdp_query(dev);
+-		bpf->prog_attached = !!bpf->prog_id;
++		bpf->prog_flags = vi->xdp_prog ? vi->xdp_flags : 0;
+ 		return 0;
++	case XDP_SETUP_PROG_HW:
++		err = virtnet_setup_prog_hw_checks(ns, bpf);
++		if (err)
++			return err;
++
++		return virtnet_xdp_set_prog(ns, bpf);
+ 	default:
+ 		return -EINVAL;
+ 	}
+@@ -2372,6 +2626,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -218,7 +341,7 @@ index ece9784..288707d 100644
  static int virtnet_init(struct net_device *dev)
  {
  	struct virtnet_info *vi = netdev_priv(dev);
-@@ -2380,7 +2546,7 @@ static int virtnet_init(struct net_device *dev)
+@@ -2380,7 +2662,7 @@ static int virtnet_init(struct net_device *dev)
  	if (IS_ERR_OR_NULL(vi->ddir))
  		return -ENOMEM;
  
