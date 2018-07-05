@@ -1,5 +1,5 @@
 Bottom: 80d8d6c32238302049f42b9b7d74d6e43692bd55
-Top:    d2c7c3e29e917f41219663b5304073f6583b5764
+Top:    7bc4eb68ac99c70ab41f7187563c4c8dbb752631
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:11:53 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ece9784..695f038 100644
+index ece9784..f603d20 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -33,6 +33,7 @@
@@ -22,13 +22,15 @@ index ece9784..695f038 100644
  #include <net/route.h>
  #include <net/xdp.h>
  #include <net/net_failover.h>
-@@ -223,6 +224,17 @@ struct virtnet_info {
+@@ -223,6 +224,19 @@ struct virtnet_info {
  	struct failover *failover;
  
  	struct dentry *ddir;
 +
 +	struct bpf_prog *bpf_offloaded;
 +	u32 bpf_offloaded_id;
++
++	u32 prog_id_gen;
 +
 +	bool bpf_bind_accept;
 +	u32 bpf_bind_verifier_delay;
@@ -40,7 +42,7 @@ index ece9784..695f038 100644
  };
  
  struct padded_vnet_hdr {
-@@ -238,6 +250,15 @@ struct padded_vnet_hdr {
+@@ -238,6 +252,18 @@ struct padded_vnet_hdr {
  #define DRV_NAME "virtio-net"
  struct dentry *virtnet_ddir;
  
@@ -53,13 +55,74 @@ index ece9784..695f038 100644
 +	struct list_head l;
 +};
 +
++#define pr_vlog(env, fmt, ...)	\
++	bpf_verifier_log_write(env, "[netdevsim] " fmt, ##__VA_ARGS__)
++
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2342,9 +2363,42 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+@@ -2342,9 +2368,100 @@ static u32 virtnet_xdp_query(struct net_device *dev)
  	return 0;
  }
  
++static int virtnet_debugfs_bpf_string_read(struct seq_file *file, void *data)
++{
++	const char **str = file->private;
++
++	if (*str)
++		seq_printf(file, "%s\n", *str);
++
++	return 0;
++}
++
++static int virtnet_debugfs_bpf_string_open(struct inode *inode, struct file *f)
++{
++	return single_open(f, virtnet_debugfs_bpf_string_read,
++			   inode->i_private);
++}
++
++static const struct file_operations virtnet_bpf_string_fops = {
++	.owner = THIS_MODULE,
++	.open = virtnet_debugfs_bpf_string_open,
++	.release = single_release,
++	.read = seq_read,
++	.llseek = seq_lseek
++};
++
++static int virtnet_bpf_create_prog(struct virtnet_info *vi,
++				   struct bpf_prog *prog)
++{
++	struct virtnet_bpf_bound_prog *state;
++	char name[16];
++
++	state = kzalloc(sizeof(*state), GFP_KERNEL);
++	if (!state)
++		return -ENOMEM;
++
++	state->vi = vi;
++	state->prog = prog;
++	state->state = "verify";
++
++	/* Program id is not populated yet when we create the state. */
++	sprintf(name, "%u", vi->prog_id_gen++);
++	state->ddir = debugfs_create_dir(name, vi->ddir_bpf_bound_progs);
++	if (IS_ERR_OR_NULL(state->ddir)) {
++		kfree(state);
++		return -ENOMEM;
++	}
++
++	debugfs_create_u32("id", 0400, state->ddir, &prog->aux->id);
++	debugfs_create_file("state", 0400, state->ddir,
++			    &state->state, &virtnet_bpf_string_fops);
++	debugfs_create_bool("loaded", 0400, state->ddir, &state->is_loaded);
++
++	list_add_tail(&state->l, &vi->bpf_bound_progs);
++
++	prog->aux->offload->dev_priv = state;
++
++	return 0;
++}
++
 +static int
 +virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 +			int prev_insn)
@@ -82,7 +145,7 @@ index ece9784..695f038 100644
 +
  static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
  {
-+	struct virtnet_info *vi;
++	struct virtnet_info *vi = netdev_priv(dev);
 +	int err;
 +
  	switch (bpf->command) {
@@ -99,7 +162,7 @@ index ece9784..695f038 100644
  	case XDP_SETUP_PROG:
  		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
  	case XDP_QUERY_PROG:
-@@ -2372,6 +2426,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+@@ -2372,6 +2489,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -134,7 +197,7 @@ index ece9784..695f038 100644
  static int virtnet_init(struct net_device *dev)
  {
  	struct virtnet_info *vi = netdev_priv(dev);
-@@ -2380,7 +2462,7 @@ static int virtnet_init(struct net_device *dev)
+@@ -2380,7 +2525,7 @@ static int virtnet_init(struct net_device *dev)
  	if (IS_ERR_OR_NULL(vi->ddir))
  		return -ENOMEM;
  
