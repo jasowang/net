@@ -1,8 +1,8 @@
 Version: 1
-Previous: 70835668ba8da045f1427eb7c01156b699367943
-Head: ffa50612636a19fa6000cded4e2294a047db2b71
+Previous: 8f673a29196518c5953932c25ff0e3285d4eeccb
+Head: d93a0e476f49799c816526aa9941622720085639
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
+  virtio-net-basic-ebpf-offload: d93a0e476f49799c816526aa9941622720085639
 Unapplied:
-  virtio-net-basic-ebpf-offload: 4b458ef147c5464993c2d6865c92c3dd1d6f48b9
 Hidden:
