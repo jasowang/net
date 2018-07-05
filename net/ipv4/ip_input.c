@@ -577,6 +577,8 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 	struct sk_buff *skb, *next;
 	struct list_head sublist;
 
+	INIT_LIST_HEAD(&sublist);
+
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct net_device *dev = skb->dev;
 		struct net *net = dev_net(dev);
