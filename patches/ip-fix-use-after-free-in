@@ -3,7 +3,10 @@ Top:    6be23939aa8c94b1a767f4aebb9a0bea08de3275
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 10:52:32 +0800
 
-ip: fix use after free in ip_list_rcv()
+net: ipv4: fix use after free in ip_list_rcv()
+
+When skb was freed by ip_recv_core() its pointer was left in the list
+which will lead use after free when trying to dispatching the
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
