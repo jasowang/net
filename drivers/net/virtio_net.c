@@ -224,6 +224,9 @@ struct virtnet_info {
 
 	struct dentry *ddir;
 
+	struct bpf_prog *bpf_offloaded;
+	u32 bpf_offloaded_id;
+
 	bool bpf_bind_accept;
 	u32 bpf_bind_verifier_delay;
 	struct dentry *ddir_bpf_bound_progs;
@@ -2396,7 +2399,7 @@ static int virtnet_bpf_init(struct virtnet_info *vi)
 	debugfs_create_u32("bpf_offloaded_id", 0400, vi->ddir,
 			   &vi->bpf_offloaded_id);
 
-	ns->bpf_bind_accept = true;
+	vi->bpf_bind_accept = true;
 	debugfs_create_bool("bpf_bind_accept", 0600, vi->ddir,
 			    &vi->bpf_bind_accept);
 	debugfs_create_u32("bpf_bind_verifier_delay", 0600, vi->ddir,
