@@ -1,0 +1,24 @@
+Bottom: 6ff871626e86e9928aa164e7a896e761dec3d45c
+Top:    a32045a0ffecb9cc12f40821889ac277902bbd1b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-05 11:36:29 +0800
+
+Refresh of ip-fix-use-after-free-in
+
+---
+
+diff --git a/net/ipv4/ip_input.c b/net/ipv4/ip_input.c
+index 028fc19..827bd87 100644
+--- a/net/ipv4/ip_input.c
++++ b/net/ipv4/ip_input.c
+@@ -575,9 +575,7 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
+ 	struct net_device *curr_dev = NULL;
+ 	struct net *curr_net = NULL;
+ 	struct sk_buff *skb, *next;
+-	struct list_head sublist;
+-
+-	INIT_LIST_HEAD(&sublist);
++	LIST_HEAD(sublist);
+ 
+ 	list_for_each_entry_safe(skb, next, head, list) {
+ 		struct net_device *dev = skb->dev;
