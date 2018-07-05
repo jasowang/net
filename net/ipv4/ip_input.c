@@ -575,26 +575,29 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 	struct net_device *curr_dev = NULL;
 	struct net *curr_net = NULL;
 	struct sk_buff *skb, *next;
-	struct list_head sublist;
+	LIST_HEAD(sublist);
 
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct net_device *dev = skb->dev;
 		struct net *net = dev_net(dev);
 
+		list_del(&skb->list);
 		skb = ip_rcv_core(skb, net);
 		if (skb == NULL)
 			continue;
 
 		if (curr_dev != dev || curr_net != net) {
 			/* dispatch old sublist */
-			list_cut_before(&sublist, head, &skb->list);
-			if (!list_empty(&sublist))
+			if (!list_empty(&sublist)) {
 				ip_sublist_rcv(&sublist, dev, net);
+				INIT_LIST_HEAD(&sublist);
+			}
 			/* start new sublist */
 			curr_dev = dev;
 			curr_net = net;
 		}
+		list_add_tail(&skb->list, &sublist);
 	}
 	/* dispatch final sublist */
-	ip_sublist_rcv(head, curr_dev, curr_net);
+	ip_sublist_rcv(&sublist, curr_dev, curr_net);
 }
