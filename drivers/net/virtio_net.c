@@ -2442,6 +2442,18 @@ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 	return 0;
 }
 
+static void virtnet_bpf_destroy_prog(struct bpf_prog *prog)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	state = prog->aux->offload->dev_priv;
+	WARN(state->is_loaded,
+	     "offload state destroyed while program still bound");
+	debugfs_remove_recursive(state->ddir);
+	list_del(&state->l);
+	kfree(state);
+}
+
 static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
 	.insn_hook = virtnet_bpf_verify_insn,
 };
@@ -2449,6 +2461,7 @@ static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
+	struct virtnet_bpf_bound_prog *state;
 	int err;
 
 	switch (bpf->command) {
@@ -2461,6 +2474,14 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 			return err;
 
 		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
+		return 0;
+	case BPF_OFFLOAD_TRANSLATE:
+		state = bpf->offload.prog->aux->offload->dev_priv;
+
+		state->state = "xlated";
+		return 0;
+	case BPF_OFFLOAD_DESTROY:
+		virtnet_bpf_destroy_prog(bpf->offload.prog);
 		return 0;
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
