@@ -1,8 +1,7 @@
 Version: 1
-Previous: d15097dcf1868a28cbbdcc0eba4d5283f9468da0
-Head: c8199ad0d03dbca8cb1b2872f23dbd1b2740a341
+Previous: c2b03fd8282b5afa78d677e9fdf42d7b424c180c
+Head: 5450b77800d953c521c3660afef203f428f3c8bb
 Applied:
-  virtio-net-debugfs-for: 21b38f90381cdd8702cedbb1599cd9d55fffd60f
-  refresh-temp: c8199ad0d03dbca8cb1b2872f23dbd1b2740a341
+  virtio-net-debugfs-for: 5450b77800d953c521c3660afef203f428f3c8bb
 Unapplied:
 Hidden:
