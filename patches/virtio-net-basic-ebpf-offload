@@ -1,5 +1,5 @@
 Bottom: 80d8d6c32238302049f42b9b7d74d6e43692bd55
-Top:    7bc4eb68ac99c70ab41f7187563c4c8dbb752631
+Top:    2e13bffb2fa34354d452a59946f2ed202b0beca9
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:11:53 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index ece9784..f603d20 100644
+index ece9784..288707d 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -33,6 +33,7 @@
@@ -61,7 +61,7 @@ index ece9784..f603d20 100644
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2342,9 +2368,100 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+@@ -2342,9 +2368,121 @@ static u32 virtnet_xdp_query(struct net_device *dev)
  	return 0;
  }
  
@@ -139,6 +139,18 @@ index ece9784..f603d20 100644
 +	return 0;
 +}
 +
++static void virtnet_bpf_destroy_prog(struct bpf_prog *prog)
++{
++	struct virtnet_bpf_bound_prog *state;
++
++	state = prog->aux->offload->dev_priv;
++	WARN(state->is_loaded,
++	     "offload state destroyed while program still bound");
++	debugfs_remove_recursive(state->ddir);
++	list_del(&state->l);
++	kfree(state);
++}
++
 +static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
 +	.insn_hook = virtnet_bpf_verify_insn,
 +};
@@ -146,6 +158,7 @@ index ece9784..f603d20 100644
  static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
  {
 +	struct virtnet_info *vi = netdev_priv(dev);
++	struct virtnet_bpf_bound_prog *state;
 +	int err;
 +
  	switch (bpf->command) {
@@ -159,10 +172,18 @@ index ece9784..f603d20 100644
 +
 +		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
 +		return 0;
++	case BPF_OFFLOAD_TRANSLATE:
++		state = bpf->offload.prog->aux->offload->dev_priv;
++
++		state->state = "xlated";
++		return 0;
++	case BPF_OFFLOAD_DESTROY:
++		virtnet_bpf_destroy_prog(bpf->offload.prog);
++		return 0;
  	case XDP_SETUP_PROG:
  		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
  	case XDP_QUERY_PROG:
-@@ -2372,6 +2489,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+@@ -2372,6 +2510,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -197,7 +218,7 @@ index ece9784..f603d20 100644
  static int virtnet_init(struct net_device *dev)
  {
  	struct virtnet_info *vi = netdev_priv(dev);
-@@ -2380,7 +2525,7 @@ static int virtnet_init(struct net_device *dev)
+@@ -2380,7 +2546,7 @@ static int virtnet_init(struct net_device *dev)
  	if (IS_ERR_OR_NULL(vi->ddir))
  		return -ENOMEM;
  
