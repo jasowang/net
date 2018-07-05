@@ -5,6 +5,8 @@ Date:   2018-07-05 10:52:32 +0800
 
 ip: fix use after free in ip_list_rcv()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
