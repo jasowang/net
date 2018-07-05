@@ -1,5 +1,5 @@
 Bottom: a27553613514a5ee5ed122fa10557b997fb12c57
-Top:    e7d8d4df7cfec3586065102aa061a60be0706578
+Top:    80d8d6c32238302049f42b9b7d74d6e43692bd55
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:50:57 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index b24874f..9a9845c 100644
+index b24874f..ece9784 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -2342,9 +2342,9 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+@@ -2342,14 +2342,14 @@ static u32 virtnet_xdp_query(struct net_device *dev)
  	return 0;
  }
  
@@ -24,8 +24,16 @@ index b24874f..9a9845c 100644
 -	switch (xdp->command) {
 +	switch (bpf->command) {
  	case XDP_SETUP_PROG:
- 		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
+-		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
++		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
  	case XDP_QUERY_PROG:
+-		xdp->prog_id = virtnet_xdp_query(dev);
+-		xdp->prog_attached = !!xdp->prog_id;
++		bpf->prog_id = virtnet_xdp_query(dev);
++		bpf->prog_attached = !!bpf->prog_id;
+ 		return 0;
+ 	default:
+ 		return -EINVAL;
 @@ -2406,7 +2406,7 @@ static const struct net_device_ops virtnet_netdev = {
  #ifdef CONFIG_NET_POLL_CONTROLLER
  	.ndo_poll_controller = virtnet_netpoll,
