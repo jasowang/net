@@ -1,9 +1,9 @@
 Version: 1
-Previous: 3838b6f49246daa0b537194f81db926e5b2ad246
-Head: dd95cecc79e99a4fa52d209ce8c9ddbf6ca8a383
+Previous: d598da0787ede52c8f7b605702e510a80520cbb6
+Head: b92261bd92ca0d86abb9608e779c46b255b075d2
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
   virtio-net-rename-virtnet_xdp: b92261bd92ca0d86abb9608e779c46b255b075d2
-  virtio-net-basic-ebpf-offload: dd95cecc79e99a4fa52d209ce8c9ddbf6ca8a383
 Unapplied:
+  virtio-net-basic-ebpf-offload: dd95cecc79e99a4fa52d209ce8c9ddbf6ca8a383
 Hidden:
