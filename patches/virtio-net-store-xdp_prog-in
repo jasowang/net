@@ -5,6 +5,8 @@ Date:   2018-07-05 19:26:33 +0800
 
 virtio-net: store xdp_prog in device
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
