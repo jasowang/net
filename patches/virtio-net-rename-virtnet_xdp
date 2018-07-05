@@ -5,6 +5,8 @@ Date:   2018-07-05 16:50:57 +0800
 
 virtio-net: rename virtnet_xdp() to virtnet_bpf()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
