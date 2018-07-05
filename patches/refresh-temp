@@ -1,0 +1,22 @@
+Bottom: 3ca44dba32af951288cd3165f1b7c3f24794bea5
+Top:    a27553613514a5ee5ed122fa10557b997fb12c57
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-05 16:39:18 +0800
+
+Refresh of virtio-net-debugfs-for
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index a403443..b24874f 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2385,6 +2385,9 @@ static int virtnet_init(struct net_device *dev)
+ 
+ static void virtnet_uninit(struct net_device *dev)
+ {
++	struct virtnet_info *vi = netdev_priv(dev);
++
++	debugfs_remove_recursive(vi->ddir);
+ 	return;
+ }
