@@ -221,6 +221,8 @@ struct virtnet_info {
 
 	/* failover when STANDBY feature enabled */
 	struct failover *failover;
+
+	struct list_head bpf_bound_progs;
 };
 
 struct padded_vnet_hdr {
@@ -235,6 +237,15 @@ struct padded_vnet_hdr {
 
 #define DRV_NAME "virtio-net"
 struct dentry *virtnet_ddir;
+
+struct virtnet_bpf_bound_prog {
+	struct virtnet_info *vi;
+	struct bpf_prog *prog;
+	struct dentry *ddir;
+	const char *state;
+	bool is_loaded;
+	struct list_head l;
+};
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -2370,7 +2381,23 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
 	return 0;
 }
 
+static int virtnet_init(struct net_device *dev)
+{
+	struct virtnet_info *vi = netdev_priv(dev);
+
+	INIT_LIST_HEAD(&vi->bpf_bound_progs);
+
+	return 0;
+}
+
+static void virtnet_uninit(struct net_device *dev)
+{
+	return;
+}
+
 static const struct net_device_ops virtnet_netdev = {
+	.ndo_init            = virtnet_init,
+	.ndo_uninit          = virtnet_uninit,
 	.ndo_open            = virtnet_open,
 	.ndo_stop   	     = virtnet_close,
 	.ndo_start_xmit      = start_xmit,
