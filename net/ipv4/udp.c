@@ -2317,6 +2317,7 @@ int udp_v4_early_demux(struct sk_buff *skb)
 	int sdif = inet_sdif(skb);
 	int ours;
 
+	printk("21\n");
 	/* validate the packet */
 	if (!pskb_may_pull(skb, skb_transport_offset(skb) + sizeof(struct udphdr)))
 		return 0;
@@ -2324,6 +2325,7 @@ int udp_v4_early_demux(struct sk_buff *skb)
 	iph = ip_hdr(skb);
 	uh = udp_hdr(skb);
 
+	printk("22\n");
 	if (skb->pkt_type == PACKET_MULTICAST) {
 		in_dev = __in_dev_get_rcu(skb->dev);
 
@@ -2343,6 +2345,7 @@ int udp_v4_early_demux(struct sk_buff *skb)
 					     uh->source, iph->saddr, dif, sdif);
 	}
 
+	printk("23\n");
 	if (!sk || !refcount_inc_not_zero(&sk->sk_refcnt))
 		return 0;
 
@@ -2350,6 +2353,7 @@ int udp_v4_early_demux(struct sk_buff *skb)
 	skb->destructor = sock_efree;
 	dst = READ_ONCE(sk->sk_rx_dst);
 
+	printk("24\n");
 	if (dst)
 		dst = dst_check(dst, 0);
 	if (dst) {
@@ -2369,6 +2373,7 @@ int udp_v4_early_demux(struct sk_buff *skb)
 						     iph->saddr, iph->tos,
 						     skb->dev, in_dev, &itag);
 	}
+	printk("25\n");
 	return 0;
 }
 

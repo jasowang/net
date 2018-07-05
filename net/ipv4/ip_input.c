@@ -323,13 +323,28 @@ static int ip_rcv_finish_core(struct net *net, struct sock *sk,
 	if (!skb)
 		return NET_RX_SUCCESS;
 
-	if (net->ipv4.sysctl_ip_early_demux &&
-	    !skb_dst(skb) &&
-	    !skb->sk &&
-	    !ip_is_fragment(iph)) {
+	printk("11 skb %p iph %p net %p\n", skb, iph, net);
+	if (!net) {
+		if (skb->dev)
+			printk("devname is %s\n", skb->dev->name);
+		dump_stack();
+		goto drop_error;
+	}
+	if (net->ipv4.sysctl_ip_early_demux) {
 		const struct net_protocol *ipprot;
 		int protocol = iph->protocol;
 
+		printk("111\n");
+		if (skb_dst(skb))
+			goto pass;
+		printk("112\n");
+		if (skb->sk)
+			goto pass;
+		printk("113\n");
+		if (ip_is_fragment(iph))
+			goto pass;
+
+		printk("114\n");
 		ipprot = rcu_dereference(inet_protos[protocol]);
 		if (ipprot && (edemux = READ_ONCE(ipprot->early_demux))) {
 			err = edemux(skb);
@@ -339,7 +354,9 @@ static int ip_rcv_finish_core(struct net *net, struct sock *sk,
 			iph = ip_hdr(skb);
 		}
 	}
+pass:
 
+	printk("12\n");
 	/*
 	 *	Initialise the virtual path cache for the packet. It describes
 	 *	how the packet travels inside Linux networking.
@@ -362,9 +379,11 @@ static int ip_rcv_finish_core(struct net *net, struct sock *sk,
 	}
 #endif
 
+	printk("13\n");
 	if (iph->ihl > 5 && ip_rcv_options(skb))
 		goto drop;
 
+	printk("14\n");
 	rt = skb_rtable(skb);
 	if (rt->rt_type == RTN_MULTICAST) {
 		__IP_UPD_PO_STATS(net, IPSTATS_MIB_INMCAST, skb->len);
@@ -393,6 +412,7 @@ static int ip_rcv_finish_core(struct net *net, struct sock *sk,
 		    IN_DEV_ORCONF(in_dev, DROP_UNICAST_IN_L2_MULTICAST))
 			goto drop;
 	}
+	printk("15\n");
 
 	return NET_RX_SUCCESS;
 
@@ -543,21 +563,30 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct dst_entry *dst;
 
+		printk("1 sk %p\n", sk);
 		if (ip_rcv_finish_core(net, sk, skb) == NET_RX_DROP)
 			continue;
 
+		printk("2\n");
 		dst = skb_dst(skb);
 		if (curr_dst != dst) {
 			/* dispatch old sublist */
+			printk("3 %p\n", &skb->list);
 			list_cut_before(&sublist, head, &skb->list);
-			if (!list_empty(&sublist))
+			printk("4\n");
+			if (!list_empty(&sublist)) {
+				printk("5\n");
 				ip_sublist_rcv_finish(&sublist);
+			}
+			printk("6\n");
 			/* start new sublist */
 			curr_dst = dst;
 		}
 	}
+	printk("7\n");
 	/* dispatch final sublist */
 	ip_sublist_rcv_finish(head);
+	printk("8\n");
 }
 
 static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
@@ -577,24 +606,35 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 	struct sk_buff *skb, *next;
 	struct list_head sublist;
 
+	printk("start!\n");
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct net_device *dev = skb->dev;
 		struct net *net = dev_net(dev);
 
+		printk("ip_list_rcv, net %p dev %s\n",
+			net, dev->name);
+
+		list_del(&skb->list);
 		skb = ip_rcv_core(skb, net);
 		if (skb == NULL)
 			continue;
 
 		if (curr_dev != dev || curr_net != net) {
 			/* dispatch old sublist */
-			list_cut_before(&sublist, head, &skb->list);
-			if (!list_empty(&sublist))
+			if (!list_empty(&sublist)) {
 				ip_sublist_rcv(&sublist, dev, net);
+				INIT_LIST_HEAD(&sublist);
+			}
 			/* start new sublist */
 			curr_dev = dev;
 			curr_net = net;
 		}
+
+		list_add_tail(&sublist, &skb->list);
 	}
+	printk("dispatch final curr_dev %p curr_net %p empty %d\n",
+		curr_dev, curr_net, list_empty(head));
 	/* dispatch final sublist */
 	ip_sublist_rcv(head, curr_dev, curr_net);
+	printk("end\n");
 }
