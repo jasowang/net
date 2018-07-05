@@ -1,9 +1,8 @@
 Version: 1
-Previous: 95300eb1adc02608f75713666b7fef8865755cb3
-Head: 516910a0f2b7be8462da480f07cda7085a7e4615
+Previous: 506b421a6ebc69d04f348a88dce03588a5692d96
+Head: 93c8dffe9f5296d71ca6d0043cab134fe6c0a2e6
 Applied:
   virtio-net-debugfs-for: f70948871561afbce36c6eb0f6381ec275084450
-  virtio-net-basic-ebpf-offload: e383320f7d6ba6a1722d9173493c3ac4d7c5e84b
-  refresh-temp: 516910a0f2b7be8462da480f07cda7085a7e4615
+  virtio-net-basic-ebpf-offload: 93c8dffe9f5296d71ca6d0043cab134fe6c0a2e6
 Unapplied:
 Hidden:
