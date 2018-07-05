@@ -5,8 +5,11 @@ Date:   2018-07-05 10:52:32 +0800
 
 net: ipv4: fix use after free in ip_list_rcv()
 
-When skb was freed by ip_recv_core() its pointer was left in the list
-which will lead use after free when trying to dispatching the
+When skb was freed by ip_rcv_core() its pointer was left in the list
+which will lead use after free when trying to dispatching the final
+sublist. Fixing this by delete skb from the list before calling
+ip_rcv_core().
+
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
