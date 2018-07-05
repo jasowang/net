@@ -33,6 +33,7 @@
 #include <linux/netdevice.h>
 #include <linux/pci.h>
 #include <linux/debugfs.h>
+#include <linux/bpf_verifier.h>
 #include <net/route.h>
 #include <net/xdp.h>
 #include <net/net_failover.h>
@@ -223,6 +224,17 @@ struct virtnet_info {
 	struct failover *failover;
 
 	struct dentry *ddir;
+
+	struct bpf_prog *bpf_offloaded;
+	u32 bpf_offloaded_id;
+
+	bool bpf_bind_accept;
+	u32 bpf_bind_verifier_delay;
+	struct dentry *ddir_bpf_bound_progs;
+	struct list_head bpf_bound_progs;
+
+	bool bpf_xdpdrv_accept;
+	bool bpf_xdpoffload_accept;
 };
 
 struct padded_vnet_hdr {
@@ -237,6 +249,15 @@ struct padded_vnet_hdr {
 
 #define DRV_NAME "virtio-net"
 struct dentry *virtnet_ddir;
+
+struct virtnet_bpf_bound_prog {
+	struct virtnet_info *vi;
+	struct bpf_prog *prog;
+	struct dentry *ddir;
+	const char *state;
+	bool is_loaded;
+	struct list_head l;
+};
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -2342,9 +2363,42 @@ static u32 virtnet_xdp_query(struct net_device *dev)
 	return 0;
 }
 
+static int
+virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+			int prev_insn)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	state = env->prog->aux->offload->dev_priv;
+	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
+		msleep(state->vi->bpf_bind_verifier_delay);
+
+	if (insn_idx == env->prog->len - 1)
+		pr_vlog(env, "Hello from virtio-net!\n");
+
+	return 0;
+}
+
+static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
+	.insn_hook = virtnet_bpf_verify_insn,
+};
+
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
+	struct virtnet_info *vi;
+	int err;
+
 	switch (bpf->command) {
+	case BPF_OFFLOAD_VERIFIER_PREP:
+		if (!vi->bpf_bind_accept)
+			return -EOPNOTSUPP;
+
+		err = virtnet_bpf_create_prog(vi, bpf->verifier.prog);
+		if (err)
+			return err;
+
+		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
+		return 0;
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:
@@ -2372,6 +2426,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
 	return 0;
 }
 
+static int virtnet_bpf_init(struct virtnet_info *vi)
+{
+	INIT_LIST_HEAD(&vi->bpf_bound_progs);
+
+	debugfs_create_u32("bpf_offloaded_id", 0400, vi->ddir,
+			   &vi->bpf_offloaded_id);
+
+	vi->bpf_bind_accept = true;
+	debugfs_create_bool("bpf_bind_accept", 0600, vi->ddir,
+			    &vi->bpf_bind_accept);
+	debugfs_create_u32("bpf_bind_verifier_delay", 0600, vi->ddir,
+			   &vi->bpf_bind_verifier_delay);
+
+	vi->ddir_bpf_bound_progs =
+		debugfs_create_dir("bpf_bound_progs", vi->ddir);
+	if (IS_ERR_OR_NULL(vi->ddir_bpf_bound_progs))
+		return -ENOMEM;
+
+	vi->bpf_xdpdrv_accept = true;
+	debugfs_create_bool("bpf_xdpdrv_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpdrv_accept);
+	vi->bpf_xdpoffload_accept = true;
+	debugfs_create_bool("bpf_xdpoffload_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpoffload_accept);
+
+	return 0;
+}
+
 static int virtnet_init(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
@@ -2380,7 +2462,7 @@ static int virtnet_init(struct net_device *dev)
 	if (IS_ERR_OR_NULL(vi->ddir))
 		return -ENOMEM;
 
-	return 0;
+	return virtnet_bpf_init(vi);
 }
 
 static void virtnet_uninit(struct net_device *dev)
