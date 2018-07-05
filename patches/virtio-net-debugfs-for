@@ -1,5 +1,5 @@
 Bottom: 955d32553e5375fa5d23cd3aaea3a79d4fef6bec
-Top:    0248c35a9bb009e90b0833384e4f4edb633f5a98
+Top:    3ca44dba32af951288cd3165f1b7c3f24794bea5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 15:38:58 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 53085c6..1526014 100644
+index 53085c6..a403443 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -32,6 +32,7 @@
@@ -24,7 +24,16 @@ index 53085c6..1526014 100644
  #include <net/route.h>
  #include <net/xdp.h>
  #include <net/net_failover.h>
-@@ -232,6 +233,9 @@ struct padded_vnet_hdr {
+@@ -220,6 +221,8 @@ struct virtnet_info {
+ 
+ 	/* failover when STANDBY feature enabled */
+ 	struct failover *failover;
++
++	struct dentry *ddir;
+ };
+ 
+ struct padded_vnet_hdr {
+@@ -232,6 +235,9 @@ struct padded_vnet_hdr {
  	char padding[4];
  };
  
@@ -34,7 +43,33 @@ index 53085c6..1526014 100644
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -3101,6 +3105,10 @@ static __init int virtio_net_driver_init(void)
+@@ -2366,7 +2372,25 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+ 	return 0;
+ }
+ 
++static int virtnet_init(struct net_device *dev)
++{
++	struct virtnet_info *vi = netdev_priv(dev);
++
++	vi->ddir = debugfs_create_dir(netdev_name(dev), virtnet_ddir);
++	if (IS_ERR_OR_NULL(vi->ddir))
++		return -ENOMEM;
++
++	return 0;
++}
++
++static void virtnet_uninit(struct net_device *dev)
++{
++	return;
++}
++
+ static const struct net_device_ops virtnet_netdev = {
++	.ndo_init            = virtnet_init,
++	.ndo_uninit          = virtnet_uninit,
+ 	.ndo_open            = virtnet_open,
+ 	.ndo_stop   	     = virtnet_close,
+ 	.ndo_start_xmit      = start_xmit,
+@@ -3101,6 +3125,10 @@ static __init int virtio_net_driver_init(void)
  {
  	int ret;
  
@@ -45,7 +80,7 @@ index 53085c6..1526014 100644
  	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN, "virtio/net:online",
  				      virtnet_cpu_online,
  				      virtnet_cpu_down_prep);
-@@ -3121,6 +3129,7 @@ static __init int virtio_net_driver_init(void)
+@@ -3121,6 +3149,7 @@ static __init int virtio_net_driver_init(void)
  err_dead:
  	cpuhp_remove_multi_state(virtionet_online);
  out:
@@ -53,7 +88,7 @@ index 53085c6..1526014 100644
  	return ret;
  }
  module_init(virtio_net_driver_init);
-@@ -3130,6 +3139,7 @@ static __exit void virtio_net_driver_exit(void)
+@@ -3130,6 +3159,7 @@ static __exit void virtio_net_driver_exit(void)
  	unregister_virtio_driver(&virtio_net_driver);
  	cpuhp_remove_multi_state(CPUHP_VIRT_NET_DEAD);
  	cpuhp_remove_multi_state(virtionet_online);
