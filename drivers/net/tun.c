@@ -1589,13 +1589,8 @@ static void tun_rx_batched(struct tun_struct *tun, struct tun_file *tfile,
 	spin_unlock(&queue->lock);
 
 	if (rcv) {
-		struct sk_buff *nskb, *tmp;
-
 		local_bh_disable();
-		list_for_each_entry_safe(nskb, tmp, &list, list) {
-			list_del_init(&nskb->list);
-			kfree_skb(nskb);
-		}
+		netif_receive_skb_list(&list);
 		local_bh_enable();
 	}
 }
