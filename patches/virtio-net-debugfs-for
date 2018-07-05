@@ -1,5 +1,5 @@
 Bottom: 955d32553e5375fa5d23cd3aaea3a79d4fef6bec
-Top:    3ca44dba32af951288cd3165f1b7c3f24794bea5
+Top:    a27553613514a5ee5ed122fa10557b997fb12c57
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 15:38:58 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 53085c6..a403443 100644
+index 53085c6..b24874f 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -32,6 +32,7 @@
@@ -43,7 +43,7 @@ index 53085c6..a403443 100644
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2366,7 +2372,25 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+@@ -2366,7 +2372,28 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -60,6 +60,9 @@ index 53085c6..a403443 100644
 +
 +static void virtnet_uninit(struct net_device *dev)
 +{
++	struct virtnet_info *vi = netdev_priv(dev);
++
++	debugfs_remove_recursive(vi->ddir);
 +	return;
 +}
 +
@@ -69,7 +72,7 @@ index 53085c6..a403443 100644
  	.ndo_open            = virtnet_open,
  	.ndo_stop   	     = virtnet_close,
  	.ndo_start_xmit      = start_xmit,
-@@ -3101,6 +3125,10 @@ static __init int virtio_net_driver_init(void)
+@@ -3101,6 +3128,10 @@ static __init int virtio_net_driver_init(void)
  {
  	int ret;
  
@@ -80,7 +83,7 @@ index 53085c6..a403443 100644
  	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN, "virtio/net:online",
  				      virtnet_cpu_online,
  				      virtnet_cpu_down_prep);
-@@ -3121,6 +3149,7 @@ static __init int virtio_net_driver_init(void)
+@@ -3121,6 +3152,7 @@ static __init int virtio_net_driver_init(void)
  err_dead:
  	cpuhp_remove_multi_state(virtionet_online);
  out:
@@ -88,7 +91,7 @@ index 53085c6..a403443 100644
  	return ret;
  }
  module_init(virtio_net_driver_init);
-@@ -3130,6 +3159,7 @@ static __exit void virtio_net_driver_exit(void)
+@@ -3130,6 +3162,7 @@ static __exit void virtio_net_driver_exit(void)
  	unregister_virtio_driver(&virtio_net_driver);
  	cpuhp_remove_multi_state(CPUHP_VIRT_NET_DEAD);
  	cpuhp_remove_multi_state(virtionet_online);
