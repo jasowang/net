@@ -223,7 +223,14 @@ struct virtnet_info {
 	struct failover *failover;
 
 	struct dentry *ddir;
+
+	bool bpf_bind_accept;
+	u32 bpf_bind_verifier_delay;
+	struct dentry *ddir_bpf_bound_progs;
 	struct list_head bpf_bound_progs;
+
+	bool bpf_xdpdrv_accept;
+	bool bpf_xdpoffload_accept;
 };
 
 struct padded_vnet_hdr {
@@ -2382,6 +2389,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
 	return 0;
 }
 
+static int virtnet_bpf_init(struct virtnet_info *vi)
+{
+	INIT_LIST_HEAD(&vi->bpf_bound_progs);
+
+	debugfs_create_u32("bpf_offloaded_id", 0400, vi->ddir,
+			   &vi->bpf_offloaded_id);
+
+	ns->bpf_bind_accept = true;
+	debugfs_create_bool("bpf_bind_accept", 0600, vi->ddir,
+			    &vi->bpf_bind_accept);
+	debugfs_create_u32("bpf_bind_verifier_delay", 0600, vi->ddir,
+			   &vi->bpf_bind_verifier_delay);
+
+	vi->ddir_bpf_bound_progs =
+		debugfs_create_dir("bpf_bound_progs", vi->ddir);
+	if (IS_ERR_OR_NULL(vi->ddir_bpf_bound_progs))
+		return -ENOMEM;
+
+	vi->bpf_xdpdrv_accept = true;
+	debugfs_create_bool("bpf_xdpdrv_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpdrv_accept);
+	vi->bpf_xdpoffload_accept = true;
+	debugfs_create_bool("bpf_xdpoffload_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpoffload_accept);
+
+	return 0;
+}
+
 static int virtnet_init(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
@@ -2389,9 +2424,8 @@ static int virtnet_init(struct net_device *dev)
 	vi->ddir = debugfs_create_dir(netdev_name(dev), virtnet_ddir);
 	if (IS_ERR_OR_NULL(vi->ddir))
 		return -ENOMEM;
-	INIT_LIST_HEAD(&vi->bpf_bound_progs);
 
-	return 0;
+	return virtnet_bpf_init(vi);
 }
 
 static void virtnet_uninit(struct net_device *dev)
