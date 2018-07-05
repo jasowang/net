@@ -225,6 +225,9 @@ struct virtnet_info {
 
 	struct dentry *ddir;
 
+	u32 xdp_flags;
+	int xdp_prog_mode;
+
 	struct bpf_prog *bpf_offloaded;
 	u32 bpf_offloaded_id;
 
@@ -261,7 +264,9 @@ struct virtnet_bpf_bound_prog {
 	struct list_head l;
 };
 
-#define pr_vlog(env, fmt, ...)	\
+#define VIRTNET_EA(extack, msg)	NL_SET_ERR_MSG_MOD((extack), msg)
+
+#define pr_vlog(env, fmt, ...)						\
 	bpf_verifier_log_write(env, "[netdevsim] " fmt, ##__VA_ARGS__)
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
@@ -2458,6 +2463,110 @@ static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
 	.insn_hook = virtnet_bpf_verify_insn,
 };
 
+static int
+virtnet_setup_prog_hw_checks(struct virtnet_info *vi, struct netdev_bpf *bpf)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	if (!bpf->prog)
+		return 0;
+
+	if (!bpf->prog->aux->offload) {
+		VIRTNET_EA(bpf->extack, "xdpoffload of non-bound program");
+		return -EINVAL;
+	}
+	if (bpf->prog->aux->offload->netdev != vi->netdev) {
+		VIRTNET_EA(bpf->extack, "program bound to different dev");
+		return -EINVAL;
+	}
+
+	state = bpf->prog->aux->offload->dev_priv;
+	if (WARN_ON(strcmp(state->state, "xlated"))) {
+		VIRTNET_EA(bpf->extack, "offloading program in bad state");
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static void virtnet_prog_set_loaded(struct bpf_prog *prog, bool loaded)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	if (!prog || !prog->aux->offload)
+		return;
+
+	state = prog->aux->offload->dev_priv;
+	state->is_loaded = loaded;
+}
+
+static int
+virtnet_bpf_offload(struct virtnet_info *vi, struct bpf_prog *prog,
+		    bool oldprog)
+{
+	virtnet_prog_set_loaded(vi->bpf_offloaded, false);
+
+	WARN(!!vi->bpf_offloaded != oldprog,
+	     "bad offload state, expected offload %sto be active",
+	     oldprog ? "" : "not ");
+	vi->bpf_offloaded = prog;
+	vi->bpf_offloaded_id = prog ? prog->aux->id : 0;
+	virtnet_prog_set_loaded(prog, true);
+
+	return 0;
+}
+
+static bool virtnet_xdp_offload_active(struct virtnet_info *vi)
+{
+	return vi->xdp_prog_mode == XDP_ATTACHED_HW;
+}
+
+static int virtnet_xdp_offload_prog(struct virtnet_info *vi,
+				    struct netdev_bpf *bpf)
+{
+	if (!virtnet_xdp_offload_active(vi) && !bpf->prog)
+		return 0;
+	if (!virtnet_xdp_offload_active(vi) && bpf->prog && vi->bpf_offloaded) {
+		VIRTNET_EA(bpf->extack, "TC program is already loaded");
+		return -EBUSY;
+	}
+
+	return virtnet_bpf_offload(vi, bpf->prog, nsim_xdp_offload_active(ns));
+}
+
+static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+{
+	int err;
+
+	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
+		VIRTNET_EA(bpf->extack, "program loaded with different flags");
+		return -EBUSY;
+	}
+
+	if (!vi->bpf_xdpoffload_accept) {
+		VIRTNET_EA(bpf->extack, "XDP offload disabled in DebugFS");
+		return -EOPNOTSUPP;
+	}
+
+	err = virtnet_xdp_offload_prog(ns, bpf);
+	if (err)
+		return err;
+
+	if (vi->xdp_prog)
+		bpf_prog_put(vi->xdp_prog);
+
+	vi->xdp_prog = bpf->prog;
+	vi->xdp_flags = bpf->flags;
+
+	if (!bpf->prog)
+		vi->xdp_prog_mode = XDP_ATTACHED_NONE;
+	else if (bpf->command == XDP_SETUP_PROG)
+		vi->xdp_prog_mode = XDP_ATTACHED_DRV;
+	else
+		vi->xdp_prog_mode = XDP_ATTACHED_HW;
+
+	return 0;
+}
+
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
@@ -2486,9 +2595,16 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:
+		bpf->prog_attached = vi->xdp_prog_mode;
 		bpf->prog_id = virtnet_xdp_query(dev);
-		bpf->prog_attached = !!bpf->prog_id;
+		bpf->prog_flags = vi->xdp_prog ? vi->xdp_flags : 0;
 		return 0;
+	case XDP_SETUP_PROG_HW:
+		err = virtnet_setup_prog_hw_checks(ns, bpf);
+		if (err)
+			return err;
+
+		return virtnet_xdp_set_prog(ns, bpf);
 	default:
 		return -EINVAL;
 	}
