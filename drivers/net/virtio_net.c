@@ -2346,10 +2346,10 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
 	switch (bpf->command) {
 	case XDP_SETUP_PROG:
-		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
+		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:
-		xdp->prog_id = virtnet_xdp_query(dev);
-		xdp->prog_attached = !!xdp->prog_id;
+		bpf->prog_id = virtnet_xdp_query(dev);
+		bpf->prog_attached = !!bpf->prog_id;
 		return 0;
 	default:
 		return -EINVAL;
