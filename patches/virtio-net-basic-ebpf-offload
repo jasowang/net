@@ -1,5 +1,5 @@
 Bottom: e7d8d4df7cfec3586065102aa061a60be0706578
-Top:    f334ecbcee46778e1a438b2bdf1ed15d21b9451f
+Top:    29fd17a6c13a6a13140098af90e526d8ce673bb3
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:11:53 +0800
 
@@ -11,10 +11,18 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 9a9845c..4507714 100644
+index 9a9845c..8089c80 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
-@@ -223,6 +223,17 @@ struct virtnet_info {
+@@ -33,6 +33,7 @@
+ #include <linux/netdevice.h>
+ #include <linux/pci.h>
+ #include <linux/debugfs.h>
++#include <linux/bpf_verifier.h>
+ #include <net/route.h>
+ #include <net/xdp.h>
+ #include <net/net_failover.h>
+@@ -223,6 +224,17 @@ struct virtnet_info {
  	struct failover *failover;
  
  	struct dentry *ddir;
@@ -32,7 +40,7 @@ index 9a9845c..4507714 100644
  };
  
  struct padded_vnet_hdr {
-@@ -238,6 +249,15 @@ struct padded_vnet_hdr {
+@@ -238,6 +250,15 @@ struct padded_vnet_hdr {
  #define DRV_NAME "virtio-net"
  struct dentry *virtnet_ddir;
  
@@ -48,7 +56,50 @@ index 9a9845c..4507714 100644
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2372,6 +2392,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+@@ -2342,9 +2363,42 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+ 	return 0;
+ }
+ 
++static int
++virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
++			int prev_insn)
++{
++	struct virtnet_bpf_bound_prog *state;
++
++	state = env->prog->aux->offload->dev_priv;
++	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
++		msleep(state->vi->bpf_bind_verifier_delay);
++
++	if (insn_idx == env->prog->len - 1)
++		pr_vlog(env, "Hello from virtio-net!\n");
++
++	return 0;
++}
++
++static const struct bpf_prog_offload_ops virtnet_bpf_analyzer_ops = {
++	.insn_hook = virtnet_bpf_verify_insn,
++};
++
+ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
+ {
++	struct virtnet_info *vi;
++	int err;
++
+ 	switch (bpf->command) {
++	case BPF_OFFLOAD_VERIFIER_PREP:
++		if (!vi->bpf_bind_accept)
++			return -EOPNOTSUPP;
++
++		err = virtnet_bpf_create_prog(vi, bpf->verifier.prog);
++		if (err)
++			return err;
++
++		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
++		return 0;
+ 	case XDP_SETUP_PROG:
+ 		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
+ 	case XDP_QUERY_PROG:
+@@ -2372,6 +2426,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -83,7 +134,7 @@ index 9a9845c..4507714 100644
  static int virtnet_init(struct net_device *dev)
  {
  	struct virtnet_info *vi = netdev_priv(dev);
-@@ -2380,7 +2428,7 @@ static int virtnet_init(struct net_device *dev)
+@@ -2380,7 +2462,7 @@ static int virtnet_init(struct net_device *dev)
  	if (IS_ERR_OR_NULL(vi->ddir))
  		return -ENOMEM;
  
