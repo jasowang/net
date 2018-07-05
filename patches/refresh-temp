@@ -1,0 +1,57 @@
+Bottom: 955d32553e5375fa5d23cd3aaea3a79d4fef6bec
+Top:    0248c35a9bb009e90b0833384e4f4edb633f5a98
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-05 16:02:15 +0800
+
+Refresh of virtio-net-debugfs-for
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 53085c6..1526014 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -32,6 +32,7 @@
+ #include <linux/filter.h>
+ #include <linux/netdevice.h>
+ #include <linux/pci.h>
++#include <linux/debugfs.h>
+ #include <net/route.h>
+ #include <net/xdp.h>
+ #include <net/net_failover.h>
+@@ -232,6 +233,9 @@ struct padded_vnet_hdr {
+ 	char padding[4];
+ };
+ 
++#define DRV_NAME "virtio-net"
++struct dentry *virtnet_ddir;
++
+ /* Converting between virtqueue no. and kernel tx/rx queue no.
+  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
+  */
+@@ -3101,6 +3105,10 @@ static __init int virtio_net_driver_init(void)
+ {
+ 	int ret;
+ 
++	virtnet_ddir = debugfs_create_dir(DRV_NAME, NULL);
++	if (IS_ERR_OR_NULL(virtnet_ddir))
++		return -ENOMEM;
++
+ 	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN, "virtio/net:online",
+ 				      virtnet_cpu_online,
+ 				      virtnet_cpu_down_prep);
+@@ -3121,6 +3129,7 @@ static __init int virtio_net_driver_init(void)
+ err_dead:
+ 	cpuhp_remove_multi_state(virtionet_online);
+ out:
++	debugfs_remove_recursive(virtnet_ddir);
+ 	return ret;
+ }
+ module_init(virtio_net_driver_init);
+@@ -3130,6 +3139,7 @@ static __exit void virtio_net_driver_exit(void)
+ 	unregister_virtio_driver(&virtio_net_driver);
+ 	cpuhp_remove_multi_state(CPUHP_VIRT_NET_DEAD);
+ 	cpuhp_remove_multi_state(virtionet_online);
++	debugfs_remove_recursive(virtnet_ddir);
+ }
+ module_exit(virtio_net_driver_exit);
