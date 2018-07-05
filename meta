@@ -1,11 +1,10 @@
 Version: 1
-Previous: 1738a30b6365f954a38bb10b14f5f1a84e4cdd09
-Head: b880d63219873396f4881fef31c58c19765713b1
+Previous: 5f135175083d489fcdc11a947081c6130fc6b63b
+Head: d7ff5bee05a96492eaf9afac65e1de1d3b9f4c56
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
   virtio-net-rename-virtnet_xdp: b92261bd92ca0d86abb9608e779c46b255b075d2
   virtio-net-store-xdp_prog-in: 5dba37b3e9d553ecb3cf3224d958a0194238d4c1
-  virtio-net-basic-ebpf-offload: 106601727ede5800a33b272fd84b8f14b7be9ba8
-  refresh-temp: b880d63219873396f4881fef31c58c19765713b1
+  virtio-net-basic-ebpf-offload: d7ff5bee05a96492eaf9afac65e1de1d3b9f4c56
 Unapplied:
 Hidden:
