@@ -2527,6 +2527,9 @@ static int virtnet_xdp_offload_prog(struct virtnet_info *vi,
 
 static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 {
+	struct virtio_device *vdev = vi->vdev;
+	struct bpf_prog *prog = bpf->prog;
+	struct scatterlist sg;
 	int err;
 
 	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
@@ -2543,9 +2546,19 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	if (err)
 		return err;
 
-	err = virtnet_xdp_set(vi->dev, bpf->prog, bpf->extack);
+	err = virtnet_xdp_set(vi->dev, prog, bpf->extack);
 	if (err)
 		return err;
+
+	sg_init_one(&sg, prog->insnsi, prog->len * sizeof(prog->insnsi[0]));
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
+				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
+				  &sg)) {
+		dev_warn(&vdev->dev, "Failed to set bpf offload prog\n");
+		err = -EFAULT;
+		return err;
+	}
+	printk("offload to host successfuly!\n");
 
 	vi->xdp_flags = bpf->flags;
 
