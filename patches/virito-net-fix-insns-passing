@@ -1,0 +1,11 @@
+Bottom: 1836a29910c30d3ff6e0f6c4f08f1c0ebd17f0c0
+Top:    1836a29910c30d3ff6e0f6c4f08f1c0ebd17f0c0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-06 17:25:50 +0800
+
+virito-net: fix insns passing
+
+
+---
+
+
