@@ -1,0 +1,97 @@
+Bottom: 39f09888e86a2e7450d82940835481177cb66b87
+Top:    200478d0821560c14814d207a47356c3655dc43b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-06 21:15:19 +0800
+
+Refresh of tuntap-support-xdp-offloading
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8add2c8..7c49469 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1106,16 +1106,26 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	if (len == 0 || pskb_trim(skb, len))
+ 		goto drop;
+ 
++	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
++		goto drop;
++
+ 	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+ 	if (xdp_prog) {
+-		int ret = do_xdp_generic(xdp_prog->prog, skb);
++		struct sk_buff *nskb;
++
++		if (skb_shared(skb)) {
++			nskb = skb_copy(skb, GFP_ATOMIC);
++			if (!nskb)
++				goto drop;
++			kfree_skb(skb);
++		} else
++			nskb = skb;
++
++ 		int ret = do_xdp_generic(xdp_prog->prog, nskb);
+ 		if (ret != XDP_PASS)
+-			goto drop;
++			goto out;
+ 	}
+ 
+-	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
+-		goto drop;
+-
+ 	skb_tx_timestamp(skb);
+ 
+ 	/* Orphan the skb - required as we might hang on to it
+@@ -1137,9 +1147,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	return NETDEV_TX_OK;
+ 
+ drop:
+-	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+ 	skb_tx_error(skb);
+ 	kfree_skb(skb);
++out:
++	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+ 	rcu_read_unlock();
+ 	return NET_XMIT_DROP;
+ }
+@@ -2852,7 +2863,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+ }
+ 
+ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+-			void __user *data)
++			void __user *data, int type)
+ {
+ 	struct bpf_prog *prog;
+ 	int fd;
+@@ -2863,7 +2874,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+ 	if (fd == -1) {
+ 		prog = NULL;
+ 	} else {
+-		prog = bpf_prog_get_type(fd, BPF_PROG_TYPE_SOCKET_FILTER);
++		prog = bpf_prog_get_type(fd, type);
+ 		if (IS_ERR(prog))
+ 			return PTR_ERR(prog);
+ 	}
+@@ -3160,15 +3171,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 		break;
+ 
+ 	case TUNSETSTEERINGEBPF:
+-		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
++		ret = tun_set_ebpf(tun, &tun->steering_prog, argp,
++				   BPF_PROG_TYPE_SOCKET_FILTER);
+ 		break;
+ 
+ 	case TUNSETFILTEREBPF:
+-		ret = tun_set_ebpf(tun, &tun->filter_prog, argp);
++		ret = tun_set_ebpf(tun, &tun->filter_prog, argp,
++				   BPF_PROG_TYPE_SOCKET_FILTER);
+ 		break;
+ 
+ 	case TUNSETOFFLOADEDXDP:
+-		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp);
++		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp,
++				   BPF_PROG_TYPE_XDP);
+ 		break;
+ 
+ 	default:
