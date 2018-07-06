@@ -1,5 +1,5 @@
 Bottom: 102df5b4e34ff475c1dc594ef47dfde8f2292d58
-Top:    b8c6aa510656df009daa7ca8a13dba262027da73
+Top:    b20eedcb27496313e0a8d12d1871d6595007bf9d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-05 16:11:53 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index 56813ce..b9506d1 100644
+index 56813ce..2134f3b 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -33,6 +33,7 @@
@@ -66,7 +66,7 @@ index 56813ce..b9506d1 100644
  /* Converting between virtqueue no. and kernel tx/rx queue no.
   * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
   */
-@@ -2333,15 +2364,239 @@ static u32 virtnet_xdp_query(struct net_device *dev)
+@@ -2333,15 +2364,238 @@ static u32 virtnet_xdp_query(struct net_device *dev)
  	return 0;
  }
  
@@ -249,10 +249,10 @@ index 56813ce..b9506d1 100644
 +	if (err)
 +		return err;
 +
-+	if (vi->xdp_prog)
-+		bpf_prog_put(vi->xdp_prog);
++	err = virtnet_xdp_set(vi->dev, bpf->prog, bpf->extack);
++	if (err)
++		return err;
 +
-+	vi->xdp_prog = bpf->prog;
 +	vi->xdp_flags = bpf->flags;
 +
 +	if (!bpf->prog)
@@ -302,12 +302,11 @@ index 56813ce..b9506d1 100644
 +		err = virtnet_setup_prog_hw_checks(vi, bpf);
 +		if (err)
 +			return err;
-+
 +		return virtnet_xdp_set_prog(vi, bpf);
  	default:
  		return -EINVAL;
  	}
-@@ -2363,6 +2618,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
+@@ -2363,6 +2617,34 @@ static int virtnet_get_phys_port_name(struct net_device *dev, char *buf,
  	return 0;
  }
  
@@ -342,7 +341,7 @@ index 56813ce..b9506d1 100644
  static int virtnet_init(struct net_device *dev)
  {
  	struct virtnet_info *vi = netdev_priv(dev);
-@@ -2371,7 +2654,7 @@ static int virtnet_init(struct net_device *dev)
+@@ -2371,7 +2653,7 @@ static int virtnet_init(struct net_device *dev)
  	if (IS_ERR_OR_NULL(vi->ddir))
  		return -ENOMEM;
  
