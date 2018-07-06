@@ -245,6 +245,7 @@ struct tun_struct {
 	struct bpf_prog __rcu *xdp_prog;
 	struct tun_prog __rcu *steering_prog;
 	struct tun_prog __rcu *filter_prog;
+	struct tun_prog __rcu *offloaded_xdp_prog;
 	struct ethtool_link_ksettings link_ksettings;
 };
 
@@ -1074,6 +1075,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct tun_struct *tun = netdev_priv(dev);
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
+	struct tun_prog *xdp_prog;
 	int len = skb->len;
 
 	rcu_read_lock();
@@ -1103,6 +1105,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	len = run_ebpf_filter(tun, skb, len);
 	if (len == 0 || pskb_trim(skb, len))
 		goto drop;
+
+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+	if (xdp_prog) {
+		int ret = do_xdp_generic(xdp_prog->prog, skb);
+		if (ret != XDP_PASS)
+			goto drop;
+	}
 
 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
 		goto drop;
@@ -2282,6 +2291,7 @@ static void tun_free_netdev(struct net_device *dev)
 	security_tun_dev_free_security(tun->security);
 	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
 	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
+	__tun_set_ebpf(tun, &tun->offloaded_xdp_prog, NULL);
 }
 
 static void tun_setup(struct net_device *dev)
@@ -3155,6 +3165,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 
 	case TUNSETFILTEREBPF:
 		ret = tun_set_ebpf(tun, &tun->filter_prog, argp);
+		break;
+
+	case TUNSETOFFLOADEDXDP:
+		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp);
 		break;
 
 	default:
