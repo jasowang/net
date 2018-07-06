@@ -2550,6 +2550,8 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	if (err)
 		return err;
 
+	printk("prog->len %d total %d\n",
+		prog->len, prog->len * sizeof(prog->insnsi[0]));
 	sg_init_one(&sg, prog->insnsi, prog->len * sizeof(prog->insnsi[0]));
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
 				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
