@@ -245,6 +245,7 @@ struct tun_struct {
 	struct bpf_prog __rcu *xdp_prog;
 	struct tun_prog __rcu *steering_prog;
 	struct tun_prog __rcu *filter_prog;
+	struct tun_prog __rcu *offloaded_xdp_prog;
 	struct ethtool_link_ksettings link_ksettings;
 };
 
@@ -1068,6 +1069,63 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
 	return len;
 }
 
+static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
+{
+	struct sk_buff *nskb;
+
+	/* TODO: if the program won't modify the packet, avoid the
+	 * skb_copy() here */
+	if (skb_shared(skb) || skb_cloned(skb)) {
+		nskb = skb_copy(skb, GFP_ATOMIC);
+		return nskb;
+	}
+
+	return skb;
+}
+
+static u32 tun_do_xdp_offload_generic(struct tun_struct *tun,
+				      struct sk_buff *skb)
+{
+	struct tun_prog *xdp_prog;
+	struct xdp_buff xdp;
+	u32 act = XDP_PASS;
+
+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+	if (xdp_prog) {
+		skb = tun_prepare_xdp_skb(skb);
+		if (!skb) {
+			act = XDP_DROP;
+			kfree_skb(skb);
+			goto drop;
+		}
+
+		act = do_xdp_generic_core(skb, &xdp, xdp_prog->prog);
+		switch (act) {
+		case XDP_TX:
+			netif_receive_skb(skb);
+			break;
+		case XDP_PASS:
+			break;
+		case XDP_REDIRECT:
+			/* fall through */
+			kfree_skb(skb);
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto drop;
+		}
+	}
+
+	return act;
+drop:
+	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+	return act;
+}
+
 /* Net device start xmit */
 static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
@@ -1075,6 +1133,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
 	int len = skb->len;
+	u32 act;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -1116,6 +1175,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
+	act = tun_do_xdp_offload_generic(tun, skb);
+	if (act != XDP_PASS)
+		goto out;
+
 	if (ptr_ring_produce(&tfile->tx_ring, skb))
 		goto drop;
 
@@ -1128,9 +1191,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	return NETDEV_TX_OK;
 
 drop:
-	this_cpu_inc(tun->pcpu_stats->tx_dropped);
 	skb_tx_error(skb);
 	kfree_skb(skb);
+out:
+	this_cpu_inc(tun->pcpu_stats->tx_dropped);
 	rcu_read_unlock();
 	return NET_XMIT_DROP;
 }
@@ -2282,6 +2346,7 @@ static void tun_free_netdev(struct net_device *dev)
 	security_tun_dev_free_security(tun->security);
 	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
 	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
+	__tun_set_ebpf(tun, &tun->offloaded_xdp_prog, NULL);
 }
 
 static void tun_setup(struct net_device *dev)
@@ -2842,7 +2907,7 @@ unlock:
 }
 
 static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
-			void __user *data)
+			void __user *data, int type)
 {
 	struct bpf_prog *prog;
 	int fd;
@@ -2853,7 +2918,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
 	if (fd == -1) {
 		prog = NULL;
 	} else {
-		prog = bpf_prog_get_type(fd, BPF_PROG_TYPE_SOCKET_FILTER);
+		prog = bpf_prog_get_type(fd, type);
 		if (IS_ERR(prog))
 			return PTR_ERR(prog);
 	}
@@ -3150,11 +3215,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case TUNSETSTEERINGEBPF:
-		ret = tun_set_ebpf(tun, &tun->steering_prog, argp);
+		ret = tun_set_ebpf(tun, &tun->steering_prog, argp,
+				   BPF_PROG_TYPE_SOCKET_FILTER);
 		break;
 
 	case TUNSETFILTEREBPF:
-		ret = tun_set_ebpf(tun, &tun->filter_prog, argp);
+		ret = tun_set_ebpf(tun, &tun->filter_prog, argp,
+				   BPF_PROG_TYPE_SOCKET_FILTER);
+		break;
+
+	case TUNSETOFFLOADEDXDP:
+		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp,
+				   BPF_PROG_TYPE_XDP);
 		break;
 
 	default:
