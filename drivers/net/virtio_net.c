@@ -163,6 +163,7 @@ struct control_buf {
 	u8 allmulti;
 	__virtio16 vid;
 	__virtio64 offloads;
+	struct bpf_insn insns[4096];
 };
 
 struct virtnet_info {
@@ -2530,7 +2531,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	struct virtio_device *vdev = vi->vdev;
 	struct bpf_prog *prog = bpf->prog;
 	struct scatterlist sg;
-	int err;
+	int err, i;
 
 	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
 		VIRTNET_EA(bpf->extack, "program loaded with different flags");
@@ -2552,7 +2553,14 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 
 	printk("prog->len %d total %d\n",
 		prog->len, prog->len * sizeof(prog->insnsi[0]));
-	sg_init_one(&sg, prog->insnsi, prog->len * sizeof(prog->insnsi[0]));
+
+	for (i = 0; i < prog->len; i++)
+		printk("insn %d opcode %x\n", i, prog->insnsi[i].code);
+
+	memcpy(vi->ctrl->insns, prog->insnsi,
+	       prog->len * sizeof(prog->insnsi[0]));
+	printk("ctl addr %p prog addr %p\n", &vi->ctrl->hdr, prog->insnsi);
+	sg_init_one(&sg, vi->ctrl->insns, prog->len * sizeof(prog->insnsi[0]));
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
 				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
 				  &sg)) {
