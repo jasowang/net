@@ -5,6 +5,8 @@ Date:   2018-07-06 17:39:00 +0800
 
 tuntap: support XDP offloading from guest
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
