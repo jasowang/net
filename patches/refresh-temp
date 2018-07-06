@@ -1,0 +1,177 @@
+Bottom: cff8113ba4e59ff3be2b934f239f6499fde57c56
+Top:    fbc46518d9eb9964c260670b2d6cfc024032ff81
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-06 15:56:56 +0800
+
+Refresh of bpf-verifier-debug
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 7c94791..7491c05 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2550,6 +2550,8 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+ 	if (err)
+ 		return err;
+ 
++	printk("prog->len %d total %d\n",
++		prog->len, prog->len * sizeof(prog->insnsi[0]));
+ 	sg_init_one(&sg, prog->insnsi, prog->len * sizeof(prog->insnsi[0]));
+ 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
+ 				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
+diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
+index d10ecd7..0f55f79 100644
+--- a/kernel/bpf/syscall.c
++++ b/kernel/bpf/syscall.c
+@@ -1271,60 +1271,84 @@ static int bpf_prog_load(union bpf_attr *attr)
+ 	char license[128];
+ 	bool is_gpl;
+ 
+-	if (CHECK_ATTR(BPF_PROG_LOAD))
++	if (CHECK_ATTR(BPF_PROG_LOAD)) {
++		printk("1\n");
+ 		return -EINVAL;
++	}
+ 
+-	if (attr->prog_flags & ~BPF_F_STRICT_ALIGNMENT)
++	if (attr->prog_flags & ~BPF_F_STRICT_ALIGNMENT) {
++		printk("2\n");
+ 		return -EINVAL;
++	}
+ 
+ 	/* copy eBPF program license from user space */
+ 	if (strncpy_from_user(license, u64_to_user_ptr(attr->license),
+-			      sizeof(license) - 1) < 0)
++				sizeof(license) - 1) < 0) {
++		printk("3\n");
+ 		return -EFAULT;
++	}
+ 	license[sizeof(license) - 1] = 0;
+ 
+ 	/* eBPF programs must be GPL compatible to use GPL-ed functions */
+ 	is_gpl = license_is_gpl_compatible(license);
+ 
+-	if (attr->insn_cnt == 0 || attr->insn_cnt > BPF_MAXINSNS)
++	if (attr->insn_cnt == 0 || attr->insn_cnt > BPF_MAXINSNS) {
++		printk("4\n");
+ 		return -E2BIG;
++	}
+ 
+ 	if (type == BPF_PROG_TYPE_KPROBE &&
+-	    attr->kern_version != LINUX_VERSION_CODE)
++		attr->kern_version != LINUX_VERSION_CODE) {
++		printk("5\n");
+ 		return -EINVAL;
++	}
+ 
+ 	if (type != BPF_PROG_TYPE_SOCKET_FILTER &&
+ 	    type != BPF_PROG_TYPE_CGROUP_SKB &&
+-	    !capable(CAP_SYS_ADMIN))
++		!capable(CAP_SYS_ADMIN)) {
++		printk("6\n");
+ 		return -EPERM;
++	}
+ 
+ 	bpf_prog_load_fixup_attach_type(attr);
+-	if (bpf_prog_load_check_attach_type(type, attr->expected_attach_type))
++	if (bpf_prog_load_check_attach_type(type,
++						attr->expected_attach_type))
++	{
++		printk("7\n");
+ 		return -EINVAL;
++	}
+ 
+ 	/* plain bpf_prog allocation */
+ 	prog = bpf_prog_alloc(bpf_prog_size(attr->insn_cnt), GFP_USER);
+-	if (!prog)
++	if (!prog) {
++		printk("8\n");
+ 		return -ENOMEM;
++	}
+ 
+ 	prog->expected_attach_type = attr->expected_attach_type;
+ 
+ 	prog->aux->offload_requested = !!attr->prog_ifindex;
+ 
+ 	err = security_bpf_prog_alloc(prog->aux);
+-	if (err)
++	if (err) {
++		printk("9\n");
+ 		goto free_prog_nouncharge;
++	}
+ 
+ 	err = bpf_prog_charge_memlock(prog);
+-	if (err)
++	if (err) {
++		printk("10\n");
+ 		goto free_prog_sec;
++	}
+ 
+ 	prog->len = attr->insn_cnt;
+ 
+ 	err = -EFAULT;
+ 	if (copy_from_user(prog->insns, u64_to_user_ptr(attr->insns),
+-			   bpf_prog_insn_size(prog)) != 0)
++				bpf_prog_insn_size(prog)) != 0) {
++		printk("11\n");
+ 		goto free_prog;
++	}
+ 
+ 	prog->orig_prog = NULL;
+ 	prog->jited = 0;
+@@ -1334,35 +1358,48 @@ static int bpf_prog_load(union bpf_attr *attr)
+ 
+ 	if (bpf_prog_is_dev_bound(prog->aux)) {
+ 		err = bpf_prog_offload_init(prog, attr);
+-		if (err)
++		if (err) {
++			printk("12\n");
+ 			goto free_prog;
++		}
+ 	}
+ 
+ 	/* find program type: socket_filter vs tracing_filter */
+ 	err = find_prog_type(type, prog);
+-	if (err < 0)
++	if (err < 0) {
++		printk("13\n");
+ 		goto free_prog;
++	}
+ 
+ 	prog->aux->load_time = ktime_get_boot_ns();
+ 	err = bpf_obj_name_cpy(prog->aux->name, attr->prog_name);
+-	if (err)
++	if (err) {
++		printk("14\n");
+ 		goto free_prog;
++	}
+ 
+ 	/* run eBPF verifier */
+ 	err = bpf_check(&prog, attr);
+-	if (err < 0)
++	if (err < 0) {
++		printk("15\n");
+ 		goto free_used_maps;
++	}
+ 
+ 	prog = bpf_prog_select_runtime(prog, &err);
+-	if (err < 0)
++	if (err < 0) {
++		printk("16\n");
+ 		goto free_used_maps;
++	}
+ 
+ 	err = bpf_prog_alloc_id(prog);
+-	if (err)
++	if (err) {
++		printk("17\n");
+ 		goto free_used_maps;
++	}
+ 
+ 	err = bpf_prog_new_fd(prog);
+ 	if (err < 0) {
++		printk("18\n");
+ 		/* failed to allocate fd.
+ 		 * bpf_prog_put() is needed because the above
+ 		 * bpf_prog_alloc_id() has published the prog
