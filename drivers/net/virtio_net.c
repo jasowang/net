@@ -2543,10 +2543,10 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	if (err)
 		return err;
 
-	if (vi->xdp_prog)
-		bpf_prog_put(vi->xdp_prog);
+	err = virtnet_xdp_set(vi->dev, bpf->prog, bpf->extack);
+	if (err)
+		return err;
 
-	vi->xdp_prog = bpf->prog;
 	vi->xdp_flags = bpf->flags;
 
 	if (!bpf->prog)
@@ -2595,7 +2595,6 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 		err = virtnet_setup_prog_hw_checks(vi, bpf);
 		if (err)
 			return err;
-
 		return virtnet_xdp_set_prog(vi, bpf);
 	default:
 		return -EINVAL;
