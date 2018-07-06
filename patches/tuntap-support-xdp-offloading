@@ -1,5 +1,5 @@
 Bottom: 874eff7842dbdeb251567b9b0eda2345571b910d
-Top:    874eff7842dbdeb251567b9b0eda2345571b910d
+Top:    39f09888e86a2e7450d82940835481177cb66b87
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-06 17:39:00 +0800
 
@@ -10,4 +10,68 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index a192a01..8add2c8 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -245,6 +245,7 @@ struct tun_struct {
+ 	struct bpf_prog __rcu *xdp_prog;
+ 	struct tun_prog __rcu *steering_prog;
+ 	struct tun_prog __rcu *filter_prog;
++	struct tun_prog __rcu *offloaded_xdp_prog;
+ 	struct ethtool_link_ksettings link_ksettings;
+ };
+ 
+@@ -1074,6 +1075,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	struct tun_struct *tun = netdev_priv(dev);
+ 	int txq = skb->queue_mapping;
+ 	struct tun_file *tfile;
++	struct tun_prog *xdp_prog;
+ 	int len = skb->len;
+ 
+ 	rcu_read_lock();
+@@ -1104,6 +1106,13 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	if (len == 0 || pskb_trim(skb, len))
+ 		goto drop;
+ 
++	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
++	if (xdp_prog) {
++		int ret = do_xdp_generic(xdp_prog->prog, skb);
++		if (ret != XDP_PASS)
++			goto drop;
++	}
++
+ 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
+ 		goto drop;
+ 
+@@ -2282,6 +2291,7 @@ static void tun_free_netdev(struct net_device *dev)
+ 	security_tun_dev_free_security(tun->security);
+ 	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
+ 	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
++	__tun_set_ebpf(tun, &tun->offloaded_xdp_prog, NULL);
+ }
+ 
+ static void tun_setup(struct net_device *dev)
+@@ -3157,6 +3167,10 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+ 		ret = tun_set_ebpf(tun, &tun->filter_prog, argp);
+ 		break;
+ 
++	case TUNSETOFFLOADEDXDP:
++		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp);
++		break;
++
+ 	default:
+ 		ret = -EINVAL;
+ 		break;
+diff --git a/include/uapi/linux/if_tun.h b/include/uapi/linux/if_tun.h
+index ee432cd..98602d5 100644
+--- a/include/uapi/linux/if_tun.h
++++ b/include/uapi/linux/if_tun.h
+@@ -59,6 +59,7 @@
+ #define TUNGETVNETBE _IOR('T', 223, int)
+ #define TUNSETSTEERINGEBPF _IOR('T', 224, int)
+ #define TUNSETFILTEREBPF _IOR('T', 225, int)
++#define TUNSETOFFLOADEDXDP _IOR('T', 226, int)
+ 
+ /* TUNSETIFF ifr flags */
+ #define IFF_TUN		0x0001
