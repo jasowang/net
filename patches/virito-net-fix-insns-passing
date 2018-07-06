@@ -1,5 +1,5 @@
 Bottom: 1836a29910c30d3ff6e0f6c4f08f1c0ebd17f0c0
-Top:    1836a29910c30d3ff6e0f6c4f08f1c0ebd17f0c0
+Top:    874eff7842dbdeb251567b9b0eda2345571b910d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-06 17:25:50 +0800
 
@@ -10,4 +10,124 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index 7491c05..e192594 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -163,6 +163,7 @@ struct control_buf {
+ 	u8 allmulti;
+ 	__virtio16 vid;
+ 	__virtio64 offloads;
++	struct bpf_insn insns[4096];
+ };
+ 
+ struct virtnet_info {
+@@ -2530,7 +2531,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+ 	struct virtio_device *vdev = vi->vdev;
+ 	struct bpf_prog *prog = bpf->prog;
+ 	struct scatterlist sg;
+-	int err;
++	int err, i;
+ 
+ 	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
+ 		VIRTNET_EA(bpf->extack, "program loaded with different flags");
+@@ -2552,7 +2553,14 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+ 
+ 	printk("prog->len %d total %d\n",
+ 		prog->len, prog->len * sizeof(prog->insnsi[0]));
+-	sg_init_one(&sg, prog->insnsi, prog->len * sizeof(prog->insnsi[0]));
++
++	for (i = 0; i < prog->len; i++)
++		printk("insn %d opcode %x\n", i, prog->insnsi[i].code);
++
++	memcpy(vi->ctrl->insns, prog->insnsi,
++	       prog->len * sizeof(prog->insnsi[0]));
++	printk("ctl addr %p prog addr %p\n", &vi->ctrl->hdr, prog->insnsi);
++	sg_init_one(&sg, vi->ctrl->insns, prog->len * sizeof(prog->insnsi[0]));
+ 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
+ 				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
+ 				  &sg)) {
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 814b395..074b418 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -344,6 +344,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
+ 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+ 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
++			printk("out desc.addr %llx desc.len %d\n", desc[i].addr, desc[i].len);
+ 			prev = i;
+ 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
+ 		}
+@@ -357,6 +358,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
+ 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
+ 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+ 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
++			printk("in desc.addr %llx desc.len %d\n", desc[i].addr, desc[i].len);
+ 			prev = i;
+ 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
+ 		}
+@@ -463,6 +465,7 @@ int virtqueue_add_sgs(struct virtqueue *_vq,
+ 		for (sg = sgs[i]; sg; sg = sg_next(sg))
+ 			total_sg++;
+ 	}
++	printk("total sgs %d\n", total_sg);
+ 	return virtqueue_add(_vq, sgs, total_sg, out_sgs, in_sgs,
+ 			     data, NULL, gfp);
+ }
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index 19a9711..cd7487f 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -5871,16 +5871,20 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 	 * allocate/free it every time bpf_check() is called
+ 	 */
+ 	env = kzalloc(sizeof(struct bpf_verifier_env), GFP_KERNEL);
+-	if (!env)
++	if (!env) {
++		DBG();
+ 		return -ENOMEM;
++	}
+ 	log = &env->log;
+ 
+ 	env->insn_aux_data =
+ 		vzalloc(array_size(sizeof(struct bpf_insn_aux_data),
+ 				   (*prog)->len));
+ 	ret = -ENOMEM;
+-	if (!env->insn_aux_data)
++	if (!env->insn_aux_data) {
++		DBG();
+ 		goto err_free_env;
++	}
+ 	env->prog = *prog;
+ 	env->ops = bpf_verifier_ops[env->prog->type];
+ 
+@@ -5898,8 +5902,12 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 		ret = -EINVAL;
+ 		/* log attributes have to be sane */
+ 		if (log->len_total < 128 || log->len_total > UINT_MAX >> 8 ||
+-		    !log->level || !log->ubuf)
++			!log->level || !log->ubuf) {
++			printk("len_total %d UINT_MAX >> 8 %d, log->level %d log->ubuf %p\n",
++				log->len_total, UINT_MAX >> 8, log->level, log->ubuf);
++			DBG();
+ 			goto err_unlock;
++		}
+ 	}
+ 
+ 	env->strict_alignment = !!(attr->prog_flags & BPF_F_STRICT_ALIGNMENT);
+@@ -5959,6 +5967,7 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 		ret = -ENOSPC;
+ 	if (log->level && !log->ubuf) {
+ 		ret = -EFAULT;
++		DBG();
+ 		goto err_release_maps;
+ 	}
+ 
+@@ -5970,6 +5979,7 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 
+ 		if (!env->prog->aux->used_maps) {
+ 			ret = -ENOMEM;
++			DBG();
+ 			goto err_release_maps;
+ 		}
