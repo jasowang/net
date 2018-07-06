@@ -5871,16 +5871,20 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
 	 * allocate/free it every time bpf_check() is called
 	 */
 	env = kzalloc(sizeof(struct bpf_verifier_env), GFP_KERNEL);
-	if (!env)
+	if (!env) {
+		DBG();
 		return -ENOMEM;
+	}
 	log = &env->log;
 
 	env->insn_aux_data =
 		vzalloc(array_size(sizeof(struct bpf_insn_aux_data),
 				   (*prog)->len));
 	ret = -ENOMEM;
-	if (!env->insn_aux_data)
+	if (!env->insn_aux_data) {
+		DBG();
 		goto err_free_env;
+	}
 	env->prog = *prog;
 	env->ops = bpf_verifier_ops[env->prog->type];
 
@@ -5898,8 +5902,12 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
 		ret = -EINVAL;
 		/* log attributes have to be sane */
 		if (log->len_total < 128 || log->len_total > UINT_MAX >> 8 ||
-		    !log->level || !log->ubuf)
+			!log->level || !log->ubuf) {
+			printk("len_total %d UINT_MAX >> 8 %d, log->level %d log->ubuf %p\n",
+				log->len_total, UINT_MAX >> 8, log->level, log->ubuf);
+			DBG();
 			goto err_unlock;
+		}
 	}
 
 	env->strict_alignment = !!(attr->prog_flags & BPF_F_STRICT_ALIGNMENT);
@@ -5959,6 +5967,7 @@ skip_full_check:
 		ret = -ENOSPC;
 	if (log->level && !log->ubuf) {
 		ret = -EFAULT;
+		DBG();
 		goto err_release_maps;
 	}
 
@@ -5970,6 +5979,7 @@ skip_full_check:
 
 		if (!env->prog->aux->used_maps) {
 			ret = -ENOMEM;
+			DBG();
 			goto err_release_maps;
 		}
 
