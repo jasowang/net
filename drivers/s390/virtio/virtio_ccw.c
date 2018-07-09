@@ -765,6 +765,11 @@ out_free:
 	return rc;
 }
 
+static void ccw_transport_features(struct virtio_device *vdev)
+{
+	__virtio_clear_bit(vdev, VIRTIO_F_RING_PACKED);
+}
+
 static int virtio_ccw_finalize_features(struct virtio_device *vdev)
 {
 	struct virtio_ccw_device *vcdev = to_vc_device(vdev);
@@ -790,6 +795,9 @@ static int virtio_ccw_finalize_features(struct virtio_device *vdev)
 	}
 	/* Give virtio_ring a chance to accept features. */
 	vring_transport_features(vdev);
+
+	/* Give virtio_ccw a chance to accept features. */
+	ccw_transport_features(vdev);
 
 	features->index = 0;
 	features->features = cpu_to_le32((u32)vdev->features);
