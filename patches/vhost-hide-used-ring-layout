@@ -1,5 +1,5 @@
 Bottom: 5510f66da186705b4f1e30d4bd7a6ef10e669695
-Top:    50013501c4c41e834d4c507d42ca4c0f63c92884
+Top:    6c5150f426cfc3836d7a99218f91adbaa7669ebf
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-02 17:51:07 +0800
 
@@ -25,7 +25,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 03dd1de..7e4a8a7 100644
+index 03dd1de..b4378c9 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -430,15 +430,16 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -147,16 +147,13 @@ index 03dd1de..7e4a8a7 100644
  				/* They have slipped one in as we were
  				 * doing that: check again. */
  				vhost_disable_notify(&net->dev, vq);
-@@ -774,7 +775,12 @@ static void handle_rx(struct vhost_net *net)
- 			 * they refilled. */
+@@ -775,6 +776,9 @@ static void handle_rx(struct vhost_net *net)
  			goto out;
  		}
+ 		busyloop_intr = false;
 +		/* On error, stop handling until the next kick. */
 +		if (unlikely(err < 0))
 +			goto out;
-+
- 		busyloop_intr = false;
-+
  		if (nvq->rx_ring)
  			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
  		/* On overrun, truncate and discard */
