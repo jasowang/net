@@ -516,7 +516,7 @@ static void handle_tx(struct vhost_net *net)
 		busyloop_intr = false;
 		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
 					       ARRAY_SIZE(vq->iov),
-					       &out, &in);
+					       &out, &in, &busyloop_intr);
 		/* Nothing new?  Wait for eventfd to tell us they refilled. */
 		if (err == -ENOSPC) {
 			if (unlikely(busyloop_intr)) {
