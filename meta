@@ -1,6 +1,6 @@
 Version: 1
-Previous: bc72686826856fa333b45784e1762defdf16e696
-Head: 00f553660a7f524a3b913cb5cf6c5f33f9638f09
+Previous: 80f5753597ed3007f1df7cda1c0999fc889e1fd3
+Head: 52b509218f0ab5946f9cbaf5501d88f69333f0e3
 Applied:
 Unapplied:
   vhost-move-get_rx_bufs-to: f5239557c2ed81bdf7e19db1de06699bbec41981
