@@ -1,5 +1,5 @@
 Bottom: 5510f66da186705b4f1e30d4bd7a6ef10e669695
-Top:    6c5150f426cfc3836d7a99218f91adbaa7669ebf
+Top:    2acaddac00697b8ae535ce41d55be1517dd8b115
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-02 17:51:07 +0800
 
@@ -25,7 +25,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 03dd1de..b4378c9 100644
+index 03dd1de..a8c9506 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -430,15 +430,16 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -87,7 +87,7 @@ index 03dd1de..b4378c9 100644
 -			break;
 +		err = vhost_net_tx_get_vq_desc(net, vq, &used, vq->iov,
 +					       ARRAY_SIZE(vq->iov),
-+					       &out, &in);
++					       &out, &in, &busyloop_intr);
  		/* Nothing new?  Wait for eventfd to tell us they refilled. */
 -		if (head == vq->num) {
 +		if (err == -ENOSPC) {
