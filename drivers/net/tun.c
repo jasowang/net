@@ -1073,6 +1073,8 @@ static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
 {
 	struct sk_buff *nskb;
 
+	/* TODO: if the program won't modify the packet, avoid the
+	 * skb_copy() here */
 	if (skb_shared(skb) || skb_cloned(skb)) {
 		nskb = skb_copy(skb, GFP_ATOMIC);
 		return nskb;
@@ -1092,6 +1094,7 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
 		skb = tun_prepare_xdp_skb(skb);
 		if (!skb) {
 			act = XDP_DROP;
+			kfree_skb(skb);
 			goto drop;
 		}
 
@@ -1102,13 +1105,14 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
 			break;
 		case XDP_PASS:
 			break;
+		case XDP_REDIRECT:
+			/* fall through */
+			kfree_skb(skb);
 		default:
 			bpf_warn_invalid_xdp_action(act);
 			/* fall through */
 		case XDP_ABORTED:
 			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
-			/* fall through */
-		case XDP_REDIRECT:
 			/* fall through */
 		case XDP_DROP:
 			goto drop;
@@ -1118,7 +1122,6 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
 	return act;
 drop:
 	this_cpu_inc(tun->pcpu_stats->tx_dropped);
-	kfree_skb(skb);
 	return act;
 }
 
