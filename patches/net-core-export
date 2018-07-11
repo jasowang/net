@@ -5,6 +5,8 @@ Date:   2018-07-11 11:43:18 +0800
 
 net: core: export do_xdp_generic_core()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
