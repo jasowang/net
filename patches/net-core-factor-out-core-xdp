@@ -1,0 +1,11 @@
+Bottom: b0ecd471b0f25ce78f73e8e65dcc7c0ea14fa2d0
+Top:    b0ecd471b0f25ce78f73e8e65dcc7c0ea14fa2d0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-11 11:15:18 +0800
+
+net: core: factor out core XDP generic logic
+
+
+---
+
+
