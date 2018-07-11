@@ -1076,7 +1076,7 @@ static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
 	/* TODO: if the program won't modify the packet, avoid the
 	 * skb_copy() here */
 	if (skb_shared(skb) || skb_cloned(skb)) {
-		nskb = skb_copy_headerlen(skb, GFP_ATOMIC, XDP_PACKET_HEADROOM);
+		nskb = skb_copy(skb, GFP_ATOMIC);
 		return nskb;
 	}
 
