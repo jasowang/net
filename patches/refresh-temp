@@ -1,0 +1,21 @@
+Bottom: ccf8a72c8351e5ed6f764284e8776e4ef51f21e5
+Top:    7065a211e3242e27617f87239d53c44daa7477ca
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-11 13:29:55 +0800
+
+Refresh of tuntap-support-xdp-offloading
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 838604e..516dfbd 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1162,7 +1162,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
+ 		goto drop;
+ 
+-
+ 	skb_tx_timestamp(skb);
+ 
+ 	/* Orphan the skb - required as we might hang on to it
