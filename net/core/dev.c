@@ -4230,7 +4230,6 @@ static u32 do_xdp_generic_core(struct sk_buff *skb,
 	return act;
 }
 
-
 static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 				     struct xdp_buff *xdp,
 				     struct bpf_prog *xdp_prog)
