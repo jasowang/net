@@ -5,6 +5,8 @@ Date:   2018-07-11 11:23:11 +0800
 
 net: core: rename netif_receive_generic_xdp() to do_generic_xdp_core()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
