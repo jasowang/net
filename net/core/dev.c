@@ -4162,24 +4162,15 @@ static int netif_receive_generic_xdp_prepare(struct sk_buff *skb,
 	return 0;
 }
 
-static u32 netif_receive_generic_xdp(struct sk_buff *skb,
-				     struct xdp_buff *xdp,
-				     struct bpf_prog *xdp_prog)
+static u32 do_xdp_generic_core(struct sk_buff *skb,
+			       struct xdp_buff *xdp,
+			       struct bpf_prog *xdp_prog)
 {
 	struct netdev_rx_queue *rxqueue;
 	void *orig_data, *orig_data_end;
 	u32 metalen, act = XDP_DROP;
-	int hlen, off, err;
+	int hlen, off;
 	u32 mac_len;
-
-	err = netif_receive_generic_xdp_prepare(skb, xdp, xdp_prog);
-
-	if (err == -ENOTSUPP)
-		return XDP_PASS;
-	if (err) {
-		act = XDP_DROP;
-		goto do_drop;
-	}
 
 	/* The XDP program wants to see the packet starting at the MAC
 	 * header.
@@ -4232,10 +4223,31 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 		trace_xdp_exception(skb->dev, xdp_prog, act);
 		/* fall through */
 	case XDP_DROP:
-	do_drop:
 		kfree_skb(skb);
 		break;
 	}
+
+	return act;
+}
+
+
+static u32 netif_receive_generic_xdp(struct sk_buff *skb,
+				     struct xdp_buff *xdp,
+				     struct bpf_prog *xdp_prog)
+{
+	u32 act;
+	int err;
+
+	err = netif_receive_generic_xdp_prepare(skb, xdp, xdp_prog);
+
+	if (err == -ENOTSUPP)
+		return XDP_PASS;
+	if (err) {
+		kfree_skb(skb);
+		return XDP_DROP;
+	}
+
+	act = do_xdp_generic_core(skb, xdp, xdp_prog);
 
 	return act;
 }
