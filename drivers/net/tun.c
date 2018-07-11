@@ -1162,7 +1162,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
 		goto drop;
 
-
 	skb_tx_timestamp(skb);
 
 	/* Orphan the skb - required as we might hang on to it
