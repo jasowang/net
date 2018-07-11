@@ -4129,21 +4129,15 @@ static struct netdev_rx_queue *netif_get_rxqueue(struct sk_buff *skb)
 	return rxqueue;
 }
 
-static u32 netif_receive_generic_xdp(struct sk_buff *skb,
-				     struct xdp_buff *xdp,
-				     struct bpf_prog *xdp_prog)
+static int netif_receive_generic_xdp_prepare(struct sk_buff *skb,
+					     struct xdp_buff *xdp,
+					     struct bpf_prog *xdp_prog)
 {
-	struct netdev_rx_queue *rxqueue;
-	void *orig_data, *orig_data_end;
-	u32 metalen, act = XDP_DROP;
-	int hlen, off;
-	u32 mac_len;
-
 	/* Reinjected packets coming from act_mirred or similar should
 	 * not get XDP generic processing.
 	 */
 	if (skb_cloned(skb))
-		return XDP_PASS;
+		return -ENOTSUPP;
 
 	/* XDP packets must be linear and must have sufficient headroom
 	 * of XDP_PACKET_HEADROOM bytes. This is the guarantee that also
@@ -4160,9 +4154,31 @@ static u32 netif_receive_generic_xdp(struct sk_buff *skb,
 		if (pskb_expand_head(skb,
 				     hroom > 0 ? ALIGN(hroom, NET_SKB_PAD) : 0,
 				     troom > 0 ? troom + 128 : 0, GFP_ATOMIC))
-			goto do_drop;
+			return -EFAULT;
 		if (skb_linearize(skb))
-			goto do_drop;
+			return -EFAULT;
+	}
+
+	return 0;
+}
+
+static u32 netif_receive_generic_xdp(struct sk_buff *skb,
+				     struct xdp_buff *xdp,
+				     struct bpf_prog *xdp_prog)
+{
+	struct netdev_rx_queue *rxqueue;
+	void *orig_data, *orig_data_end;
+	u32 metalen, act = XDP_DROP;
+	int hlen, off, err;
+	u32 mac_len;
+
+	err = netif_receive_generic_xdp_prepare(skb, xdp, xdp_prog);
+
+	if (err == -ENOTSUPP)
+		return XDP_PASS;
+	if (err) {
+		act = XDP_DROP;
+		goto do_drop;
 	}
 
 	/* The XDP program wants to see the packet starting at the MAC
