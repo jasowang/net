@@ -1,0 +1,76 @@
+Bottom: d2eb783925a1c587317c56fbaaec9cecfbc7721f
+Top:    892b698f37a6e4373e96f20a9f15b68bfe3d4761
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-11 15:15:23 +0800
+
+Refresh of net-skbuff-introduce
+
+---
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 7601838..248e4d0 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -1035,6 +1035,8 @@ int skb_copy_ubufs(struct sk_buff *skb, gfp_t gfp_mask);
+ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t priority);
+ void skb_copy_header(struct sk_buff *new, const struct sk_buff *old);
+ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t priority);
++struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb, gfp_t priority,
++	                           int headerlen);
+ struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb, int headroom,
+ 				   gfp_t gfp_mask, bool fclone);
+ static inline struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom,
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index c4e24ac..2292d44 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -1339,9 +1339,9 @@ static inline int skb_alloc_rx_flag(const struct sk_buff *skb)
+  *	header is going to be modified. Use pskb_copy() instead.
+  */
+ 
+-struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
++static struct sk_buff *skb_copy_internal(const struct sk_buff *skb,
++					 gfp_t gfp_mask, int headerlen)
+ {
+-	int headerlen = skb_headroom(skb);
+ 	unsigned int size = skb_end_offset(skb) + skb->data_len;
+ 	struct sk_buff *n = __alloc_skb(size, gfp_mask,
+ 					skb_alloc_rx_flag(skb), NUMA_NO_NODE);
+@@ -1359,8 +1359,37 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
+ 	skb_copy_header(n, skb);
+ 	return n;
+ }
++
++/**
++ *	skb_copy	-	create private copy of an sk_buff
++ *	@skb: buffer to copy
++ *	@gfp_mask: allocation priority
++ *
++ *	Make a copy of both an &sk_buff and its data. This is used when the
++ *	caller wishes to modify the data and needs a private copy of the
++ *	data to alter. Returns %NULL on failure or the pointer to the buffer
++ *	on success. The returned buffer has a reference count of 1.
++ *
++ *	As by-product this function converts non-linear &sk_buff to linear
++ *	one, so that &sk_buff becomes completely private and caller is allowed
++ *	to modify all the data of returned buffer. This means that this
++ *	function is not recommended for use in circumstances when only
++ *	header is going to be modified. Use pskb_copy() instead.
++ */
++static struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
++{
++	return skb_copy_internal(skb, skb_headroom(skb));
++}
++EXPORT_SYMBOL(skb_copy);
++
++static struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb,
++					  gfp_t gfp_mask, int headerlen)
++{
++	return skb_copy_internal(skb, headerlen);
++}
+ EXPORT_SYMBOL(skb_copy);
+ 
++
+ /**
+  *	__pskb_copy_fclone	-  create copy of an sk_buff with private head.
+  *	@skb: buffer to copy
