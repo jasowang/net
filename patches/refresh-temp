@@ -1,0 +1,51 @@
+Bottom: 892b698f37a6e4373e96f20a9f15b68bfe3d4761
+Top:    98d26ef0481ea781934ecc7cb72f3b4c074a2a00
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-11 15:27:49 +0800
+
+Refresh of net-skbuff-introduce
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 8568cd7..6d9f3b3 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1076,7 +1076,7 @@ static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
+ 	/* TODO: if the program won't modify the packet, avoid the
+ 	 * skb_copy() here */
+ 	if (skb_shared(skb) || skb_cloned(skb)) {
+-		nskb = skb_copy(skb, GFP_ATOMIC);
++		nskb = skb_copy_headerlen(skb, GFP_ATOMIC, XDP_PACKET_HEADROOM);
+ 		return nskb;
+ 	}
+ 
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index 2292d44..6ed081d 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -1376,18 +1376,18 @@ static struct sk_buff *skb_copy_internal(const struct sk_buff *skb,
+  *	function is not recommended for use in circumstances when only
+  *	header is going to be modified. Use pskb_copy() instead.
+  */
+-static struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
++struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
+ {
+-	return skb_copy_internal(skb, skb_headroom(skb));
++	return skb_copy_internal(skb, gfp_mask, skb_headroom(skb));
+ }
+ EXPORT_SYMBOL(skb_copy);
+ 
+-static struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb,
+-					  gfp_t gfp_mask, int headerlen)
++struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb,
++				   gfp_t gfp_mask, int headerlen)
+ {
+-	return skb_copy_internal(skb, headerlen);
++	return skb_copy_internal(skb, gfp_mask, headerlen);
+ }
+-EXPORT_SYMBOL(skb_copy);
++EXPORT_SYMBOL(skb_copy_headerlen);
+ 
+ 
+ /**
