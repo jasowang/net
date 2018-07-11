@@ -1,5 +1,5 @@
 Bottom: c5e06427c0b7184642245ef489a4ae745fba57b8
-Top:    318aed061f8b53f6f197cae9c74858f639a87fa1
+Top:    ccf8a72c8351e5ed6f764284e8776e4ef51f21e5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-06 17:39:00 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a192a01..7c49469 100644
+index a192a01..838604e 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -245,6 +245,7 @@ struct tun_struct {
@@ -22,39 +22,94 @@ index a192a01..7c49469 100644
  	struct ethtool_link_ksettings link_ksettings;
  };
  
-@@ -1074,6 +1075,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
- 	struct tun_struct *tun = netdev_priv(dev);
+@@ -1068,6 +1069,59 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
+ 	return len;
+ }
+ 
++static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
++{
++	struct sk_buff *nskb;
++
++	if (skb_shared(skb) || skb_cloned(skb)) {
++		nskb = skb_copy(skb, GFP_ATOMIC);
++		return nskb;
++	}
++
++	return skb;
++}
++
++static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
++{
++	struct tun_prog *xdp_prog;
++	struct xdp_buff xdp;
++	u32 act = XDP_PASS;
++
++	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
++	if (xdp_prog) {
++		skb = tun_prepare_xdp_skb(skb);
++		if (!skb) {
++			act = XDP_DROP;
++			goto drop;
++		}
++
++		act = do_xdp_generic_core(skb, &xdp, xdp_prog->prog);
++		switch (act) {
++		case XDP_TX:
++			netif_receive_skb(skb);
++			break;
++		case XDP_PASS:
++			break;
++		default:
++			bpf_warn_invalid_xdp_action(act);
++			/* fall through */
++		case XDP_ABORTED:
++			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
++			/* fall through */
++		case XDP_REDIRECT:
++			/* fall through */
++		case XDP_DROP:
++			goto drop;
++		}
++	}
++
++	return act;
++drop:
++	this_cpu_inc(tun->pcpu_stats->tx_dropped);
++	kfree_skb(skb);
++	return act;
++}
++
+ /* Net device start xmit */
+ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ {
+@@ -1075,6 +1129,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	int txq = skb->queue_mapping;
  	struct tun_file *tfile;
-+	struct tun_prog *xdp_prog;
  	int len = skb->len;
++	u32 act;
  
  	rcu_read_lock();
-@@ -1107,6 +1109,23 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	tfile = rcu_dereference(tun->tfiles[txq]);
+@@ -1107,6 +1162,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
  		goto drop;
  
-+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
-+	if (xdp_prog) {
-+		struct sk_buff *nskb;
-+
-+		if (skb_shared(skb)) {
-+			nskb = skb_copy(skb, GFP_ATOMIC);
-+			if (!nskb)
-+				goto drop;
-+			kfree_skb(skb);
-+		} else
-+			nskb = skb;
-+
-+ 		int ret = do_xdp_generic(xdp_prog->prog, nskb);
-+		if (ret != XDP_PASS)
-+			goto out;
-+	}
 +
  	skb_tx_timestamp(skb);
  
  	/* Orphan the skb - required as we might hang on to it
-@@ -1128,9 +1147,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1116,6 +1172,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	nf_reset(skb);
+ 
++	act = tun_do_xdp_offload(tun, skb);
++	if (act != XDP_PASS)
++		goto out;
++
+ 	if (ptr_ring_produce(&tfile->tx_ring, skb))
+ 		goto drop;
+ 
+@@ -1128,9 +1188,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	return NETDEV_TX_OK;
  
  drop:
@@ -66,7 +121,7 @@ index a192a01..7c49469 100644
  	rcu_read_unlock();
  	return NET_XMIT_DROP;
  }
-@@ -2282,6 +2302,7 @@ static void tun_free_netdev(struct net_device *dev)
+@@ -2282,6 +2343,7 @@ static void tun_free_netdev(struct net_device *dev)
  	security_tun_dev_free_security(tun->security);
  	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
  	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
@@ -74,7 +129,7 @@ index a192a01..7c49469 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2842,7 +2863,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+@@ -2842,7 +2904,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
  }
  
  static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
@@ -83,7 +138,7 @@ index a192a01..7c49469 100644
  {
  	struct bpf_prog *prog;
  	int fd;
-@@ -2853,7 +2874,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+@@ -2853,7 +2915,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
  	if (fd == -1) {
  		prog = NULL;
  	} else {
@@ -92,7 +147,7 @@ index a192a01..7c49469 100644
  		if (IS_ERR(prog))
  			return PTR_ERR(prog);
  	}
-@@ -3150,11 +3171,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -3150,11 +3212,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
  	case TUNSETSTEERINGEBPF:
