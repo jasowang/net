@@ -1069,14 +1069,67 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
 	return len;
 }
 
+static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
+{
+	struct sk_buff *nskb;
+
+	if (skb_shared(skb) || skb_cloned(skb)) {
+		nskb = skb_copy(skb, GFP_ATOMIC);
+		return nskb;
+	}
+
+	return skb;
+}
+
+static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
+{
+	struct tun_prog *xdp_prog;
+	struct xdp_buff xdp;
+	u32 act = XDP_PASS;
+
+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+	if (xdp_prog) {
+		skb = tun_prepare_xdp_skb(skb);
+		if (!skb) {
+			act = XDP_DROP;
+			goto drop;
+		}
+
+		act = do_xdp_generic_core(skb, &xdp, xdp_prog->prog);
+		switch (act) {
+		case XDP_TX:
+			netif_receive_skb(skb);
+			break;
+		case XDP_PASS:
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
+			/* fall through */
+		case XDP_REDIRECT:
+			/* fall through */
+		case XDP_DROP:
+			goto drop;
+		}
+	}
+
+	return act;
+drop:
+	this_cpu_inc(tun->pcpu_stats->tx_dropped);
+	kfree_skb(skb);
+	return act;
+}
+
 /* Net device start xmit */
 static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct tun_struct *tun = netdev_priv(dev);
 	int txq = skb->queue_mapping;
 	struct tun_file *tfile;
-	struct tun_prog *xdp_prog;
 	int len = skb->len;
+	u32 act;
 
 	rcu_read_lock();
 	tfile = rcu_dereference(tun->tfiles[txq]);
@@ -1109,22 +1162,6 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (unlikely(skb_orphan_frags_rx(skb, GFP_ATOMIC)))
 		goto drop;
 
-	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
-	if (xdp_prog) {
-		struct sk_buff *nskb;
-
-		if (skb_shared(skb)) {
-			nskb = skb_copy(skb, GFP_ATOMIC);
-			if (!nskb)
-				goto drop;
-			kfree_skb(skb);
-		} else
-			nskb = skb;
-
- 		int ret = do_xdp_generic(xdp_prog->prog, nskb);
-		if (ret != XDP_PASS)
-			goto out;
-	}
 
 	skb_tx_timestamp(skb);
 
@@ -1134,6 +1171,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	skb_orphan(skb);
 
 	nf_reset(skb);
+
+	act = tun_do_xdp_offload(tun, skb);
+	if (act != XDP_PASS)
+		goto out;
 
 	if (ptr_ring_produce(&tfile->tx_ring, skb))
 		goto drop;
