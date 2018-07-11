@@ -5,6 +5,8 @@ Date:   2018-07-11 11:15:18 +0800
 
 net: core: factor out core XDP generic logic
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
