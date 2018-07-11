@@ -1376,18 +1376,18 @@ static struct sk_buff *skb_copy_internal(const struct sk_buff *skb,
  *	function is not recommended for use in circumstances when only
  *	header is going to be modified. Use pskb_copy() instead.
  */
-static struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
+struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 {
-	return skb_copy_internal(skb, skb_headroom(skb));
+	return skb_copy_internal(skb, gfp_mask, skb_headroom(skb));
 }
 EXPORT_SYMBOL(skb_copy);
 
-static struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb,
-					  gfp_t gfp_mask, int headerlen)
+struct sk_buff *skb_copy_headerlen(const struct sk_buff *skb,
+				   gfp_t gfp_mask, int headerlen)
 {
-	return skb_copy_internal(skb, headerlen);
+	return skb_copy_internal(skb, gfp_mask, headerlen);
 }
-EXPORT_SYMBOL(skb_copy);
+EXPORT_SYMBOL(skb_copy_headerlen);
 
 
 /**
