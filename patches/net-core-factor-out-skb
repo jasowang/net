@@ -5,6 +5,8 @@ Date:   2018-07-11 11:10:10 +0800
 
 net: core: factor out skb preparation for XDP generic
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
