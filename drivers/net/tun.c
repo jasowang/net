@@ -1377,6 +1377,7 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
 		act = bpf_prog_run_xdp(xdp_prog->prog, &xdp);
 		switch (act) {
 		case XDP_TX:
+			/* FIXME! */
 			break;
 		case XDP_PASS:
 			break;
