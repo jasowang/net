@@ -1,5 +1,5 @@
 Bottom: c5e06427c0b7184642245ef489a4ae745fba57b8
-Top:    d2eb783925a1c587317c56fbaaec9cecfbc7721f
+Top:    b3a6c0fa4a58a2be57a089838bc652df61fed092
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-06 17:39:00 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a192a01..8568cd7 100644
+index a192a01..085e276 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -245,6 +245,7 @@ struct tun_struct {
@@ -22,7 +22,7 @@ index a192a01..8568cd7 100644
  	struct ethtool_link_ksettings link_ksettings;
  };
  
-@@ -1068,6 +1069,62 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
+@@ -1068,6 +1069,63 @@ static unsigned int run_ebpf_filter(struct tun_struct *tun,
  	return len;
  }
  
@@ -40,7 +40,8 @@ index a192a01..8568cd7 100644
 +	return skb;
 +}
 +
-+static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
++static u32 tun_do_xdp_offload_generic(struct tun_struct *tun,
++				      struct sk_buff *skb)
 +{
 +	struct tun_prog *xdp_prog;
 +	struct xdp_buff xdp;
@@ -85,7 +86,7 @@ index a192a01..8568cd7 100644
  /* Net device start xmit */
  static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  {
-@@ -1075,6 +1132,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1075,6 +1133,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	int txq = skb->queue_mapping;
  	struct tun_file *tfile;
  	int len = skb->len;
@@ -93,18 +94,18 @@ index a192a01..8568cd7 100644
  
  	rcu_read_lock();
  	tfile = rcu_dereference(tun->tfiles[txq]);
-@@ -1116,6 +1174,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1116,6 +1175,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	nf_reset(skb);
  
-+	act = tun_do_xdp_offload(tun, skb);
++	act = tun_do_xdp_offload_generic(tun, skb);
 +	if (act != XDP_PASS)
 +		goto out;
 +
  	if (ptr_ring_produce(&tfile->tx_ring, skb))
  		goto drop;
  
-@@ -1128,9 +1190,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -1128,9 +1191,10 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
  	return NETDEV_TX_OK;
  
  drop:
@@ -116,7 +117,7 @@ index a192a01..8568cd7 100644
  	rcu_read_unlock();
  	return NET_XMIT_DROP;
  }
-@@ -2282,6 +2345,7 @@ static void tun_free_netdev(struct net_device *dev)
+@@ -2282,6 +2346,7 @@ static void tun_free_netdev(struct net_device *dev)
  	security_tun_dev_free_security(tun->security);
  	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
  	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
@@ -124,7 +125,7 @@ index a192a01..8568cd7 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2842,7 +2906,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+@@ -2842,7 +2907,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
  }
  
  static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
@@ -133,7 +134,7 @@ index a192a01..8568cd7 100644
  {
  	struct bpf_prog *prog;
  	int fd;
-@@ -2853,7 +2917,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+@@ -2853,7 +2918,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
  	if (fd == -1) {
  		prog = NULL;
  	} else {
@@ -142,7 +143,7 @@ index a192a01..8568cd7 100644
  		if (IS_ERR(prog))
  			return PTR_ERR(prog);
  	}
-@@ -3150,11 +3214,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -3150,11 +3215,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
  	case TUNSETSTEERINGEBPF:
