@@ -1083,7 +1083,8 @@ static struct sk_buff *tun_prepare_xdp_skb(struct sk_buff *skb)
 	return skb;
 }
 
-static u32 tun_do_xdp_offload(struct tun_struct *tun, struct sk_buff *skb)
+static u32 tun_do_xdp_offload_generic(struct tun_struct *tun,
+				      struct sk_buff *skb)
 {
 	struct tun_prog *xdp_prog;
 	struct xdp_buff xdp;
@@ -1174,7 +1175,7 @@ static netdev_tx_t tun_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	nf_reset(skb);
 
-	act = tun_do_xdp_offload(tun, skb);
+	act = tun_do_xdp_offload_generic(tun, skb);
 	if (act != XDP_PASS)
 		goto out;
 
