@@ -1361,6 +1361,42 @@ static void __tun_xdp_flush_tfile(struct tun_file *tfile)
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 }
 
+static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
+{
+	struct tun_prog *xdp_prog;
+	struct xdp_buff xdp;
+	u32 act = XDP_PASS;
+
+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+	if (xdp_prog) {
+		xdp.data_hard_start = frame;
+		xdp.data = frame->data;
+		xdp.data_end = xdp.data + frame->len;
+		xdp.data_meta = xdp.data - frame->metasize;
+
+		act = bpf_prog_run_xdp(xdp_prog->prog, &xdp);
+		switch (act) {
+		case XDP_TX:
+			break;
+		case XDP_PASS:
+			break;
+		case XDP_REDIRECT:
+			/* fall through */
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
+			/* fall through */
+		case XDP_DROP:
+			xdp_return_frame_rx_napi(frame);
+			break;
+		}
+	}
+
+	return act;
+}
+
 static int tun_xdp_xmit(struct net_device *dev, int n,
 			struct xdp_frame **frames, u32 flags)
 {
@@ -1388,10 +1424,18 @@ static int tun_xdp_xmit(struct net_device *dev, int n,
 	spin_lock(&tfile->tx_ring.producer_lock);
 	for (i = 0; i < n; i++) {
 		struct xdp_frame *xdp = frames[i];
+		u32 act;
 		/* Encode the XDP flag into lowest bit for consumer to differ
 		 * XDP buffer from sk_buff.
 		 */
 		void *frame = tun_xdp_to_ptr(xdp);
+
+		act = tun_do_xdp_offload(tun, xdp);
+		if (act != XDP_PASS) {
+			if (act != XDP_TX)
+				drops++;
+			continue;
+		}
 
 		if (__ptr_ring_produce(&tfile->tx_ring, frame)) {
 			this_cpu_inc(tun->pcpu_stats->tx_dropped);
