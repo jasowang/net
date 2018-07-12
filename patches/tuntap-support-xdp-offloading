@@ -1,5 +1,5 @@
 Bottom: c5e06427c0b7184642245ef489a4ae745fba57b8
-Top:    b3a6c0fa4a58a2be57a089838bc652df61fed092
+Top:    8dfd198b79ef4238753fcfe1490a8a0febc00634
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-06 17:39:00 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index a192a01..085e276 100644
+index a192a01..ad8abbe 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -245,6 +245,7 @@ struct tun_struct {
@@ -117,7 +117,70 @@ index a192a01..085e276 100644
  	rcu_read_unlock();
  	return NET_XMIT_DROP;
  }
-@@ -2282,6 +2346,7 @@ static void tun_free_netdev(struct net_device *dev)
+@@ -1297,6 +1361,42 @@ static void __tun_xdp_flush_tfile(struct tun_file *tfile)
+ 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
+ }
+ 
++static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
++{
++	struct tun_prog *xdp_prog;
++	struct xdp_buff xdp;
++	u32 act = XDP_PASS;
++
++	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
++	if (xdp_prog) {
++		xdp.data_hard_start = frame;
++		xdp.data = frame->data;
++		xdp.data_end = xdp.data + frame->len;
++		xdp.data_meta = xdp.data - frame->metasize;
++
++		act = bpf_prog_run_xdp(xdp_prog->prog, &xdp);
++		switch (act) {
++		case XDP_TX:
++			break;
++		case XDP_PASS:
++			break;
++		case XDP_REDIRECT:
++			/* fall through */
++		default:
++			bpf_warn_invalid_xdp_action(act);
++			/* fall through */
++		case XDP_ABORTED:
++			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
++			/* fall through */
++		case XDP_DROP:
++			xdp_return_frame_rx_napi(frame);
++			break;
++		}
++	}
++
++	return act;
++}
++
+ static int tun_xdp_xmit(struct net_device *dev, int n,
+ 			struct xdp_frame **frames, u32 flags)
+ {
+@@ -1324,11 +1424,19 @@ static int tun_xdp_xmit(struct net_device *dev, int n,
+ 	spin_lock(&tfile->tx_ring.producer_lock);
+ 	for (i = 0; i < n; i++) {
+ 		struct xdp_frame *xdp = frames[i];
++		u32 act;
+ 		/* Encode the XDP flag into lowest bit for consumer to differ
+ 		 * XDP buffer from sk_buff.
+ 		 */
+ 		void *frame = tun_xdp_to_ptr(xdp);
+ 
++		act = tun_do_xdp_offload(tun, xdp);
++		if (act != XDP_PASS) {
++			if (act != XDP_TX)
++				drops++;
++			continue;
++		}
++
+ 		if (__ptr_ring_produce(&tfile->tx_ring, frame)) {
+ 			this_cpu_inc(tun->pcpu_stats->tx_dropped);
+ 			xdp_return_frame_rx_napi(xdp);
+@@ -2282,6 +2390,7 @@ static void tun_free_netdev(struct net_device *dev)
  	security_tun_dev_free_security(tun->security);
  	__tun_set_ebpf(tun, &tun->steering_prog, NULL);
  	__tun_set_ebpf(tun, &tun->filter_prog, NULL);
@@ -125,7 +188,7 @@ index a192a01..085e276 100644
  }
  
  static void tun_setup(struct net_device *dev)
-@@ -2842,7 +2907,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
+@@ -2842,7 +2951,7 @@ static int tun_set_queue(struct file *file, struct ifreq *ifr)
  }
  
  static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
@@ -134,7 +197,7 @@ index a192a01..085e276 100644
  {
  	struct bpf_prog *prog;
  	int fd;
-@@ -2853,7 +2918,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
+@@ -2853,7 +2962,7 @@ static int tun_set_ebpf(struct tun_struct *tun, struct tun_prog **prog_p,
  	if (fd == -1) {
  		prog = NULL;
  	} else {
@@ -143,7 +206,7 @@ index a192a01..085e276 100644
  		if (IS_ERR(prog))
  			return PTR_ERR(prog);
  	}
-@@ -3150,11 +3215,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
+@@ -3150,11 +3259,18 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
  		break;
  
  	case TUNSETSTEERINGEBPF:
