@@ -1,6 +1,6 @@
 Version: 1
-Previous: fab87d5079ef18480ca045b5ef6dd2131228dc49
-Head: 89af506ccf82631eb6e5c4d6930fc83841b44c83
+Previous: b82f39712770a8115cf318c7a8ec77396b1fa1dd
+Head: 423e3ddd82965f74d59efba4cd21634fd9419f45
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
   virtio-net-rename-virtnet_xdp: b92261bd92ca0d86abb9608e779c46b255b075d2
@@ -12,8 +12,7 @@ Applied:
   net-core-export: 929ff2ab2034ab594d0ab3cadaa2cf393064bc04
   tuntap-support-xdp-offloading: 5127842d8cfe51524347d12d749a4c4eae0a4c75
   virito-net-fix-me-to-destroy: 5b1ab91d5b07de6a4ff84edac7900c41a11ae8f4
-  virtio-net-map-offload: a95d7134232962432894d3d071a677b86bfea626
-  refresh-temp: 89af506ccf82631eb6e5c4d6930fc83841b44c83
+  virtio-net-map-offload: 423e3ddd82965f74d59efba4cd21634fd9419f45
 Unapplied:
   net-core-factor-out-skb: 720791d4320ffd5ef9a834dc0d14fba68eade48a
   net-core-factor-out-core-xdp: 54cf30617c3534744b5bd3c211c560f26d564135
