@@ -2605,6 +2605,7 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 		state->state = "xlated";
 		return 0;
 	case BPF_OFFLOAD_DESTROY:
+		/* FIXME: implement this */
 		virtnet_bpf_destroy_prog(bpf->offload.prog);
 		return 0;
 	case XDP_SETUP_PROG:
