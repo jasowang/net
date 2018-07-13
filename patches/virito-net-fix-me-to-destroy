@@ -1,0 +1,24 @@
+Bottom: a9521bf0d4e7b5893744d3cf2e84744f0d5179a5
+Top:    a6d8808332686b62a25774bc4fe6a54c91709cf1
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-13 11:49:48 +0800
+
+virito-net: FIX ME to destroy prog
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index e192594..eb96ce1 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2605,6 +2605,7 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
+ 		state->state = "xlated";
+ 		return 0;
+ 	case BPF_OFFLOAD_DESTROY:
++		/* FIXME: implement this */
+ 		virtnet_bpf_destroy_prog(bpf->offload.prog);
+ 		return 0;
+ 	case XDP_SETUP_PROG:
