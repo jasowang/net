@@ -2596,7 +2596,7 @@ static int virtnet_bfp_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 				     u8 *out_key, u8 *out_value)
 {
 	struct bpf_map *map = &offmap->map;
-	struct virtio_net_ctrl_ebpf_map *ctl = &vq->ctrl->ebpf;
+	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
 	struct scatterlist sg;
 
 	/* Copy inputs */
