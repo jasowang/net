@@ -63,8 +63,9 @@ static void usage(const char *prog)
 	fprintf(stderr,
 		"usage: %s [OPTS] IFINDEX\n\n"
 		"OPTS:\n"
-		"    -S    use skb-mode\n"
-		"    -N    enforce native mode\n",
+		"    -S           use skb-mode\n"
+		"    -N           enforce native mode\n"
+		"    -D ifindex   offload mode\n",
 		prog);
 }
 
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
 	struct bpf_prog_load_attr prog_load_attr = {
 		.prog_type	= BPF_PROG_TYPE_XDP,
 	};
-	const char *optstr = "SN";
+	const char *optstr = "SND";
 	int prog_fd, map_fd, opt;
 	struct bpf_object *obj;
 	struct bpf_map *map;
