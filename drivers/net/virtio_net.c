@@ -275,6 +275,7 @@ struct virtnet_bpf_bound_prog {
 
 struct virtnet_bpf_map {
 	struct bpf_offloaded_map *offmap;
+	struct virtnet_info *vi;
 	u32 id;
 	struct list_head l;
 };
@@ -2591,11 +2592,13 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	return 0;
 }
 
-static int virtnet_bfp_ctrl_entry_op(struct bpf_offloaded_map *offmap,
+static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 				     int cmd, u8 *key, u8 *value, u64 flags,
 				     u8 *out_key, u8 *out_value)
 {
 	struct bpf_map *map = &offmap->map;
+	struct virtnet_bpf_map *virtnet_map = offmap->dev_priv;
+	struct virtnet_info *vi = virtnet_map ->vi;
 	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
 	struct scatterlist sg;
 
@@ -2605,17 +2608,16 @@ static int virtnet_bfp_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 	if (value)
 		memcpy(&ctrl->value, value, map->value_size);
 
-	ctrl->cmd = cpu_to_virtio64(cmd);
-	ctrl->flags = cpu_to_virtio64(flags);
+	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
+	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
 	ctrl->map_fd = 0; /* FIXME */
 
-	sg_init_one(&sg, vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
+	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
 				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
 				  &sg)) {
-		dev_warn(&vdev->dev, "Failed to do ebpf op %d\n", cmd);
-		err = -EFAULT;
-		return err;
+		dev_warn(&vi->vdev->dev, "Failed to do ebpf op %d\n", cmd);
+		return -EFAULT;
 	}
 
 	printk("eBPF op was done successfully!\n");
@@ -2633,7 +2635,7 @@ static int virtnet_bpf_map_update_entry(struct bpf_offloaded_map *offmap,
 					void *key, void *value, u64 flags)
 {
 	return virtnet_bpf_ctrl_entry_op(offmap,
-					 VIRTIO_NET_BPF_CMD_UPDATE_ENTRY,
+					 VIRTIO_NET_BPF_CMD_UPDATE_ELEM,
 					 key, value, flags, NULL, NULL);
 }
 
@@ -2641,15 +2643,15 @@ static int virtnet_bpf_map_delete_elem(struct bpf_offloaded_map *offmap,
 				       void *key)
 {
 	return virtnet_bpf_ctrl_entry_op(offmap,
-					 VIRTIO_NET_BPF_CMD_DELETE_ENTRY,
+					 VIRTIO_NET_BPF_CMD_DELETE_ELEM,
 					 key, NULL, 0, NULL, NULL);
 }
 
 static int virtnet_bpf_map_lookup_entry(struct bpf_offloaded_map *offmap,
-					void *key, void *value, u64 flags)
+					void *key, void *value)
 {
 	return virtnet_bpf_ctrl_entry_op(offmap,
-					 VIRTIO_NET_BPF_CMD_LOOKUP_ENTRY,
+					 VIRTIO_NET_BPF_CMD_LOOKUP_ELEM,
 					 key, NULL, 0, NULL, value);
 }
 
@@ -2678,36 +2680,36 @@ static const struct bpf_map_dev_ops virtnet_bpf_map_ops = {
 	.map_delete_elem	= virtnet_bpf_map_delete_elem,
 };
 
-static int virtnet_bpf_map_alloc(struct nfp_app_bpf *bpf,
+static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
 				 struct bpf_offloaded_map *offmap)
 {
-	struct virtio_net_ctrl_ebpf_map *ctl = &vi->ctrl->ebpf;
+	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
 	struct virtnet_bpf_map *virtnet_map;
 	struct bpf_map *map = &offmap->map;
 	struct scatterlist sg;
 
-	virtnet_map = kzalloc(sizeof(*virtnet_map));
+	virtnet_map = kzalloc(sizeof(*virtnet_map), GFP_KERNEL);
 	if (!virtnet_map)
 		return -ENOMEM;
 
-	ctl->key_size = cpu_to_virtio32(map->key_size);
-	ctl->value_size = cpu_to_virtio32(map->value_size);
-	ctl->max_entries = cpu_to_virtio32(map->max_entries);
-	ctl->map_type = cpu_to_virtio32(map->map_type);
-	ctl->map_flags = 0;
-	ctl->cmd = cpu_to_virtio32(VIRTIO_NET_BPF_CMD_CREATE_MAP);
+	ctrl->key_size = cpu_to_virtio32(vi->vdev, map->key_size);
+	ctrl->value_size = cpu_to_virtio32(vi->vdev, map->value_size);
+	ctrl->max_entries = cpu_to_virtio32(vi->vdev, map->max_entries);
+	ctrl->map_type = cpu_to_virtio32(vi->vdev, map->map_type);
+	ctrl->map_flags = 0;
+	ctrl->cmd = cpu_to_virtio32(vi->vdev, VIRTIO_NET_BPF_CMD_CREATE_MAP);
 
-	sg_init_one(&sg, vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
+	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
 
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
 				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
 				  &sg)) {
-		dev_warn(&vdev->dev, "Failed to create ebpf map\n");
-		err = -EFAULT;
-		return err;
+		dev_warn(&vi->vdev->dev, "Failed to create ebpf map\n");
+		return -EFAULT;
 	}
 
 	offmap->dev_ops = &virtnet_bpf_map_ops;
+	offmap->dev_priv = virtnet_map;
 
 	virtnet_map->offmap = offmap;
 	virtnet_map->id = ctrl->map_fd;

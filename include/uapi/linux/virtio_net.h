@@ -274,7 +274,7 @@ struct virtio_net_ctrl_ebpf {
 
 struct virtio_net_ctrl_ebpf_map {
 	__virtio32 cmd;
-	__virtio32 map_fd;
+	__virtio32 map_type;
 	__virtio32 key_size;
 	__virtio32 value_size;
 	__virtio32 max_entries;
@@ -282,6 +282,7 @@ struct virtio_net_ctrl_ebpf_map {
 	__virtio64 key;
 	__virtio64 value;
 	__virtio64 flags;
+	__virtio32 map_fd;
 };
 
 #define VIRTIO_NET_CTRL_EBPF_MAP 7
