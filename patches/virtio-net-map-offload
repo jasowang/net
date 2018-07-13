@@ -5,6 +5,8 @@ Date:   2018-07-13 14:47:59 +0800
 
 virtio-net: map offload
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
