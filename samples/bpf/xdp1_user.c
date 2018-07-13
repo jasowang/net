@@ -75,12 +75,11 @@ int main(int argc, char **argv)
 	struct bpf_prog_load_attr prog_load_attr = {
 		.prog_type	= BPF_PROG_TYPE_XDP,
 	};
-	const char *optstr = "SND";
+	const char *optstr = "SNO";
 	int prog_fd, map_fd, opt;
 	struct bpf_object *obj;
 	struct bpf_map *map;
 	char filename[256];
-	int ifindex = -1;
 
 	while ((opt = getopt(argc, argv, optstr)) != -1) {
 		switch (opt) {
@@ -90,8 +89,8 @@ int main(int argc, char **argv)
 		case 'N':
 			xdp_flags |= XDP_FLAGS_DRV_MODE;
 			break;
-		case 'D':
-			ifindex = atoi(optarg);
+		case 'O':
+			xdp_flags |= XDP_FLAGS_HW_MODE;
 			break;
 		default:
 			usage(basename(argv[0]));
@@ -113,7 +112,7 @@ int main(int argc, char **argv)
 
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 	prog_load_attr.file = filename;
-	if (ifindex != -1)
+	if (xdp_flags & XDP_FLAGS_HW_MODE)
 		prog_load_attr.ifindex = ifindex;
 
 	if (bpf_prog_load_xattr(&prog_load_attr, &obj, &prog_fd))
