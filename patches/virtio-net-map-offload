@@ -1,5 +1,5 @@
 Bottom: a6d8808332686b62a25774bc4fe6a54c91709cf1
-Top:    baedc7b09701a5ff113e7e74a5c3eafeb4a23d68
+Top:    5e4d5b81c4066ed0dba3f1d37ddd49b9ac809822
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-13 14:47:59 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index eb96ce1..2d98105 100644
+index eb96ce1..8cde2bc 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -164,6 +164,7 @@ struct control_buf {
@@ -53,7 +53,7 @@ index eb96ce1..2d98105 100644
 +				     u8 *out_key, u8 *out_value)
 +{
 +	struct bpf_map *map = &offmap->map;
-+	struct virtio_net_ctrl_ebpf_map *ctl = &vq->ctrl->ebpf;
++	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
 +	struct scatterlist sg;
 +
 +	/* Copy inputs */
