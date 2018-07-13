@@ -2620,7 +2620,7 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 		return -EFAULT;
 	}
 
-	printk("eBPF op was done successfully!\n");
+	printk("eBPF op was done successfully for op %d!\n", cmd);
 
 	/* Copy outputs */
 	if (out_key)
