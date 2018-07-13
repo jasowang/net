@@ -1,0 +1,40 @@
+Bottom: e726725df1a4852c02b661c1233d5a0ff8d84a10
+Top:    13342c612aa9b895f182e6d8183b2480184b6e84
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-13 11:27:20 +0800
+
+Refresh of xdp1_user-support-ifindex-for
+
+---
+
+diff --git a/samples/bpf/xdp1_user.c b/samples/bpf/xdp1_user.c
+index b02c5315..604eb72 100644
+--- a/samples/bpf/xdp1_user.c
++++ b/samples/bpf/xdp1_user.c
+@@ -79,6 +79,7 @@ int main(int argc, char **argv)
+ 	struct bpf_object *obj;
+ 	struct bpf_map *map;
+ 	char filename[256];
++	int ifindex = -1;
+ 
+ 	while ((opt = getopt(argc, argv, optstr)) != -1) {
+ 		switch (opt) {
+@@ -88,6 +89,9 @@ int main(int argc, char **argv)
+ 		case 'N':
+ 			xdp_flags |= XDP_FLAGS_DRV_MODE;
+ 			break;
++		case 'D':
++			ifindex = atoi(optarg);
++			break;
+ 		default:
+ 			usage(basename(argv[0]));
+ 			return 1;
+@@ -108,6 +112,8 @@ int main(int argc, char **argv)
+ 
+ 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
+ 	prog_load_attr.file = filename;
++	if (ifindex != -1)
++		prog_load_attr.ifindex = ifindex;
+ 
+ 	if (bpf_prog_load_xattr(&prog_load_attr, &obj, &prog_fd))
+ 		return 1;
