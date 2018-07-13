@@ -1,7 +1,8 @@
 Version: 1
-Previous: 734dac76a87e6b7fbfcf8f1dde4052777d6183ee
-Head: f1fbeada1bc07e710d972657ac083fca8db206dc
+Previous: 0a766b26d2f0f5b0f93bd32fa971fd9c9a6a80fe
+Head: 69d93a4ea8bde40c3e342e3517bddcda438ab823
 Applied:
+  xdp1_user-support-ifindex-for: 69d93a4ea8bde40c3e342e3517bddcda438ab823
 Unapplied:
   exp: 29870d7d288ed8a8d9c1e3675177f8c42a04ca6a
   virtio-net-switch-to-use: a727a8339a172470a85eb7304089c175f7f8af0c
