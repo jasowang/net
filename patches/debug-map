@@ -1,5 +1,5 @@
 Bottom: 170d3ecb9c357d27c1d1930b316ded3d50dbafde
-Top:    a270a923d0c6059be4bfff0c13aa536eff471403
+Top:    5496c85fe74d5b8893d742005eb62be71bc6986e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-16 10:56:02 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index b5c011a..e83ac5a 100644
+index b5c011a..a0abf07 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -266,6 +266,8 @@ struct virtnet_bpf_bound_prog {
@@ -58,7 +58,82 @@ index b5c011a..e83ac5a 100644
  	state->state = "verify";
  
  	/* Program id is not populated yet when we create the state. */
-@@ -2540,6 +2548,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+@@ -2433,19 +2441,74 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
+ 	return 0;
+ }
+ 
++static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
++						   struct bpf_map *map)
++{
++	struct virtnet_bpf_map *virtnet_map;
++
++	list_for_each_entry(virtnet_map, &vi->map_list, l) {
++		if (map == &virtnet_map->offmap->map)
++			return virtnet_map;
++	}
++
++	return NULL;
++}
++
+ static int
+ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+ 			int prev_insn)
+ {
+ 	struct virtnet_bpf_bound_prog *state;
++	struct virtnet_info *vi;
++	int i;
+ 
+ 	state = env->prog->aux->offload->dev_priv;
++	vi = state->vi;
++
+ 	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
+ 		msleep(state->vi->bpf_bind_verifier_delay);
+ 
+ 	if (insn_idx == env->prog->len - 1)
+ 		pr_vlog(env, "Hello from virtio-net!\n");
+ 
++	/* Replace map fd with host identitier. */
++	for (i = 0; i < state->len; i++) {
++		struct bpf_insn *insn = &state->insnsi[i];
++		struct virtnet_bpf_map *virtnet_map;
++		struct bpf_map *map;
++		struct fd f;
++
++		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
++			continue;
++
++		printk("found map access !\n");
++
++		f = fdget(insn->imm);
++		map = __bpf_map_get(f);
++		if (IS_ERR(map)) {
++			pr_vlog(env, "fd %d is not pointing to valid bpf_map\n",
++				insn->imm);
++			printk("fd %d is not pointing to valid bpf_map\n",
++				insn->imm);
++			return -EINVAL;
++		}
++
++		printk("find fd %d in imm\n", insn->imm);
++		virtnet_map = virtnet_get_bpf_map(vi, map);
++		if (!virtnet_map) {
++			pr_vlog(env, "could not get a offloaded map fd %d\n",
++				insn->imm);
++			printk("could not get a offloaded map fd %d\n",
++				insn->imm);
++			return -EINVAL;
++		}
++
++		printk("replace it with %d\n", virtnet_map->id);
++		insn->imm = virtnet_map->id;
++
++		fdput(f);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -2540,6 +2603,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
  {
  	struct virtio_device *vdev = vi->vdev;
  	struct bpf_prog *prog = bpf->prog;
@@ -66,7 +141,7 @@ index b5c011a..e83ac5a 100644
  	struct scatterlist sg;
  	int err, i;
  
-@@ -2564,13 +2573,18 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+@@ -2564,13 +2628,18 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
  	printk("prog->len %d total %d\n",
  		prog->len, prog->len * sizeof(prog->insnsi[0]));
  
@@ -76,21 +151,21 @@ index b5c011a..e83ac5a 100644
  	for (i = 0; i < prog->len; i++)
 -		printk("insn %d opcode %x\n", i, prog->insnsi[i].code);
 +		printk("insn %d opcode %x\n", i, bound_prog->insnsi[i].code);
++
++	memcpy(vi->ctrl->insns, bound_prog->insnsi,
++		prog->len * sizeof(bound_prog->insnsi[0]));
++	sg_init_one(&sg, vi->ctrl->insns,
++		    bound_prog->len * sizeof(bound_prog->insnsi[0]));
  
 -	memcpy(vi->ctrl->insns, prog->insnsi,
 -	       prog->len * sizeof(prog->insnsi[0]));
 -	printk("ctl addr %p prog addr %p\n", &vi->ctrl->hdr, prog->insnsi);
 -	sg_init_one(&sg, vi->ctrl->insns, prog->len * sizeof(prog->insnsi[0]));
-+	memcpy(vi->ctrl->insns, bound_prog->insnsi,
-+		prog->len * sizeof(bound_prog->insnsi[0]));
-+	sg_init_one(&sg, vi->ctrl->insns,
-+		    bound_prog->len * sizeof(bound_prog->insnsi[0]));
-+
 +	printk("set offload prog!\n");
  	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
  				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
  				  &sg)) {
-@@ -2610,8 +2624,9 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
+@@ -2610,8 +2679,9 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
  
  	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
  	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
@@ -101,7 +176,7 @@ index b5c011a..e83ac5a 100644
  	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
  	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
  				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
-@@ -2713,13 +2728,14 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
+@@ -2713,13 +2783,14 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
  
  	virtnet_map->offmap = offmap;
  	virtnet_map->id = ctrl->map_fd;
@@ -155,7 +230,7 @@ index ac747d5..7b74b2a 100644
  	offmap = kzalloc(sizeof(*offmap), GFP_USER);
  	if (!offmap)
 diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
-index 0f55f79..3e65b34 100644
+index 0f55f79..755a5aa 100644
 --- a/kernel/bpf/syscall.c
 +++ b/kernel/bpf/syscall.c
 @@ -59,6 +59,8 @@ static const struct bpf_map_ops * const bpf_map_types[] = {
@@ -197,7 +272,15 @@ index 0f55f79..3e65b34 100644
  	err = bpf_obj_name_cpy(map->name, attr->map_name);
  	if (err)
  		goto free_map_nouncharge;
-@@ -2324,6 +2331,7 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
+@@ -538,6 +545,7 @@ struct bpf_map *__bpf_map_get(struct fd f)
+ 
+ 	return f.file->private_data;
+ }
++EXPORT_SYMBOL(__bpf_map_get);
+ 
+ /* prog's and map's refcnt limit */
+ #define BPF_MAX_REFCNT 32768
+@@ -2324,6 +2332,7 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
  
  	switch (cmd) {
  	case BPF_MAP_CREATE:
