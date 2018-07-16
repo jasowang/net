@@ -266,6 +266,8 @@ struct virtnet_bpf_bound_prog {
 	const char *state;
 	bool is_loaded;
 	struct list_head l;
+	u32 len;
+	struct bpf_insn insnsi[0];
 };
 
 #define VIRTNET_EA(extack, msg)	NL_SET_ERR_MSG_MOD((extack), msg)
@@ -1593,12 +1595,14 @@ static bool virtnet_send_command(struct virtnet_info *vi, u8 class, u8 cmd,
 	if (unlikely(!virtqueue_kick(vi->cvq)))
 		return vi->ctrl->status == VIRTIO_NET_OK;
 
+	printk("wait for response!\n");
 	/* Spin for a response, the kick causes an ioport write, trapping
 	 * into the hypervisor, so the request should be handled immediately.
 	 */
 	while (!virtqueue_get_buf(vi->cvq, &tmp) &&
 	       !virtqueue_is_broken(vi->cvq))
 		cpu_relax();
+	printk("response get!\n");
 
 	return vi->ctrl->status == VIRTIO_NET_OK;
 }
@@ -2403,14 +2407,18 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 				   struct bpf_prog *prog)
 {
 	struct virtnet_bpf_bound_prog *state;
+	size_t insn_len = prog->len * sizeof(struct bpf_insn);
 	char name[16];
 
-	state = kzalloc(sizeof(*state), GFP_KERNEL);
+	state = kzalloc(sizeof(*state) + insn_len, GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
 
+	memcpy(&state->insnsi[0], prog->insnsi, insn_len);
+
 	state->vi = vi;
 	state->prog = prog;
+	state->len = prog->len;
 	state->state = "verify";
 
 	/* Program id is not populated yet when we create the state. */
@@ -2433,18 +2441,73 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 	return 0;
 }
 
+static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
+						   struct bpf_map *map)
+{
+	struct virtnet_bpf_map *virtnet_map;
+
+	list_for_each_entry(virtnet_map, &vi->map_list, l) {
+		if (map == &virtnet_map->offmap->map)
+			return virtnet_map;
+	}
+
+	return NULL;
+}
+
 static int
 virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 			int prev_insn)
 {
 	struct virtnet_bpf_bound_prog *state;
+	struct virtnet_info *vi;
+	int i;
 
 	state = env->prog->aux->offload->dev_priv;
+	vi = state->vi;
+
 	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
 		msleep(state->vi->bpf_bind_verifier_delay);
 
 	if (insn_idx == env->prog->len - 1)
 		pr_vlog(env, "Hello from virtio-net!\n");
+
+	/* Replace map fd with host identitier. */
+	for (i = 0; i < state->len; i++) {
+		struct bpf_insn *insn = &state->insnsi[i];
+		struct virtnet_bpf_map *virtnet_map;
+		struct bpf_map *map;
+		struct fd f;
+
+		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
+			continue;
+
+		printk("found map access !\n");
+
+		f = fdget(insn->imm);
+		map = __bpf_map_get(f);
+		if (IS_ERR(map)) {
+			pr_vlog(env, "fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			printk("fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			return -EINVAL;
+		}
+
+		printk("find fd %d in imm\n", insn->imm);
+		virtnet_map = virtnet_get_bpf_map(vi, map);
+		if (!virtnet_map) {
+			pr_vlog(env, "could not get a offloaded map fd %d\n",
+				insn->imm);
+			printk("could not get a offloaded map fd %d\n",
+				insn->imm);
+			return -EINVAL;
+		}
+
+		printk("replace it with %d\n", virtnet_map->id);
+		insn->imm = virtnet_map->id;
+
+		fdput(f);
+	}
 
 	return 0;
 }
@@ -2540,6 +2603,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 {
 	struct virtio_device *vdev = vi->vdev;
 	struct bpf_prog *prog = bpf->prog;
+	struct virtnet_bpf_bound_prog *bound_prog = prog->aux->offload->dev_priv;
 	struct scatterlist sg;
 	int err, i;
 
@@ -2564,13 +2628,18 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
 	printk("prog->len %d total %d\n",
 		prog->len, prog->len * sizeof(prog->insnsi[0]));
 
-	for (i = 0; i < prog->len; i++)
-		printk("insn %d opcode %x\n", i, prog->insnsi[i].code);
+	printk("bound_prog->len %d total %d\n",
+		bound_prog->len, bound_prog->len * sizeof(prog->insnsi[0]));
 
-	memcpy(vi->ctrl->insns, prog->insnsi,
-	       prog->len * sizeof(prog->insnsi[0]));
-	printk("ctl addr %p prog addr %p\n", &vi->ctrl->hdr, prog->insnsi);
-	sg_init_one(&sg, vi->ctrl->insns, prog->len * sizeof(prog->insnsi[0]));
+	for (i = 0; i < prog->len; i++)
+		printk("insn %d opcode %x\n", i, bound_prog->insnsi[i].code);
+
+	memcpy(vi->ctrl->insns, bound_prog->insnsi,
+		prog->len * sizeof(bound_prog->insnsi[0]));
+	sg_init_one(&sg, vi->ctrl->insns,
+		    bound_prog->len * sizeof(bound_prog->insnsi[0]));
+
+	printk("set offload prog!\n");
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
 				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
 				  &sg)) {
@@ -2610,8 +2679,9 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 
 	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
 	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
-	ctrl->map_fd = 0; /* FIXME */
+	ctrl->map_fd = virtnet_map->id;
 
+	printk("entry op send command %d\n", ctrl->cmd);
 	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
 				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
@@ -2713,12 +2783,13 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
 
 	virtnet_map->offmap = offmap;
 	virtnet_map->id = ctrl->map_fd;
+
+	printk("success get map id from host %d\n", ctrl->map_fd);
+
 	list_add_tail(&virtnet_map->l, &vi->map_list);
 
 	return 0;
 }
-
-
 
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
