@@ -1208,6 +1208,8 @@ bpf_program__relocate(struct bpf_program *prog, struct bpf_object *obj)
 				return -LIBBPF_ERRNO__RELOC;
 			}
 			insns[insn_idx].src_reg = BPF_PSEUDO_MAP_FD;
+			fprintf(stderr, "really relocate to %d\n",
+				obj->maps[map_idx].fd);
 			insns[insn_idx].imm = obj->maps[map_idx].fd;
 		} else {
 			err = bpf_program__reloc_text(prog, obj,
@@ -2238,6 +2240,8 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
 	struct bpf_map *map;
 	int section_idx;
 	int err;
+
+	fprintf(stderr, "load xattr!\n");
 
 	if (!attr)
 		return -EINVAL;
