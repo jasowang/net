@@ -1,5 +1,5 @@
 Bottom: 170d3ecb9c357d27c1d1930b316ded3d50dbafde
-Top:    dd80c2292c5902f6e737b3eb4475c6f0d9b84eb1
+Top:    715ba9503d3a02fbffbc3e7345e6f54fa4163f4b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-16 10:56:02 +0800
 
@@ -339,7 +339,7 @@ index 0f55f79..755a5aa 100644
  		break;
  	case BPF_MAP_LOOKUP_ELEM:
 diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
-index 38ed3e9..63c4830 100644
+index 38ed3e9..a404104 100644
 --- a/tools/lib/bpf/libbpf.c
 +++ b/tools/lib/bpf/libbpf.c
 @@ -930,6 +930,8 @@ bpf_program__collect_reloc(struct bpf_program *prog, GElf_Shdr *shdr,
@@ -360,7 +360,16 @@ index 38ed3e9..63c4830 100644
  		prog->reloc_desc[i].type = RELO_LD64;
  		prog->reloc_desc[i].insn_idx = insn_idx;
  		prog->reloc_desc[i].map_idx = map_idx;
-@@ -2219,6 +2223,8 @@ int bpf_prog_load(const char *file, enum bpf_prog_type type,
+@@ -1204,6 +1208,8 @@ bpf_program__relocate(struct bpf_program *prog, struct bpf_object *obj)
+ 				return -LIBBPF_ERRNO__RELOC;
+ 			}
+ 			insns[insn_idx].src_reg = BPF_PSEUDO_MAP_FD;
++			fprintf(stderr, "really relocate to %d\n",
++				obj->maps[map_idx].fd);
+ 			insns[insn_idx].imm = obj->maps[map_idx].fd;
+ 		} else {
+ 			err = bpf_program__reloc_text(prog, obj,
+@@ -2219,6 +2225,8 @@ int bpf_prog_load(const char *file, enum bpf_prog_type type,
  	attr.prog_type = type;
  	attr.expected_attach_type = 0;
  
@@ -369,7 +378,14 @@ index 38ed3e9..63c4830 100644
  	return bpf_prog_load_xattr(&attr, pobj, prog_fd);
  }
  
-@@ -2238,6 +2244,7 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
+@@ -2233,11 +2241,14 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
+ 	int section_idx;
+ 	int err;
+ 
++	fprintf(stderr, "load xattr!\n");
++
+ 	if (!attr)
+ 		return -EINVAL;
  	if (!attr->file)
  		return -EINVAL;
  
