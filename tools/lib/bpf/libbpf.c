@@ -930,6 +930,8 @@ bpf_program__collect_reloc(struct bpf_program *prog, GElf_Shdr *shdr,
 	size_t nr_maps = obj->nr_maps;
 	int i, nrels;
 
+	fprintf(stderr, "collect_reloc!\n");
+
 	pr_debug("collecting relocating info for: '%s'\n",
 		 prog->section_name);
 	nrels = shdr->sh_size / shdr->sh_entsize;
@@ -1006,6 +1008,8 @@ bpf_program__collect_reloc(struct bpf_program *prog, GElf_Shdr *shdr,
 			return -LIBBPF_ERRNO__RELOC;
 		}
 
+		fprintf(stderr, "relocate to mapfd insn_idx %d from %d idx %d\n",
+			(int) insn_idx, (int) insns[insn_idx].imm, (int) map_idx);
 		prog->reloc_desc[i].type = RELO_LD64;
 		prog->reloc_desc[i].insn_idx = insn_idx;
 		prog->reloc_desc[i].map_idx = map_idx;
@@ -1204,6 +1208,8 @@ bpf_program__relocate(struct bpf_program *prog, struct bpf_object *obj)
 				return -LIBBPF_ERRNO__RELOC;
 			}
 			insns[insn_idx].src_reg = BPF_PSEUDO_MAP_FD;
+			fprintf(stderr, "really relocate to %d\n",
+				obj->maps[map_idx].fd);
 			insns[insn_idx].imm = obj->maps[map_idx].fd;
 		} else {
 			err = bpf_program__reloc_text(prog, obj,
@@ -2219,6 +2225,8 @@ int bpf_prog_load(const char *file, enum bpf_prog_type type,
 	attr.prog_type = type;
 	attr.expected_attach_type = 0;
 
+	fprintf(stderr, "load!\n");
+
 	return bpf_prog_load_xattr(&attr, pobj, prog_fd);
 }
 
@@ -2233,11 +2241,14 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
 	int section_idx;
 	int err;
 
+	fprintf(stderr, "load xattr!\n");
+
 	if (!attr)
 		return -EINVAL;
 	if (!attr->file)
 		return -EINVAL;
 
+	fprintf(stderr, "open !\n");
 	obj = __bpf_object__open(attr->file, NULL, 0,
 				 bpf_prog_type__needs_kver(attr->prog_type));
 	if (IS_ERR_OR_NULL(obj))
