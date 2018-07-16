@@ -1,0 +1,31 @@
+Bottom: dd80c2292c5902f6e737b3eb4475c6f0d9b84eb1
+Top:    715ba9503d3a02fbffbc3e7345e6f54fa4163f4b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-16 17:48:36 +0800
+
+Refresh of debug-map
+
+---
+
+diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
+index 63c4830..a404104 100644
+--- a/tools/lib/bpf/libbpf.c
++++ b/tools/lib/bpf/libbpf.c
+@@ -1208,6 +1208,8 @@ bpf_program__relocate(struct bpf_program *prog, struct bpf_object *obj)
+ 				return -LIBBPF_ERRNO__RELOC;
+ 			}
+ 			insns[insn_idx].src_reg = BPF_PSEUDO_MAP_FD;
++			fprintf(stderr, "really relocate to %d\n",
++				obj->maps[map_idx].fd);
+ 			insns[insn_idx].imm = obj->maps[map_idx].fd;
+ 		} else {
+ 			err = bpf_program__reloc_text(prog, obj,
+@@ -2239,6 +2241,8 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
+ 	int section_idx;
+ 	int err;
+ 
++	fprintf(stderr, "load xattr!\n");
++
+ 	if (!attr)
+ 		return -EINVAL;
+ 	if (!attr->file)
