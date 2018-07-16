@@ -59,6 +59,8 @@ static const struct bpf_map_ops * const bpf_map_types[] = {
 #undef BPF_MAP_TYPE
 };
 
+#define DBG() printk("file %s line %d\n", __FILE__, __LINE__)
+
 /*
  * If we're handed a bigger struct than we know of, ensure all the unknown bits
  * are 0 - i.e. new user-space does not rely on any kernel feature extensions
@@ -436,24 +438,29 @@ static int map_create(union bpf_attr *attr)
 	int f_flags;
 	int err;
 
+	DBG();
 	err = CHECK_ATTR(BPF_MAP_CREATE);
 	if (err)
 		return -EINVAL;
 
+	DBG();
 	f_flags = bpf_get_file_flag(attr->map_flags);
 	if (f_flags < 0)
 		return f_flags;
 
+	DBG();
 	if (numa_node != NUMA_NO_NODE &&
 	    ((unsigned int)numa_node >= nr_node_ids ||
 	     !node_online(numa_node)))
 		return -EINVAL;
 
+	DBG();
 	/* find map type and init map: hashtable vs rbtree vs bloom vs ... */
 	map = find_and_alloc_map(attr);
 	if (IS_ERR(map))
 		return PTR_ERR(map);
 
+	DBG();
 	err = bpf_obj_name_cpy(map->name, attr->map_name);
 	if (err)
 		goto free_map_nouncharge;
@@ -2324,6 +2331,7 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 
 	switch (cmd) {
 	case BPF_MAP_CREATE:
+		DBG();
 		err = map_create(&attr);
 		break;
 	case BPF_MAP_LOOKUP_ELEM:
