@@ -2481,7 +2481,7 @@ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
 			continue;
 
-		printk("found map access !\n");
+		printk("found map access at idx %d! fd %d\n", i, insn->imm);
 
 		f = fdget(insn->imm);
 		map = __bpf_map_get(f);
