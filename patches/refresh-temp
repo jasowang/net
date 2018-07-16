@@ -1,0 +1,61 @@
+Bottom: 5496c85fe74d5b8893d742005eb62be71bc6986e
+Top:    56b16b18d5c4a1b7771fe95098a82c5ab5be46ac
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-16 14:07:59 +0800
+
+Refresh of debug-map
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index a0abf07..ae508e3 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2481,7 +2481,7 @@ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+ 		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
+ 			continue;
+ 
+-		printk("found map access !\n");
++		printk("found map access at idx %d! fd %d\n", i, insn->imm);
+ 
+ 		f = fdget(insn->imm);
+ 		map = __bpf_map_get(f);
+diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
+index 38ed3e9..63c4830 100644
+--- a/tools/lib/bpf/libbpf.c
++++ b/tools/lib/bpf/libbpf.c
+@@ -930,6 +930,8 @@ bpf_program__collect_reloc(struct bpf_program *prog, GElf_Shdr *shdr,
+ 	size_t nr_maps = obj->nr_maps;
+ 	int i, nrels;
+ 
++	fprintf(stderr, "collect_reloc!\n");
++
+ 	pr_debug("collecting relocating info for: '%s'\n",
+ 		 prog->section_name);
+ 	nrels = shdr->sh_size / shdr->sh_entsize;
+@@ -1006,6 +1008,8 @@ bpf_program__collect_reloc(struct bpf_program *prog, GElf_Shdr *shdr,
+ 			return -LIBBPF_ERRNO__RELOC;
+ 		}
+ 
++		fprintf(stderr, "relocate to mapfd insn_idx %d from %d idx %d\n",
++			(int) insn_idx, (int) insns[insn_idx].imm, (int) map_idx);
+ 		prog->reloc_desc[i].type = RELO_LD64;
+ 		prog->reloc_desc[i].insn_idx = insn_idx;
+ 		prog->reloc_desc[i].map_idx = map_idx;
+@@ -2219,6 +2223,8 @@ int bpf_prog_load(const char *file, enum bpf_prog_type type,
+ 	attr.prog_type = type;
+ 	attr.expected_attach_type = 0;
+ 
++	fprintf(stderr, "load!\n");
++
+ 	return bpf_prog_load_xattr(&attr, pobj, prog_fd);
+ }
+ 
+@@ -2238,6 +2244,7 @@ int bpf_prog_load_xattr(const struct bpf_prog_load_attr *attr,
+ 	if (!attr->file)
+ 		return -EINVAL;
+ 
++	fprintf(stderr, "open !\n");
+ 	obj = __bpf_object__open(attr->file, NULL, 0,
+ 				 bpf_prog_type__needs_kver(attr->prog_type));
+ 	if (IS_ERR_OR_NULL(obj))
