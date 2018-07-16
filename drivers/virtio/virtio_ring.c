@@ -344,7 +344,6 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
-			printk("out desc.addr %llx desc.len %d\n", desc[i].addr, desc[i].len);
 			prev = i;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
@@ -358,7 +357,6 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
-			printk("in desc.addr %llx desc.len %d\n", desc[i].addr, desc[i].len);
 			prev = i;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
