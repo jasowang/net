@@ -1,0 +1,100 @@
+Bottom: a270a923d0c6059be4bfff0c13aa536eff471403
+Top:    5496c85fe74d5b8893d742005eb62be71bc6986e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-16 13:38:10 +0800
+
+Refresh of debug-map
+
+---
+
+diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
+index e83ac5a..a0abf07 100644
+--- a/drivers/net/virtio_net.c
++++ b/drivers/net/virtio_net.c
+@@ -2441,19 +2441,74 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
+ 	return 0;
+ }
+ 
++static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
++						   struct bpf_map *map)
++{
++	struct virtnet_bpf_map *virtnet_map;
++
++	list_for_each_entry(virtnet_map, &vi->map_list, l) {
++		if (map == &virtnet_map->offmap->map)
++			return virtnet_map;
++	}
++
++	return NULL;
++}
++
+ static int
+ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+ 			int prev_insn)
+ {
+ 	struct virtnet_bpf_bound_prog *state;
++	struct virtnet_info *vi;
++	int i;
+ 
+ 	state = env->prog->aux->offload->dev_priv;
++	vi = state->vi;
++
+ 	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
+ 		msleep(state->vi->bpf_bind_verifier_delay);
+ 
+ 	if (insn_idx == env->prog->len - 1)
+ 		pr_vlog(env, "Hello from virtio-net!\n");
+ 
++	/* Replace map fd with host identitier. */
++	for (i = 0; i < state->len; i++) {
++		struct bpf_insn *insn = &state->insnsi[i];
++		struct virtnet_bpf_map *virtnet_map;
++		struct bpf_map *map;
++		struct fd f;
++
++		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
++			continue;
++
++		printk("found map access !\n");
++
++		f = fdget(insn->imm);
++		map = __bpf_map_get(f);
++		if (IS_ERR(map)) {
++			pr_vlog(env, "fd %d is not pointing to valid bpf_map\n",
++				insn->imm);
++			printk("fd %d is not pointing to valid bpf_map\n",
++				insn->imm);
++			return -EINVAL;
++		}
++
++		printk("find fd %d in imm\n", insn->imm);
++		virtnet_map = virtnet_get_bpf_map(vi, map);
++		if (!virtnet_map) {
++			pr_vlog(env, "could not get a offloaded map fd %d\n",
++				insn->imm);
++			printk("could not get a offloaded map fd %d\n",
++				insn->imm);
++			return -EINVAL;
++		}
++
++		printk("replace it with %d\n", virtnet_map->id);
++		insn->imm = virtnet_map->id;
++
++		fdput(f);
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
+index 3e65b34..755a5aa 100644
+--- a/kernel/bpf/syscall.c
++++ b/kernel/bpf/syscall.c
+@@ -545,6 +545,7 @@ struct bpf_map *__bpf_map_get(struct fd f)
+ 
+ 	return f.file->private_data;
+ }
++EXPORT_SYMBOL(__bpf_map_get);
+ 
+ /* prog's and map's refcnt limit */
+ #define BPF_MAX_REFCNT 32768
