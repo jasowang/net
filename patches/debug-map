@@ -1,5 +1,5 @@
 Bottom: 170d3ecb9c357d27c1d1930b316ded3d50dbafde
-Top:    56b16b18d5c4a1b7771fe95098a82c5ab5be46ac
+Top:    dd80c2292c5902f6e737b3eb4475c6f0d9b84eb1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-16 10:56:02 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/virtio_net.c b/drivers/net/virtio_net.c
-index b5c011a..ae508e3 100644
+index b5c011a..5ad4a14 100644
 --- a/drivers/net/virtio_net.c
 +++ b/drivers/net/virtio_net.c
 @@ -266,6 +266,8 @@ struct virtnet_bpf_bound_prog {
@@ -68,8 +68,7 @@ index b5c011a..ae508e3 100644
 +	struct virtnet_bpf_map *virtnet_map;
 +
 +	list_for_each_entry(virtnet_map, &vi->map_list, l) {
-+		if (map == &virtnet_map->offmap->map)
-+			return virtnet_map;
++		return virtnet_map;
 +	}
 +
 +	return NULL;
@@ -103,7 +102,7 @@ index b5c011a..ae508e3 100644
 +			continue;
 +
 +		printk("found map access at idx %d! fd %d\n", i, insn->imm);
-+
++#if 0
 +		f = fdget(insn->imm);
 +		map = __bpf_map_get(f);
 +		if (IS_ERR(map)) {
@@ -113,6 +112,7 @@ index b5c011a..ae508e3 100644
 +				insn->imm);
 +			return -EINVAL;
 +		}
++#endif
 +
 +		printk("find fd %d in imm\n", insn->imm);
 +		virtnet_map = virtnet_get_bpf_map(vi, map);
@@ -127,7 +127,7 @@ index b5c011a..ae508e3 100644
 +		printk("replace it with %d\n", virtnet_map->id);
 +		insn->imm = virtnet_map->id;
 +
-+		fdput(f);
++//		fdput(f);
 +	}
 +
  	return 0;
@@ -141,7 +141,26 @@ index b5c011a..ae508e3 100644
  	struct scatterlist sg;
  	int err, i;
  
-@@ -2564,13 +2628,18 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+@@ -2557,20 +2621,37 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+ 	if (err)
+ 		return err;
+ 
++	{
++		struct bpf_prog *old_prog;
++
++		old_prog = rtnl_dereference(vi->xdp_prog);
++		rcu_assign_pointer(vi->xdp_prog, prog);
++
++		if (old_prog)
++			bpf_prog_put(old_prog);
++	}
++
++#if 0
+ 	err = virtnet_xdp_set(vi->dev, prog, bpf->extack);
+ 	if (err)
+ 		return err;
++#endif
+ 
  	printk("prog->len %d total %d\n",
  		prog->len, prog->len * sizeof(prog->insnsi[0]));
  
@@ -165,7 +184,37 @@ index b5c011a..ae508e3 100644
  	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
  				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
  				  &sg)) {
-@@ -2610,8 +2679,9 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
+@@ -2578,6 +2659,7 @@ static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+ 		err = -EFAULT;
+ 		return err;
+ 	}
++
+ 	printk("offload to host successfuly!\n");
+ 
+ 	vi->xdp_flags = bpf->flags;
+@@ -2597,11 +2679,18 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
+ 				     u8 *out_key, u8 *out_value)
+ {
+ 	struct bpf_map *map = &offmap->map;
+-	struct virtnet_bpf_map *virtnet_map = offmap->dev_priv;
+-	struct virtnet_info *vi = virtnet_map ->vi;
+-	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
++	struct virtnet_bpf_map *virtnet_map;
++	struct virtnet_info *vi;
++	struct virtio_net_ctrl_ebpf_map *ctrl;
+ 	struct scatterlist sg;
+ 
++	printk("map %p\n", map);
++	virtnet_map = offmap->dev_priv;
++	printk("virt map %p\n", virtnet_map);
++	vi = virtnet_map->vi;
++	printk("vi %p\n", vi);
++	ctrl = &vi->ctrl->ebpf;
++
+ 	/* Copy inputs */
+ 	if (key)
+ 		memcpy(&ctrl->key, key, map->key_size);
+@@ -2610,8 +2699,9 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
  
  	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
  	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
@@ -176,10 +225,11 @@ index b5c011a..ae508e3 100644
  	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
  	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
  				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
-@@ -2713,13 +2783,14 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
+@@ -2713,13 +2803,15 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
  
  	virtnet_map->offmap = offmap;
  	virtnet_map->id = ctrl->map_fd;
++	virtnet_map->vi = vi;
 +
 +	printk("success get map id from host %d\n", ctrl->map_fd);
 +
