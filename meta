@@ -1,6 +1,6 @@
 Version: 1
-Previous: d62b5d0e8c486e8ff06b1a8db6c4f434b797f193
-Head: efe97aff7eafb6ec3100b7441beddbf5c83ce532
+Previous: 81eef6d304ab4ca80e4dfa916f35d2f77d4a9e15
+Head: c6558d7e461f57c4abf8efd575cb9cb8c2c7a089
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
   virtio-net-rename-virtnet_xdp: b92261bd92ca0d86abb9608e779c46b255b075d2
@@ -14,6 +14,7 @@ Applied:
   virito-net-fix-me-to-destroy: 5b1ab91d5b07de6a4ff84edac7900c41a11ae8f4
   virtio-net-map-offload: d55cac2b2868eb421de59ee2190a8a32969d26e5
   xdp1_user-support-ifindex-for: efe97aff7eafb6ec3100b7441beddbf5c83ce532
+  debug-map: c6558d7e461f57c4abf8efd575cb9cb8c2c7a089
 Unapplied:
   net-core-factor-out-skb: 720791d4320ffd5ef9a834dc0d14fba68eade48a
   net-core-factor-out-core-xdp: 54cf30617c3534744b5bd3c211c560f26d564135
