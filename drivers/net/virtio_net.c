@@ -2441,18 +2441,73 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 	return 0;
 }
 
+static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
+						   struct bpf_map *map)
+{
+	struct virtnet_bpf_map *virtnet_map;
+
+	list_for_each_entry(virtnet_map, &vi->map_list, l) {
+		if (map == &virtnet_map->offmap->map)
+			return virtnet_map;
+	}
+
+	return NULL;
+}
+
 static int
 virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 			int prev_insn)
 {
 	struct virtnet_bpf_bound_prog *state;
+	struct virtnet_info *vi;
+	int i;
 
 	state = env->prog->aux->offload->dev_priv;
+	vi = state->vi;
+
 	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
 		msleep(state->vi->bpf_bind_verifier_delay);
 
 	if (insn_idx == env->prog->len - 1)
 		pr_vlog(env, "Hello from virtio-net!\n");
+
+	/* Replace map fd with host identitier. */
+	for (i = 0; i < state->len; i++) {
+		struct bpf_insn *insn = &state->insnsi[i];
+		struct virtnet_bpf_map *virtnet_map;
+		struct bpf_map *map;
+		struct fd f;
+
+		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
+			continue;
+
+		printk("found map access !\n");
+
+		f = fdget(insn->imm);
+		map = __bpf_map_get(f);
+		if (IS_ERR(map)) {
+			pr_vlog(env, "fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			printk("fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			return -EINVAL;
+		}
+
+		printk("find fd %d in imm\n", insn->imm);
+		virtnet_map = virtnet_get_bpf_map(vi, map);
+		if (!virtnet_map) {
+			pr_vlog(env, "could not get a offloaded map fd %d\n",
+				insn->imm);
+			printk("could not get a offloaded map fd %d\n",
+				insn->imm);
+			return -EINVAL;
+		}
+
+		printk("replace it with %d\n", virtnet_map->id);
+		insn->imm = virtnet_map->id;
+
+		fdput(f);
+	}
 
 	return 0;
 }

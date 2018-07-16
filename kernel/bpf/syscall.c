@@ -545,6 +545,7 @@ struct bpf_map *__bpf_map_get(struct fd f)
 
 	return f.file->private_data;
 }
+EXPORT_SYMBOL(__bpf_map_get);
 
 /* prog's and map's refcnt limit */
 #define BPF_MAX_REFCNT 32768
