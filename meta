@@ -1,9 +1,8 @@
 Version: 1
-Previous: 9221ac61fd1ced1fff349939f9ee54f3edf1293d
-Head: e11009d77ee563122393a323058cffd89d02780b
+Previous: 632cd03361090f718b04379c95890925241ec5b0
+Head: 2ff94e36743e1bc658367a99efd291a9e7a733f2
 Applied:
-  vhost_net-drop-unnecessary: 7836e0aaf2ac57e9ff1d2216f9bd804318fc2a68
-  refresh-temp: e11009d77ee563122393a323058cffd89d02780b
+  vhost_net-drop-unnecessary: 2ff94e36743e1bc658367a99efd291a9e7a733f2
 Unapplied:
   vhost_net-introduce-helper-to: 89f404c2f63d52139b0fefa1532508d388808b8c
   vhost_net-introduce: d7552bf8e24e1924dab282041502713d82445a0f
