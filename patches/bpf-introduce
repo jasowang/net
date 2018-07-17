@@ -1,0 +1,12 @@
+Bottom: 715ba9503d3a02fbffbc3e7345e6f54fa4163f4b
+Top:    715ba9503d3a02fbffbc3e7345e6f54fa4163f4b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 11:49:04 +0800
+
+bpf: introduce bpf_pro_offload_verifier_setup()
+
+
+
+---
+
+
