@@ -1,5 +1,5 @@
 Bottom: e23389689901495db33102b3fd9b32ba2d9bb283
-Top:    3dbb13d321649e0f5a5d966ac5a96ee9d57aafae
+Top:    616eee86fe606ee581b09ed5bf85d9eac61ddebf
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c1ea833..058efe9 100644
+index c1ea833..18c013d 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -428,6 +428,18 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -50,17 +50,6 @@ index c1ea833..058efe9 100644
  		preempt_disable();
  		endtime = busy_clock() + vq->busyloop_timeout;
  		while (vhost_can_busy_poll(endtime)) {
-@@ -494,8 +509,8 @@ static int get_tx_bufs(struct vhost_net *net,
- 	struct vhost_virtqueue *vq = &nvq->vq;
- 	int ret;
- 
--	ret = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
--				       ARRAY_SIZE(vq->iov),
-+	ret = vhost_net_tx_get_vq_desc(net, vq, vq->iov + nvq->done_idx,
-+				       ARRAY_SIZE(vq->iov) - nvq->done_idx,
- 				       out, in, busyloop_intr);
- 	if (ret)
- 		goto err;
 @@ -596,13 +611,15 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
