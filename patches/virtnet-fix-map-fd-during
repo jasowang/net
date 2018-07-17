@@ -5,6 +5,8 @@ Date:   2018-07-17 13:40:53 +0800
 
 virtnet: fix map fd during setup
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
