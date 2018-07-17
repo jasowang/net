@@ -820,6 +820,7 @@ enum bpf_netdev_command {
 	 */
 	XDP_QUERY_PROG,
 	/* BPF program for offload callbacks, invoked at program load time. */
+        BPF_OFFLOAD_VERIFIER_SETUP,
 	BPF_OFFLOAD_VERIFIER_PREP,
 	BPF_OFFLOAD_TRANSLATE,
 	BPF_OFFLOAD_DESTROY,
