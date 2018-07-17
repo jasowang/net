@@ -577,7 +577,6 @@ static void handle_tx(struct vhost_net *net)
 			if (unlikely(busyloop_intr)) {
 				vhost_poll_queue(&vq->poll);
 			} else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
-
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
