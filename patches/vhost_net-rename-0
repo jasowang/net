@@ -1,5 +1,5 @@
-Bottom: 07ba260d1d57e17a1730b79e50d4c1a9fd7641bb
-Top:    e23389689901495db33102b3fd9b32ba2d9bb283
+Bottom: cad95ab82a770d42a28f5986c4c67f65e755ed92
+Top:    2ae0afc4c5610ef6340b9318ae3d3bc6d453ae48
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-15 12:01:27 +0800
 
@@ -13,7 +13,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 8a0c7da..c1ea833 100644
+index 7d3b988..6d38de4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -94,7 +94,7 @@ struct vhost_net_ubuf_ref {
@@ -34,7 +34,7 @@ index 8a0c7da..c1ea833 100644
  	return rxq->tail;
  }
  
-@@ -1030,7 +1030,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -1027,7 +1027,7 @@ static void handle_rx(struct vhost_net *net)
  			goto out;
  		}
  		nvq->done_idx += headcount;
@@ -43,7 +43,7 @@ index 8a0c7da..c1ea833 100644
  			vhost_net_signal_used(nvq);
  		if (unlikely(vq_log))
  			vhost_log_write(vq, vq_log, log, vhost_len);
-@@ -1098,7 +1098,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
+@@ -1095,7 +1095,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
  		return -ENOMEM;
  	}
  
