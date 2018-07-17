@@ -553,7 +553,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
-		bool busyloop_intr;
+		bool busyloop_intr = false;
 
 		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
 				   &busyloop_intr);
@@ -570,10 +570,6 @@ static void handle_tx_copy(struct vhost_net *net)
 			}
 			break;
 		}
-
-		/* On error, stop handling until the next kick. */
-		if (unlikely(err < 0))
-			break;
 
 		total_len += len;
 		if (tx_can_batch(vq, total_len))
