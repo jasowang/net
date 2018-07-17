@@ -580,9 +580,6 @@ static void handle_tx(struct vhost_net *net)
 			}
 			break;
 		}
-		/* On error, stop handling until the next kick. */
-		if (unlikely(err < 0))
-			break;
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
