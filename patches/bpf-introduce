@@ -5,6 +5,7 @@ Date:   2018-07-17 11:49:04 +0800
 
 bpf: introduce bpf_pro_offload_verifier_setup()
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
