@@ -509,8 +509,8 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, vq, vq->iov + nvq->done_idx,
-				       ARRAY_SIZE(vq->iov) - nvq->done_idx,
+	ret = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
+				       ARRAY_SIZE(vq->iov),
 				       out, in, busyloop_intr);
 	if (ret)
 		goto err;
