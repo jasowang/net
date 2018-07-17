@@ -1,0 +1,11 @@
+Bottom: 236f0cca64c7e3f38022e525f4e23a140e358a8d
+Top:    236f0cca64c7e3f38022e525f4e23a140e358a8d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 13:40:53 +0800
+
+virtnet: fix map fd during setup
+
+
+---
+
+
