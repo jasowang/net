@@ -1,0 +1,75 @@
+Bottom: 715ba9503d3a02fbffbc3e7345e6f54fa4163f4b
+Top:    236f0cca64c7e3f38022e525f4e23a140e358a8d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 11:49:08 +0800
+
+Refresh of bpf-introduce
+
+---
+
+diff --git a/include/linux/bpf_verifier.h b/include/linux/bpf_verifier.h
+index 38b04f5..cae279f 100644
+--- a/include/linux/bpf_verifier.h
++++ b/include/linux/bpf_verifier.h
+@@ -214,6 +214,7 @@ static inline struct bpf_reg_state *cur_regs(struct bpf_verifier_env *env)
+ }
+ 
+ int bpf_prog_offload_verifier_prep(struct bpf_verifier_env *env);
++int bpf_prog_offload_verifier_setup(struct bpf_verifier_env *env);
+ int bpf_prog_offload_verify_insn(struct bpf_verifier_env *env,
+ 				 int insn_idx, int prev_insn_idx);
+ 
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index cdf103e..1e080d4 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -820,6 +820,7 @@ enum bpf_netdev_command {
+ 	 */
+ 	XDP_QUERY_PROG,
+ 	/* BPF program for offload callbacks, invoked at program load time. */
++        BPF_OFFLOAD_VERIFIER_SETUP,
+ 	BPF_OFFLOAD_VERIFIER_PREP,
+ 	BPF_OFFLOAD_TRANSLATE,
+ 	BPF_OFFLOAD_DESTROY,
+diff --git a/kernel/bpf/offload.c b/kernel/bpf/offload.c
+index 7b74b2a..5a01387 100644
+--- a/kernel/bpf/offload.c
++++ b/kernel/bpf/offload.c
+@@ -102,6 +102,20 @@ static int __bpf_offload_ndo(struct bpf_prog *prog, enum bpf_netdev_command cmd,
+ 	return netdev->netdev_ops->ndo_bpf(netdev, data);
+ }
+ 
++int bpf_prog_offload_verifier_setup(struct bpf_verifier_env *env)
++{
++	struct netdev_bpf data = {};
++	int err;
++
++	data.verifier.prog = env->prog;
++
++	rtnl_lock();
++	err = __bpf_offload_ndo(env->prog, BPF_OFFLOAD_VERIFIER_SETUP, &data);
++	rtnl_unlock();
++
++	return err;
++}
++
+ int bpf_prog_offload_verifier_prep(struct bpf_verifier_env *env)
+ {
+ 	struct netdev_bpf data = {};
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index cd7487f..e109e6d7 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -5914,6 +5914,12 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 	if (!IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS))
+ 		env->strict_alignment = true;
+ 
++	if (bpf_prog_is_dev_bound(env->prog->aux)) {
++		ret = bpf_prog_offload_verifier_setup(env);
++		if (ret)
++			goto skip_full_check;
++	}
++
+ 	ret = replace_map_fd_with_map_ptr(env);
+ 	if (ret < 0)
+ 		goto skip_full_check;
