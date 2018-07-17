@@ -1361,6 +1361,42 @@ static void __tun_xdp_flush_tfile(struct tun_file *tfile)
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 }
 
+static u32 tun_do_xdp_rx(struct tun_struct *tun, struct xdp_buff *xdp)
+{
+	struct bpf_prog *xdp_prog = rcu_dereference(tun->xdp_prog);
+	u32 act = XDP_PASS;
+
+	if (xdp_prog) {
+		act = bpf_prog_run_xdp(xdp_prog, xdp);
+		switch (act) {
+		case XDP_REDIRECT:
+			err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
+			if (err)
+				goto err_redirect;
+			xdp_do_flush_map();
+			break;
+		case XDP_TX:
+			WARN_ON_ONCE("XDP_TX in XDP RX\n");
+			/* FIXME */
+			break;
+		case XDP_PASS:
+			WARN_ON_ONCE("XDP_PASS in XDP RX\n");
+			/* FXIME build_skb() */
+			break;
+		default:
+			bpf_warn_invalid_xdp_action(act);
+			/* fall through */
+		case XDP_ABORTED:
+			trace_xdp_exception(tun->dev, xdp_prog, act);
+			/* fall through */
+		case XDP_DROP:
+			goto err_xdp;
+		}
+	}
+
+	return act;
+}
+
 static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
 {
 	struct tun_prog *xdp_prog;
@@ -1377,8 +1413,8 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
 		act = bpf_prog_run_xdp(xdp_prog->prog, &xdp);
 		switch (act) {
 		case XDP_TX:
-			/* FIXME! */
-			break;
+			/* fall through */
+			
 		case XDP_PASS:
 			break;
 		case XDP_REDIRECT:

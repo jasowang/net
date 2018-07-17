@@ -2403,12 +2403,27 @@ static const struct file_operations virtnet_bpf_string_fops = {
 	.llseek = seq_lseek
 };
 
+static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
+						   struct bpf_map *map)
+{
+	struct virtnet_bpf_map *virtnet_map;
+
+	list_for_each_entry(virtnet_map, &vi->map_list, l) {
+		if (&virtnet_map->offmap->map == map)
+			return virtnet_map;
+	}
+
+	return NULL;
+}
+
 static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 				   struct bpf_prog *prog)
 {
 	struct virtnet_bpf_bound_prog *state;
 	size_t insn_len = prog->len * sizeof(struct bpf_insn);
 	char name[16];
+	int i;
+	int err = 0;
 
 	state = kzalloc(sizeof(*state) + insn_len, GFP_KERNEL);
 	if (!state)
@@ -2419,6 +2434,42 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 	state->vi = vi;
 	state->prog = prog;
 	state->len = prog->len;
+
+	/* Replace map fd with host identitier. */
+	for (i = 0; i < state->len; i++) {
+		struct bpf_insn *insn = &state->insnsi[i];
+		struct virtnet_bpf_map *virtnet_map;
+		struct bpf_map *map;
+		struct fd f;
+
+		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
+			continue;
+
+		printk("found map access at idx %d! fd %d\n", i, insn->imm);
+		f = fdget(insn->imm);
+		map = __bpf_map_get(f);
+		if (IS_ERR(map)) {
+			printk("fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			err = -EINVAL;
+			goto err_replace;
+		}
+
+		printk("find fd %d in imm\n", insn->imm);
+		virtnet_map = virtnet_get_bpf_map(vi, map);
+		if (!virtnet_map) {
+			printk("could not get a offloaded map fd %d\n",
+				insn->imm);
+			err = -EINVAL;
+			goto err_replace;
+		}
+
+		printk("replace it with %d\n", virtnet_map->id);
+		insn->imm = virtnet_map->id;
+
+		fdput(f);
+	}
+
 	state->state = "verify";
 
 	/* Program id is not populated yet when we create the state. */
@@ -2439,18 +2490,10 @@ static int virtnet_bpf_create_prog(struct virtnet_info *vi,
 	prog->aux->offload->dev_priv = state;
 
 	return 0;
-}
 
-static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
-						   struct bpf_map *map)
-{
-	struct virtnet_bpf_map *virtnet_map;
-
-	list_for_each_entry(virtnet_map, &vi->map_list, l) {
-		return virtnet_map;
-	}
-
-	return NULL;
+err_replace:
+	kfree(state);
+	return err;
 }
 
 static int
@@ -2459,7 +2502,6 @@ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 {
 	struct virtnet_bpf_bound_prog *state;
 	struct virtnet_info *vi;
-	int i;
 
 	state = env->prog->aux->offload->dev_priv;
 	vi = state->vi;
@@ -2469,45 +2511,6 @@ virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
 
 	if (insn_idx == env->prog->len - 1)
 		pr_vlog(env, "Hello from virtio-net!\n");
-
-	/* Replace map fd with host identitier. */
-	for (i = 0; i < state->len; i++) {
-		struct bpf_insn *insn = &state->insnsi[i];
-		struct virtnet_bpf_map *virtnet_map;
-		struct bpf_map *map;
-		struct fd f;
-
-		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
-			continue;
-
-		printk("found map access at idx %d! fd %d\n", i, insn->imm);
-#if 0
-		f = fdget(insn->imm);
-		map = __bpf_map_get(f);
-		if (IS_ERR(map)) {
-			pr_vlog(env, "fd %d is not pointing to valid bpf_map\n",
-				insn->imm);
-			printk("fd %d is not pointing to valid bpf_map\n",
-				insn->imm);
-			return -EINVAL;
-		}
-#endif
-
-		printk("find fd %d in imm\n", insn->imm);
-		virtnet_map = virtnet_get_bpf_map(vi, map);
-		if (!virtnet_map) {
-			pr_vlog(env, "could not get a offloaded map fd %d\n",
-				insn->imm);
-			printk("could not get a offloaded map fd %d\n",
-				insn->imm);
-			return -EINVAL;
-		}
-
-		printk("replace it with %d\n", virtnet_map->id);
-		insn->imm = virtnet_map->id;
-
-//		fdput(f);
-	}
 
 	return 0;
 }
@@ -2819,13 +2822,16 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 	int err;
 
 	switch (bpf->command) {
-	case BPF_OFFLOAD_VERIFIER_PREP:
+	case BPF_OFFLOAD_VERIFIER_SETUP:
 		if (!vi->bpf_bind_accept)
 			return -EOPNOTSUPP;
-
 		err = virtnet_bpf_create_prog(vi, bpf->verifier.prog);
 		if (err)
 			return err;
+		return 0;
+	case BPF_OFFLOAD_VERIFIER_PREP:
+		if (!vi->bpf_bind_accept)
+			return -EOPNOTSUPP;
 
 		bpf->verifier.ops = &virtnet_bpf_analyzer_ops;
 		return 0;
