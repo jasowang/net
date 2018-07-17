@@ -1,5 +1,5 @@
-Bottom: e23389689901495db33102b3fd9b32ba2d9bb283
-Top:    80eace24936613551af3a4b4a25f3607a8d9dc4b
+Bottom: 2ae0afc4c5610ef6340b9318ae3d3bc6d453ae48
+Top:    2168dc43c46c5525f65a1cbbc8aa8962982b5276
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c1ea833..ae87dab 100644
+index 6d38de4..7c12629 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -428,6 +428,18 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -39,8 +39,8 @@ index c1ea833..ae87dab 100644
 +
  static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  				    struct vhost_virtqueue *vq,
- 				    struct iovec iov[], unsigned int iov_size,
-@@ -439,6 +451,9 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+ 				    unsigned int *out_num, unsigned int *in_num,
+@@ -438,6 +450,9 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
  				  out_num, in_num, NULL, NULL);
  
  	if (r == vq->num && vq->busyloop_timeout) {
@@ -50,7 +50,7 @@ index c1ea833..ae87dab 100644
  		preempt_disable();
  		endtime = busy_clock() + vq->busyloop_timeout;
  		while (vhost_can_busy_poll(endtime)) {
-@@ -516,6 +531,10 @@ static int get_tx_bufs(struct vhost_net *net,
+@@ -513,6 +528,10 @@ static int get_tx_bufs(struct vhost_net *net,
  		goto err;
  	}
  
@@ -61,7 +61,7 @@ index c1ea833..ae87dab 100644
  	return 0;
  err:
  	*len = 0;
-@@ -596,13 +615,15 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -593,13 +612,15 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -78,7 +78,7 @@ index c1ea833..ae87dab 100644
  	mutex_unlock(&vq->mutex);
  }
  
-@@ -764,18 +785,6 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -761,18 +782,6 @@ static int sk_has_rx_data(struct sock *sk)
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
