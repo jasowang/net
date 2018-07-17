@@ -1,5 +1,5 @@
-Bottom: 47999505453068497e99c79755b32fa3f5a97e1a
-Top:    ea4844c237cc0f6ab6006fc361a6cb0fad1b3d0c
+Bottom: 4228d15ee2484eed0be121e1158cadbe45754f59
+Top:    74f2444ba3b85c4f61c0e6d36711159b2bd950f5
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-30 15:59:24 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 6be4bea..1e6163f 100644
+index 658ef83..d883f16 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -522,6 +522,12 @@ static int get_tx_bufs(struct vhost_net *net,
@@ -27,7 +27,7 @@ index 6be4bea..1e6163f 100644
  /* Expects to be always run from workqueue - which acts as
   * read-size critical section for our kind of RCU. */
  static void handle_tx(struct vhost_net *net)
-@@ -599,8 +605,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -606,8 +612,7 @@ static void handle_tx(struct vhost_net *net)
  			ubufs = NULL;
  		}
  		total_len += len;
