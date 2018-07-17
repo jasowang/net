@@ -1,5 +1,5 @@
 Bottom: d56ff063b1486849d1eb52796e4a978822173c41
-Top:    a33ac57ae0539167c42d823b36dc16f202b7e2b2
+Top:    b3481d2ba452e43d2268bd7771737cff078d0233
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,10 +15,41 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 441197b..10e4f7a 100644
+index 441197b..af938f4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -523,9 +523,83 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -495,10 +495,12 @@ static int get_tx_bufs(struct vhost_net *net,
+ 
+ 	ret = vhost_net_tx_get_vq_desc(net, vq, out, in, busyloop_intr);
+ 
++	if (ret < 0 || ret == vq->num)
++		return ret;
++
+ 	if (*in) {
+ 		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n", *out, *in);
+-		ret = -EFAULT;
+-		goto err;
++		return -EFAULT;
+ 	}
+ 
+ 	/* Sanity check */
+@@ -507,14 +509,10 @@ static int get_tx_bufs(struct vhost_net *net,
+ 		vq_err(vq, "Unexpected header len for TX: "
+ 			"%zd expected %zd\n",
+ 			*len, nvq->vhost_hlen);
+-		ret = -EFAULT;
+-		goto err;
++		return -EFAULT;
+ 	}
+ 
+ 	return ret;
+-err:
+-	*len = 0;
+-	return ret;
+ }
+ 
+ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -523,9 +521,83 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
@@ -103,7 +134,7 @@ index 441197b..10e4f7a 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -542,7 +616,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -542,7 +614,7 @@ static void handle_tx(struct vhost_net *net)
  	int err;
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
@@ -112,7 +143,7 @@ index 441197b..10e4f7a 100644
  	int sent_pkts = 0;
  
  	mutex_lock(&vq->mutex);
-@@ -556,14 +630,11 @@ static void handle_tx(struct vhost_net *net)
+@@ -556,14 +628,11 @@ static void handle_tx(struct vhost_net *net)
  	vhost_disable_notify(&net->dev, vq);
  	vhost_net_disable_vq(net, vq);
  
@@ -128,7 +159,7 @@ index 441197b..10e4f7a 100644
  
  		busyloop_intr = false;
  		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
-@@ -582,9 +653,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -582,9 +651,9 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  
@@ -141,7 +172,7 @@ index 441197b..10e4f7a 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -643,6 +714,16 @@ static void handle_tx(struct vhost_net *net)
+@@ -643,6 +712,16 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
