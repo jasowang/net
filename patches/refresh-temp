@@ -1,0 +1,33 @@
+Bottom: db251455603153970b2caf2d10c9aec2254cdaaa
+Top:    a33ac57ae0539167c42d823b36dc16f202b7e2b2
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 17:28:48 +0800
+
+Refresh of vhost_net-split-out-datacopy
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 07919c9..10e4f7a 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -553,7 +553,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 	vhost_net_disable_vq(net, vq);
+ 
+ 	for (;;) {
+-		bool busyloop_intr;
++		bool busyloop_intr = false;
+ 
+ 		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
+ 				   &busyloop_intr);
+@@ -571,10 +571,6 @@ static void handle_tx_copy(struct vhost_net *net)
+ 			break;
+ 		}
+ 
+-		/* On error, stop handling until the next kick. */
+-		if (unlikely(err < 0))
+-			break;
+-
+ 		total_len += len;
+ 		if (tx_can_batch(vq, total_len))
+ 			msg.msg_flags |= MSG_MORE;
