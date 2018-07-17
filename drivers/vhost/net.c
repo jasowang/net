@@ -487,7 +487,7 @@ static bool vhost_exceeds_weight(int pkts, int total_len)
 
 static int get_tx_bufs(struct vhost_net *net,
 		       struct vhost_net_virtqueue *nvq,
-		       struct vhost_used_elem *used,
+		       struct iovec iov[], unsigned int iov_size,
 		       struct msghdr *msg,
 		       unsigned int *out, unsigned int *in,
 		       size_t *len, bool *busyloop_intr)
@@ -495,7 +495,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, vq, used, vq->iov,
+	ret = vhost_net_tx_get_vq_desc(net, vq, vq->iov,
 				       ARRAY_SIZE(vq->iov),
 				       out, in, busyloop_intr);
 	if (ret)
@@ -566,11 +566,9 @@ static void handle_tx(struct vhost_net *net)
 		if (zcopy)
 			vhost_zerocopy_signal_used(net, vq);
 
-<<<<<<< current
 		busyloop_intr = false;
-		head = get_tx_bufs(net, vq, vq->iov,
-				   ARRAY_SIZE(vq->iov),
-				   &out, &in, &busyloop_intr);
+		head = get_tx_bufs(net, nvq, vq->iov, ARRAY_SIZE(vq->iov),
+				   &msg, &out, &in, &len, &busyloop_intr);
 		/* On error, stop handling until the next kick. */
 		if (unlikely(head < 0))
 			break;
@@ -579,36 +577,15 @@ static void handle_tx(struct vhost_net *net)
 			if (unlikely(busyloop_intr)) {
 				vhost_poll_queue(&vq->poll);
 			} else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
-=======
-		err = get_tx_bufs(net, nvq, &used, &msg, &out, &in, &len);
-		if (err == -ENOSPC) {
-			if (unlikely(vhost_enable_notify(&net->dev, vq))) {
->>>>>>> patched
+
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
 			break;
 		}
-<<<<<<< current
-		if (in) {
-			vq_err(vq, "Unexpected descriptor format for TX: "
-			       "out %d, int %d\n", out, in);
-			break;
-		}
-
-		/* Sanity check */
-		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
-		if (!len) {
-			vq_err(vq, "Unexpected header len for TX: "
-			"%zd expected %zd\n",
-			len, hdr_size);
-			break;
-		}
-=======
 		/* On error, stop handling until the next kick. */
 		if (unlikely(err < 0))
 			break;
->>>>>>> patched
 
 		zcopy_used = zcopy && len >= VHOST_GOODCOPY_LEN
 				   && !vhost_exceeds_maxpend(net)
