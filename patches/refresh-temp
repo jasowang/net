@@ -1,0 +1,34 @@
+Bottom: 2168dc43c46c5525f65a1cbbc8aa8962982b5276
+Top:    30de6ecbfc5176951feb3005494cd1fff55d926e
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 16:53:51 +0800
+
+Refresh of vhost_net-batch-update-used
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 7c12629..2fd789b 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -441,10 +441,11 @@ static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
+ }
+ 
+ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
+-				    struct vhost_virtqueue *vq,
++				    struct vhost_net_virtqueue *nvq,
+ 				    unsigned int *out_num, unsigned int *in_num,
+ 				    bool *busyloop_intr)
+ {
++	struct vhost_virtqueue *vq = &nvq->vq;
+ 	unsigned long uninitialized_var(endtime);
+ 	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
+ 				  out_num, in_num, NULL, NULL);
+@@ -508,7 +509,7 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+ 	int ret;
+ 
+-	ret = vhost_net_tx_get_vq_desc(net, vq, out, in, busyloop_intr);
++	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, busyloop_intr);
+ 	if (ret)
+ 		goto err;
