@@ -511,7 +511,7 @@ static int get_tx_bufs(struct vhost_net *net,
 		goto err;
 	}
 
-	return 0;
+	return ret;
 err:
 	*len = 0;
 	return ret;
