@@ -1,0 +1,22 @@
+Bottom: 8b54c06e4f4dce1fd6e442ffdd7265db4cbea500
+Top:    448031f2a937a23c2fe5a34149efc3c076194bde
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-17 17:13:40 +0800
+
+Refresh of vhost_net-introduce-tx
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 657425b..e7de849 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -511,7 +511,7 @@ static int get_tx_bufs(struct vhost_net *net,
+ 		goto err;
+ 	}
+ 
+-	return 0;
++	return ret;
+ err:
+ 	*len = 0;
+ 	return ret;
