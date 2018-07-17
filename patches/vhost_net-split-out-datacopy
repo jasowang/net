@@ -1,5 +1,5 @@
-Bottom: 74f2444ba3b85c4f61c0e6d36711159b2bd950f5
-Top:    47c0e4f775d2a8b97c754266a604be4e86454af6
+Bottom: 7dd6d9e3a7f4ee144d910e62cadcb49ba4386263
+Top:    6c7dd809121b3e6233f54e8ad0dbc629c36958dc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,10 +15,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d883f16..0782782 100644
+index 3198d31..879a32e 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -528,9 +528,87 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -525,9 +525,87 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
@@ -107,7 +107,7 @@ index d883f16..0782782 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -547,7 +625,7 @@ static void handle_tx(struct vhost_net *net)
+@@ -544,7 +622,7 @@ static void handle_tx(struct vhost_net *net)
  	int err;
  	struct socket *sock;
  	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
@@ -116,7 +116,7 @@ index d883f16..0782782 100644
  	int sent_pkts = 0;
  
  	mutex_lock(&vq->mutex);
-@@ -561,14 +639,11 @@ static void handle_tx(struct vhost_net *net)
+@@ -558,14 +636,11 @@ static void handle_tx(struct vhost_net *net)
  	vhost_disable_notify(&net->dev, vq);
  	vhost_net_disable_vq(net, vq);
  
@@ -132,7 +132,7 @@ index d883f16..0782782 100644
  
  		busyloop_intr = false;
  		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
-@@ -587,9 +662,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -584,9 +659,9 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  
@@ -145,7 +145,7 @@ index d883f16..0782782 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -648,6 +723,16 @@ static void handle_tx(struct vhost_net *net)
+@@ -645,6 +720,16 @@ static void handle_tx(struct vhost_net *net)
  	mutex_unlock(&vq->mutex);
  }
  
