@@ -5,6 +5,8 @@ Date:   2018-07-17 16:48:58 +0800
 
 vhost_net: drop unnecessary parameter
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
