@@ -1,5 +1,5 @@
 Bottom: e23389689901495db33102b3fd9b32ba2d9bb283
-Top:    616eee86fe606ee581b09ed5bf85d9eac61ddebf
+Top:    80eace24936613551af3a4b4a25f3607a8d9dc4b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:03:11 +0800
 
@@ -18,7 +18,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index c1ea833..18c013d 100644
+index c1ea833..ae87dab 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -428,6 +428,18 @@ static int vhost_net_enable_vq(struct vhost_net *n,
@@ -50,12 +50,23 @@ index c1ea833..18c013d 100644
  		preempt_disable();
  		endtime = busy_clock() + vq->busyloop_timeout;
  		while (vhost_can_busy_poll(endtime)) {
-@@ -596,13 +611,15 @@ static void handle_tx_copy(struct vhost_net *net)
+@@ -516,6 +531,10 @@ static int get_tx_bufs(struct vhost_net *net,
+ 		goto err;
+ 	}
+ 
++	vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, ret);
++	vq->heads[nvq->done_idx].len = 0;
++	++nvq->done_idx;
++
+ 	return 0;
+ err:
+ 	*len = 0;
+@@ -596,13 +615,15 @@ static void handle_tx_copy(struct vhost_net *net)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
 -		vhost_add_used_and_signal(&net->dev, vq, head, 0);
-+		if (++nvq->done_idx >= VHOST_NET_BATCH)
++		if (nvq->done_idx >= VHOST_NET_BATCH)
 +			vhost_net_signal_used(nvq);
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
@@ -67,7 +78,7 @@ index c1ea833..18c013d 100644
  	mutex_unlock(&vq->mutex);
  }
  
-@@ -764,18 +781,6 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -764,18 +785,6 @@ static int sk_has_rx_data(struct sock *sk)
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
