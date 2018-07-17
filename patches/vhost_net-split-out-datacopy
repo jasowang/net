@@ -7,7 +7,7 @@ vhost_net: split out datacopy logic
 
 Instead of mixing zerocopy and datacopy logics, this patch tries to
 split datacopy logic out. This results for a more compact code and
-specific optimization could be done on top more easily.
+ad-hoc optimization could be done on top more easily.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
