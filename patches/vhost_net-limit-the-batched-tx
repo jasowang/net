@@ -1,0 +1,11 @@
+Bottom: f6aaea9b20464e86e82b553abd6a5cb2ff372dd8
+Top:    f6aaea9b20464e86e82b553abd6a5cb2ff372dd8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 07:57:49 +0800
+
+vhost_net: limit the batched tx bytes
+
+
+---
+
+
