@@ -700,13 +700,10 @@ static void handle_tx(struct vhost_net *net)
 	vhost_disable_notify(&net->dev, vq);
 	vhost_net_disable_vq(net, vq);
 
-	if (vhost_sock_zcopy(sock)) {
-		printk("zcopy!\n");
+	if (vhost_sock_zcopy(sock))
 		handle_tx_zerocopy(net, sock);
-	} else {
-		printk("data copy!\n");
+	else
 		handle_tx_copy(net, sock);
-	}
 
 out:
 	mutex_unlock(&vq->mutex);
