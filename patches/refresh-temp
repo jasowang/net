@@ -1,0 +1,43 @@
+Bottom: e1045df3dbb4a33a59d1670f9c84971725f3f2f2
+Top:    671e58a06678ecd1390c91471792ad70681e44c9
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-18 09:54:44 +0800
+
+Refresh of vhost_net-batch-update-used
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 9ee6f9e..310800e 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -528,10 +528,6 @@ static int get_tx_bufs(struct vhost_net *net,
+ 		return -EFAULT;
+ 	}
+ 
+-	vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, ret);
+-	vq->heads[nvq->done_idx].len = 0;
+-	++nvq->done_idx;
+-
+ 	return ret;
+ }
+ 
+@@ -589,6 +585,9 @@ static void handle_tx_copy(struct vhost_net *net)
+ 			break;
+ 		}
+ 
++		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
++		vq->heads[nvq->done_idx].len = 0;
++
+ 		total_len += len;
+ 		if (tx_can_batch(vq, total_len))
+ 			msg.msg_flags |= MSG_MORE;
+@@ -605,7 +604,7 @@ static void handle_tx_copy(struct vhost_net *net)
+ 		if (err != len)
+ 			pr_debug("Truncated TX packet: "
+ 				 " len %d != %zd\n", err, len);
+-		if (nvq->done_idx >= VHOST_NET_BATCH)
++		if (++nvq->done_idx >= VHOST_NET_BATCH)
+ 			vhost_net_signal_used(nvq);
+ 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
+ 			vhost_poll_queue(&vq->poll);
