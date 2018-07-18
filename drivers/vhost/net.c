@@ -528,10 +528,6 @@ static int get_tx_bufs(struct vhost_net *net,
 		return -EFAULT;
 	}
 
-	vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, ret);
-	vq->heads[nvq->done_idx].len = 0;
-	++nvq->done_idx;
-
 	return ret;
 }
 
@@ -589,6 +585,9 @@ static void handle_tx_copy(struct vhost_net *net)
 			break;
 		}
 
+		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
+		vq->heads[nvq->done_idx].len = 0;
+
 		total_len += len;
 		if (tx_can_batch(vq, total_len))
 			msg.msg_flags |= MSG_MORE;
@@ -605,7 +604,7 @@ static void handle_tx_copy(struct vhost_net *net)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (nvq->done_idx >= VHOST_NET_BATCH)
+		if (++nvq->done_idx >= VHOST_NET_BATCH)
 			vhost_net_signal_used(nvq);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
