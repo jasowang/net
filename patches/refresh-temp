@@ -1,0 +1,44 @@
+Bottom: 448031f2a937a23c2fe5a34149efc3c076194bde
+Top:    4147c32b055c68a5605178b55f31cbf2ae3bd2ad
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-18 15:27:08 +0800
+
+Refresh of vhost_net-introduce-tx
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index e7de849..801b4c5 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -494,11 +494,12 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	int ret;
+ 
+ 	ret = vhost_net_tx_get_vq_desc(net, vq, out, in, busyloop_intr);
++	if (ret < 0 || ret == vq->num)
++		return ret;
+ 
+ 	if (*in) {
+ 		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n", *out, *in);
+-		ret = -EFAULT;
+-		goto err;
++		return -EFAULT;
+ 	}
+ 
+ 	/* Sanity check */
+@@ -507,14 +508,10 @@ static int get_tx_bufs(struct vhost_net *net,
+ 		vq_err(vq, "Unexpected header len for TX: "
+ 			"%zd expected %zd\n",
+ 			*len, nvq->vhost_hlen);
+-		ret = -EFAULT;
+-		goto err;
++		return -EFAULT;
+ 	}
+ 
+ 	return ret;
+-err:
+-	*len = 0;
+-	return ret;
+ }
+ 
+ /* Expects to be always run from workqueue - which acts as
