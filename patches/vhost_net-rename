@@ -1,5 +1,5 @@
 Bottom: 8b252cc73eb019e5c50fd6fa2b71195923f7589a
-Top:    8056c2216d8f45527f3b52e0c40c1491c0aad2e0
+Top:    b4938566bb14b3b579a08eee0461b382d9e6fbcc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-15 11:54:24 +0800
 
@@ -11,10 +11,26 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 5e821de..ed21ce1 100644
+index 5e821de..d8b9e37 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -743,7 +743,7 @@ static int sk_has_rx_data(struct sock *sk)
+@@ -700,13 +700,10 @@ static void handle_tx(struct vhost_net *net)
+ 	vhost_disable_notify(&net->dev, vq);
+ 	vhost_net_disable_vq(net, vq);
+ 
+-	if (vhost_sock_zcopy(sock)) {
+-		printk("zcopy!\n");
++	if (vhost_sock_zcopy(sock))
+ 		handle_tx_zerocopy(net, sock);
+-	} else {
+-		printk("data copy!\n");
++	else
+ 		handle_tx_copy(net, sock);
+-	}
+ 
+ out:
+ 	mutex_unlock(&vq->mutex);
+@@ -743,7 +740,7 @@ static int sk_has_rx_data(struct sock *sk)
  	return skb_queue_empty(&sk->sk_receive_queue);
  }
  
@@ -23,7 +39,7 @@ index 5e821de..ed21ce1 100644
  {
  	struct vhost_virtqueue *vq = &nvq->vq;
  	struct vhost_dev *dev = vq->dev;
-@@ -767,7 +767,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
+@@ -767,7 +764,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
  
  	if (!len && tvq->busyloop_timeout) {
  		/* Flush batched heads first */
@@ -32,7 +48,7 @@ index 5e821de..ed21ce1 100644
  		/* Both tx vq and rx socket were polled here */
  		mutex_lock_nested(&tvq->mutex, 1);
  		vhost_disable_notify(&net->dev, tvq);
-@@ -1010,7 +1010,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -1010,7 +1007,7 @@ static void handle_rx(struct vhost_net *net)
  		}
  		nvq->done_idx += headcount;
  		if (nvq->done_idx > VHOST_RX_BATCH)
@@ -41,7 +57,7 @@ index 5e821de..ed21ce1 100644
  		if (unlikely(vq_log))
  			vhost_log_write(vq, vq_log, log, vhost_len);
  		total_len += vhost_len;
-@@ -1024,7 +1024,7 @@ static void handle_rx(struct vhost_net *net)
+@@ -1024,7 +1021,7 @@ static void handle_rx(struct vhost_net *net)
  	else
  		vhost_net_enable_vq(net, vq);
  out:
