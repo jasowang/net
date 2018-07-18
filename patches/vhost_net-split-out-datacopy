@@ -1,5 +1,5 @@
 Bottom: d56ff063b1486849d1eb52796e4a978822173c41
-Top:    b3481d2ba452e43d2268bd7771737cff078d0233
+Top:    99d21e7ddc83d867fde0519bad1bbb617febc916
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 441197b..af938f4 100644
+index 441197b..49aae2f 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -495,10 +495,12 @@ static int get_tx_bufs(struct vhost_net *net,
@@ -49,42 +49,35 @@ index 441197b..af938f4 100644
  }
  
  static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
-@@ -523,9 +521,83 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -523,9 +521,7 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
-+static void handle_tx_copy(struct vhost_net *net)
-+{
-+	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-+	struct vhost_virtqueue *vq = &nvq->vq;
-+	unsigned out, in;
-+	int head;
-+	struct msghdr msg = {
-+		.msg_name = NULL,
-+		.msg_namelen = 0,
-+		.msg_control = NULL,
-+		.msg_controllen = 0,
-+		.msg_flags = MSG_DONTWAIT,
-+	};
-+	size_t len, total_len = 0;
-+	int err;
-+	struct socket *sock;
-+	int sent_pkts = 0;
-+
-+	mutex_lock(&vq->mutex);
-+	sock = vq->private_data;
-+	if (!sock)
-+		goto out;
-+
-+	if (!vq_iotlb_prefetch(vq))
-+		goto out;
-+
-+	vhost_disable_notify(&net->dev, vq);
-+	vhost_net_disable_vq(net, vq);
-+
+-/* Expects to be always run from workqueue - which acts as
+- * read-size critical section for our kind of RCU. */
+-static void handle_tx(struct vhost_net *net)
++static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+ {
+ 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+ 	struct vhost_virtqueue *vq = &nvq->vq;
+@@ -540,30 +536,75 @@ static void handle_tx(struct vhost_net *net)
+ 	};
+ 	size_t len, total_len = 0;
+ 	int err;
+-	struct socket *sock;
+-	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
+-	bool zcopy, zcopy_used;
+ 	int sent_pkts = 0;
+ 
+-	mutex_lock(&vq->mutex);
+-	sock = vq->private_data;
+-	if (!sock)
+-		goto out;
 +	for (;;) {
 +		bool busyloop_intr = false;
-+
+ 
+-	if (!vq_iotlb_prefetch(vq))
+-		goto out;
 +		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
 +				   &busyloop_intr);
 +		/* On error, stop handling until the next kick. */
@@ -100,13 +93,16 @@ index 441197b..af938f4 100644
 +			}
 +			break;
 +		}
-+
+ 
+-	vhost_disable_notify(&net->dev, vq);
+-	vhost_net_disable_vq(net, vq);
 +		total_len += len;
 +		if (tx_can_batch(vq, total_len))
 +			msg.msg_flags |= MSG_MORE;
 +		else
 +			msg.msg_flags &= ~MSG_MORE;
-+
+ 
+-	zcopy = nvq->ubufs;
 +		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 +		err = sock->ops->sendmsg(sock, &msg, len);
 +		if (unlikely(err < 0)) {
@@ -123,32 +119,27 @@ index 441197b..af938f4 100644
 +			break;
 +		}
 +	}
-+out:
-+	mutex_unlock(&vq->mutex);
 +}
 +
- /* Expects to be always run from workqueue - which acts as
-  * read-size critical section for our kind of RCU. */
--static void handle_tx(struct vhost_net *net)
-+static void handle_tx_zerocopy(struct vhost_net *net)
- {
- 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
- 	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -542,7 +614,7 @@ static void handle_tx(struct vhost_net *net)
- 	int err;
- 	struct socket *sock;
- 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
--	bool zcopy, zcopy_used;
++static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
++{
++	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
++	struct vhost_virtqueue *vq = &nvq->vq;
++	unsigned out, in;
++	int head;
++	struct msghdr msg = {
++		.msg_name = NULL,
++		.msg_namelen = 0,
++		.msg_control = NULL,
++		.msg_controllen = 0,
++		.msg_flags = MSG_DONTWAIT,
++	};
++	size_t len, total_len = 0;
++	int err;
++	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 +	bool zcopy_used;
- 	int sent_pkts = 0;
++	int sent_pkts = 0;
  
- 	mutex_lock(&vq->mutex);
-@@ -556,14 +628,11 @@ static void handle_tx(struct vhost_net *net)
- 	vhost_disable_notify(&net->dev, vq);
- 	vhost_net_disable_vq(net, vq);
- 
--	zcopy = nvq->ubufs;
--
  	for (;;) {
  		bool busyloop_intr;
  
@@ -159,7 +150,7 @@ index 441197b..af938f4 100644
  
  		busyloop_intr = false;
  		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
-@@ -582,9 +651,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -582,9 +623,9 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  
@@ -172,20 +163,39 @@ index 441197b..af938f4 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -643,6 +712,16 @@ static void handle_tx(struct vhost_net *net)
- 	mutex_unlock(&vq->mutex);
- }
- 
+@@ -639,6 +680,35 @@ static void handle_tx(struct vhost_net *net)
+ 			break;
+ 		}
+ 	}
++}
++
++/* Expects to be always run from workqueue - which acts as
++ * read-size critical section for our kind of RCU. */
 +static void handle_tx(struct vhost_net *net)
 +{
 +	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
++	struct vhost_virtqueue *vq = &nvq->vq;
++	struct socket *sock;
 +
-+	if (nvq->ubufs)
-+		handle_tx_zerocopy(net);
-+	else
-+		handle_tx_copy(net);
-+}
++	mutex_lock(&vq->mutex);
++	sock = vq->private_data;
++	if (!sock)
++		goto out;
 +
- static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
- {
- 	struct sk_buff *head;
++	if (!vq_iotlb_prefetch(vq))
++		goto out;
++
++	vhost_disable_notify(&net->dev, vq);
++	vhost_net_disable_vq(net, vq);
++
++	if (vhost_sock_zcopy(sock)) {
++		printk("zcopy!\n");
++		handle_tx_zerocopy(net, sock);
++	} else {
++		printk("data copy!\n");
++		handle_tx_copy(net, sock);
++	}
++
+ out:
+ 	mutex_unlock(&vq->mutex);
+ }
