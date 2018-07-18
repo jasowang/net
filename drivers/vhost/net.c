@@ -494,11 +494,12 @@ static int get_tx_bufs(struct vhost_net *net,
 	int ret;
 
 	ret = vhost_net_tx_get_vq_desc(net, vq, out, in, busyloop_intr);
+	if (ret < 0 || ret == vq->num)
+		return ret;
 
 	if (*in) {
 		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n", *out, *in);
-		ret = -EFAULT;
-		goto err;
+		return -EFAULT;
 	}
 
 	/* Sanity check */
@@ -507,13 +508,9 @@ static int get_tx_bufs(struct vhost_net *net,
 		vq_err(vq, "Unexpected header len for TX: "
 			"%zd expected %zd\n",
 			*len, nvq->vhost_hlen);
-		ret = -EFAULT;
-		goto err;
+		return -EFAULT;
 	}
 
-	return ret;
-err:
-	*len = 0;
 	return ret;
 }
 
