@@ -521,7 +521,7 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
 	       !vhost_vq_avail_empty(vq->dev, vq);
 }
 
-static void handle_tx_copy(struct vhost_net *net)
+static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
@@ -536,19 +536,7 @@ static void handle_tx_copy(struct vhost_net *net)
 	};
 	size_t len, total_len = 0;
 	int err;
-	struct socket *sock;
 	int sent_pkts = 0;
-
-	mutex_lock(&vq->mutex);
-	sock = vq->private_data;
-	if (!sock)
-		goto out;
-
-	if (!vq_iotlb_prefetch(vq))
-		goto out;
-
-	vhost_disable_notify(&net->dev, vq);
-	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
 		bool busyloop_intr = false;
@@ -591,13 +579,9 @@ static void handle_tx_copy(struct vhost_net *net)
 			break;
 		}
 	}
-out:
-	mutex_unlock(&vq->mutex);
 }
 
-/* Expects to be always run from workqueue - which acts as
- * read-size critical section for our kind of RCU. */
-static void handle_tx_zerocopy(struct vhost_net *net)
+static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
@@ -612,21 +596,9 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 	};
 	size_t len, total_len = 0;
 	int err;
-	struct socket *sock;
 	struct vhost_net_ubuf_ref *uninitialized_var(ubufs);
 	bool zcopy_used;
 	int sent_pkts = 0;
-
-	mutex_lock(&vq->mutex);
-	sock = vq->private_data;
-	if (!sock)
-		goto out;
-
-	if (!vq_iotlb_prefetch(vq))
-		goto out;
-
-	vhost_disable_notify(&net->dev, vq);
-	vhost_net_disable_vq(net, vq);
 
 	for (;;) {
 		bool busyloop_intr;
@@ -708,18 +680,37 @@ static void handle_tx_zerocopy(struct vhost_net *net)
 			break;
 		}
 	}
-out:
-	mutex_unlock(&vq->mutex);
 }
 
+/* Expects to be always run from workqueue - which acts as
+ * read-size critical section for our kind of RCU. */
 static void handle_tx(struct vhost_net *net)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
+	struct vhost_virtqueue *vq = &nvq->vq;
+	struct socket *sock;
 
-	if (nvq->ubufs)
-		handle_tx_zerocopy(net);
-	else
-		handle_tx_copy(net);
+	mutex_lock(&vq->mutex);
+	sock = vq->private_data;
+	if (!sock)
+		goto out;
+
+	if (!vq_iotlb_prefetch(vq))
+		goto out;
+
+	vhost_disable_notify(&net->dev, vq);
+	vhost_net_disable_vq(net, vq);
+
+	if (vhost_sock_zcopy(sock)) {
+		printk("zcopy!\n");
+		handle_tx_zerocopy(net, sock);
+	} else {
+		printk("data copy!\n");
+		handle_tx_copy(net, sock);
+	}
+
+out:
+	mutex_unlock(&vq->mutex);
 }
 
 static int peek_head_len(struct vhost_net_virtqueue *rvq, struct sock *sk)
