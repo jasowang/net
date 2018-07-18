@@ -1,0 +1,23 @@
+Bottom: 6b02667ef72841231ee8ce24c28b4c29a077bd44
+Top:    8b252cc73eb019e5c50fd6fa2b71195923f7589a
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-18 15:27:32 +0800
+
+Refresh of vhost_net-split-out-datacopy
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5f1e5c1..5e821de 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -497,9 +497,6 @@ static int get_tx_bufs(struct vhost_net *net,
+ 	if (ret < 0 || ret == vq->num)
+ 		return ret;
+ 
+-	if (ret < 0 || ret == vq->num)
+-		return ret;
+-
+ 	if (*in) {
+ 		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n", *out, *in);
+ 		return -EFAULT;
