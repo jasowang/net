@@ -95,6 +95,7 @@ struct vhost_net_ubuf_ref {
 };
 
 #define VHOST_NET_BATCH 64
+#define VHOST_NET_BATCH_BYTES 65535
 struct vhost_net_buf {
 	void **queue;
 	int tail;
@@ -549,7 +550,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		.msg_controllen = 0,
 		.msg_flags = MSG_DONTWAIT,
 	};
-	size_t len, total_len = 0;
+	size_t len, total_len = 0, batch_len = 0;
 	int err;
 	int sent_pkts = 0;
 
@@ -574,6 +575,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 
 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
 		vq->heads[nvq->done_idx].len = 0;
+		batch_len += len;
 
 		total_len += len;
 		if (tx_can_batch(vq, total_len))
@@ -591,8 +593,11 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		if (err != len)
 			pr_debug("Truncated TX packet: "
 				 " len %d != %zd\n", err, len);
-		if (++nvq->done_idx >= VHOST_NET_BATCH)
+		if (++nvq->done_idx >= VHOST_NET_BATCH ||
+		    batch_len >= VHOST_NET_BATCH_BYTES) {
+			batch_len = 0;
 			vhost_net_signal_used(nvq);
+		}
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
 			break;
