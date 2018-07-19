@@ -547,8 +547,7 @@ static void handle_tx(struct vhost_net *net)
 		/* Sanity check */
 		len = init_iov_iter(vq, &msg.msg_iter, hdr_size, out);
 		if (!len) {
-			vq_err(vq, "Unexpected header len for TX: "
-			"%zd expected %zd\n",
+			vq_err(vq, "Unexpected header len for TX: %zd expected %zd\n",
 			len, hdr_size);
 			break;
 		}
