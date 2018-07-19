@@ -549,7 +549,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		if (head == vq->num) {
 			if (unlikely(busyloop_intr)) {
 				vhost_poll_queue(&vq->poll);
-			} else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+			} else if (unlikely(vhost_enable_notify(&net->dev,
+								vq))) {
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
