@@ -585,7 +585,7 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-	unsigned out, in;
+	unsigned int out, in;
 	int head;
 	struct msghdr msg = {
 		.msg_name = NULL,
