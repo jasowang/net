@@ -1,5 +1,5 @@
 Bottom: e1c024bf1ede3811a7a52fe176b87fa7ea097629
-Top:    60bfe4c84a78d628e7b33e7b3542b243f3baca2c
+Top:    0cc52231d8b5ae38b4540fd97ca4b79d6d98f9f0
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
@@ -97,7 +97,7 @@ index b16701b..869591ee 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d707522..dfa8a9d 100644
+index d707522..5aa51a3 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -556,7 +556,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
@@ -109,7 +109,17 @@ index d707522..dfa8a9d 100644
  		return -EFAULT;
  
  	if (SKB_DATA_ALIGN(len + pad) +
-@@ -612,11 +612,35 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+@@ -576,7 +576,8 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+ 	 * offset sizeof(int): vnet header
+ 	 */
+ 	copied = copy_page_from_iter(alloc_frag->page,
+-				     alloc_frag->offset + sizeof(int), sock_hlen, from);
++				     alloc_frag->offset + sizeof(int),
++				     sock_hlen, from);
+ 	if (copied != sock_hlen)
+ 		return -EFAULT;
+ 
+@@ -612,11 +613,35 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
  	return 0;
  }
  
@@ -146,23 +156,27 @@ index d707522..dfa8a9d 100644
  	unsigned out, in;
  	int head;
  	struct msghdr msg = {
-@@ -628,7 +652,6 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -626,9 +651,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+ 		.msg_controllen = 0,
+ 		.msg_flags = MSG_DONTWAIT,
  	};
- 	size_t len, total_len = 0, batch_len = 0;
+-	size_t len, total_len = 0, batch_len = 0;
++	size_t len, total_len = 0;
  	int err;
 -	struct tun_msg_ctl ctl;
  	int sent_pkts = 0;
  
  	for (;;) {
-@@ -654,19 +677,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
- 		vq->heads[nvq->done_idx].len = 0;
- 		batch_len += len;
+@@ -652,21 +676,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  
--		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
+ 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
+ 		vq->heads[nvq->done_idx].len = 0;
+-		batch_len += len;
 +		total_len += len;
 +		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
 +					  &nvq->xdp[nvq->done_idx]);
-+
+ 
+-		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
  		if (!err) {
 -			ctl.type = TUN_MSG_PTR;
 -			ctl.ptr = &xdp;
@@ -188,7 +202,7 @@ index d707522..dfa8a9d 100644
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -678,11 +704,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -678,11 +703,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
