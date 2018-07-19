@@ -3,7 +3,7 @@ Top:    a572c476634a0796baa6cff589973b11c1bc3251
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:44:14 +0800
 
-tuntap: enable premmption early
+tuntap: enable bh early during processing XDP
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
