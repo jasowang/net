@@ -3,7 +3,7 @@ Top:    36a70eb0ff9b4876f33658e4582020dc8f8e7a08
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:29:49 +0800
 
-tap: support batch receiving from vhost_net
+tap: batched sendmsg()
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
