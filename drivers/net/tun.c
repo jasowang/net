@@ -1688,7 +1688,6 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		case XDP_TX:
 			if (tun_xdp_tx(tun->dev, &xdp))
 				goto err_xdp;
-			tun_xdp_flush(tun->dev);
 			goto out;
 		case XDP_PASS:
 			delta = orig_data - xdp.data;
