@@ -9,7 +9,7 @@ This patch implements XDP batching for vhost_net with tun. This is
 done by batching XDP buffs in vhost and submit them when:
 
 - vhost_net can not build XDP buff (mostly because of the size of packet)
-- #batched exceeds the limitation (VHOST_NET_RX_BATCH).
+- #batched exceeds the limitation (VHOST_NET_BATCH).
 - tun accept a batch of XDP buff through msg_control and process them
   in a batch
 
