@@ -571,8 +571,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 			break;
 		}
 		if (err != len)
-			pr_debug("Truncated TX packet: "
-				 " len %d != %zd\n", err, len);
+			pr_debug("Truncated TX packet: len %d != %zd\n",
+				 err, len);
 		vhost_add_used_and_signal(&net->dev, vq, head, 0);
 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
 			vhost_poll_queue(&vq->poll);
