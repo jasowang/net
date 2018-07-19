@@ -121,7 +121,6 @@ struct vhost_net_virtqueue {
 	struct ptr_ring *rx_ring;
 	struct vhost_net_buf rxq;
 	struct xdp_buff xdp[VHOST_NET_BATCH];
-	struct vring_used_elem heads[VHOST_RX_BATCH];
 };
 
 struct vhost_net {
@@ -619,7 +618,7 @@ static void vhost_tx_batch(struct vhost_net *net,
 			   struct msghdr *msghdr)
 {
 	struct tun_msg_ctl ctl = {
-		.type = n << 16 | TUN_MSG_PTR,
+		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
 		.ptr = nvq->xdp,
 	};
 	int err;
