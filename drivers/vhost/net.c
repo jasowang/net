@@ -498,7 +498,8 @@ static int get_tx_bufs(struct vhost_net *net,
 		return ret;
 
 	if (*in) {
-		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n", *out, *in);
+		vq_err(vq, "Unexpected descriptor format for TX: out %d, int %d\n",
+			*out, *in);
 		return -EFAULT;
 	}
 
