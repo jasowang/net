@@ -1,5 +1,5 @@
 Bottom: a572c476634a0796baa6cff589973b11c1bc3251
-Top:    4d4dd3be1f43efa6e38a28a241ed37e01ccdeef5
+Top:    cda92389e08cacd0f41e40348c4f6f23d3bb9bce
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:16:42 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0e9fe12..25e90dd 100644
+index 0e9fe12..5daed95 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1624,7 +1624,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
@@ -33,7 +33,7 @@ index 0e9fe12..25e90dd 100644
  	/* There's a small window that XDP may be set after the check
  	 * of xdp_prog above, this should be rare and for simplicity
  	 * we do XDP on skb in case the headroom is not enough.
-@@ -1677,23 +1680,16 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1677,23 +1680,15 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  
  		switch (act) {
  		case XDP_REDIRECT:
@@ -57,12 +57,11 @@ index 0e9fe12..25e90dd 100644
 -			local_bh_enable();
 -			return NULL;
 +				goto err_xdp;
-+			tun_xdp_flush(tun->dev);
 +			goto out;
  		case XDP_PASS:
  			delta = orig_data - xdp.data;
  			len = xdp.data_end - xdp.data;
-@@ -1712,23 +1708,23 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1712,23 +1707,23 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	local_bh_enable();
  
  	skb = build_skb(buf, buflen);
