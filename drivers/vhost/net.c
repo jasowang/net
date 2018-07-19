@@ -623,7 +623,7 @@ static void vhost_tx_batch(struct vhost_net *net,
 	};
 	int err;
 
-	if (n == 0)
+	if (nvq->done_idx == 0)
 		return;
 
 	msghdr->msg_control = &ctl;
@@ -652,7 +652,6 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 	};
 	size_t len, total_len = 0, batch_len = 0;
 	int err;
-	struct tun_msg_ctl ctl;
 	int sent_pkts = 0;
 
 	for (;;) {
@@ -678,14 +677,13 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		vq->heads[nvq->done_idx].len = 0;
 		batch_len += len;
 
-
 		total_len += len;
 		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
 					  &nvq->xdp[nvq->done_idx]);
 
 		if (!err) {
-			if (++nvq->done_idx == VHOST_RX_BATCH)
-				vhost_tx_batch(net, nvq, sock, &msg)
+			if (++nvq->done_idx == VHOST_NET_BATCH)
+				vhost_tx_batch(net, nvq, sock, &msg);
 			goto done;
 		} else if (unlikely(err != -ENOSPC)) {
 			vq_err(vq, "Fail to build XDP buffer\n");
