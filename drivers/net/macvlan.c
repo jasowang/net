@@ -556,6 +556,8 @@ static netdev_tx_t macvlan_start_xmit(struct sk_buff *skb,
 	unsigned int len = skb->len;
 	int ret;
 
+	printk("start xmit!\n");
+
 	if (unlikely(netpoll_tx_running(dev)))
 		return macvlan_netpoll_send_skb(vlan, skb);
 
