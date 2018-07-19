@@ -13,8 +13,8 @@ done by batching XDP buffs in vhost and submit them when:
 - tun accept a batch of XDP buff through msg_control and process them
   in a batch
 
-With this tun XDP can benefit from e.g batch transmission during
-XDP_REDIRECT or XDP_TX.
+With this tun XDP can benefit from e.g batch transmission XDP_REDIRECT
+during or XDP_TX.
 
 Tests shows 21% improvement on TX pps (from ~3.2Mpps to ~3.9Mpps)
 while transmitting through testpmd from guest to host by
