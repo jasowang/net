@@ -1,5 +1,5 @@
 Bottom: 54de626a54b8476d3eff1336d9068a865ea52f1e
-Top:    87c1becbbfa32f866c8028d77cfe796f0b50e84e
+Top:    9e5c5528f59b29a8ad11d7e8ce0ed52e1c6ab01a
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-21 16:43:08 +0800
 
@@ -138,7 +138,7 @@ index 87ea8cb..109d516 100644
  	return ret;
  }
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 30f06e3..d707522 100644
+index 30f06e3..57003c9 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -120,6 +120,7 @@ struct vhost_net_virtqueue {
@@ -204,14 +204,6 @@ index 30f06e3..d707522 100644
  			ubufs = nvq->ubufs;
  			atomic_inc(&ubufs->refcount);
  			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
-@@ -747,6 +763,7 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
- 			msg.msg_control = NULL;
- 			ubufs = NULL;
- 		}
-+
- 		total_len += len;
- 		if (tx_can_batch(vq, total_len) &&
- 		    likely(!vhost_exceeds_maxpend(net))) {
 diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
 index 3d2996d..ba46dce 100644
 --- a/include/linux/if_tun.h
