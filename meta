@@ -1,6 +1,6 @@
 Version: 1
-Previous: 582181ff55359a7cbead24dabe4f7d34c7356bc4
-Head: d79978d4feae10204e51f48a0f04d4bae3d42c80
+Previous: c43d7804f9094ad96f08b30945d8cd510616ce3b
+Head: 896b6667a3bbfe942aba3f58b0de6c32ec18f0ab
 Applied:
   virtio-net-debugfs-for: ffa50612636a19fa6000cded4e2294a047db2b71
   virtio-net-rename-virtnet_xdp: b92261bd92ca0d86abb9608e779c46b255b075d2
@@ -17,6 +17,7 @@ Applied:
   debug-map: a169e9fe9895208bde26ee449869673e57c470e1
   bpf-introduce: b4a5322eac8821356a26e9ca76e3a8249fdf236e
   virtnet-fix-map-fd-during: d79978d4feae10204e51f48a0f04d4bae3d42c80
+  refresh-temp: 896b6667a3bbfe942aba3f58b0de6c32ec18f0ab
 Unapplied:
   net-core-factor-out-skb: 720791d4320ffd5ef9a834dc0d14fba68eade48a
   net-core-factor-out-core-xdp: 54cf30617c3534744b5bd3c211c560f26d564135
