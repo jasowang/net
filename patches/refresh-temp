@@ -1,0 +1,30 @@
+Bottom: a1ca85bf0d3be564d30ef18b3f6e60cb71ade740
+Top:    23f7c0a538e7d46c4ee57e31604ff4249d592489
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 14:35:12 +0800
+
+Refresh of xdp-batch
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index f374a25..e28cf17 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -121,7 +121,6 @@ struct vhost_net_virtqueue {
+ 	struct ptr_ring *rx_ring;
+ 	struct vhost_net_buf rxq;
+ 	struct xdp_buff xdp[VHOST_NET_BATCH];
+-	struct vring_used_elem heads[VHOST_RX_BATCH];
+ };
+ 
+ struct vhost_net {
+@@ -619,7 +618,7 @@ static void vhost_tx_batch(struct vhost_net *net,
+ 			   struct msghdr *msghdr)
+ {
+ 	struct tun_msg_ctl ctl = {
+-		.type = n << 16 | TUN_MSG_PTR,
++		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
+ 		.ptr = nvq->xdp,
+ 	};
+ 	int err;
