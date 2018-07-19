@@ -2416,7 +2416,7 @@ static int tun_xdp_one(struct tun_struct *tun,
 	int err = 0;
 	bool skb_xdp = false;
 
-	local_bh_enable();
+	local_bh_disable();
 	rcu_read_lock();
 
 	xdp_prog = rcu_dereference(tun->xdp_prog);
