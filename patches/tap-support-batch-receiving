@@ -1,0 +1,11 @@
+Bottom: 834f983dcf5a41db792e988ed506e735e925715d
+Top:    834f983dcf5a41db792e988ed506e735e925715d
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 16:29:49 +0800
+
+tap: support batch receiving from vhost_net
+
+
+---
+
+
