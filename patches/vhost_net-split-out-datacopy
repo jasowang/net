@@ -1,5 +1,5 @@
 Bottom: ffe1b35eca9afe41141ded1b7b16582a7f0d6e79
-Top:    f49f42b77b25f3d17c1bde3b76f3aefb9998881d
+Top:    5aa5621a18d7eeeca9f321666c6ef6ba28354d79
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f59b615..886a603 100644
+index f59b615..9cef0b2 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -520,9 +520,7 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
@@ -95,7 +95,7 @@ index f59b615..886a603 100644
 +{
 +	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
 +	struct vhost_virtqueue *vq = &nvq->vq;
-+	unsigned int out, in;
++	unsigned out, in;
 +	int head;
 +	struct msghdr msg = {
 +		.msg_name = NULL,
