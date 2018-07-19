@@ -3,7 +3,9 @@ Top:    b4938566bb14b3b579a08eee0461b382d9e6fbcc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-15 11:54:24 +0800
 
-vhost_net: rename vhost_rx_signale_used() to vhost_net_signal_used()
+vhost_net: rename vhost_rx_signal_used() to vhost_net_signal_used()
+
+Rename for reusing this for TX.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
