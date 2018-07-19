@@ -1,5 +1,5 @@
 Bottom: ffe1b35eca9afe41141ded1b7b16582a7f0d6e79
-Top:    04a74d84954cc67eb428c6db07846c7da2416ab5
+Top:    25ce7dde3c6db06bd20a897c26f57761e279d971
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-12 11:09:26 +0800
 
@@ -15,7 +15,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f59b615..5c3b9ef 100644
+index f59b615..c81e4e4 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -520,9 +520,7 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
@@ -29,7 +29,7 @@ index f59b615..5c3b9ef 100644
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
  	struct vhost_virtqueue *vq = &nvq->vq;
-@@ -537,30 +535,75 @@ static void handle_tx(struct vhost_net *net)
+@@ -537,30 +535,76 @@ static void handle_tx(struct vhost_net *net)
  	};
  	size_t len, total_len = 0;
  	int err;
@@ -56,7 +56,8 @@ index f59b615..5c3b9ef 100644
 +		if (head == vq->num) {
 +			if (unlikely(busyloop_intr)) {
 +				vhost_poll_queue(&vq->poll);
-+			} else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
++			} else if (unlikely(vhost_enable_notify(&net->dev,
++								vq))) {
 +				vhost_disable_notify(&net->dev, vq);
 +				continue;
 +			}
@@ -70,8 +71,7 @@ index f59b615..5c3b9ef 100644
 +			msg.msg_flags |= MSG_MORE;
 +		else
 +			msg.msg_flags &= ~MSG_MORE;
- 
--	zcopy = nvq->ubufs;
++
 +		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 +		err = sock->ops->sendmsg(sock, &msg, len);
 +		if (unlikely(err < 0)) {
@@ -89,7 +89,8 @@ index f59b615..5c3b9ef 100644
 +		}
 +	}
 +}
-+
+ 
+-	zcopy = nvq->ubufs;
 +static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 +{
 +	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
@@ -119,7 +120,7 @@ index f59b615..5c3b9ef 100644
  
  		busyloop_intr = false;
  		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
-@@ -579,9 +622,9 @@ static void handle_tx(struct vhost_net *net)
+@@ -579,9 +623,9 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  
@@ -132,7 +133,7 @@ index f59b615..5c3b9ef 100644
  
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
-@@ -636,6 +679,32 @@ static void handle_tx(struct vhost_net *net)
+@@ -636,6 +680,32 @@ static void handle_tx(struct vhost_net *net)
  			break;
  		}
  	}
