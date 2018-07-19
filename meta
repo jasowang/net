@@ -1,5 +1,5 @@
 Version: 1
-Previous: 142ea2fa536d223f59495c3f7468f05180f7c7a7
+Previous: 325df356d7e4243f0514590bdeb3e70ca34ec443
 Head: 836828020401948830197275b443ba40573269f9
 Applied:
   vhost_net-limit-the-batched-tx: 77a9c514245035cdb62c7b8cd145a03ad7e654da
@@ -10,6 +10,5 @@ Applied:
   tun: f52f308d4445dde213d325cf052dcde4791e0931
   vhost: 836828020401948830197275b443ba40573269f9
 Unapplied:
-  vhost_net-build-xdp-buff: 3fbbfb80d1401e26f4a5aca7e71323c143538f6a
   vhost_net-batch-submitting-xdp: 05d4f3d9e91d0bb2c5c5e1aebfada07842ea5ec2
 Hidden:
