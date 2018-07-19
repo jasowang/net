@@ -5,7 +5,7 @@ Date:   2018-06-15 12:01:27 +0800
 
 vhost_net: rename VHOST_RX_BATCH to VHOST_NET_BATCH
 
-A more generic name which is suitable for TX as well.
+A more generic name which could be used for TX as well.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 

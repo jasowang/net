@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2adfc4564d2e14e54918b75ec744e26bd4f8773d
-Head: 155d71a77095a9f88e1f86f56885c03ec547e81d
+Previous: 846614a56d350ab2bf1a20b440b85be9507f0b8a
+Head: 64c2ba6246f74ae351310a7e842224c15643185a
 Applied:
   vhost_net-drop-unnecessary: 2ff94e36743e1bc658367a99efd291a9e7a733f2
   vhost_net-introduce-helper-to: 09ae5b2ac4db2e47bdf0fae509f30ed942e7dccb
@@ -9,8 +9,8 @@ Applied:
   vhost_net-introduce-1: ddfed71375ada26e6001082a140751e98fcc620e
   vhost_net-split-out-datacopy: d248c28cf44d27ea895bf4a546e7f298f82b59b9
   vhost_net-rename: d929499efb6ee313dbe03bdfb269a87e14217471
-  vhost_net-rename-0: 09297c44594c9129ef1871b2d7d4139892d8ea9c
-  vhost_net-batch-update-used: 155d71a77095a9f88e1f86f56885c03ec547e81d
+  vhost_net-rename-0: f4b661f5b1b9234d5d850ab126e95d991ec63f7f
+  vhost_net-batch-update-used: 64c2ba6246f74ae351310a7e842224c15643185a
 Unapplied:
   vhost_net-limit-the-batched-tx: 77a9c514245035cdb62c7b8cd145a03ad7e654da
   tuntap-enable-premmption-early: 90a56e8dc5fe04f6fe5829873598d3cf429e8310
