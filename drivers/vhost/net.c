@@ -451,7 +451,7 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
-		if (vhost_sock_zcopy(vq->private_data))
+		if (!vhost_sock_zcopy(vq->private_data))
 			vhost_net_signal_used(nvq);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
