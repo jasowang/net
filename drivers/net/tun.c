@@ -2416,7 +2416,7 @@ static int tun_xdp_one(struct tun_struct *tun,
 	int err = 0;
 	bool skb_xdp = false;
 
-	preempt_disable();
+	local_bh_enable();
 	rcu_read_lock();
 
 	xdp_prog = rcu_dereference(tun->xdp_prog);
@@ -2478,7 +2478,7 @@ build:
 
 out:
 	rcu_read_unlock();
-	preempt_enable();
+	local_bh_enable();
 
 	return err;
 }
