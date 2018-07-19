@@ -576,7 +576,8 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	 * offset sizeof(int): vnet header
 	 */
 	copied = copy_page_from_iter(alloc_frag->page,
-				     alloc_frag->offset + sizeof(int), sock_hlen, from);
+				     alloc_frag->offset + sizeof(int),
+				     sock_hlen, from);
 	if (copied != sock_hlen)
 		return -EFAULT;
 
@@ -650,7 +651,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		.msg_controllen = 0,
 		.msg_flags = MSG_DONTWAIT,
 	};
-	size_t len, total_len = 0, batch_len = 0;
+	size_t len, total_len = 0;
 	int err;
 	int sent_pkts = 0;
 
@@ -675,8 +676,6 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 
 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
 		vq->heads[nvq->done_idx].len = 0;
-		batch_len += len;
-
 		total_len += len;
 		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
 					  &nvq->xdp[nvq->done_idx]);
