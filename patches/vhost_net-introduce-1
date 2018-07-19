@@ -5,6 +5,9 @@ Date:   2018-05-30 15:59:24 +0800
 
 vhost_net: introduce tx_can_batch()
 
+Introduce tx_can_batch() to determine whether TX could be
+batched. This will help to reduce the code duplication in the future.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
