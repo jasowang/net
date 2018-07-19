@@ -1,7 +1,7 @@
-Bottom: 9e5c5528f59b29a8ad11d7e8ce0ed52e1c6ab01a
+Bottom: 9e3058411485616523eb7aab46d2423518388943
 Top:    834f983dcf5a41db792e988ed506e735e925715d
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-05-14 11:09:49 +0800
+Date:   2018-07-19 16:18:37 +0800
 
 vhost_net: batch submitting XDP buffers to underlayer sockets
 
@@ -21,7 +21,6 @@ while transmitting through testpmd from guest to host by
 xdp_redirect_map between tap0 and ixgbe.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -97,32 +96,96 @@ index 109d516..869591ee 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 57003c9..536e696 100644
+index 06ec51f..536e696 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
-@@ -556,7 +556,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
- 	void *buf;
- 	int copied;
+@@ -120,6 +120,7 @@ struct vhost_net_virtqueue {
+ 	struct vhost_net_ubuf_ref *ubufs;
+ 	struct ptr_ring *rx_ring;
+ 	struct vhost_net_buf rxq;
++	struct xdp_buff xdp[VHOST_NET_BATCH];
+ };
  
--	if (len < nvq->sock_hlen)
-+	if (unlikely(len < nvq->sock_hlen))
- 		return -EFAULT;
- 
- 	if (SKB_DATA_ALIGN(len + pad) +
-@@ -576,7 +576,8 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
- 	 * offset sizeof(int): vnet header
- 	 */
- 	copied = copy_page_from_iter(alloc_frag->page,
--				     alloc_frag->offset + sizeof(int), sock_hlen, from);
-+				     alloc_frag->offset + sizeof(int),
-+				     sock_hlen, from);
- 	if (copied != sock_hlen)
- 		return -EFAULT;
- 
-@@ -612,11 +613,35 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
- 	return 0;
+ struct vhost_net {
+@@ -537,6 +538,106 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+ 	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
++#define VHOST_NET_HEADROOM 256
++#define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
++
++static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
++			       struct iov_iter *from,
++			       struct xdp_buff *xdp)
++{
++	struct vhost_virtqueue *vq = &nvq->vq;
++	struct page_frag *alloc_frag = &current->task_frag;
++	struct virtio_net_hdr *gso;
++	size_t len = iov_iter_count(from);
++	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
++	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + VHOST_NET_HEADROOM
++				 + nvq->sock_hlen);
++	int sock_hlen = nvq->sock_hlen;
++	void *buf;
++	int copied;
++
++	if (unlikely(len < nvq->sock_hlen))
++		return -EFAULT;
++
++	if (SKB_DATA_ALIGN(len + pad) +
++	    SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) > PAGE_SIZE)
++		return -ENOSPC;
++
++	buflen += SKB_DATA_ALIGN(len + pad);
++	alloc_frag->offset = ALIGN((u64)alloc_frag->offset, SMP_CACHE_BYTES);
++	if (unlikely(!skb_page_frag_refill(buflen, alloc_frag, GFP_KERNEL)))
++		return -ENOMEM;
++
++	buf = (char *)page_address(alloc_frag->page) + alloc_frag->offset;
++
++	/* We store two kinds of metadata in the header which will be
++	 * used for XDP_PASS to do build_skb():
++	 * offset 0: buflen
++	 * offset sizeof(int): vnet header
++	 */
++	copied = copy_page_from_iter(alloc_frag->page,
++				     alloc_frag->offset + sizeof(int),
++				     sock_hlen, from);
++	if (copied != sock_hlen)
++		return -EFAULT;
++
++	gso = (struct virtio_net_hdr *)(buf + sizeof(int));
++
++	if ((gso->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) &&
++	    vhost16_to_cpu(vq, gso->csum_start) +
++	    vhost16_to_cpu(vq, gso->csum_offset) + 2 >
++	    vhost16_to_cpu(vq, gso->hdr_len)) {
++		gso->hdr_len = cpu_to_vhost16(vq,
++			       vhost16_to_cpu(vq, gso->csum_start) +
++			       vhost16_to_cpu(vq, gso->csum_offset) + 2);
++
++		if (vhost16_to_cpu(vq, gso->hdr_len) > len)
++			return -EINVAL;
++	}
++
++	len -= sock_hlen;
++	copied = copy_page_from_iter(alloc_frag->page,
++				     alloc_frag->offset + pad,
++				     len, from);
++	if (copied != len)
++		return -EFAULT;
++
++	xdp->data_hard_start = buf;
++	xdp->data = buf + pad;
++	xdp->data_end = xdp->data + len;
++	*(int *)(xdp->data_hard_start)= buflen;
++
++	get_page(alloc_frag->page);
++	alloc_frag->offset += buflen;
++
++	return 0;
++}
++
 +static void vhost_tx_batch(struct vhost_net *net,
 +			   struct vhost_net_virtqueue *nvq,
 +			   struct socket *sock,
@@ -151,38 +214,30 @@ index 57003c9..536e696 100644
  static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
- 	struct vhost_virtqueue *vq = &nvq->vq;
--	struct xdp_buff xdp;
- 	unsigned out, in;
- 	int head;
- 	struct msghdr msg = {
-@@ -626,9 +651,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -550,7 +651,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		.msg_controllen = 0,
  		.msg_flags = MSG_DONTWAIT,
  	};
 -	size_t len, total_len = 0, batch_len = 0;
 +	size_t len, total_len = 0;
  	int err;
--	struct tun_msg_ctl ctl;
  	int sent_pkts = 0;
  
- 	for (;;) {
-@@ -652,21 +676,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -575,13 +676,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  
  		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
  		vq->heads[nvq->done_idx].len = 0;
 -		batch_len += len;
-+		total_len += len;
+-
+ 		total_len += len;
+-		if (tx_can_batch(vq, total_len))
+-			msg.msg_flags |= MSG_MORE;
+-		else
+-			msg.msg_flags &= ~MSG_MORE;
 +		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
 +					  &nvq->xdp[nvq->done_idx]);
- 
--		err = vhost_net_build_xdp(nvq, &msg.msg_iter, &xdp);
- 		if (!err) {
--			ctl.type = TUN_MSG_PTR;
--			ctl.ptr = &xdp;
--			msg.msg_control = &ctl;
--		} else
--			msg.msg_control = NULL;
++
++		if (!err) {
 +			if (++nvq->done_idx == VHOST_NET_BATCH)
 +				vhost_tx_batch(net, nvq, sock, &msg);
 +			goto done;
@@ -190,19 +245,14 @@ index 57003c9..536e696 100644
 +			vq_err(vq, "Fail to build XDP buffer\n");
 +			break;
 +		}
- 
--		total_len += len;
--		if (tx_can_batch(vq, total_len))
--			msg.msg_flags |= MSG_MORE;
--		else
--			msg.msg_flags &= ~MSG_MORE;
++
 +		/* Flush batched packets */
 +		vhost_tx_batch(net, nvq, sock, &msg);
 +		msg.msg_control = NULL;
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -678,11 +703,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -593,11 +703,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -216,3 +266,27 @@ index 57003c9..536e696 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
+@@ -656,16 +763,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
+ 		/* use msg_control to pass vhost zerocopy ubuf info to skb */
+ 		if (zcopy_used) {
+ 			struct ubuf_info *ubuf;
++			struct tun_msg_ctl ctl;
++
+ 			ubuf = nvq->ubuf_info + nvq->upend_idx;
+ 
++			ctl.type = TUN_MSG_UBUF;
++			ctl.ptr = ubuf;
++
+ 			vq->heads[nvq->upend_idx].id = cpu_to_vhost32(vq, head);
+ 			vq->heads[nvq->upend_idx].len = VHOST_DMA_IN_PROGRESS;
+ 			ubuf->callback = vhost_zerocopy_callback;
+ 			ubuf->ctx = nvq->ubufs;
+ 			ubuf->desc = nvq->upend_idx;
+ 			refcount_set(&ubuf->refcnt, 1);
+-			msg.msg_control = ubuf;
+-			msg.msg_controllen = sizeof(ubuf);
++			msg.msg_control = &ctl;
++			msg.msg_controllen = sizeof(ctl);
+ 			ubufs = nvq->ubufs;
+ 			atomic_inc(&ubufs->refcount);
+ 			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
