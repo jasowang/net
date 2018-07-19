@@ -5,6 +5,8 @@ Date:   2018-05-12 10:48:35 +0800
 
 vhost_net: introduce helper to initialize tx iov iter
 
+Introduce init_iov_iter() in order to be reused by future patch.
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
