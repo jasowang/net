@@ -1,5 +1,5 @@
-Bottom: 87c1becbbfa32f866c8028d77cfe796f0b50e84e
-Top:    0cc52231d8b5ae38b4540fd97ca4b79d6d98f9f0
+Bottom: 9e5c5528f59b29a8ad11d7e8ce0ed52e1c6ab01a
+Top:    834f983dcf5a41db792e988ed506e735e925715d
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-14 11:09:49 +0800
 
@@ -97,7 +97,7 @@ index 109d516..869591ee 100644
  	}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index d707522..5aa51a3 100644
+index 57003c9..536e696 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -556,7 +556,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
