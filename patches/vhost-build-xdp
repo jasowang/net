@@ -14,8 +14,8 @@ stored into the header of the XDP buff.
 
 This userspace copy and XDP buffs building is key to achieve XDP
 batching in TUN, since TUN does not need to care about userspace copy
-and then can disable premmption for several XDP buffs to achieve
-batching from XDP.
+and then can disable bh for several XDP buffs to achieve batching from
+XDP.
 
 TODO: reserve headroom based on the TUN XDP.
 
