@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2d9d4b114767701622474e21916bca594600c5e8
-Head: df83518b599b6ea2f8027a17374fde333741c6dd
+Previous: 181614ea838c5e0e4430ddbfe6cdacc88efcdfd2
+Head: 79a08b194f4222dcafea09c82a7c39321e4cb084
 Applied:
   vhost_net-drop-unnecessary: 2ff94e36743e1bc658367a99efd291a9e7a733f2
   vhost_net-introduce-helper-to: 09ae5b2ac4db2e47bdf0fae509f30ed942e7dccb
@@ -19,6 +19,7 @@ Applied:
   vhost-build-xdp: 13bb1efae33e8bc57fcce15b4dad9c605ce96cfe
   vhost_net-passing-raw-xdp-buff: b592bd305e0da4650aa0c9235685100dc8bdfb38
   xdp-batch: df83518b599b6ea2f8027a17374fde333741c6dd
+  refresh-temp: 79a08b194f4222dcafea09c82a7c39321e4cb084
 Unapplied:
   vhost_net-use-vhost_net: fed30e00e9a5df1210b13d32b520147f718024b6
   vhost_net-avoid-unncessary: 45be163f3855ea4110d6e438b69fe1bbbcf3882f
