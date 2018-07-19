@@ -1,12 +1,12 @@
 Version: 1
-Previous: 73ed7360dc20b991f478602f43ed360eadbabf8f
-Head: 1107a3bcc8741e4ddd6ee23a2570c516538a8cda
+Previous: bedf7c9ae1786aa0d7fe5524dcd5174ba607010c
+Head: daed6fd929c008c1ece75586fdbaa0d277408ca9
 Applied:
   vhost_net-drop-unnecessary: 2ff94e36743e1bc658367a99efd291a9e7a733f2
   vhost_net-introduce-helper-to: 359c686c8ce87265c913fbfc90acbe7dcf2a0dd6
   vhost_net-introduce: 1107a3bcc8741e4ddd6ee23a2570c516538a8cda
+  vhost_net-introduce-tx: daed6fd929c008c1ece75586fdbaa0d277408ca9
 Unapplied:
-  vhost_net-introduce-tx: 2a4af70e58f32963006e8255bc75261b6eabc251
   vhost_net-introduce-1: c9c7381b45b39d35d248a9fb1eb4bf25dfb4f7ad
   vhost_net-split-out-datacopy: 5c3bfb3eb1065b305147cc016cfa5850520cf958
   vhost_net-rename: d1860f77963c3b994105c47542362b3c0812ac05
