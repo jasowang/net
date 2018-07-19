@@ -3,7 +3,24 @@ Top:    634c1fddb212de66438c4d7dd113a3e2fe810b0b
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:51 +0800
 
-tun:
+tuntap: batched sendmsg()
+
+This patches implement a TUN specific msg_control:
+
+#define TUN_MSG_UBUF 1
+#define TUN_MSG_PTR  2
+struct tun_msg_ctl {
+       int type;
+       void *ptr;
+};
+
+The first supported type is ubuf which is already used by vhost_net
+zerocopy code. The second is XDP buff, which allows vhost_net to pass
+XDP buff to TUN. This could be used to implement accepting an array of
+XDP buffs from vhost_net in the following patches.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
