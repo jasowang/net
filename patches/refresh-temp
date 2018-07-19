@@ -1,0 +1,24 @@
+Bottom: 25ce7dde3c6db06bd20a897c26f57761e279d971
+Top:    5aa5621a18d7eeeca9f321666c6ef6ba28354d79
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 20:34:40 +0800
+
+Refresh of vhost_net-split-out-datacopy
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index c81e4e4..9cef0b2 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -571,8 +571,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+ 			break;
+ 		}
+ 		if (err != len)
+-			pr_debug("Truncated TX packet: "
+-				 " len %d != %zd\n", err, len);
++			pr_debug("Truncated TX packet: len %d != %zd\n",
++				 err, len);
+ 		vhost_add_used_and_signal(&net->dev, vq, head, 0);
+ 		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
+ 			vhost_poll_queue(&vq->poll);
