@@ -1,13 +1,13 @@
 Version: 1
-Previous: a8211640b82dc9a0c6b0f1652af1b9fcfbbbf2b0
-Head: 2124d0fe72500ae21a67cbf8120b5f471a19f3de
+Previous: caf610e0fef6bbd78dc06990610d3d651b9a38ff
+Head: 3fbbfb80d1401e26f4a5aca7e71323c143538f6a
 Applied:
   vhost_net-limit-the-batched-tx: 77a9c514245035cdb62c7b8cd145a03ad7e654da
   tuntap-enable-bh-early-during: 90a56e8dc5fe04f6fe5829873598d3cf429e8310
   tuntap-simplify-error-handling: ab2f3a215c06ff9eed8dda9d3bf80c72fc624b9f
   tuntap-tweak-on-the-path-of: 6d0efabd20eb45782aea0ceb11c8e760ea236aa2
   tuntap-split-out-xdp-logic: 2124d0fe72500ae21a67cbf8120b5f471a19f3de
-Unapplied:
   vhost_net-build-xdp-buff: 3fbbfb80d1401e26f4a5aca7e71323c143538f6a
+Unapplied:
   vhost_net-batch-submitting-xdp: 05d4f3d9e91d0bb2c5c5e1aebfada07842ea5ec2
 Hidden:
