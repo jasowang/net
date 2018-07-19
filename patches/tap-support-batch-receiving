@@ -5,6 +5,8 @@ Date:   2018-07-19 16:29:49 +0800
 
 tap: support batch receiving from vhost_net
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
