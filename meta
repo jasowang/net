@@ -1,6 +1,6 @@
 Version: 1
-Previous: 13cf8d2754fd4a6ade38d4087bf3b3ba4521e885
-Head: f3aa8179db5df8e560c810bc28a56c5bad24e928
+Previous: 2cd370c136b918138b93486e2bed7552c726ab4e
+Head: 9f6ca29eeb3cd77f37f158f675c81ed1ea19d0dd
 Applied:
   vhost_net-limit-the-batched-tx: 77a9c514245035cdb62c7b8cd145a03ad7e654da
   tuntap-enable-bh-early-during: 90a56e8dc5fe04f6fe5829873598d3cf429e8310
