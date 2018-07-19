@@ -1,5 +1,5 @@
 Bottom: 834f983dcf5a41db792e988ed506e735e925715d
-Top:    834f983dcf5a41db792e988ed506e735e925715d
+Top:    e874c954b1f2ae591c3b0e210046175354837a89
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:29:49 +0800
 
@@ -10,4 +10,27 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/tap.c b/drivers/net/tap.c
+index f0f7cd9..647a3dc 100644
+--- a/drivers/net/tap.c
++++ b/drivers/net/tap.c
+@@ -1150,6 +1150,20 @@ static int tap_sendmsg(struct socket *sock, struct msghdr *m,
+ 		       size_t total_len)
+ {
+ 	struct tap_queue *q = container_of(sock, struct tap_queue, sock);
++	struct tun_msg_ctl *ctl = m->msg_control;
++
++	if (ctl && ((ctl->type & 0xF) == TUN_MSG_PTR)) {
++		int n = ctl->type >> 16;
++
++		for (i = 0; i < n; i ++) {
++			struct xdp_buff *xdp = (struct xdp_buff *)ctl->ptr[i];
++
++			tap_get_xdp(tap_queue, xdp);
++		}
++
++		return total_len;
++	}
++
+ 	return tap_get_user(q, m, &m->msg_iter, m->msg_flags & MSG_DONTWAIT);
+ }
