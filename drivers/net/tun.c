@@ -2493,7 +2493,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 		rcu_read_lock();
 
 		for (i = 0; i < n; i++) {
-			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
+			xdp = &((struct xdp_buff *)ctl->ptr)[i];
 			tun_xdp_one(tun, tfile, xdp);
 		}
 
