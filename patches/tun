@@ -1,17 +1,25 @@
 Bottom: d1b13f7d23cbed2542ccf29a91d52650143670ba
-Top:    9e3058411485616523eb7aab46d2423518388943
+Top:    634c1fddb212de66438c4d7dd113a3e2fe810b0b
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-07-19 16:18:03 +0800
+Date:   2018-07-19 16:19:51 +0800
 
 tun:
 
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 87ea8cb..109d516 100644
+index 87ea8cb..869591ee 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -2403,18 +2403,107 @@ static void tun_sock_write_space(struct sock *sk)
+@@ -1628,7 +1628,6 @@ static u32 tun_do_xdp(struct tun_struct *tun,
+ 	switch (act) {
+ 	case XDP_REDIRECT:
+ 		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
+-		xdp_do_flush_map();
+ 		if (*err)
+ 			break;
+ 		goto out;
+@@ -2403,18 +2402,118 @@ static void tun_sock_write_space(struct sock *sk)
  	kill_fasync(&tfile->fasync, SIGIO, POLL_OUT);
  }
  
@@ -27,9 +35,6 @@ index 87ea8cb..109d516 100644
 +	int buflen = *(int *)xdp->data_hard_start;
 +	int err = 0;
 +	bool skb_xdp = false;
-+
-+	local_bh_disable();
-+	rcu_read_lock();
 +
 +	xdp_prog = rcu_dereference(tun->xdp_prog);
 +	if (xdp_prog) {
@@ -89,15 +94,13 @@ index 87ea8cb..109d516 100644
 +		tun_flow_update(tun, rxhash, tfile);
 +
 +out:
-+	rcu_read_unlock();
-+	local_bh_enable();
-+
 +	return err;
 +}
 +
  static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
  {
- 	int ret;
+-	int ret;
++	int ret, i;
  	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
  	struct tun_struct *tun = tun_get(tfile);
 +	struct tun_msg_ctl *ctl = m->msg_control;
@@ -106,10 +109,27 @@ index 87ea8cb..109d516 100644
  		return -EBADFD;
  
 -	ret = tun_get_user(tun, tfile, m->msg_control, &m->msg_iter,
-+	if (ctl && ctl->type == TUN_MSG_PTR) {
-+		ret = tun_xdp_one(tun, tfile, ctl->ptr);
-+		if (!ret)
-+			ret = total_len;
++	if (ctl && ((ctl->type & 0xF) == TUN_MSG_PTR)) {
++		int n = ctl->type >> 16;
++
++		local_bh_disable();
++		rcu_read_lock();
++
++		for (i = 0; i < n; i++) {
++			struct xdp_buff *x = (struct xdp_buff *)ctl->ptr;
++			struct xdp_buff *xdp = &x[i];
++
++			xdp_set_data_meta_invalid(xdp);
++			xdp->rxq = &tfile->xdp_rxq;
++			tun_xdp_one(tun, tfile, xdp);
++		}
++
++		xdp_do_flush_map();
++
++		rcu_read_unlock();
++		local_bh_enable();
++
++		ret = total_len;
 +		goto out;
 +	}
 +
