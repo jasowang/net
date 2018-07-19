@@ -1,0 +1,41 @@
+Bottom: 60bfe4c84a78d628e7b33e7b3542b243f3baca2c
+Top:    0cc52231d8b5ae38b4540fd97ca4b79d6d98f9f0
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 15:21:05 +0800
+
+Refresh of xdp-batch
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index dfa8a9d..5aa51a3 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -576,7 +576,8 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+ 	 * offset sizeof(int): vnet header
+ 	 */
+ 	copied = copy_page_from_iter(alloc_frag->page,
+-				     alloc_frag->offset + sizeof(int), sock_hlen, from);
++				     alloc_frag->offset + sizeof(int),
++				     sock_hlen, from);
+ 	if (copied != sock_hlen)
+ 		return -EFAULT;
+ 
+@@ -650,7 +651,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+ 		.msg_controllen = 0,
+ 		.msg_flags = MSG_DONTWAIT,
+ 	};
+-	size_t len, total_len = 0, batch_len = 0;
++	size_t len, total_len = 0;
+ 	int err;
+ 	int sent_pkts = 0;
+ 
+@@ -675,8 +676,6 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+ 
+ 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
+ 		vq->heads[nvq->done_idx].len = 0;
+-		batch_len += len;
+-
+ 		total_len += len;
+ 		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
+ 					  &nvq->xdp[nvq->done_idx]);
