@@ -1,0 +1,31 @@
+Bottom: 4a42587c7d5728b0673d7b15acede4a23ccb0ea0
+Top:    e1c024bf1ede3811a7a52fe176b87fa7ea097629
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 14:14:33 +0800
+
+Refresh of vhost_net-passing-raw-xdp-buff
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 1498eff..b16701b 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2416,7 +2416,7 @@ static int tun_xdp_one(struct tun_struct *tun,
+ 	int err = 0;
+ 	bool skb_xdp = false;
+ 
+-	preempt_disable();
++	local_bh_enable();
+ 	rcu_read_lock();
+ 
+ 	xdp_prog = rcu_dereference(tun->xdp_prog);
+@@ -2478,7 +2478,7 @@ static int tun_xdp_one(struct tun_struct *tun,
+ 
+ out:
+ 	rcu_read_unlock();
+-	preempt_enable();
++	local_bh_enable();
+ 
+ 	return err;
+ }
