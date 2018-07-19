@@ -1150,6 +1150,20 @@ static int tap_sendmsg(struct socket *sock, struct msghdr *m,
 		       size_t total_len)
 {
 	struct tap_queue *q = container_of(sock, struct tap_queue, sock);
+	struct tun_msg_ctl *ctl = m->msg_control;
+
+	if (ctl && ((ctl->type & 0xF) == TUN_MSG_PTR)) {
+		int n = ctl->type >> 16;
+
+		for (i = 0; i < n; i ++) {
+			struct xdp_buff *xdp = (struct xdp_buff *)ctl->ptr[i];
+
+			tap_get_xdp(tap_queue, xdp);
+		}
+
+		return total_len;
+	}
+
 	return tap_get_user(q, m, &m->msg_iter, m->msg_flags & MSG_DONTWAIT);
 }
 
