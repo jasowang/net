@@ -6,7 +6,7 @@ Date:   2018-04-17 07:46:51 +0800
 tuntap: tweak on the path of non-xdp case in tun_build_skb()
 
 If we're sure not to go native XDP, there's no need for several things
-like touching preemption counter and rcu stuffs.
+like bh and rcu stuffs.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
