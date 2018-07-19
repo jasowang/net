@@ -1,0 +1,39 @@
+Bottom: d182c58a3fa47edbae27c4aa5a87371c90789e51
+Top:    a572c476634a0796baa6cff589973b11c1bc3251
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-19 13:52:11 +0800
+
+Refresh of tuntap-enable-premmption-early
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 76f0f41..0e9fe12 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1708,22 +1708,18 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 			goto err_xdp;
+ 		}
+ 	}
++	rcu_read_unlock();
++	local_bh_enable();
+ 
+ 	skb = build_skb(buf, buflen);
+-	if (!skb) {
+-		rcu_read_unlock();
+-		local_bh_enable();
++	if (!skb)
+ 		return ERR_PTR(-ENOMEM);
+-	}
+ 
+ 	skb_reserve(skb, pad - delta);
+ 	skb_put(skb, len);
+ 	get_page(alloc_frag->page);
+ 	alloc_frag->offset += buflen;
+ 
+-	rcu_read_unlock();
+-	local_bh_enable();
+-
+ 	return skb;
+ 
+ err_redirect:
