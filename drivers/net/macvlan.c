@@ -561,6 +561,8 @@ static netdev_tx_t macvlan_start_xmit(struct sk_buff *skb,
 
 	ret = macvlan_queue_xmit(skb, dev);
 
+	printk("here!\n");
+
 	if (likely(ret == NET_XMIT_SUCCESS || ret == NET_XMIT_CN)) {
 		struct vlan_pcpu_stats *pcpu_stats;
 
