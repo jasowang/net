@@ -2481,6 +2481,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 	struct tun_file *tfile = container_of(sock, struct tun_file, socket);
 	struct tun_struct *tun = tun_get(tfile);
 	struct tun_msg_ctl *ctl = m->msg_control;
+	struct xdp_buff *xdp;
 
 	if (!tun)
 		return -EBADFD;
@@ -2492,11 +2493,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 		rcu_read_lock();
 
 		for (i = 0; i < n; i++) {
-			struct xdp_buff *x = (struct xdp_buff *)ctl->ptr;
-			struct xdp_buff *xdp = &x[i];
-
-			xdp_set_data_meta_invalid(xdp);
-			xdp->rxq = &tfile->xdp_rxq;
+			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
 			tun_xdp_one(tun, tfile, xdp);
 		}
 
