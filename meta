@@ -1,6 +1,6 @@
 Version: 1
-Previous: 3ebc354ab78e8e84602aea7e6f7b2e9db4c1cf4d
-Head: 231d43af67f213063327faab6c2838b426e83c6d
+Previous: 7ea44f5c68940a30d35f99374a74e3d9b18ca985
+Head: 98c5e3a4c16efdb84768f9f5f5bac8983fe7e4f8
 Applied:
   vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
   vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
@@ -15,8 +15,8 @@ Applied:
   tuntap-enable-bh-early-during: 97850ba95ca05d86dfa0ab5f796a46aad3fa7068
   tuntap-simplify-error-handling: 500fddd6c798aad30f344aae6bc72c9c129a3520
   tuntap-tweak-on-the-path-of: 231d43af67f213063327faab6c2838b426e83c6d
+  tuntap-split-out-xdp-logic: 98c5e3a4c16efdb84768f9f5f5bac8983fe7e4f8
 Unapplied:
-  tuntap-split-out-xdp-logic: 2124d0fe72500ae21a67cbf8120b5f471a19f3de
   tun: 5bbc56cbf2c7cd1f2ca951cba1393ca22f0d3056
   tap-support-batch-receiving: 5e0237c3af0cba59aa1f0d8b8d5fede212b787b0
   vhost-part: aaa79f44aec894fb3e1943eadff3b0495edf8e39
