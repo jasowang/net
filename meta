@@ -1,6 +1,6 @@
 Version: 1
-Previous: 709c3b836fefaad1c89fca1e0f89cadafc8c8888
-Head: 606e92b7f18b371fd11fa931b576f13f064893fb
+Previous: c95adccb4816ce46ae0d3ae3d4809c8bdf530c91
+Head: 750a2eb4ec8744a6cda11d2d99e1a9f0c4d64972
 Applied:
   vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
   vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
@@ -19,8 +19,7 @@ Applied:
   tuntap-batched-sendmsg: c7c6b352ba1750babd2e5c9f09354a34f603ec65
   tap-support-batch-receiving: 6da9ec47cdaa92600116769138d26c08e0403c0b
   net-sock-introduce-sock_xdp: dfdfbbf8edbafbbb9ec0be47ea8f8ad8c5eb262c
-  vhost-part: 2cae30f3d43861178a2838e3b90f9d10690bfaaf
-  refresh-temp: 606e92b7f18b371fd11fa931b576f13f064893fb
+  vhost-part: 750a2eb4ec8744a6cda11d2d99e1a9f0c4d64972
 Unapplied:
   vhost_net-batch-submitting-xdp: 3f60efdf641d0fbfded7fd55472cb6102689f333
 Hidden:
