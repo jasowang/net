@@ -1,5 +1,5 @@
 Bottom: 850e2a96d4e7041c6a150a09fd07ddbee58bcca4
-Top:    8392767cc0b7bb70f820f0bd33ab1c04ad098582
+Top:    d8924756a53a2c3ddce7d0557cab0ccb5fae0bc8
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:08 +0800
 
@@ -25,8 +25,21 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 6691b9d..4dc61fd 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2493,7 +2493,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ 		rcu_read_lock();
+ 
+ 		for (i = 0; i < n; i++) {
+-			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
++			xdp = &((struct xdp_buff *)ctl->ptr)[i];
+ 			tun_xdp_one(tun, tfile, xdp);
+ 		}
+ 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f488848..12b4634 100644
+index f488848..52b4d3f 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -120,6 +120,7 @@ struct vhost_net_virtqueue {
@@ -37,11 +50,10 @@ index f488848..12b4634 100644
  };
  
  struct vhost_net {
-@@ -537,6 +538,106 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -537,6 +538,105 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
-+#define VHOST_NET_HEADROOM 256
 +#define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
 +
 +static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
@@ -53,7 +65,7 @@ index f488848..12b4634 100644
 +	struct virtio_net_hdr *gso;
 +	size_t len = iov_iter_count(from);
 +	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-+	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + VHOST_NET_HEADROOM
++	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + XDP_PACKET_HEADROOM
 +				 + nvq->sock_hlen);
 +	int sock_hlen = nvq->sock_hlen;
 +	void *buf;
@@ -144,7 +156,7 @@ index f488848..12b4634 100644
  static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -550,7 +651,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -550,7 +650,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		.msg_controllen = 0,
  		.msg_flags = MSG_DONTWAIT,
  	};
@@ -153,7 +165,7 @@ index f488848..12b4634 100644
  	int err;
  	int sent_pkts = 0;
  
-@@ -575,13 +676,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -575,13 +675,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  
  		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
  		vq->heads[nvq->done_idx].len = 0;
@@ -182,7 +194,7 @@ index f488848..12b4634 100644
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -593,11 +703,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -593,11 +702,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -196,7 +208,7 @@ index f488848..12b4634 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -656,16 +763,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
+@@ -656,16 +762,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
  			struct ubuf_info *ubuf;
