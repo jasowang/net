@@ -5,6 +5,8 @@ Date:   2018-07-20 11:10:56 +0800
 
 net: sock: introduce SOCK_XDP
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
