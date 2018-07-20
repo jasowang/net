@@ -447,10 +447,34 @@ static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
 	nvq->done_idx = 0;
 }
 
+static void vhost_tx_batch(struct vhost_net *net,
+			   struct vhost_net_virtqueue *nvq,
+			   struct socket *sock,
+			   struct msghdr *msghdr)
+{
+	struct tun_msg_ctl ctl = {
+		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
+		.ptr = nvq->xdp,
+	};
+	int err;
+
+	if (nvq->done_idx == 0)
+		return;
+
+	msghdr->msg_control = &ctl;
+	err = sock->ops->sendmsg(sock, msghdr, 0);
+	if (unlikely(err < 0)) {
+		vq_err(&nvq->vq, "Fail to batch sending packets\n");
+		return;
+	}
+
+	vhost_net_signal_used(nvq);
+}
+
 static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    struct vhost_net_virtqueue *nvq,
 				    unsigned int *out_num, unsigned int *in_num,
-				    bool *busyloop_intr)
+				    struct msghdr *msghdr, bool *busyloop_intr)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
@@ -458,8 +482,9 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
+		/* Flush batched packets first */
 		if (!vhost_sock_zcopy(vq->private_data))
-			vhost_net_signal_used(nvq);
+			vhost_tx_batch(net, nvq, vq->private_data, msghdr);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(endtime)) {
@@ -515,7 +540,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, busyloop_intr);
+	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, msg, busyloop_intr);
 
 	if (ret < 0 || ret == vq->num)
 		return ret;
@@ -616,30 +641,6 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	alloc_frag->offset += buflen;
 
 	return 0;
-}
-
-static void vhost_tx_batch(struct vhost_net *net,
-			   struct vhost_net_virtqueue *nvq,
-			   struct socket *sock,
-			   struct msghdr *msghdr)
-{
-	struct tun_msg_ctl ctl = {
-		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
-		.ptr = nvq->xdp,
-	};
-	int err;
-
-	if (nvq->done_idx == 0)
-		return;
-
-	msghdr->msg_control = &ctl;
-	err = sock->ops->sendmsg(sock, msghdr, 0);
-	if (unlikely(err < 0)) {
-		vq_err(&nvq->vq, "Fail to batch sending packets\n");
-		return;
-	}
-
-	vhost_net_signal_used(nvq);
 }
 
 static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
