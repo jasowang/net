@@ -1,6 +1,6 @@
 Version: 1
-Previous: 51256c9340d0d405b860c4b5404f5d8076e619ad
-Head: cae780034b0b4675db5dce418214bab4c817df57
+Previous: e2b89ae7c61d0dc05c03e54b8f28682fc53ac99c
+Head: 7167c14d8674d91f04a55db65c7dc57513faf21d
 Applied:
   vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
   vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
@@ -20,6 +20,7 @@ Applied:
   tap-support-batch-receiving: 928258311b9fd58f3c460eea57fc8f58e9ef7697
   net-sock-introduce-sock_xdp: 556e4dac6238346e1be99974a3cf11bea22cad5d
   vhost-part: cae780034b0b4675db5dce418214bab4c817df57
+  tuntap-fix: 7167c14d8674d91f04a55db65c7dc57513faf21d
 Unapplied:
   debug-XDP_PASS: d7b6bc05eb5b384a9c0f9c9b6c74742a3d660514
   vhost_net-batch-submitting-xdp: 3f60efdf641d0fbfded7fd55472cb6102689f333
