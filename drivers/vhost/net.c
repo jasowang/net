@@ -538,7 +538,6 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
 	       !vhost_vq_avail_empty(vq->dev, vq);
 }
 
-#define VHOST_NET_HEADROOM 256
 #define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
 
 static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
@@ -550,7 +549,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	struct virtio_net_hdr *gso;
 	size_t len = iov_iter_count(from);
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + VHOST_NET_HEADROOM
+	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + XDP_PACKET_HEADROOM
 				 + nvq->sock_hlen);
 	int sock_hlen = nvq->sock_hlen;
 	void *buf;
