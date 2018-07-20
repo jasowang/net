@@ -635,8 +635,7 @@ static void vhost_tx_batch(struct vhost_net *net,
 	msghdr->msg_control = &ctl;
 	err = sock->ops->sendmsg(sock, msghdr, 0);
 	if (unlikely(err < 0)) {
-		/* FIXME vq_err() */
-		vq_err(&nvq->vq, "sendmsg err!\n");
+		vq_err(&nvq->vq, "Fail to batch sending packets\n");
 		return;
 	}
 
