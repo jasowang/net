@@ -1,5 +1,5 @@
 Bottom: 252f55853a444c327365f677662fcee13814e23c
-Top:    7b53da29242a2e954635f03e8d5edf636cfec579
+Top:    ffbd44d04a08775494b692404a5f60f79bcf2fe6
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-20 08:52:18 +0800
 
@@ -24,7 +24,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 29c0d61..6691b9d 100644
+index 29c0d61..4dc61fd 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1627,7 +1627,6 @@ static u32 tun_do_xdp(struct tun_struct *tun,
@@ -133,7 +133,7 @@ index 29c0d61..6691b9d 100644
 +		rcu_read_lock();
 +
 +		for (i = 0; i < n; i++) {
-+			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
++			xdp = &((struct xdp_buff *)ctl->ptr)[i];
 +			tun_xdp_one(tun, tfile, xdp);
 +		}
 +
