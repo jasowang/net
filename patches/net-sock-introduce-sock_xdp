@@ -1,4 +1,4 @@
-Bottom: 314a187bbc4e102fefaed4583b0ce919d7fb9a42
+Bottom: 42966446b45031f1248f5c737f167e3863fae9eb
 Top:    ea08cadd38863bfbe486de904f6e7a107dc7f747
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-20 11:10:56 +0800
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 6691b9d..bc7cebf 100644
+index 4dc61fd..bc7cebf 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -868,6 +868,9 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
@@ -53,15 +53,6 @@ index 6691b9d..bc7cebf 100644
 +
  	return 0;
  }
- 
-@@ -2493,7 +2512,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
- 		rcu_read_lock();
- 
- 		for (i = 0; i < n; i++) {
--			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
-+			xdp = &((struct xdp_buff *)ctl->ptr)[i];
- 			tun_xdp_one(tun, tfile, xdp);
- 		}
  
 diff --git a/include/net/sock.h b/include/net/sock.h
 index 83b7475..c8cc8e3 100644
