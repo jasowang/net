@@ -1,6 +1,6 @@
 Version: 1
-Previous: 78983f198c2eddf2e1063309052f83cd99bd79c0
-Head: a9160cb9faf15c380f2534cdefd8e6390e5a7475
+Previous: d680a9695105fe827b9523f4e495cb312d3cab9d
+Head: 4b7ad30cadbc014eac170feb9231322315675174
 Applied:
   vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
   vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
@@ -21,6 +21,7 @@ Applied:
   net-sock-introduce-sock_xdp: 556e4dac6238346e1be99974a3cf11bea22cad5d
   vhost-part: cae780034b0b4675db5dce418214bab4c817df57
   tuntap-fix: a9160cb9faf15c380f2534cdefd8e6390e5a7475
+  refresh-temp: 4b7ad30cadbc014eac170feb9231322315675174
 Unapplied:
   debug-XDP_PASS: d7b6bc05eb5b384a9c0f9c9b6c74742a3d660514
   vhost_net-batch-submitting-xdp: 3f60efdf641d0fbfded7fd55472cb6102689f333
