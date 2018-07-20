@@ -336,6 +336,11 @@ static bool vhost_sock_zcopy(struct socket *sock)
 		sock_flag(sock->sk, SOCK_ZEROCOPY);
 }
 
+static bool vhost_sock_xdp(struct socket *sock)
+{
+	return sock_flag(sock->sk, SOCK_XDP);
+}
+
 /* In case of DMA done not in order in lower device driver for some reason.
  * upend_idx is used to track end of used idx, done_idx is used to track head
  * of used idx. Once lower device DMA done contiguously, we will signal KVM
@@ -545,12 +550,13 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 			       struct xdp_buff *xdp)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
+	struct socket *sock = vq->private_data;
 	struct page_frag *alloc_frag = &current->task_frag;
 	struct virtio_net_hdr *gso;
 	size_t len = iov_iter_count(from);
+	int headroom = vhost_sock_xdp(sock) ? XDP_PACKET_HEADROOM : 0;
 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + XDP_PACKET_HEADROOM
-				 + nvq->sock_hlen);
+	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + headroom + nvq->sock_hlen);
 	int sock_hlen = nvq->sock_hlen;
 	void *buf;
 	int copied;
