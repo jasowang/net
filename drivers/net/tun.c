@@ -2452,6 +2452,7 @@ build:
 	skb = build_skb(xdp->data_hard_start, buflen);
 	if (!skb) {
 		err = -ENOMEM;
+		printk("build skb error!\n");
 		goto out;
 	}
 
@@ -2461,6 +2462,7 @@ build:
 			goto out;
 	}
 
+	printk("XDP_PASS!\n");
 	skb_reserve(skb, xdp->data - xdp->data_hard_start);
 	skb_put(skb, xdp->data_end - xdp->data);
 
@@ -2468,6 +2470,7 @@ build:
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
 		err = -EINVAL;
+		printk("virtio_net_hdr_to_skb error!\n");
 		goto out;
 	}
 
@@ -2478,6 +2481,7 @@ build:
 	if (!rcu_dereference(tun->steering_prog))
 		rxhash = __skb_get_hash_symmetric(skb);
 
+	printk("skb receive!\n");
 	netif_receive_skb(skb);
 
 	stats = get_cpu_ptr(tun->pcpu_stats);

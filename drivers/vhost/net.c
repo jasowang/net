@@ -447,10 +447,35 @@ static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
 	nvq->done_idx = 0;
 }
 
+static void vhost_tx_batch(struct vhost_net *net,
+			   struct vhost_net_virtqueue *nvq,
+			   struct socket *sock,
+			   struct msghdr *msghdr)
+{
+	struct tun_msg_ctl ctl = {
+		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
+		.ptr = nvq->xdp,
+	};
+	int err;
+
+	if (nvq->done_idx == 0)
+		return;
+
+	printk("batch %d\n", nvq->done_idx);
+	msghdr->msg_control = &ctl;
+	err = sock->ops->sendmsg(sock, msghdr, 0);
+	if (unlikely(err < 0)) {
+		vq_err(&nvq->vq, "Fail to batch sending packets\n");
+		return;
+	}
+
+	vhost_net_signal_used(nvq);
+}
+
 static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				    struct vhost_net_virtqueue *nvq,
 				    unsigned int *out_num, unsigned int *in_num,
-				    bool *busyloop_intr)
+				    struct msghdr *msg, bool *busyloop_intr)
 {
 	struct vhost_virtqueue *vq = &nvq->vq;
 	unsigned long uninitialized_var(endtime);
@@ -458,8 +483,9 @@ static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
 				  out_num, in_num, NULL, NULL);
 
 	if (r == vq->num && vq->busyloop_timeout) {
+		/* Flush batched packets first */
 		if (!vhost_sock_zcopy(vq->private_data))
-			vhost_net_signal_used(nvq);
+			vhost_tx_batch(net, nvq, vq->private_data, msg);
 		preempt_disable();
 		endtime = busy_clock() + vq->busyloop_timeout;
 		while (vhost_can_busy_poll(endtime)) {
@@ -515,7 +541,7 @@ static int get_tx_bufs(struct vhost_net *net,
 	struct vhost_virtqueue *vq = &nvq->vq;
 	int ret;
 
-	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, busyloop_intr);
+	ret = vhost_net_tx_get_vq_desc(net, nvq, out, in, msg, busyloop_intr);
 
 	if (ret < 0 || ret == vq->num)
 		return ret;
@@ -618,30 +644,6 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
 	return 0;
 }
 
-static void vhost_tx_batch(struct vhost_net *net,
-			   struct vhost_net_virtqueue *nvq,
-			   struct socket *sock,
-			   struct msghdr *msghdr)
-{
-	struct tun_msg_ctl ctl = {
-		.type = nvq->done_idx << 16 | TUN_MSG_PTR,
-		.ptr = nvq->xdp,
-	};
-	int err;
-
-	if (nvq->done_idx == 0)
-		return;
-
-	msghdr->msg_control = &ctl;
-	err = sock->ops->sendmsg(sock, msghdr, 0);
-	if (unlikely(err < 0)) {
-		vq_err(&nvq->vq, "Fail to batch sending packets\n");
-		return;
-	}
-
-	vhost_net_signal_used(nvq);
-}
-
 static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 {
 	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
@@ -659,14 +661,18 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 	int err;
 	int sent_pkts = 0;
 
+	printk("handle_tx!\n");
+
 	for (;;) {
 		bool busyloop_intr = false;
 
 		head = get_tx_bufs(net, nvq, &msg, &out, &in, &len,
 				   &busyloop_intr);
 		/* On error, stop handling until the next kick. */
-		if (unlikely(head < 0))
+		if (unlikely(head < 0)) {
+			printk("head < 0\n");
 			break;
+		}
 		/* Nothing new?  Wait for eventfd to tell us they refilled. */
 		if (head == vq->num) {
 			if (unlikely(busyloop_intr)) {
@@ -675,18 +681,23 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 				vhost_disable_notify(&net->dev, vq);
 				continue;
 			}
+			printk("no new!\n");
 			break;
 		}
 
 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
 		vq->heads[nvq->done_idx].len = 0;
+		printk("get a head %d\n", nvq->done_idx);
 		total_len += len;
 		err = vhost_net_build_xdp(nvq, &msg.msg_iter,
 					  &nvq->xdp[nvq->done_idx]);
 
 		if (!err) {
-			if (++nvq->done_idx == VHOST_NET_BATCH)
+			if (++nvq->done_idx == VHOST_NET_BATCH) {
+				printk("exceed flush!\n");
 				vhost_tx_batch(net, nvq, sock, &msg);
+			}
+			printk("batch to %d\n", nvq->done_idx);
 			goto done;
 		} else if (unlikely(err != -ENOSPC)) {
 			vq_err(vq, "Fail to build XDP buffer\n");
@@ -700,6 +711,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 		/* TODO: Check specific error and bomb out unless ENOBUFS? */
 		err = sock->ops->sendmsg(sock, &msg, len);
 		if (unlikely(err < 0)) {
+			printk("sendmsg error!\n");
 			vhost_discard_vq_desc(vq, 1);
 			vhost_net_enable_vq(net, vq);
 			break;
@@ -715,7 +727,7 @@ done:
 		}
 	}
 
-	vhost_net_signal_used(nvq);
+	vhost_tx_batch(net, nvq, sock, &msg);
 }
 
 static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
