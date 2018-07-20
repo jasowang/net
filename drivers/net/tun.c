@@ -2455,12 +2455,6 @@ build:
 		goto out;
 	}
 
-	if (skb_xdp) {
-		err = do_xdp_generic(xdp_prog, skb);
-		if (err != XDP_PASS)
-			goto out;
-	}
-
 	skb_reserve(skb, xdp->data - xdp->data_hard_start);
 	skb_put(skb, xdp->data_end - xdp->data);
 
@@ -2474,6 +2468,12 @@ build:
 	skb->protocol = eth_type_trans(skb, tun->dev);
 	skb_reset_network_header(skb);
 	skb_probe_transport_header(skb, 0);
+
+	if (skb_xdp) {
+		err = do_xdp_generic(xdp_prog, skb);
+		if (err != XDP_PASS)
+			goto out;
+	}
 
 	if (!rcu_dereference(tun->steering_prog))
 		rxhash = __skb_get_hash_symmetric(skb);
