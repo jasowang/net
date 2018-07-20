@@ -1,0 +1,43 @@
+Bottom: 8392767cc0b7bb70f820f0bd33ab1c04ad098582
+Top:    d8924756a53a2c3ddce7d0557cab0ccb5fae0bc8
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-20 11:18:05 +0800
+
+Refresh of vhost-part
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 6691b9d..4dc61fd 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2493,7 +2493,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
+ 		rcu_read_lock();
+ 
+ 		for (i = 0; i < n; i++) {
+-			xdp = &((struct xdp_buff *)ctl->ptr)[i]);
++			xdp = &((struct xdp_buff *)ctl->ptr)[i];
+ 			tun_xdp_one(tun, tfile, xdp);
+ 		}
+ 
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 12b4634..52b4d3f 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -538,7 +538,6 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+ 	       !vhost_vq_avail_empty(vq->dev, vq);
+ }
+ 
+-#define VHOST_NET_HEADROOM 256
+ #define VHOST_NET_RX_PAD (NET_IP_ALIGN + NET_SKB_PAD)
+ 
+ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+@@ -550,7 +549,7 @@ static int vhost_net_build_xdp(struct vhost_net_virtqueue *nvq,
+ 	struct virtio_net_hdr *gso;
+ 	size_t len = iov_iter_count(from);
+ 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+-	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + VHOST_NET_HEADROOM
++	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + XDP_PACKET_HEADROOM
+ 				 + nvq->sock_hlen);
+ 	int sock_hlen = nvq->sock_hlen;
+ 	void *buf;
