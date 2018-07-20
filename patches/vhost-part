@@ -1,5 +1,5 @@
 Bottom: 850e2a96d4e7041c6a150a09fd07ddbee58bcca4
-Top:    d8924756a53a2c3ddce7d0557cab0ccb5fae0bc8
+Top:    626616b97ad91e0720cec85d9756f8c7576087ee
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:08 +0800
 
@@ -39,7 +39,7 @@ index 6691b9d..4dc61fd 100644
  		}
  
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index f488848..52b4d3f 100644
+index f488848..5816887 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -120,6 +120,7 @@ struct vhost_net_virtqueue {
@@ -50,7 +50,19 @@ index f488848..52b4d3f 100644
  };
  
  struct vhost_net {
-@@ -537,6 +538,105 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
+@@ -335,6 +336,11 @@ static bool vhost_sock_zcopy(struct socket *sock)
+ 		sock_flag(sock->sk, SOCK_ZEROCOPY);
+ }
+ 
++static bool vhost_sock_xdp(struct socket *sock)
++{
++	return sock_flag(sock->sk, SOCK_XDP);
++}
++
+ /* In case of DMA done not in order in lower device driver for some reason.
+  * upend_idx is used to track end of used idx, done_idx is used to track head
+  * of used idx. Once lower device DMA done contiguously, we will signal KVM
+@@ -537,6 +543,106 @@ static bool tx_can_batch(struct vhost_virtqueue *vq, size_t total_len)
  	       !vhost_vq_avail_empty(vq->dev, vq);
  }
  
@@ -61,12 +73,13 @@ index f488848..52b4d3f 100644
 +			       struct xdp_buff *xdp)
 +{
 +	struct vhost_virtqueue *vq = &nvq->vq;
++	struct socket *sock = vq->private_data;
 +	struct page_frag *alloc_frag = &current->task_frag;
 +	struct virtio_net_hdr *gso;
 +	size_t len = iov_iter_count(from);
++	int headroom = vhost_sock_xdp(sock) ? XDP_PACKET_HEADROOM : 0;
 +	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-+	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + XDP_PACKET_HEADROOM
-+				 + nvq->sock_hlen);
++	int pad = SKB_DATA_ALIGN(VHOST_NET_RX_PAD + headroom + nvq->sock_hlen);
 +	int sock_hlen = nvq->sock_hlen;
 +	void *buf;
 +	int copied;
@@ -156,7 +169,7 @@ index f488848..52b4d3f 100644
  static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  {
  	struct vhost_net_virtqueue *nvq = &net->vqs[VHOST_NET_VQ_TX];
-@@ -550,7 +650,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -550,7 +656,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		.msg_controllen = 0,
  		.msg_flags = MSG_DONTWAIT,
  	};
@@ -165,7 +178,7 @@ index f488848..52b4d3f 100644
  	int err;
  	int sent_pkts = 0;
  
-@@ -575,13 +675,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -575,13 +681,22 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  
  		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
  		vq->heads[nvq->done_idx].len = 0;
@@ -194,7 +207,7 @@ index f488848..52b4d3f 100644
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -593,11 +702,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -593,11 +708,8 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		if (err != len)
  			pr_debug("Truncated TX packet: "
  				 " len %d != %zd\n", err, len);
@@ -208,7 +221,7 @@ index f488848..52b4d3f 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
-@@ -656,16 +762,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
+@@ -656,16 +768,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
  			struct ubuf_info *ubuf;
