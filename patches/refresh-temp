@@ -1,0 +1,22 @@
+Bottom: 626616b97ad91e0720cec85d9756f8c7576087ee
+Top:    8b1a791d8ad0cb86cde663f30c791561893454d6
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-07-20 11:20:48 +0800
+
+Refresh of vhost-part
+
+---
+
+diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
+index 5816887..b4bbed4 100644
+--- a/drivers/vhost/net.c
++++ b/drivers/vhost/net.c
+@@ -635,8 +635,7 @@ static void vhost_tx_batch(struct vhost_net *net,
+ 	msghdr->msg_control = &ctl;
+ 	err = sock->ops->sendmsg(sock, msghdr, 0);
+ 	if (unlikely(err < 0)) {
+-		/* FIXME vq_err() */
+-		vq_err(&nvq->vq, "sendmsg err!\n");
++		vq_err(&nvq->vq, "Fail to batch sending packets\n");
+ 		return;
+ 	}
