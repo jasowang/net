@@ -1,14 +1,14 @@
 Version: 1
-Previous: 877d57ea2949cb89d04f2faf70e5ae8a0ed4b946
-Head: 42b0cc8c71adaf352d7b651cb0d92bb6fb1db8e9
+Previous: 7da8e698c1627bd35d515fe64f43bdde66c6c901
+Head: 1c6b18cb7ffd37ccfce9c45b1b3e9accb891cca5
 Applied:
   tuntap-switch-to-use: 60c65585ba46043afb486505964672e55da5dfe5
   tuntap-enable-bh-early-during: 42b0cc8c71adaf352d7b651cb0d92bb6fb1db8e9
+  tuntap-simplify-error-handling: c8dd19c2c33716e154fb739f0ef746c29a7516db
+  tuntap-tweak-on-the-path-of: 966803fa681d59a2a3d9700675514393f89001ce
+  tuntap-split-out-xdp-logic: d8413a60a917befcff4aae0748878ed4b2bde9d8
+  tuntap-batched-sendmsg: 1c6b18cb7ffd37ccfce9c45b1b3e9accb891cca5
 Unapplied:
-  tuntap-simplify-error-handling: 2995892afb4a6aeccdd65187755403daa37d76bb
-  tuntap-tweak-on-the-path-of: ac733ee14329a0068a0f702dec62ae2fa5d7d2f1
-  tuntap-split-out-xdp-logic: 25c85ae38a0d2d10ac1ea98fde32e20c4529afa3
-  tuntap-batched-sendmsg: 65cd294fc5b25dd3677f6978e30c7b96e495e224
   tap-support-batch-receiving: 38dd0767256678615f54c6871d38c7d978bad9ec
   net-sock-introduce-sock_xdp: 6538da630a9d50ae92b398888e875917c1f8c713
   vhost-part: 53e55995bbdb2a7e235bb6622b887d73b65a2671
