@@ -1,5 +1,5 @@
-Bottom: 2bff98003ee8b810ac6d81b30d4f8cb6b34f4ad4
-Top:    beefe82f7cdd385bdb197bbd69cc794812331c25
+Bottom: d8aa12ca4b77d952ef61ef5402a7c3950a54aee1
+Top:    d8aa12ca4b77d952ef61ef5402a7c3950a54aee1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:16:42 +0800
 
@@ -10,86 +10,4 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 39b23fc..2b5a528 100644
---- a/drivers/net/tun.c
-+++ b/drivers/net/tun.c
-@@ -1623,7 +1623,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 				     int len, int *skb_xdp)
- {
- 	struct page_frag *alloc_frag = &current->task_frag;
--	struct sk_buff *skb;
-+	struct sk_buff *skb = NULL;
- 	struct bpf_prog *xdp_prog;
- 	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
- 	unsigned int delta = 0;
-@@ -1649,6 +1649,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 	if (copied != len)
- 		return ERR_PTR(-EFAULT);
- 
-+	get_page(alloc_frag->page);
-+	alloc_frag->offset += buflen;
-+
- 	/* There's a small window that XDP may be set after the check
- 	 * of xdp_prog above, this should be rare and for simplicity
- 	 * we do XDP on skb in case the headroom is not enough.
-@@ -1676,23 +1679,15 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 
- 		switch (act) {
- 		case XDP_REDIRECT:
--			get_page(alloc_frag->page);
--			alloc_frag->offset += buflen;
- 			err = xdp_do_redirect(tun->dev, &xdp, xdp_prog);
- 			xdp_do_flush_map();
- 			if (err)
--				goto err_redirect;
--			rcu_read_unlock();
--			local_bh_enable();
--			return NULL;
-+				goto err_xdp;
-+			goto out;
- 		case XDP_TX:
--			get_page(alloc_frag->page);
--			alloc_frag->offset += buflen;
- 			if (tun_xdp_tx(tun->dev, &xdp))
--				goto err_redirect;
--			rcu_read_unlock();
--			local_bh_enable();
--			return NULL;
-+				goto err_xdp;
-+			goto out;
- 		case XDP_PASS:
- 			delta = orig_data - xdp.data;
- 			len = xdp.data_end - xdp.data;
-@@ -1711,23 +1706,23 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
- 	local_bh_enable();
- 
- 	skb = build_skb(buf, buflen);
--	if (!skb)
--		return ERR_PTR(-ENOMEM);
-+	if (!skb) {
-+		skb = ERR_PTR(-ENOMEM);
-+		goto out;
-+	}
- 
- 	skb_reserve(skb, pad - delta);
- 	skb_put(skb, len);
--	get_page(alloc_frag->page);
--	alloc_frag->offset += buflen;
- 
- 	return skb;
- 
--err_redirect:
--	put_page(alloc_frag->page);
- err_xdp:
-+	alloc_frag->offset -= buflen;
-+	put_page(alloc_frag->page);
-+out:
- 	rcu_read_unlock();
- 	local_bh_enable();
--	this_cpu_inc(tun->pcpu_stats->rx_dropped);
--	return NULL;
-+	return skb;
- }
- 
- /* Get packet from user space buffer */
+
