@@ -1,10 +1,10 @@
 Version: 1
-Previous: 0792d05758db7c28181f53acefbb0be57750f5f8
-Head: 60c65585ba46043afb486505964672e55da5dfe5
+Previous: 877d57ea2949cb89d04f2faf70e5ae8a0ed4b946
+Head: 42b0cc8c71adaf352d7b651cb0d92bb6fb1db8e9
 Applied:
   tuntap-switch-to-use: 60c65585ba46043afb486505964672e55da5dfe5
+  tuntap-enable-bh-early-during: 42b0cc8c71adaf352d7b651cb0d92bb6fb1db8e9
 Unapplied:
-  tuntap-enable-bh-early-during: d0b354b3e1c4663440aa6955444ab86d4ad55e16
   tuntap-simplify-error-handling: 2995892afb4a6aeccdd65187755403daa37d76bb
   tuntap-tweak-on-the-path-of: ac733ee14329a0068a0f702dec62ae2fa5d7d2f1
   tuntap-split-out-xdp-logic: 25c85ae38a0d2d10ac1ea98fde32e20c4529afa3
