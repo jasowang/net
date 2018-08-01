@@ -1,7 +1,8 @@
 Version: 1
-Previous: 8ac48981a5beae9fe2aa57d151baffb5fa25216a
-Head: c215cab609bf6a625dad1aba0093f173313e89ba
+Previous: 32f54e2b73c01e30109c781ee78363b5dc571b9b
+Head: 3bc950c34b28b60f879ea0ef8d97e65a8c8f1d50
 Applied:
+Unapplied:
   vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
   vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
   vhost_net-introduce-0: 8f47eb7be2f5fdfcff4e1a8e292ab891a610670f
@@ -20,7 +21,6 @@ Applied:
   tap-support-batch-receiving: 8bdb93d9c5fd86a0ef37475c00ace11a4e28432e
   net-sock-introduce-sock_xdp: fe9beec66650d78c7c6942bd1d5cf5bbec1c623e
   vhost-part: c215cab609bf6a625dad1aba0093f173313e89ba
-Unapplied:
   debug-XDP_PASS: d7b6bc05eb5b384a9c0f9c9b6c74742a3d660514
   vhost_net-batch-submitting-xdp: 3f60efdf641d0fbfded7fd55472cb6102689f333
 Hidden:
