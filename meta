@@ -1,7 +1,8 @@
 Version: 1
-Previous: 832acfc5ff84d4f7d7bb0fa2aa9ca3ff396ba8f6
-Head: e6476c21447c4b17c47e476aade6facf050f31e8
+Previous: 4d361f70d6a9470ec8b91c43bf6f5486875c7991
+Head: 32a9f89293ae24f0822c4535f78d36d88ad83978
 Applied:
+  tuntap-switch-to-use: 32a9f89293ae24f0822c4535f78d36d88ad83978
 Unapplied:
   tuntap-enable-bh-early-during: d0b354b3e1c4663440aa6955444ab86d4ad55e16
   tuntap-simplify-error-handling: 2995892afb4a6aeccdd65187755403daa37d76bb
