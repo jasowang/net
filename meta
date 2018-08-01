@@ -1,18 +1,8 @@
 Version: 1
-Previous: 5552a7d34fafe8bbe87892f4dbc585b5dd452006
+Previous: 79d34cd9a2f76bf57cd9ee96d59797f5202b367b
 Head: e6476c21447c4b17c47e476aade6facf050f31e8
 Applied:
 Unapplied:
-  vhost_net-drop-unnecessary: 198ef575dd2eb9098e79230aeb80b16742937825
-  vhost_net-introduce-helper-to: cef3807635a62c20a1044bbcdcf1dd6b5d5e223b
-  vhost_net-introduce-0: 8f47eb7be2f5fdfcff4e1a8e292ab891a610670f
-  vhost_net-introduce-1: 4fd6e98a19dfabdad9f90f1e8d57a0a287f96ada
-  vhost_net-introduce: a95132c08349e248267cff41b2859eccec80f2bf
-  vhost_net-split-out-datacopy: 83045a2d2916e9c696e95267dbc1e75a33930bc3
-  vhost_net-rename: 28aee6f8d81261e604856679762a092b4d507d6c
-  vhost_net-rename-0: a23030984e154ef25b2d920f3cfbfc9c5a59f9c9
-  vhost_net-batch-update-used: 3b6539d95bf46ecc537b870719703500bd8974ff
-  vhost_net-limit-the-batched-tx: fd2a105b2c7b7d967836085988b20fac047f1266
   tuntap-enable-bh-early-during: 97850ba95ca05d86dfa0ab5f796a46aad3fa7068
   tuntap-simplify-error-handling: 500fddd6c798aad30f344aae6bc72c9c129a3520
   tuntap-tweak-on-the-path-of: 231d43af67f213063327faab6c2838b426e83c6d
