@@ -1,5 +1,5 @@
-Bottom: beefe82f7cdd385bdb197bbd69cc794812331c25
-Top:    38593460fb47d29d05edfd51adf5590f7afd6e6d
+Bottom: c83d450bc65ee6520455af6de12eb2d0f6cada85
+Top:    9f5e0f10fe81620adedb9d7b169cbf40cf123648
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:46:51 +0800
 
@@ -14,7 +14,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2b5a528..e250dcd 100644
+index c2adcd4..075e432 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -1656,10 +1656,12 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
