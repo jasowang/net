@@ -1,0 +1,22 @@
+Bottom: d2683cf46ee2ccd8a20e224c4edb52883f0ff455
+Top:    abdc25f10154ddff3996c087c7b15f7666d602bd
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-02 13:19:02 +0800
+
+Refresh of tuntap-batched-sendmsg
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 0942ff5..a8d7d8b 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1714,6 +1714,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+ 		act = tun_do_xdp(tun, tfile, xdp_prog, &xdp, &err);
+ 		if (err)
+ 			goto err_xdp;
++
++		if (act == XDP_REDIRECT)
++			xdp_do_flush_map();
+ 		if (act != XDP_PASS)
+ 			goto out;
