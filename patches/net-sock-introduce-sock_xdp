@@ -1,5 +1,5 @@
-Bottom: 9c9cb0c1383418d82df8db9b389b764ea062428b
-Top:    a088c7bc18db94b67dd868a40d54ef2dbefeb446
+Bottom: 894a26efd117c5d984796c47fe8e4c4ed3b41872
+Top:    2adb3c3405ef1b15aa3d8d31a836fcb5fe5baab2
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-20 11:10:56 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 96b3a20..dc1a1fe 100644
+index 0a31347..f0aa243 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -867,6 +867,9 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
+@@ -868,6 +868,9 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
  		tun_napi_init(tun, tfile, napi);
  	}
  
@@ -24,7 +24,7 @@ index 96b3a20..dc1a1fe 100644
  	tun_set_real_num_queues(tun);
  
  	/* device is allowed to go away first, so no need to hold extra
-@@ -1239,13 +1242,29 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+@@ -1240,13 +1243,29 @@ static int tun_xdp_set(struct net_device *dev, struct bpf_prog *prog,
  		       struct netlink_ext_ack *extack)
  {
  	struct tun_struct *tun = netdev_priv(dev);
