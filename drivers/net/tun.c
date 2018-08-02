@@ -1714,6 +1714,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		act = tun_do_xdp(tun, tfile, xdp_prog, &xdp, &err);
 		if (err)
 			goto err_xdp;
+
+		if (act == XDP_REDIRECT)
+			xdp_do_flush_map();
 		if (act != XDP_PASS)
 			goto out;
 
