@@ -1,0 +1,22 @@
+Bottom: d91d394dc7ea9418cc95defa7e1591088d23fd89
+Top:    6f2b8fdaeb3b06cf109b29c6a4b9d44f423dbc93
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-02 16:03:53 +0800
+
+Refresh of vhost-part
+
+---
+
+diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
+index 9704b51..2197421 100644
+--- a/samples/bpf/xdp1_kern.c
++++ b/samples/bpf/xdp1_kern.c
+@@ -45,7 +45,7 @@ int xdp_prog1(struct xdp_md *ctx)
+ 	void *data_end = (void *)(long)ctx->data_end;
+ 	void *data = (void *)(long)ctx->data;
+ 	struct ethhdr *eth = data;
+-	int rc = XDP_PASS;
++	int rc = XDP_DROP;
+ 	long *value;
+ 	u16 h_proto;
+ 	u64 nh_off;
