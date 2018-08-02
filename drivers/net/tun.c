@@ -2406,7 +2406,7 @@ static void tun_sock_write_space(struct sock *sk)
 
 static int tun_xdp_one(struct tun_struct *tun,
 		       struct tun_file *tfile,
-		       struct xdp_buff *xdp)
+		       struct xdp_buff *xdp, int *flush)
 {
 	struct virtio_net_hdr *gso = xdp->data_hard_start + sizeof(int);
 	struct tun_pcpu_stats *stats;
@@ -2428,6 +2428,8 @@ static int tun_xdp_one(struct tun_struct *tun,
 		act = tun_do_xdp(tun, tfile, xdp_prog, xdp, &err);
 		if (err)
 			goto out;
+		if (act == XDP_REDIRECT)
+			*flush = true;
 		if (act != XDP_PASS)
 			goto out;
 	}
@@ -2491,16 +2493,18 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 
 	if (ctl && ((ctl->type & 0xF) == TUN_MSG_PTR)) {
 		int n = ctl->type >> 16;
+		int flush = 0;
 
 		local_bh_disable();
 		rcu_read_lock();
 
 		for (i = 0; i < n; i++) {
 			xdp = &((struct xdp_buff *)ctl->ptr)[i];
-			tun_xdp_one(tun, tfile, xdp);
+			tun_xdp_one(tun, tfile, xdp, &flush);
 		}
 
-		xdp_do_flush_map();
+		if (flush)
+			xdp_do_flush_map();
 
 		rcu_read_unlock();
 		local_bh_enable();
