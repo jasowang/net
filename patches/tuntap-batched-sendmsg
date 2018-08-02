@@ -1,5 +1,5 @@
-Bottom: 4cc44fca8f0014d48b531c9cc0834c9618490654
-Top:    d2683cf46ee2ccd8a20e224c4edb52883f0ff455
+Bottom: ecb3209b15b70c7be298f4b7368dea9097b68f74
+Top:    abdc25f10154ddff3996c087c7b15f7666d602bd
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-20 16:16:00 +0800
 
@@ -24,18 +24,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3f23e2c..0942ff5 100644
+index d7499a9..a8d7d8b 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1626,7 +1626,6 @@ static u32 tun_do_xdp(struct tun_struct *tun,
- 	switch (act) {
- 	case XDP_REDIRECT:
- 		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
--		xdp_do_flush_map();
- 		if (*err)
- 			break;
- 		goto out;
-@@ -2402,18 +2401,115 @@ static void tun_sock_write_space(struct sock *sk)
+@@ -2404,18 +2404,115 @@ static void tun_sock_write_space(struct sock *sk)
  	kill_fasync(&tfile->fasync, SIGIO, POLL_OUT);
  }
  
