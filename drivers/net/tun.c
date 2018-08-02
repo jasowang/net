@@ -1626,10 +1626,8 @@ static u32 tun_do_xdp(struct tun_struct *tun,
 	switch (act) {
 	case XDP_REDIRECT:
 		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
-		if (*err) {
-			act = XDP_DROP;
+		if (*err)
 			break;
-		}
 		goto out;
 	case XDP_TX:
 		*err = tun_xdp_tx(tun->dev, xdp);
