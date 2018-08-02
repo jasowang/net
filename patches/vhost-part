@@ -1,5 +1,5 @@
 Bottom: a088c7bc18db94b67dd868a40d54ef2dbefeb446
-Top:    ba6b8c94244b8c6ce426b33fa7f799ad9cf0ea8d
+Top:    d91d394dc7ea9418cc95defa7e1591088d23fd89
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:08 +0800
 
@@ -25,19 +25,6 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index cfda146..c0cbc21 100644
---- a/drivers/net/macvlan.c
-+++ b/drivers/net/macvlan.c
-@@ -556,6 +556,8 @@ static netdev_tx_t macvlan_start_xmit(struct sk_buff *skb,
- 	unsigned int len = skb->len;
- 	int ret;
- 
-+	printk("start xmit!\n");
-+
- 	if (unlikely(netpoll_tx_running(dev)))
- 		return macvlan_netpoll_send_skb(vlan, skb);
- 
 diff --git a/drivers/net/tap.c b/drivers/net/tap.c
 index aaef87b..17f0d33 100644
 --- a/drivers/net/tap.c
