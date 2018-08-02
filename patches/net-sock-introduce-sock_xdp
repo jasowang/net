@@ -1,5 +1,5 @@
-Bottom: 50a1b3570f389dc4adf87891f679d1b05ccd255d
-Top:    7d5d861babb79092d3c43ab27f4fa21a0f3694cf
+Bottom: 9c9cb0c1383418d82df8db9b389b764ea062428b
+Top:    a088c7bc18db94b67dd868a40d54ef2dbefeb446
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-20 11:10:56 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 0942ff5..b9e66d3 100644
+index 96b3a20..dc1a1fe 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
 @@ -867,6 +867,9 @@ static int tun_attach(struct tun_struct *tun, struct file *file,
