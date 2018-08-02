@@ -1626,9 +1626,10 @@ static u32 tun_do_xdp(struct tun_struct *tun,
 	switch (act) {
 	case XDP_REDIRECT:
 		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
-		xdp_do_flush_map();
-		if (*err)
+		if (*err) {
+			act = XDP_DROP;
 			break;
+		}
 		goto out;
 	case XDP_TX:
 		*err = tun_xdp_tx(tun->dev, xdp);
@@ -1715,6 +1716,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
 		act = tun_do_xdp(tun, tfile, xdp_prog, &xdp, &err);
 		if (err)
 			goto err_xdp;
+
+		if (act == XDP_REDIRECT)
+			xdp_do_flush_map();
 		if (act != XDP_PASS)
 			goto out;
 
