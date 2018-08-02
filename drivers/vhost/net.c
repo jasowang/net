@@ -717,7 +717,7 @@ done:
 		}
 	}
 
-	vhost_net_signal_used(nvq);
+	vhost_tx_batch(net, nvq, sock, &msg);
 }
 
 static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
