@@ -3,7 +3,9 @@ Top:    ecb3209b15b70c7be298f4b7368dea9097b68f74
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-02 13:19:02 +0800
 
-tuntap: flush xdp map in the caller
+tuntap: move XDP flushing out of tun_do_xdp()
+
+This will allow adding batch flushing on top.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
