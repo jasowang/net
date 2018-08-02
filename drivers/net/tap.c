@@ -1221,7 +1221,7 @@ static int tap_sendmsg(struct socket *sock, struct msghdr *m,
 			xdp = &((struct xdp_buff *)ctl->ptr)[i];
 			tap_get_user_xdp(q, xdp);
 		}
-		return total_len;
+		return 0;
 	}
 
 	return tap_get_user(q, m, &m->msg_iter, m->msg_flags & MSG_DONTWAIT);
