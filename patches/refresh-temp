@@ -1,0 +1,25 @@
+Bottom: 384e5e94782f25233af9c7a4b748775beb5e4fca
+Top:    ecb3209b15b70c7be298f4b7368dea9097b68f74
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-02 13:38:20 +0800
+
+Refresh of tuntap-flush
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 7951012..d7499a9 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -1626,10 +1626,8 @@ static u32 tun_do_xdp(struct tun_struct *tun,
+ 	switch (act) {
+ 	case XDP_REDIRECT:
+ 		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
+-		if (*err) {
+-			act = XDP_DROP;
++		if (*err)
+ 			break;
+-		}
+ 		goto out;
+ 	case XDP_TX:
+ 		*err = tun_xdp_tx(tun->dev, xdp);
