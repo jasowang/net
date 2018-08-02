@@ -1,5 +1,5 @@
 Bottom: a088c7bc18db94b67dd868a40d54ef2dbefeb446
-Top:    f404bc0393296b516f59decf59fa3a9308f157f0
+Top:    4acd7139c3a44b1db418e1578c66cf1dbd7fa654
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:08 +0800
 
@@ -25,8 +25,34 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index cfda146..6947425 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -561,6 +561,8 @@ static netdev_tx_t macvlan_start_xmit(struct sk_buff *skb,
+ 
+ 	ret = macvlan_queue_xmit(skb, dev);
+ 
++	printk("here!\n");
++
+ 	if (likely(ret == NET_XMIT_SUCCESS || ret == NET_XMIT_CN)) {
+ 		struct vlan_pcpu_stats *pcpu_stats;
+ 
+diff --git a/drivers/net/tap.c b/drivers/net/tap.c
+index aaef87b..17f0d33 100644
+--- a/drivers/net/tap.c
++++ b/drivers/net/tap.c
+@@ -1221,7 +1221,7 @@ static int tap_sendmsg(struct socket *sock, struct msghdr *m,
+ 			xdp = &((struct xdp_buff *)ctl->ptr)[i];
+ 			tap_get_user_xdp(q, xdp);
+ 		}
+-		return total_len;
++		return 0;
+ 	}
+ 
+ 	return tap_get_user(q, m, &m->msg_iter, m->msg_flags & MSG_DONTWAIT);
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 367d802..5f1bcb7 100644
+index 367d802..d517c88 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -119,6 +119,7 @@ struct vhost_net_virtqueue {
@@ -213,7 +239,7 @@ index 367d802..5f1bcb7 100644
  
  		/* TODO: Check specific error and bomb out unless ENOBUFS? */
  		err = sock->ops->sendmsg(sock, &msg, len);
-@@ -591,9 +708,9 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
+@@ -591,16 +708,16 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
  		}
  		if (err != len)
  			pr_debug("Truncated TX packet: len %d != %zd\n",
@@ -226,6 +252,14 @@ index 367d802..5f1bcb7 100644
  		if (vhost_exceeds_weight(++sent_pkts, total_len)) {
  			vhost_poll_queue(&vq->poll);
  			break;
+ 		}
+ 	}
+ 
+-	vhost_net_signal_used(nvq);
++	vhost_tx_batch(net, nvq, sock, &msg);
+ }
+ 
+ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
 @@ -652,16 +769,21 @@ static void handle_tx_zerocopy(struct vhost_net *net, struct socket *sock)
  		/* use msg_control to pass vhost zerocopy ubuf info to skb */
  		if (zcopy_used) {
@@ -250,3 +284,16 @@ index 367d802..5f1bcb7 100644
  			ubufs = nvq->ubufs;
  			atomic_inc(&ubufs->refcount);
  			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
+diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
+index 2197421..9704b51 100644
+--- a/samples/bpf/xdp1_kern.c
++++ b/samples/bpf/xdp1_kern.c
+@@ -45,7 +45,7 @@ int xdp_prog1(struct xdp_md *ctx)
+ 	void *data_end = (void *)(long)ctx->data_end;
+ 	void *data = (void *)(long)ctx->data;
+ 	struct ethhdr *eth = data;
+-	int rc = XDP_DROP;
++	int rc = XDP_PASS;
+ 	long *value;
+ 	u16 h_proto;
+ 	u64 nh_off;
