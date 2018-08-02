@@ -1,5 +1,5 @@
-Bottom: 4cc44fca8f0014d48b531c9cc0834c9618490654
-Top:    ecb3209b15b70c7be298f4b7368dea9097b68f74
+Bottom: 8bf492bd326e8eb404de5fc88f0ada61d38d037f
+Top:    3b4608dbd161950a5af75a047e0b16d7cb8c60fc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-02 13:19:02 +0800
 
@@ -13,10 +13,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3f23e2c..d7499a9 100644
+index 58caf2f..3caa1b6 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1626,7 +1626,6 @@ static u32 tun_do_xdp(struct tun_struct *tun,
+@@ -1645,7 +1645,6 @@ static u32 tun_do_xdp(struct tun_struct *tun,
  	switch (act) {
  	case XDP_REDIRECT:
  		*err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
@@ -24,7 +24,7 @@ index 3f23e2c..d7499a9 100644
  		if (*err)
  			break;
  		goto out;
-@@ -1715,6 +1714,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1734,6 +1733,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  		act = tun_do_xdp(tun, tfile, xdp_prog, &xdp, &err);
  		if (err)
  			goto err_xdp;

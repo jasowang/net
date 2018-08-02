@@ -1,5 +1,5 @@
-Bottom: 4532af85c38ffb7afcc8ebf5d0ad3e7f5d31b860
-Top:    d2424814e9b8fdf3e24ce4981df92b8dfea6faba
+Bottom: 309aaf7f3640df3893921a937ba63460a370cebc
+Top:    dbfe4089fc3fd1267152d2c8034771cbb9f90712
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-05-13 08:16:42 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 3ca0772..6bffe35 100644
+index 7ecc4a0..1e44a4d 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1622,7 +1622,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1641,7 +1641,7 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  				     int len, int *skb_xdp)
  {
  	struct page_frag *alloc_frag = &current->task_frag;
@@ -23,7 +23,7 @@ index 3ca0772..6bffe35 100644
  	struct bpf_prog *xdp_prog;
  	int buflen = SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
  	unsigned int delta = 0;
-@@ -1648,6 +1648,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1667,6 +1667,9 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	if (copied != len)
  		return ERR_PTR(-EFAULT);
  
@@ -33,7 +33,7 @@ index 3ca0772..6bffe35 100644
  	/* There's a small window that XDP may be set after the check
  	 * of xdp_prog above, this should be rare and for simplicity
  	 * we do XDP on skb in case the headroom is not enough.
-@@ -1675,23 +1678,15 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1694,23 +1697,15 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  
  		switch (act) {
  		case XDP_REDIRECT:
@@ -61,7 +61,7 @@ index 3ca0772..6bffe35 100644
  		case XDP_PASS:
  			delta = orig_data - xdp.data;
  			len = xdp.data_end - xdp.data;
-@@ -1710,23 +1705,23 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1729,23 +1724,23 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  	local_bh_enable();
  
  	skb = build_skb(buf, buflen);

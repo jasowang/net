@@ -1,5 +1,5 @@
-Bottom: d5e6b50fedd06021794610b39393d86749aa9676
-Top:    4532af85c38ffb7afcc8ebf5d0ad3e7f5d31b860
+Bottom: 5d156e7750c68c5ec7bab8c8982fdd2d8e2ef90b
+Top:    309aaf7f3640df3893921a937ba63460a370cebc
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-04-17 07:44:14 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 2f75e86..3ca0772 100644
+index 4506da3..7ecc4a0 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -1706,22 +1706,18 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
+@@ -1725,22 +1725,18 @@ static struct sk_buff *tun_build_skb(struct tun_struct *tun,
  			goto err_xdp;
  		}
  	}
