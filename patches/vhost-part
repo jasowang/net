@@ -1,5 +1,5 @@
 Bottom: 0f088d7adf4612f10522695d406631a18b9bd53f
-Top:    d91d394dc7ea9418cc95defa7e1591088d23fd89
+Top:    6f2b8fdaeb3b06cf109b29c6a4b9d44f423dbc93
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-07-19 16:19:08 +0800
 
@@ -258,16 +258,3 @@ index 367d802..d517c88 100644
  			ubufs = nvq->ubufs;
  			atomic_inc(&ubufs->refcount);
  			nvq->upend_idx = (nvq->upend_idx + 1) % UIO_MAXIOV;
-diff --git a/samples/bpf/xdp1_kern.c b/samples/bpf/xdp1_kern.c
-index 2197421..9704b51 100644
---- a/samples/bpf/xdp1_kern.c
-+++ b/samples/bpf/xdp1_kern.c
-@@ -45,7 +45,7 @@ int xdp_prog1(struct xdp_md *ctx)
- 	void *data_end = (void *)(long)ctx->data_end;
- 	void *data = (void *)(long)ctx->data;
- 	struct ethhdr *eth = data;
--	int rc = XDP_DROP;
-+	int rc = XDP_PASS;
- 	long *value;
- 	u16 h_proto;
- 	u64 nh_off;
