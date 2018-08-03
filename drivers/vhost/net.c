@@ -1510,11 +1510,11 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
 		return vhost_net_set_features(n, features);
 	case VHOST_GET_BACKEND_FEATURES:
 		features = VHOST_NET_BACKEND_FEATURES;
-		if (copy_to_user(featurep, &features, sizeof features))
+		if (copy_to_user(featurep, &features, sizeof(features)))
 			return -EFAULT;
 		return 0;
 	case VHOST_SET_BACKEND_FEATURES:
-		if (copy_from_user(&features, featurep, sizeof features))
+		if (copy_from_user(&features, featurep, sizeof(features)))
 			return -EFAULT;
 		if (features & ~VHOST_NET_BACKEND_FEATURES)
 			return -EOPNOTSUPP;

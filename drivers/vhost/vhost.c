@@ -1061,7 +1061,7 @@ ssize_t vhost_chr_write_iter(struct vhost_dev *dev,
 	}
 
 	ret = (type == VHOST_IOTLB_MSG) ? sizeof(struct vhost_msg) :
-		                          sizeof(struct vhost_msg_v2);
+	      sizeof(struct vhost_msg_v2);
 done:
 	return ret;
 }
@@ -1156,7 +1156,7 @@ static int vhost_iotlb_miss(struct vhost_virtqueue *vq, u64 iova, int access)
 	struct vhost_iotlb_msg *msg;
 	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_MSG_V2);
 
-	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
+	node = vhost_new_msg(vq, v2 ? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
 	if (!node)
 		return -ENOMEM;
 
