@@ -1,5 +1,5 @@
-Bottom: 6db5fe541bbec8b268b3c31165dcde13df897516
-Top:    281dea9ff424123572c068eacb1debfa0efcd8c1
+Bottom: 23bc62d42783174ae3cfcf6e3e3b281895f7af3b
+Top:    316d205752a1a647a36d6f590b6164008d544971
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -43,7 +43,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 29756d8..4a123e8 100644
+index 367d802..b983a54 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -78,6 +78,10 @@ enum {
@@ -57,7 +57,7 @@ index 29756d8..4a123e8 100644
  	VHOST_NET_VQ_RX = 0,
  	VHOST_NET_VQ_TX = 1,
  	VHOST_NET_VQ_MAX = 2,
-@@ -1265,6 +1269,21 @@ static long vhost_net_reset_owner(struct vhost_net *n)
+@@ -1399,6 +1403,21 @@ static long vhost_net_reset_owner(struct vhost_net *n)
  	return err;
  }
  
@@ -79,7 +79,7 @@ index 29756d8..4a123e8 100644
  static int vhost_net_set_features(struct vhost_net *n, u64 features)
  {
  	size_t vhost_hlen, sock_hlen, hdr_len;
-@@ -1355,6 +1374,17 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
+@@ -1489,6 +1508,17 @@ static long vhost_net_ioctl(struct file *f, unsigned int ioctl,
  		if (features & ~VHOST_NET_FEATURES)
  			return -EOPNOTSUPP;
  		return vhost_net_set_features(n, features);
