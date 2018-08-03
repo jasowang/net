@@ -10,15 +10,18 @@ done by batching XDP buffs in vhost and submit them when:
 
 - vhost_net can not build XDP buff (mostly because of the size of packet)
 - #batched exceeds the limitation (VHOST_NET_BATCH).
-- tun accept a batch of XDP buff through msg_control and process them
-  in a batch
+- tun or tap accept a batch of XDP buff through msg_control and
+  process them in a batch
 
 With this tun XDP can benefit from e.g batch transmission XDP_REDIRECT
 during or XDP_TX.
 
 Tests shows 21% improvement on TX pps (from ~3.2Mpps to ~3.9Mpps)
 while transmitting through testpmd from guest to host by
-xdp_redirect_map between tap0 and ixgbe.
+xdp_redirect_map between tap0 and ixgbe. And macvtap on top of mlx4
+test shows about 26% improvements on TX pps.
+
+So both XDP path and skb path benefits from this.
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
