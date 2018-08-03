@@ -1,5 +1,5 @@
 Bottom: 23bc62d42783174ae3cfcf6e3e3b281895f7af3b
-Top:    316d205752a1a647a36d6f590b6164008d544971
+Top:    632fe0e1fc33272be17db31ebbac30ecfc504c3e
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-06-12 10:28:55 +0800
 
@@ -43,7 +43,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/vhost/net.c b/drivers/vhost/net.c
-index 367d802..b983a54 100644
+index 367d802..4e656f8 100644
 --- a/drivers/vhost/net.c
 +++ b/drivers/vhost/net.c
 @@ -78,6 +78,10 @@ enum {
@@ -85,11 +85,11 @@ index 367d802..b983a54 100644
  		return vhost_net_set_features(n, features);
 +	case VHOST_GET_BACKEND_FEATURES:
 +		features = VHOST_NET_BACKEND_FEATURES;
-+		if (copy_to_user(featurep, &features, sizeof features))
++		if (copy_to_user(featurep, &features, sizeof(features)))
 +			return -EFAULT;
 +		return 0;
 +	case VHOST_SET_BACKEND_FEATURES:
-+		if (copy_from_user(&features, featurep, sizeof features))
++		if (copy_from_user(&features, featurep, sizeof(features)))
 +			return -EFAULT;
 +		if (features & ~VHOST_NET_BACKEND_FEATURES)
 +			return -EOPNOTSUPP;
@@ -98,7 +98,7 @@ index 367d802..b983a54 100644
  		return vhost_net_reset_owner(n);
  	case VHOST_SET_OWNER:
 diff --git a/drivers/vhost/vhost.c b/drivers/vhost/vhost.c
-index a502f1a..9501d4c 100644
+index a502f1a..6f6c42d 100644
 --- a/drivers/vhost/vhost.c
 +++ b/drivers/vhost/vhost.c
 @@ -315,6 +315,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
@@ -159,7 +159,7 @@ index a502f1a..9501d4c 100644
  	}
  
 +	ret = (type == VHOST_IOTLB_MSG) ? sizeof(struct vhost_msg) :
-+		                          sizeof(struct vhost_msg_v2);
++	      sizeof(struct vhost_msg_v2);
  done:
  	return ret;
  }
@@ -202,7 +202,7 @@ index a502f1a..9501d4c 100644
 +	bool v2 = vhost_backend_has_feature(vq, VHOST_BACKEND_F_IOTLB_MSG_V2);
  
 -	node = vhost_new_msg(vq, VHOST_IOTLB_MISS);
-+	node = vhost_new_msg(vq, v2? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
++	node = vhost_new_msg(vq, v2 ? VHOST_IOTLB_MSG_V2 : VHOST_IOTLB_MSG);
  	if (!node)
  		return -ENOMEM;
  
