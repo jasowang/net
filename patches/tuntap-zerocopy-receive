@@ -1,5 +1,5 @@
 Bottom: 8f113597fe01c55681c03e8b9adc559b6cf5b081
-Top:    7f5ae97435062b9bea57ef700214e4528a9e6bef
+Top:    be0726d5f340e2e9f21fbd6aebed075a935c2ebb
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-06 13:56:18 +0800
 
@@ -11,10 +11,10 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/tun.c b/drivers/net/tun.c
-index 47c783e..35ff62c 100644
+index 47c783e..874a69e 100644
 --- a/drivers/net/tun.c
 +++ b/drivers/net/tun.c
-@@ -2078,9 +2078,52 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
+@@ -2078,9 +2078,53 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
  		if ((copy = end - offset) > 0) {
  			if (copy > len)
  				copy = len;
@@ -28,7 +28,8 @@ index 47c783e..35ff62c 100644
 +
 +				iov = to->iov;
 +				address = (unsigned long)iov->iov_base + to->iov_offset;
-+
++				printk("hit iov base %llx offset %llx addr %llx\n",
++					iov->iov_base, to->iov_offset, address);
 +				if (address & (PAGE_SIZE - 1))
 +					goto copy;
 +
