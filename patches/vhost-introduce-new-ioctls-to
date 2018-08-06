@@ -24,7 +24,7 @@ So fixing this by introducing a new message type with an explicit
 32bit reserved field after type like:
 
 struct vhost_msg_v2 {
-	int type;
+	__u32 type;
 	__u32 reserved;
 	union {
 		struct vhost_iotlb_msg iotlb;
@@ -38,6 +38,9 @@ userspace to enable this feature (VHOST_BACKEND_F_IOTLB_V2).
 
 Fixes: 6b1e6cc7855b ("vhost: new device IOTLB API")
 Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+Changes from V1:
+- use __u32 instead of int for type
 
 
 ---
