@@ -5,6 +5,13 @@ Date:   2018-08-06 13:56:18 +0800
 
 tuntap: zerocopy receive
 
+Notes:
+
+1) need coopreative guest driver, submit buffers at page boundary. And
+   vnet header/EWMA/Mergeable buffer is a killer for this.
+2) Sample result:
+   hit iov base 7f9bbcf63000 offset ed6 addr 7f9bbcf63ed6
+
 Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
