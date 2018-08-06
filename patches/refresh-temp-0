@@ -1,0 +1,30 @@
+Bottom: 366a12e032bd17d843bfda2400d5c812d1068839
+Top:    7f5ae97435062b9bea57ef700214e4528a9e6bef
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-06 13:57:16 +0800
+
+Refresh of tuntap-zerocopy-receive
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 1ee931e..35ff62c 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2093,6 +2093,7 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
+ 					goto copy;
+ 
+ 				down_read(&current->mm->mmap_sem);
++				printk("try zerocopy receive!\n");
+ 
+ 				vma = find_vma(current->mm, address);
+ 				if (!vma || vma->vm_start > address ||
+@@ -2111,6 +2112,8 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
+ 					return -EFAULT;
+ 				}
+ 
++				printk("done!\n");
++
+ 				iov_iter_advance(to, PAGE_SIZE);
+ 				n = PAGE_SIZE;
+ 				up_read(&current->mm->mmap_sem);
