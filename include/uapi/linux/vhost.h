@@ -76,7 +76,7 @@ struct vhost_msg {
 };
 
 struct vhost_msg_v2 {
-	int type;
+	__u32 type;
 	__u32 reserved;
 	union {
 		struct vhost_iotlb_msg iotlb;
