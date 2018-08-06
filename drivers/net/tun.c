@@ -2093,6 +2093,7 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
 					goto copy;
 
 				down_read(&current->mm->mmap_sem);
+				printk("try zerocopy receive!\n");
 
 				vma = find_vma(current->mm, address);
 				if (!vma || vma->vm_start > address ||
@@ -2110,6 +2111,8 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
 					up_read(&current->mm->mmap_sem);
 					return -EFAULT;
 				}
+
+				printk("done!\n");
 
 				iov_iter_advance(to, PAGE_SIZE);
 				n = PAGE_SIZE;
