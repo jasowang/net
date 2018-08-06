@@ -1,0 +1,22 @@
+Bottom: 7f5ae97435062b9bea57ef700214e4528a9e6bef
+Top:    be0726d5f340e2e9f21fbd6aebed075a935c2ebb
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-06 14:15:53 +0800
+
+Refresh of tuntap-zerocopy-receive
+
+---
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 35ff62c..874a69e 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -2088,7 +2088,8 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
+ 
+ 				iov = to->iov;
+ 				address = (unsigned long)iov->iov_base + to->iov_offset;
+-
++				printk("hit iov base %llx offset %llx addr %llx\n",
++					iov->iov_base, to->iov_offset, address);
+ 				if (address & (PAGE_SIZE - 1))
+ 					goto copy;
