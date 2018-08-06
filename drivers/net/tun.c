@@ -2078,9 +2078,49 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
 		if ((copy = end - offset) > 0) {
 			if (copy > len)
 				copy = len;
+			if (frag->size == PAGE_SIZE &&
+			    !frag->page_offset &&
+			    copy >= PAGE_SIZE) {
+				struct vm_area_struct *vma;
+				const struct iovec *iov;
+				unsigned long address;
+				int ret;
+
+				iov = to->iov;
+				address = (unsigned long)iov->iov_base + to->iov_offset;
+
+				if (address & (PAGE_SIZE - 1))
+					goto copy;
+
+				down_read(&current->mm->mmap_sem);
+
+				vma = find_vma(current->mm, address);
+				if (!vma || vma->vm_start > address ||
+				    vma->vm_end - address < PAGE_SIZE) {
+					printk("vma finding fails!\n");
+					up_read(&current->mm->mmap_sem);
+					return -EFAULT;
+				}
+				zap_page_range(vma, address, PAGE_SIZE);
+
+				ret = vm_insert_page(vma, address,
+						     skb_frag_page(frag));
+				if (ret) {
+					printk("vm_insert_page() fail!\n");
+					up_read(&current->mm->mmap_sem);
+					return -EFAULT;
+				}
+
+				iov_iter_advance(to, PAGE_SIZE);
+				n = PAGE_SIZE;
+				up_read(&current->mm->mmap_sem);
+				goto done;
+			}
+copy:
 			n = copy_page_to_iter(skb_frag_page(frag),
 					      frag->page_offset + offset -
 					      start, copy, to);
+done:
 			offset += n;
 			if (n != copy)
 				goto short_copy;
