@@ -1,0 +1,22 @@
+Bottom: 632fe0e1fc33272be17db31ebbac30ecfc504c3e
+Top:    1e96b810e08cc78e7bc79ef8c9e363601ad8c929
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-06 11:12:37 +0800
+
+Refresh of vhost-introduce-new-ioctls-to
+
+---
+
+diff --git a/include/uapi/linux/vhost.h b/include/uapi/linux/vhost.h
+index c176e9d..b1e22c4 100644
+--- a/include/uapi/linux/vhost.h
++++ b/include/uapi/linux/vhost.h
+@@ -76,7 +76,7 @@ struct vhost_msg {
+ };
+ 
+ struct vhost_msg_v2 {
+-	int type;
++	__u32 type;
+ 	__u32 reserved;
+ 	union {
+ 		struct vhost_iotlb_msg iotlb;
