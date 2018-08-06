@@ -2088,7 +2088,8 @@ int tun_skb_copy_datagram_iter(const struct sk_buff *skb, int offset,
 
 				iov = to->iov;
 				address = (unsigned long)iov->iov_base + to->iov_offset;
-
+				printk("hit iov base %llx offset %llx addr %llx\n",
+					iov->iov_base, to->iov_offset, address);
 				if (address & (PAGE_SIZE - 1))
 					goto copy;
 
