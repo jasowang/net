@@ -1078,6 +1078,9 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
 	struct page *first, *list = NULL;
 	char *p;
 	int i, err, offset;
+	char *hdr = kmalloc(vi->hdr_len, GFP_ATOMIC);
+	if (!hdr)
+		return -ENOMEM;
 
 	sg_init_table(rq->sg, MAX_SKB_FRAGS + 2);
 
@@ -1087,6 +1090,7 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
 		if (!first) {
 			if (list)
 				give_pages(rq, list);
+			kfree(hdr);
 			return -ENOMEM;
 		}
 		sg_set_buf(&rq->sg[i], page_address(first), PAGE_SIZE);
@@ -1099,24 +1103,27 @@ static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
 	first = get_a_page(rq, gfp);
 	if (!first) {
 		give_pages(rq, list);
+		kfree(hdr);
 		return -ENOMEM;
 	}
 	p = page_address(first);
 
 	/* rq->sg[0], rq->sg[1] share the same page */
 	/* a separated rq->sg[0] for header - required in case !any_header_sg */
-	sg_set_buf(&rq->sg[0], p, vi->hdr_len);
+	sg_set_buf(&rq->sg[0], hdr, vi->hdr_len);
 
 	/* rq->sg[1] for data packet, from offset */
 	offset = sizeof(struct padded_vnet_hdr);
-	sg_set_buf(&rq->sg[1], p + offset, PAGE_SIZE - offset);
+	sg_set_buf(&rq->sg[1], p, PAGE_SIZE);
 
 	/* chain first in list head */
 	first->private = (unsigned long)list;
 	err = virtqueue_add_inbuf(rq->vq, rq->sg, MAX_SKB_FRAGS + 2,
 				  first, gfp);
-	if (err < 0)
+	if (err < 0) {
+		kfree(hdr);
 		give_pages(rq, first);
+	}
 
 	return err;
 }
