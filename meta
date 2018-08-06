@@ -1,11 +1,10 @@
 Version: 1
-Previous: fef1bd7c80f90dadce2f6a2030ed8a10b021cf1e
-Head: 4f16732579472bac34aa368daa5cf3b3a9ed0cce
+Previous: 23f929682b6bec73ec49ffab87dc6bb13964143a
+Head: 8f7a5de5d55f94119a77b6dd8217f8a0a89173db
 Applied:
   tun-receive-zerocopy: 2b3bf04d2f99a7ee8c78844e439d808e4b62a225
   tuntap-zerocopy-receive: 2cf9ae0a246a37c33f29046f0149738684e0658f
-  virtio-net-zerocopy-friendly: e89fb1af1fdf4ed234c5961e780485817f35eb54
-  refresh-temp-0: 4f16732579472bac34aa368daa5cf3b3a9ed0cce
+  virtio-net-zerocopy-friendly: 8f7a5de5d55f94119a77b6dd8217f8a0a89173db
 Unapplied:
   xdp1_user-support-ifindex-for: ec246455bb129466c7602331c2bc771c79012597
   exp: 29870d7d288ed8a8d9c1e3675177f8c42a04ca6a
