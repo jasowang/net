@@ -3315,14 +3315,13 @@ EXPORT_SYMBOL_GPL(xdp_do_redirect);
 int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
 {
 	rx_handler_xdp_func_t *rx_handler_xdp;
-	int ret = 0;
 
 	rx_handler_xdp = rcu_dereference(dev->rx_handler_xdp);
 	if (rx_handler_xdp) {
 		switch(rx_handler_xdp(xdp)) {
 		case RX_HANDLER_CONSUMED:
 			return 0;
-		case RX_HANDLER_ANOHTER:
+		case RX_HANDLER_PASS:
 			return -ENOTSUPP;
 		default:
 			return -EFAULT;
