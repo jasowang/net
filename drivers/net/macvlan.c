@@ -1494,11 +1494,6 @@ static int macvlan_changelink(struct net_device *dev,
 		if (vlan->mode == MACVLAN_MODE_SOURCE &&
 		    vlan->mode != mode)
 			macvlan_flush_sources(vlan->port, vlan);
-<<<<<<< current
-=======
-			vlan->port->source_count--;
-		}
->>>>>>> patched
 	}
 
 	if (data && data[IFLA_MACVLAN_FLAGS]) {
