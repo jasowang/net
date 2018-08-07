@@ -1172,6 +1172,7 @@ static int macvlan_port_create(struct net_device *dev)
 	INIT_WORK(&port->bc_work, macvlan_process_broadcast);
 
 	err = netdev_rx_handler_register(dev, macvlan_handle_frame, port);
+
 	if (err)
 		kfree(port);
 	else
