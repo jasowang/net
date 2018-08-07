@@ -436,14 +436,33 @@ static void macvlan_forward_source(struct sk_buff *skb,
 	}
 }
 
-int macvlan_handle_frame_xdp(struct xdp_buff *xdp)
+/* called under rcu_read_lock() from XDP handler */
+static rx_handler_result_t macvlan_handle_xdp(struct xdp_buff *xdp)
 {
 	const struct ethhdr *hdr = (const struct ethhdr *)xdp->data;
+	struct xdp_rxq_info *xdp_rxq = xdp->rxq;
+	struct net_device *dev;
+	struct macvlan_port *port;
+	struct macvlan_dev *vlan;
 
 	if (is_multicast_ether_addr(eth->h_dest))
-		return -EFAULT;
+		return RX_HANDLER_PASS;
 
-	
+	port = macvlan_port_get_rcu(xdp_rxq->dev);
+	if (port->source_count)
+		return RX_HANDLER_PASS;
+
+	if (macvlan_passthru(port))
+		vlan = list_first_or_null_rcu(&port->vlans,
+					      struct macvlan_dev, list);
+	else
+		vlan = macvlan_hash_lookup(port, eth->h_dest);
+
+	dev = vlan->dev;
+	if (unlikely(!(dev->flags & IFF_UP)))
+		return RX_HANDLER_PASS;
+
+	return RX_HANDLER_CONSUMED;
 }
 
 /* called under rcu_read_lock() from netif_receive_skb */
