@@ -1,5 +1,5 @@
-Bottom: 3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
-Top:    2a9fbc811cb773be708676f29dff51bcd5e21ead
+Bottom: 448ae10f6f9d3af9e92c6784852f117530e3ad8b
+Top:    633f59bb43f60ff32cfbccaf47ee0d6d478d9802
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 14:38:32 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index cfda146..b7c814d 100644
+index af8ca96..f78319f 100644
 --- a/drivers/net/macvlan.c
 +++ b/drivers/net/macvlan.c
 @@ -53,6 +53,7 @@ struct macvlan_port {
@@ -22,7 +22,7 @@ index cfda146..b7c814d 100644
  };
  
  struct macvlan_source_entry {
-@@ -1433,6 +1434,9 @@ int macvlan_common_newlink(struct net *src_net, struct net_device *dev,
+@@ -1434,6 +1435,9 @@ int macvlan_common_newlink(struct net *src_net, struct net_device *dev,
  	if (err)
  		goto unregister_netdev;
  
@@ -32,7 +32,7 @@ index cfda146..b7c814d 100644
  	list_add_tail_rcu(&vlan->list, &port->vlans);
  	netif_stacked_transfer_operstate(lowerdev, dev);
  	linkwatch_fire_event(dev);
-@@ -1477,6 +1481,7 @@ static int macvlan_changelink(struct net_device *dev,
+@@ -1478,6 +1482,7 @@ static int macvlan_changelink(struct net_device *dev,
  			      struct netlink_ext_ack *extack)
  {
  	struct macvlan_dev *vlan = netdev_priv(dev);
@@ -40,7 +40,7 @@ index cfda146..b7c814d 100644
  	enum macvlan_mode mode;
  	bool set_mode = false;
  	enum macvlan_macaddr_mode macmode;
-@@ -1491,8 +1496,10 @@ static int macvlan_changelink(struct net_device *dev,
+@@ -1492,8 +1497,10 @@ static int macvlan_changelink(struct net_device *dev,
  		    (vlan->mode == MACVLAN_MODE_PASSTHRU))
  			return -EINVAL;
  		if (vlan->mode == MACVLAN_MODE_SOURCE &&
@@ -52,7 +52,7 @@ index cfda146..b7c814d 100644
  	}
  
  	if (data && data[IFLA_MACVLAN_FLAGS]) {
-@@ -1510,8 +1517,13 @@ static int macvlan_changelink(struct net_device *dev,
+@@ -1511,8 +1518,13 @@ static int macvlan_changelink(struct net_device *dev,
  		}
  		vlan->flags = flags;
  	}
