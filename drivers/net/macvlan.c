@@ -439,7 +439,7 @@ static void macvlan_forward_source(struct sk_buff *skb,
 /* called under rcu_read_lock() from XDP handler */
 static rx_handler_result_t macvlan_handle_xdp(struct xdp_buff *xdp)
 {
-	const struct ethhdr *hdr = (const struct ethhdr *)xdp->data;
+	const struct ethhdr *eth = (const struct ethhdr *)xdp->data;
 	struct xdp_rxq_info *xdp_rxq = xdp->rxq;
 	struct net_device *dev;
 	struct macvlan_port *port;
@@ -1201,7 +1201,8 @@ static int macvlan_port_create(struct net_device *dev)
 	skb_queue_head_init(&port->bc_queue);
 	INIT_WORK(&port->bc_work, macvlan_process_broadcast);
 
-	err = netdev_rx_handler_register(dev, macvlan_handle_frame, port);
+	err = netdev_rx_handler_register_xdp(dev, macvlan_handle_frame,
+					     macvlan_handle_xdp, port);
 	if (err)
 		kfree(port);
 	else
@@ -1526,7 +1527,7 @@ static int macvlan_changelink(struct net_device *dev,
 		if (vlan->mode == MACVLAN_MODE_SOURCE &&
 		    vlan->mode != mode) {
 			macvlan_flush_sources(vlan->port, vlan);
-			port->source_count--;
+			vlan->port->source_count--;
 		}
 	}
 

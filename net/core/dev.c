@@ -4629,6 +4629,25 @@ bool netdev_is_rx_handler_busy(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(netdev_is_rx_handler_busy);
 
+static int __netdev_rx_handler_register(struct net_device *dev,
+					rx_handler_func_t *rx_handler,
+					rx_handler_xdp_func_t *rx_handler_xdp,
+					void *rx_handler_data)
+{
+	if (netdev_is_rx_handler_busy(dev))
+		return -EBUSY;
+
+	if (dev->priv_flags & IFF_NO_RX_HANDLER)
+		return -EINVAL;
+
+	/* Note: rx_handler_data must be set before rx_handler */
+	rcu_assign_pointer(dev->rx_handler_data, rx_handler_data);
+	rcu_assign_pointer(dev->rx_handler, rx_handler);
+	rcu_assign_pointer(dev->rx_handler_xdp, rx_handler_xdp);
+
+	return 0;
+}
+
 /**
  *	netdev_rx_handler_register - register receive handler
  *	@dev: device to register a handler for
@@ -4647,19 +4666,21 @@ int netdev_rx_handler_register(struct net_device *dev,
 			       rx_handler_func_t *rx_handler,
 			       void *rx_handler_data)
 {
-	if (netdev_is_rx_handler_busy(dev))
-		return -EBUSY;
-
-	if (dev->priv_flags & IFF_NO_RX_HANDLER)
-		return -EINVAL;
-
-	/* Note: rx_handler_data must be set before rx_handler */
-	rcu_assign_pointer(dev->rx_handler_data, rx_handler_data);
-	rcu_assign_pointer(dev->rx_handler, rx_handler);
-
-	return 0;
+	return __netdev_rx_handler_register(dev, rx_handler, NULL,
+					    rx_handler_data);
 }
 EXPORT_SYMBOL_GPL(netdev_rx_handler_register);
+
+int netdev_rx_handler_register_xdp(struct net_device *dev,
+				   rx_handler_func_t *rx_handler,
+				   rx_handler_xdp_func_t *rx_handler_xdp,
+				   void *rx_handler_data)
+{
+	return __netdev_rx_handler_register(dev, rx_handler, rx_handler_xdp,
+					    rx_handler_data);
+}
+EXPORT_SYMBOL_GPL(netdev_rx_handler_register_xdp);
+
 
 /**
  *	netdev_rx_handler_unregister - unregister receive handler
