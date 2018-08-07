@@ -1,14 +1,14 @@
 Version: 1
-Previous: e0aa82502ea5bc02905f35fbf1ed610fdcaa953a
-Head: e8cf0d176e1f567c8bfe395935751345f9c2d18d
+Previous: 416a788852cc1101796b01078ded32b2ab66e6de
+Head: a7301d58fc67ebe77b536789f08661d967fff68e
 Applied:
   virtio-add-packed-ring: e8cf0d176e1f567c8bfe395935751345f9c2d18d
+  vhost-move-get_rx_bufs-to: 5fa0eedab01a873d739c677a07c1ca07499464f0
+  vhost-hide-used-ring-layout: 36832396f31ad403160669e4a682f85daf3689dc
+  vhost-do-not-use: 8db8a24bbf08dd4bf800717e472c36893f7328ad
+  vhost_net-do-not-explicitly: acf854d4383586cf0e7f631fa2597fb1fb316401
+  vhost-packed-ring-support: 62b559e5ed90c336d35ef038bb7bffca50d505f8
+  vhost-event-suppression-for: 2cf55fd0d0c066504abc0b666bfbf4e1558d317a
+  vhost-enable-packed-virtqueues: a7301d58fc67ebe77b536789f08661d967fff68e
 Unapplied:
-  vhost-move-get_rx_bufs-to: c9d674d3d759c34144e32342e23258a662d836ed
-  vhost-hide-used-ring-layout: cc6eacde479e7ae08c93f1defca1e348ab7c0dbc
-  vhost-do-not-use: b23316953dd43b0cd9b104baf8d166684d7084e3
-  vhost_net-do-not-explicitly: 7d243bfd268c13211936a4250a8aaedd6c3bfd3f
-  vhost-packed-ring-support: 954e6f134971d329d2057ac94964f4d0e774eb50
-  vhost-event-suppression-for: 6b6150e6c4afafe5af73ae555aeb7309eb86385d
-  vhost-enable-packed-virtqueues: c721daded358c9d3db1a301d7936a1ebde952b96
 Hidden:
