@@ -1,5 +1,5 @@
 Bottom: 448ae10f6f9d3af9e92c6784852f117530e3ad8b
-Top:    77bd2beb9d8e7ede1f55bebef3572781352800db
+Top:    728ee98372ae9bb11c1e1e360c278ade5dcee591
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 15:33:15 +0800
 
@@ -21,24 +21,23 @@ index c73dd73..b74a448 100644
  
  void bpf_warn_invalid_xdp_action(u32 act);
 diff --git a/net/core/filter.c b/net/core/filter.c
-index 7509bb7..f126cad 100644
+index 7509bb7..9c78254 100644
 --- a/net/core/filter.c
 +++ b/net/core/filter.c
-@@ -3312,6 +3312,27 @@ int xdp_do_redirect(struct net_device *dev, struct xdp_buff *xdp,
+@@ -3312,6 +3312,26 @@ int xdp_do_redirect(struct net_device *dev, struct xdp_buff *xdp,
  }
  EXPORT_SYMBOL_GPL(xdp_do_redirect);
  
 +int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
 +{
 +	rx_handler_xdp_func_t *rx_handler_xdp;
-+	int ret = 0;
 +
 +	rx_handler_xdp = rcu_dereference(dev->rx_handler_xdp);
 +	if (rx_handler_xdp) {
 +		switch(rx_handler_xdp(xdp)) {
 +		case RX_HANDLER_CONSUMED:
 +			return 0;
-+		case RX_HANDLER_ANOHTER:
++		case RX_HANDLER_PASS:
 +			return -ENOTSUPP;
 +		default:
 +			return -EFAULT;
