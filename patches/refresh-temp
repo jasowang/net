@@ -1,0 +1,21 @@
+Bottom: 0e365a773c97bc66cbab2132f287304180b51f04
+Top:    3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-07 14:03:23 +0800
+
+Refresh of bpf-xdp-introduce
+
+---
+
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 8701139..a777835 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -2339,6 +2339,7 @@ enum xdp_action {
+ 	XDP_PASS,
+ 	XDP_TX,
+ 	XDP_REDIRECT,
++	XDP_RX_HANDLER,
+ };
+ 
+ /* user accessible metadata for XDP packet hook
