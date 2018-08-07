@@ -3331,6 +3331,7 @@ int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
 
 	return -EINVAL;
 }
+EXPORT_SYMBOL_GPL(xdp_do_rx_handler);
 
 static int xdp_do_generic_redirect_map(struct net_device *dev,
 				       struct sk_buff *skb,
