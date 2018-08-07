@@ -1,5 +1,5 @@
 Bottom: b6318125181ccd3e12bc852d5c8f1ff0d9ac2a76
-Top:    b6318125181ccd3e12bc852d5c8f1ff0d9ac2a76
+Top:    00e015a4eb22a7fb0d63302ddc7771d5d5a6cfee
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 15:33:15 +0800
 
@@ -7,4 +7,34 @@ Date:   2018-08-07 15:33:15 +0800
 
 ---
 
-
+diff --git a/net/core/filter.c b/net/core/filter.c
+index 7509bb7..109bd3c 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -3312,6 +3312,26 @@ int xdp_do_redirect(struct net_device *dev, struct xdp_buff *xdp,
+ }
+ EXPORT_SYMBOL_GPL(xdp_do_redirect);
+ 
++int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
++{
++	rx_handler_xdp_func_t *rx_handler_xdp;
++	int ret = 0;
++
++	rx_handler_xdp = rcu_dereference(dev->rx_handler_xdp);
++	if (rx_handler_xdp) {
++		switch(rx_handler_xdp(xdp)) {
++		case RX_HANDLER_CONSUMED:
++			return 0;
++		case RX_HANDLER_ANOHTER:
++			return -ENOTSUPP;
++		default:
++			return -EFAULT;
++		}
++	}
++
++	return -EINVAL;
++}
++
+ static int xdp_do_generic_redirect_map(struct net_device *dev,
+ 				       struct sk_buff *skb,
+ 				       struct xdp_buff *xdp,
