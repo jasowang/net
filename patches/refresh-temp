@@ -1,0 +1,34 @@
+Bottom: 3f237b824453e8f90161feb82f13044d3578506d
+Top:    77bd2beb9d8e7ede1f55bebef3572781352800db
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-07 15:35:10 +0800
+
+Refresh of squash
+
+---
+
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index c73dd73..b74a448 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -791,6 +791,8 @@ int xdp_do_generic_redirect(struct net_device *dev, struct sk_buff *skb,
+ int xdp_do_redirect(struct net_device *dev,
+ 		    struct xdp_buff *xdp,
+ 		    struct bpf_prog *prog);
++int xdp_do_rx_handler(struct net_device *dev,
++		      struct xdp_buff *xdp);
+ void xdp_do_flush_map(void);
+ 
+ void bpf_warn_invalid_xdp_action(u32 act);
+diff --git a/net/core/filter.c b/net/core/filter.c
+index 109bd3c..f126cad 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -3331,6 +3331,7 @@ int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
+ 
+ 	return -EINVAL;
+ }
++EXPORT_SYMBOL_GPL(xdp_do_rx_handler);
+ 
+ static int xdp_do_generic_redirect_map(struct net_device *dev,
+ 				       struct sk_buff *skb,
