@@ -3312,6 +3312,27 @@ err:
 }
 EXPORT_SYMBOL_GPL(xdp_do_redirect);
 
+int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
+{
+	rx_handler_xdp_func_t *rx_handler_xdp;
+	int ret = 0;
+
+	rx_handler_xdp = rcu_dereference(dev->rx_handler_xdp);
+	if (rx_handler_xdp) {
+		switch(rx_handler_xdp(xdp)) {
+		case RX_HANDLER_CONSUMED:
+			return 0;
+		case RX_HANDLER_ANOHTER:
+			return -ENOTSUPP;
+		default:
+			return -EFAULT;
+		}
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(xdp_do_rx_handler);
+
 static int xdp_do_generic_redirect_map(struct net_device *dev,
 				       struct sk_buff *skb,
 				       struct xdp_buff *xdp,
