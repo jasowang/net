@@ -1,5 +1,5 @@
 Bottom: 3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
-Top:    977c55cf72e78bd66a5db0c9e01159785d5c76c1
+Top:    42d98ebb7803eff19d3753409aec3c30727b499f
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 14:52:32 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index cfda146..a22b2f4 100644
+index cfda146..740ac44 100644
 --- a/drivers/net/macvlan.c
 +++ b/drivers/net/macvlan.c
 @@ -1171,7 +1171,8 @@ static int macvlan_port_create(struct net_device *dev)
@@ -24,18 +24,6 @@ index cfda146..a22b2f4 100644
  	if (err)
  		kfree(port);
  	else
-@@ -1493,6 +1494,11 @@ static int macvlan_changelink(struct net_device *dev,
- 		if (vlan->mode == MACVLAN_MODE_SOURCE &&
- 		    vlan->mode != mode)
- 			macvlan_flush_sources(vlan->port, vlan);
-+<<<<<<< current
-+=======
-+			vlan->port->source_count--;
-+		}
-+>>>>>>> patched
- 	}
- 
- 	if (data && data[IFLA_MACVLAN_FLAGS]) {
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
 index 282e2e9..f0c5e16 100644
 --- a/include/linux/netdevice.h
