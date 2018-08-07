@@ -1,12 +1,11 @@
 Bottom: 3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
-Top:    448ae10f6f9d3af9e92c6784852f117530e3ad8b
+Top:    728ee98372ae9bb11c1e1e360c278ade5dcee591
 Author: Jason Wang <jasowang@redhat.com>
-Date:   2018-08-07 14:52:32 +0800
+Date:   2018-08-07 15:40:32 +0800
 
 net: core: introduce XDP rx handler
 
 Signed-off-by: Jason Wang <jasowang@redhat.com>
-
 
 ---
 
@@ -22,6 +21,19 @@ index cfda146..af8ca96 100644
  	if (err)
  		kfree(port);
  	else
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index c73dd73..b74a448 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -791,6 +791,8 @@ int xdp_do_generic_redirect(struct net_device *dev, struct sk_buff *skb,
+ int xdp_do_redirect(struct net_device *dev,
+ 		    struct xdp_buff *xdp,
+ 		    struct bpf_prog *prog);
++int xdp_do_rx_handler(struct net_device *dev,
++		      struct xdp_buff *xdp);
+ void xdp_do_flush_map(void);
+ 
+ void bpf_warn_invalid_xdp_action(u32 act);
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
 index 282e2e9..f0c5e16 100644
 --- a/include/linux/netdevice.h
@@ -117,3 +129,34 @@ index f68122f..5d2b5ff 100644
  /**
   *	netdev_rx_handler_unregister - unregister receive handler
   *	@dev: device to unregister a handler from
+diff --git a/net/core/filter.c b/net/core/filter.c
+index 7509bb7..9c78254 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -3312,6 +3312,26 @@ int xdp_do_redirect(struct net_device *dev, struct xdp_buff *xdp,
+ }
+ EXPORT_SYMBOL_GPL(xdp_do_redirect);
+ 
++int xdp_do_rx_handler(struct net_device *dev, struct xdp_buff *xdp)
++{
++	rx_handler_xdp_func_t *rx_handler_xdp;
++
++	rx_handler_xdp = rcu_dereference(dev->rx_handler_xdp);
++	if (rx_handler_xdp) {
++		switch(rx_handler_xdp(xdp)) {
++		case RX_HANDLER_CONSUMED:
++			return 0;
++		case RX_HANDLER_PASS:
++			return -ENOTSUPP;
++		default:
++			return -EFAULT;
++		}
++	}
++
++	return -EINVAL;
++}
++EXPORT_SYMBOL_GPL(xdp_do_rx_handler);
++
+ static int xdp_do_generic_redirect_map(struct net_device *dev,
+ 				       struct sk_buff *skb,
+ 				       struct xdp_buff *xdp,
