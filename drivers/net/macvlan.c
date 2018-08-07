@@ -34,6 +34,7 @@
 #include <net/rtnetlink.h>
 #include <net/xfrm.h>
 #include <linux/netpoll.h>
+#include <linux/bpf.h>
 
 #define MACVLAN_HASH_BITS	8
 #define MACVLAN_HASH_SIZE	(1<<MACVLAN_HASH_BITS)
@@ -1118,6 +1119,44 @@ static int macvlan_dev_get_iflink(const struct net_device *dev)
 	return vlan->lowerdev->ifindex;
 }
 
+static int macvlan_xdp_set(struct net_device *dev, struct bpf_prog *prog,
+			   struct netlink_ext_ack *extack)
+{
+	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct bpf_prog *old_prog = rtnl_dereference(vlan->xdp_prog);
+
+	rcu_assign_pointer(vlan->xdp_prog, prog);
+
+	if (old_prog)
+		bpf_prog_put(old_prog);
+
+	return 0;
+}
+
+static u32 macvlan_xdp_query(struct net_device *dev)
+{
+	struct macvlan_dev *vlan = netdev_priv(dev);
+	const struct bpf_prog *xdp_prog = rtnl_dereference(vlan->xdp_prog);
+
+	if (xdp_prog)
+		return xdp_prog->aux->id;
+
+	return 0;
+}
+
+static int macvlan_xdp(struct net_device *dev, struct netdev_bpf *xdp)
+{
+	switch (xdp->command) {
+	case XDP_SETUP_PROG:
+		return macvlan_xdp_set(dev, xdp->prog, xdp->extack);
+	case XDP_QUERY_PROG:
+		xdp->prog_id = macvlan_xdp_query(dev);
+		return 0;
+	default:
+		return -EINVAL;
+	}
+}
+
 static const struct ethtool_ops macvlan_ethtool_ops = {
 	.get_link		= ethtool_op_get_link,
 	.get_link_ksettings	= macvlan_ethtool_get_link_ksettings,
@@ -1150,6 +1189,7 @@ static const struct net_device_ops macvlan_netdev_ops = {
 #endif
 	.ndo_get_iflink		= macvlan_dev_get_iflink,
 	.ndo_features_check	= passthru_features_check,
+	.ndo_bpf		= macvlan_xdp,
 };
 
 void macvlan_common_setup(struct net_device *dev)
