@@ -1,6 +1,13 @@
 Version: 1
-Previous: 0ee923abdcb6597a2942754c06ad706ae6155902
+Previous: e88f762d362fe76dbb5d53bc62e34752450673c6
 Head: c721daded358c9d3db1a301d7936a1ebde952b96
 Applied:
+  vhost-move-get_rx_bufs-to: c9d674d3d759c34144e32342e23258a662d836ed
+  vhost-hide-used-ring-layout: cc6eacde479e7ae08c93f1defca1e348ab7c0dbc
+  vhost-do-not-use: b23316953dd43b0cd9b104baf8d166684d7084e3
+  vhost_net-do-not-explicitly: 7d243bfd268c13211936a4250a8aaedd6c3bfd3f
+  vhost-packed-ring-support: 954e6f134971d329d2057ac94964f4d0e774eb50
+  vhost-event-suppression-for: 6b6150e6c4afafe5af73ae555aeb7309eb86385d
+  vhost-enable-packed-virtqueues: c721daded358c9d3db1a301d7936a1ebde952b96
 Unapplied:
 Hidden:
