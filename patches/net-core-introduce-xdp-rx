@@ -1,5 +1,5 @@
 Bottom: 3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
-Top:    3bf16d1d38446c9c7b89d18bbc48902aa1bbbcab
+Top:    977c55cf72e78bd66a5db0c9e01159785d5c76c1
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 14:52:32 +0800
 
@@ -10,4 +10,124 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 ---
 
-
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index cfda146..a22b2f4 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -1171,7 +1171,8 @@ static int macvlan_port_create(struct net_device *dev)
+ 	skb_queue_head_init(&port->bc_queue);
+ 	INIT_WORK(&port->bc_work, macvlan_process_broadcast);
+ 
+-	err = netdev_rx_handler_register(dev, macvlan_handle_frame, port);
++	err = netdev_rx_handler_register_xdp(dev, macvlan_handle_frame,
++					     macvlan_handle_xdp, port);
+ 	if (err)
+ 		kfree(port);
+ 	else
+@@ -1493,6 +1494,11 @@ static int macvlan_changelink(struct net_device *dev,
+ 		if (vlan->mode == MACVLAN_MODE_SOURCE &&
+ 		    vlan->mode != mode)
+ 			macvlan_flush_sources(vlan->port, vlan);
++<<<<<<< current
++=======
++			vlan->port->source_count--;
++		}
++>>>>>>> patched
+ 	}
+ 
+ 	if (data && data[IFLA_MACVLAN_FLAGS]) {
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 282e2e9..f0c5e16 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -420,6 +420,7 @@ enum rx_handler_result {
+ };
+ typedef enum rx_handler_result rx_handler_result_t;
+ typedef rx_handler_result_t rx_handler_func_t(struct sk_buff **pskb);
++typedef rx_handler_result_t rx_handler_xdp_func_t(struct xdp_buff *xdp);
+ 
+ void __napi_schedule(struct napi_struct *n);
+ void __napi_schedule_irqoff(struct napi_struct *n);
+@@ -1898,6 +1899,7 @@ struct net_device {
+ 	struct bpf_prog __rcu	*xdp_prog;
+ 	unsigned long		gro_flush_timeout;
+ 	rx_handler_func_t __rcu	*rx_handler;
++	rx_handler_xdp_func_t __rcu *rx_handler_xdp;
+ 	void __rcu		*rx_handler_data;
+ 
+ #ifdef CONFIG_NET_CLS_ACT
+@@ -3530,6 +3532,10 @@ bool netdev_is_rx_handler_busy(struct net_device *dev);
+ int netdev_rx_handler_register(struct net_device *dev,
+ 			       rx_handler_func_t *rx_handler,
+ 			       void *rx_handler_data);
++int netdev_rx_handler_register_xdp(struct net_device *dev,
++                                   rx_handler_func_t *rx_handler,
++                                   rx_handler_xdp_func_t *rx_handler_xdp,
++                                   void *rx_handler_data);
+ void netdev_rx_handler_unregister(struct net_device *dev);
+ 
+ bool dev_valid_name(const char *name);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index f68122f..5d2b5ff 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -4629,6 +4629,25 @@ bool netdev_is_rx_handler_busy(struct net_device *dev)
+ }
+ EXPORT_SYMBOL_GPL(netdev_is_rx_handler_busy);
+ 
++static int __netdev_rx_handler_register(struct net_device *dev,
++					rx_handler_func_t *rx_handler,
++					rx_handler_xdp_func_t *rx_handler_xdp,
++					void *rx_handler_data)
++{
++	if (netdev_is_rx_handler_busy(dev))
++		return -EBUSY;
++
++	if (dev->priv_flags & IFF_NO_RX_HANDLER)
++		return -EINVAL;
++
++	/* Note: rx_handler_data must be set before rx_handler */
++	rcu_assign_pointer(dev->rx_handler_data, rx_handler_data);
++	rcu_assign_pointer(dev->rx_handler, rx_handler);
++	rcu_assign_pointer(dev->rx_handler_xdp, rx_handler_xdp);
++
++	return 0;
++}
++
+ /**
+  *	netdev_rx_handler_register - register receive handler
+  *	@dev: device to register a handler for
+@@ -4647,20 +4666,22 @@ int netdev_rx_handler_register(struct net_device *dev,
+ 			       rx_handler_func_t *rx_handler,
+ 			       void *rx_handler_data)
+ {
+-	if (netdev_is_rx_handler_busy(dev))
+-		return -EBUSY;
+-
+-	if (dev->priv_flags & IFF_NO_RX_HANDLER)
+-		return -EINVAL;
+-
+-	/* Note: rx_handler_data must be set before rx_handler */
+-	rcu_assign_pointer(dev->rx_handler_data, rx_handler_data);
+-	rcu_assign_pointer(dev->rx_handler, rx_handler);
+-
+-	return 0;
++	return __netdev_rx_handler_register(dev, rx_handler, NULL,
++					    rx_handler_data);
+ }
+ EXPORT_SYMBOL_GPL(netdev_rx_handler_register);
+ 
++int netdev_rx_handler_register_xdp(struct net_device *dev,
++				   rx_handler_func_t *rx_handler,
++				   rx_handler_xdp_func_t *rx_handler_xdp,
++				   void *rx_handler_data)
++{
++	return __netdev_rx_handler_register(dev, rx_handler, rx_handler_xdp,
++					    rx_handler_data);
++}
++EXPORT_SYMBOL_GPL(netdev_rx_handler_register_xdp);
++
++
+ /**
+  *	netdev_rx_handler_unregister - unregister receive handler
+  *	@dev: device to unregister a handler from
