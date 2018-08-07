@@ -53,6 +53,7 @@ struct macvlan_port {
 	struct hlist_head	vlan_source_hash[MACVLAN_HASH_SIZE];
 	DECLARE_BITMAP(mc_filter, MACVLAN_MC_FILTER_SZ);
 	unsigned char           perm_addr[ETH_ALEN];
+	unsigned long           source_count;
 };
 
 struct macvlan_source_entry {
@@ -1434,6 +1435,9 @@ int macvlan_common_newlink(struct net *src_net, struct net_device *dev,
 	if (err)
 		goto unregister_netdev;
 
+	if (vlan->mode == MACVLAN_MODE_SOURCE)
+		port->source_count++;
+
 	list_add_tail_rcu(&vlan->list, &port->vlans);
 	netif_stacked_transfer_operstate(lowerdev, dev);
 	linkwatch_fire_event(dev);
@@ -1478,6 +1482,7 @@ static int macvlan_changelink(struct net_device *dev,
 			      struct netlink_ext_ack *extack)
 {
 	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct macvlan_port *port = vlan->port;
 	enum macvlan_mode mode;
 	bool set_mode = false;
 	enum macvlan_macaddr_mode macmode;
@@ -1492,8 +1497,10 @@ static int macvlan_changelink(struct net_device *dev,
 		    (vlan->mode == MACVLAN_MODE_PASSTHRU))
 			return -EINVAL;
 		if (vlan->mode == MACVLAN_MODE_SOURCE &&
-		    vlan->mode != mode)
+		    vlan->mode != mode) {
 			macvlan_flush_sources(vlan->port, vlan);
+			port->source_count--;
+		}
 	}
 
 	if (data && data[IFLA_MACVLAN_FLAGS]) {
@@ -1511,8 +1518,13 @@ static int macvlan_changelink(struct net_device *dev,
 		}
 		vlan->flags = flags;
 	}
-	if (set_mode)
+	if (set_mode) {
 		vlan->mode = mode;
+		if (mode == MACVLAN_MODE_SOURCE &&
+		    vlan->mode != mode) {
+			port->source_count++;
+		}
+	}
 	if (data && data[IFLA_MACVLAN_MACADDR_MODE]) {
 		if (vlan->mode != MACVLAN_MODE_SOURCE)
 			return -EINVAL;
