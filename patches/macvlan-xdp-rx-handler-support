@@ -1,5 +1,5 @@
-Bottom: 2a9fbc811cb773be708676f29dff51bcd5e21ead
-Top:    d0bbb2754c2eb76734c4c4622977b5fc9845d9c8
+Bottom: 633f59bb43f60ff32cfbccaf47ee0d6d478d9802
+Top:    8ac0ba717e36f9e14d9c15905f63dce052084559
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 14:06:31 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index b7c814d..664a533 100644
+index f78319f..3d534ea 100644
 --- a/drivers/net/macvlan.c
 +++ b/drivers/net/macvlan.c
 @@ -436,6 +436,35 @@ static void macvlan_forward_source(struct sk_buff *skb,
