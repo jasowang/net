@@ -1,10 +1,10 @@
 Version: 1
-Previous: 0c93bab530bb54ddef3b990c0663b6fbb898e17f
-Head: a9685fbd2ce508734965196dea0645441664d95c
+Previous: 45380f8a6ace4f56a46c38070abce796ee50994f
+Head: 3006ee53f01298c5a1f2349489de5fbc44d85704
 Applied:
   bpf-xdp-introduce: b46baed147b3b75b9a860f412e3812a5b6e295cf
   macvlan-count-the-number-of: 2583d2608aed18a220d373d8d748ce3bf3d7f979
   macvlan-xdp-rx-handler-support: 10c04569d4689f289814de4ea1860bc14afbd7fa
-  net-core-introduce-xdp-rx: a9685fbd2ce508734965196dea0645441664d95c
+  net-core-introduce-xdp-rx: 3006ee53f01298c5a1f2349489de5fbc44d85704
 Unapplied:
 Hidden:

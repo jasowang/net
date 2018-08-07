@@ -5,6 +5,8 @@ Date:   2018-08-07 14:52:32 +0800
 
 net: core: introduce XDP rx handler
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
