@@ -1,0 +1,11 @@
+Bottom: eb70529707a88cbd131ce84876444d3df461362b
+Top:    eb70529707a88cbd131ce84876444d3df461362b
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-07 15:53:11 +0800
+
+macvlan: XDP support
+
+
+---
+
+
