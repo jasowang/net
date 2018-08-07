@@ -435,6 +435,16 @@ static void macvlan_forward_source(struct sk_buff *skb,
 	}
 }
 
+int macvlan_handle_frame_xdp(struct xdp_buff *xdp)
+{
+	const struct ethhdr *hdr = (const struct ethhdr *)xdp->data;
+
+	if (is_multicast_ether_addr(eth->h_dest))
+		return -EFAULT;
+
+	
+}
+
 /* called under rcu_read_lock() from netif_receive_skb */
 static rx_handler_result_t macvlan_handle_frame(struct sk_buff **pskb)
 {
