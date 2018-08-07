@@ -437,6 +437,80 @@ static void macvlan_forward_source(struct sk_buff *skb,
 	}
 }
 
+struct sk_buff *macvlan_xdp_build_skb(struct net_device *dev,
+				      struct xdp_buff *xdp)
+{
+	int len;
+	int buflen = xdp->data_end - xdp->data_hard_start;
+	int headroom = xdp->data - xdp->data_hard_start;
+	struct sk_buff *skb;
+
+	len = SKB_DATA_ALIGN(sizeof(struct skb_shared_info)) + headroom +
+	      SKB_DATA_ALIGN(buflen);
+
+	skb = build_skb(xdp->data_hard_start, len);
+	if (!skb)
+		return NULL;
+
+	skb_reserve(skb, headroom);
+	__skb_put(skb, xdp->data_end - xdp->data);
+
+	skb->protocol = eth_type_trans(skb, dev);
+	skb->dev = dev;
+
+	return skb;
+}
+
+static u32 macvlan_do_xdp(struct net_device *dev, struct xdp_buff *xdp)
+{
+	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct bpf_prog *xdp_prog;
+	struct sk_buff *skb;
+	u32 act = XDP_PASS;
+	int err;
+
+	rcu_read_lock();
+	xdp_prog = rcu_dereference(vlan->xdp_prog);
+
+	if (xdp_prog)
+		act = bpf_prog_run_xdp(xdp_prog, xdp);
+
+	switch (act) {
+	case XDP_PASS:
+		skb = macvlan_xdp_build_skb(dev, xdp);
+		if (!skb) {
+			act = XDP_DROP;
+			break;
+		}
+		rcu_read_unlock();
+		netif_rx(skb);
+		goto out;
+	case XDP_TX:
+		skb = macvlan_xdp_build_skb(dev, xdp);
+		if (!skb) {
+			act = XDP_DROP;
+			break;
+		}
+		generic_xdp_tx(skb, xdp_prog);
+		break;
+	case XDP_REDIRECT:
+		err = xdp_do_redirect(dev, xdp, xdp_prog);
+		xdp_do_flush_map();
+		if (err)
+			act = XDP_DROP;
+		break;
+	case XDP_DROP:
+		break;
+	default:
+		bpf_warn_invalid_xdp_action(act);
+		break;
+	}
+
+	rcu_read_unlock();
+out:
+	return act;
+}
+
 /* called under rcu_read_lock() from XDP handler */
 static rx_handler_result_t macvlan_handle_xdp(struct xdp_buff *xdp)
 {
@@ -462,6 +536,8 @@ static rx_handler_result_t macvlan_handle_xdp(struct xdp_buff *xdp)
 	dev = vlan->dev;
 	if (unlikely(!(dev->flags & IFF_UP)))
 		return RX_HANDLER_PASS;
+
+	macvlan_do_xdp(dev, xdp);
 
 	return RX_HANDLER_CONSUMED;
 }
