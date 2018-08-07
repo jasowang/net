@@ -1,5 +1,5 @@
 Bottom: 633f59bb43f60ff32cfbccaf47ee0d6d478d9802
-Top:    f24383b3d69f121873ada96d0d28bfc9507c601f
+Top:    bb43dd1ec721f81531d366abcf1b050512414f9c
 Author: Jason Wang <jasowang@redhat.com>
 Date:   2018-08-07 14:06:31 +0800
 
@@ -11,7 +11,7 @@ Signed-off-by: Jason Wang <jasowang@redhat.com>
 ---
 
 diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index f78319f..c3b0758 100644
+index f78319f..e2f448f 100644
 --- a/drivers/net/macvlan.c
 +++ b/drivers/net/macvlan.c
 @@ -436,6 +436,35 @@ static void macvlan_forward_source(struct sk_buff *skb,
@@ -50,14 +50,13 @@ index f78319f..c3b0758 100644
  /* called under rcu_read_lock() from netif_receive_skb */
  static rx_handler_result_t macvlan_handle_frame(struct sk_buff **pskb)
  {
-@@ -1172,7 +1201,9 @@ static int macvlan_port_create(struct net_device *dev)
+@@ -1172,7 +1201,8 @@ static int macvlan_port_create(struct net_device *dev)
  	skb_queue_head_init(&port->bc_queue);
  	INIT_WORK(&port->bc_work, macvlan_process_broadcast);
  
 -	err = netdev_rx_handler_register(dev, macvlan_handle_frame, port);
 +	err = netdev_rx_handler_register_xdp(dev, macvlan_handle_frame,
-+					     macvlan_handle_frame_xdp,
-+					     port);
++					     macvlan_handle_xdp, port);
  
  	if (err)
  		kfree(port);
