@@ -1,0 +1,24 @@
+Bottom: 8ac0ba717e36f9e14d9c15905f63dce052084559
+Top:    f24383b3d69f121873ada96d0d28bfc9507c601f
+Author: Jason Wang <jasowang@redhat.com>
+Date:   2018-08-07 15:24:49 +0800
+
+Refresh of macvlan-xdp-rx-handler-support
+
+---
+
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index 3d534ea..c3b0758 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -1201,7 +1201,9 @@ static int macvlan_port_create(struct net_device *dev)
+ 	skb_queue_head_init(&port->bc_queue);
+ 	INIT_WORK(&port->bc_work, macvlan_process_broadcast);
+ 
+-	err = netdev_rx_handler_register(dev, macvlan_handle_frame, port);
++	err = netdev_rx_handler_register_xdp(dev, macvlan_handle_frame,
++					     macvlan_handle_frame_xdp,
++					     port);
+ 
+ 	if (err)
+ 		kfree(port);
