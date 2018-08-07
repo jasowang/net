@@ -1481,6 +1481,7 @@ static int macvlan_changelink(struct net_device *dev,
 			      struct netlink_ext_ack *extack)
 {
 	struct macvlan_dev *vlan = netdev_priv(dev);
+	struct macvlan_port *port = vlan->port;
 	enum macvlan_mode mode;
 	bool set_mode = false;
 	enum macvlan_macaddr_mode macmode;
