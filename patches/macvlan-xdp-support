@@ -5,6 +5,8 @@ Date:   2018-08-07 15:53:11 +0800
 
 macvlan: XDP support
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
