@@ -791,6 +791,8 @@ int xdp_do_generic_redirect(struct net_device *dev, struct sk_buff *skb,
 int xdp_do_redirect(struct net_device *dev,
 		    struct xdp_buff *xdp,
 		    struct bpf_prog *prog);
+int xdp_do_rx_handler(struct net_device *dev,
+		      struct xdp_buff *xdp);
 void xdp_do_flush_map(void);
 
 void bpf_warn_invalid_xdp_action(u32 act);
