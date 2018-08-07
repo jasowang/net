@@ -34,6 +34,7 @@ struct macvlan_dev {
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	struct netpoll		*netpoll;
 #endif
+	struct bpf_prog __rcu   *xdp_prog;
 };
 
 static inline void macvlan_count_rx(const struct macvlan_dev *vlan,
