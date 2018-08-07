@@ -5,6 +5,8 @@ Date:   2018-08-07 14:38:32 +0800
 
 macvlan: count the number of vlan in source mode
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+
 
 ---
 
