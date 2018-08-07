@@ -439,7 +439,7 @@ static void macvlan_forward_source(struct sk_buff *skb,
 /* called under rcu_read_lock() from XDP handler */
 static rx_handler_result_t macvlan_handle_xdp(struct xdp_buff *xdp)
 {
-	const struct ethhdr *hdr = (const struct ethhdr *)xdp->data;
+	const struct ethhdr *eth = (const struct ethhdr *)xdp->data;
 	struct xdp_rxq_info *xdp_rxq = xdp->rxq;
 	struct net_device *dev;
 	struct macvlan_port *port;
