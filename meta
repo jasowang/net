@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9080ac9eec336b12cb46d3c6d2d1351f74885dcb
-Head: 51de7b7c239a623f29262dca390c96873c265b76
+Previous: 74d941b36325b438000dbd519b346520a3b0569d
+Head: 9889add66589baeea1c980cad67d155aec69b310
 Applied:
   virtio-add-packed-ring: e8cf0d176e1f567c8bfe395935751345f9c2d18d
   vhost-move-get_rx_bufs-to: cd8e58df17d0b714236177cc325b10392466829a
@@ -11,5 +11,6 @@ Applied:
   vhost-packed-ring-support: 9b7b0d75d88d980a3c8954db0aa754b124facd0e
   vhost-event-suppression-for: c7357109087e1865f7112f9a81eea0dbfae2429a
   vhost-enable-packed-virtqueues: 51de7b7c239a623f29262dca390c96873c265b76
+  vhost-bypass-wrap-counter: 9889add66589baeea1c980cad67d155aec69b310
 Unapplied:
 Hidden:
