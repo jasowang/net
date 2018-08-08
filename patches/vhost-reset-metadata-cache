@@ -12,6 +12,7 @@ which will lead a use after free.
 Reported-by: syzbot+c51e6736a1bf614b3272@syzkaller.appspotmail.com
 Fixes: f88949138058 ("vhost: introduce O(1) vq metadata cache")
 
+Signed-off-by: Jason Wang <jasowang@redhat.com>
 
 
 ---
