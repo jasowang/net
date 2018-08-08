@@ -1,7 +1,7 @@
 Version: 1
-Previous: ef3a8d2a5ee3d9e13cff75397aa4907166f9aebf
-Head: ed35dc1eada25641f3ed5fbd023ffa57c670c46b
+Previous: b020328f01d488dfd724060bb4f82841553a23b9
+Head: 894810cdf3c8430197376d2b5a693cc1bbd927ee
 Applied:
-  vhost-reset-metadata-cache: ed35dc1eada25641f3ed5fbd023ffa57c670c46b
+  vhost-reset-metadata-cache: 894810cdf3c8430197376d2b5a693cc1bbd927ee
 Unapplied:
 Hidden:
