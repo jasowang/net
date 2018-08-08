@@ -1,6 +1,7 @@
 Version: 1
-Previous: None
-Head: e30cb13c5a09ff5f043a6570c32e49b063bea6a1
+Previous: 2f46d7537420d4a64cead340c4e320d8719bdb0c
+Head: 14b615c62934c9b2945b984d82f37fe20c9cb806
 Applied:
+  vhost-reset-metadata-cache: 14b615c62934c9b2945b984d82f37fe20c9cb806
 Unapplied:
 Hidden:
