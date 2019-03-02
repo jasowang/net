@@ -1393,19 +1393,15 @@ static int tun_xdp_one(struct tun_struct *tun,
 static int tun_xdp_xmit(struct net_device *dev, int n,
 			struct xdp_frame **frames, u32 flags)
 {
-	struct tun_page tpage;
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_file *tfile;
 	u32 numqueues;
-	int drops = 0, flush = 0;
+	int drops = 0;
 	int cnt = n;
 	int i;
-	bool xmit = false;
 
 	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
 		return -EINVAL;
-
-	memset(&tpage, 0, sizeof(tpage));
 
 	rcu_read_lock();
 
@@ -1420,49 +1416,22 @@ static int tun_xdp_xmit(struct net_device *dev, int n,
 
 	for (i = 0; i < n; i++) {
 		struct xdp_frame *frame = frames[i];
-		struct xdp_buff xdp;
-		u32 act;
 		/* Encode the XDP flag into lowest bit for consumer to differ
 		 * XDP buffer from sk_buff.
 		 */
 		void *ptr = tun_xdp_to_ptr(frame);
-
-		xdp.data_hard_start = frame;
-		xdp.data = frame->data;
-		xdp.data_end = xdp.data + frame->len;
-		xdp.data_meta = xdp.data - frame->metasize;
-
-		act = tun_do_xdp_offload(tun, &xdp);
-		if (act != XDP_PASS) {
-			if (act != XDP_TX) {
-				xdp_return_frame_rx_napi(frame);
-				drops++;
-				continue;
-			}
-			/* XDP_TX for offloaded XDP, time for native
-			 * XDP */
-			tun_xdp_one(tun, tfile, &xdp, &flush, &tpage, false);
-			continue;
-		}
 
 		if (ptr_ring_produce(&tfile->tx_ring, ptr)) {
 			this_cpu_inc(tun->pcpu_stats->tx_dropped);
 			xdp_return_frame_rx_napi(frame);
 			drops++;
 		}
-
-		xmit = true;
 	}
 
-	if (xmit && (flags & XDP_XMIT_FLUSH))
+	if (flags & XDP_XMIT_FLUSH)
 		__tun_xdp_flush_tfile(tfile);
 
-	if (flush)
-		xdp_do_flush_map();
-
 	rcu_read_unlock();
-
-	tun_put_page(&tpage);
 
 	return cnt - drops;
 }
@@ -1765,8 +1734,12 @@ static int tun_xdp_act(struct tun_struct *tun, struct bpf_prog *xdp_prog,
 	switch (act) {
 	case XDP_REDIRECT:
 		err = xdp_do_redirect(tun->dev, xdp, xdp_prog);
-		if (err)
+		if (err) {
+			trace_printk("fail to do redirect!\n");
 			return err;
+		} else {
+			trace_printk("succeed in redirecting!\n");
+		}
 		break;
 	case XDP_TX:
 		err = tun_xdp_tx(tun->dev, xdp);
@@ -2323,6 +2296,74 @@ out:
 	return ptr;
 }
 
+static int tun_do_offloaded_xdp(struct tun_struct *tun, struct tun_file *tfile)
+{
+	void *array[64];
+	int n;
+
+        n = ptr_ring_consume_batched(&tfile->tx_ring, array, 64);
+	return __tun_do_offloaded_xdp(&tfile->socket, array, n);
+}
+
+int __tun_do_offloaded_xdp(struct socket *sock, void **array, int n)
+{
+	struct tun_file *tfile = container_of(sock,
+					struct tun_file, socket);
+	struct tun_struct *tun;
+	struct tun_page tpage;
+	struct xdp_frame *frame;
+	struct tun_prog *xdp_prog;
+	struct xdp_buff xdp;
+	int i, flush = 0;
+	u32 act;
+
+	memset (&tpage, 0, sizeof(tpage));
+
+	local_bh_disable();
+	rcu_read_lock();
+
+	tun = rcu_dereference(tfile->tun);
+	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
+	if (xdp_prog) {
+		for (i = 0; i < n; i++) {
+			frame = tun_ptr_to_xdp(array[i]);
+
+			xdp.data_hard_start = frame;
+			xdp.data = frame->data;
+			xdp.data_end = xdp.data + frame->len;
+			xdp.data_meta = xdp.data - frame->metasize;
+
+			act = tun_do_xdp_offload(tun, &xdp);
+			if (act != XDP_PASS) {
+				if (act != XDP_TX) {
+					this_cpu_inc(tun->pcpu_stats->tx_dropped);
+
+					xdp_return_frame(frame);
+					continue;
+				}
+			}
+			/* XDP_TX for offloaded XDP, time for native
+			 * XDP */
+			tun_xdp_one(tun, tfile, &xdp, &flush, &tpage, false);
+			continue;
+		}
+
+		if (flush)
+			xdp_do_flush_map();
+	} else {
+		for (i = 0; i < n; i++)
+			xdp_return_frame(tun_ptr_to_xdp(array[i]));
+	}
+
+	rcu_read_unlock();
+	local_bh_enable();
+
+	tun_put_page(&tpage);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(__tun_do_offloaded_xdp);
+
 static ssize_t tun_do_read(struct tun_struct *tun, struct tun_file *tfile,
 			   struct iov_iter *to,
 			   int noblock, void *ptr)
@@ -2718,11 +2759,15 @@ static int tun_recvmsg(struct socket *sock, struct msghdr *m, size_t total_len,
 					 SOL_PACKET, TUN_TX_TIMESTAMP);
 		goto out;
 	}
+
+#if 0
 	ret = tun_do_read(tun, tfile, &m->msg_iter, flags & MSG_DONTWAIT, ptr);
 	if (ret > (ssize_t)total_len) {
 		m->msg_flags |= MSG_TRUNC;
 		ret = flags & MSG_TRUNC ? ret : total_len;
 	}
+#endif
+	ret = tun_do_offloaded_xdp(tun, tfile);
 out:
 	tun_put(tun);
 	return ret;

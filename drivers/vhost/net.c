@@ -1134,6 +1134,8 @@ static void handle_rx(struct vhost_net *net)
 	struct iov_iter fixup;
 	__virtio16 num_buffers;
 	int recv_pkts = 0;
+	void *array[64];
+	int n;
 
 	mutex_lock_nested(&vq->mutex, VHOST_NET_VQ_RX);
 	sock = vq->private_data;
@@ -1153,97 +1155,34 @@ static void handle_rx(struct vhost_net *net)
 		vq->log : NULL;
 	mergeable = vhost_has_feature(vq, VIRTIO_NET_F_MRG_RXBUF);
 
-	while ((sock_len = vhost_net_rx_peek_head_len(net, sock->sk,
-						      &busyloop_intr))) {
-		sock_len += sock_hlen;
-		vhost_len = sock_len + vhost_hlen;
-		headcount = get_rx_bufs(vq, vq->heads + nvq->done_idx,
-					vhost_len, &in, vq_log, &log,
-					likely(mergeable) ? UIO_MAXIOV : 1);
-		/* On error, stop handling until the next kick. */
-		if (unlikely(headcount < 0))
-			goto out;
-		/* OK, now we need to know about added descriptors. */
-		if (!headcount) {
-			if (unlikely(busyloop_intr)) {
-				vhost_poll_queue(&vq->poll);
-			} else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
-				/* They have slipped one in as we were
-				 * doing that: check again. */
-				vhost_disable_notify(&net->dev, vq);
-				continue;
-			}
-			/* Nothing new?  Wait for eventfd to tell us
-			 * they refilled. */
-			goto out;
-		}
-		busyloop_intr = false;
-		if (nvq->rx_ring)
-			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
-		/* On overrun, truncate and discard */
-		if (unlikely(headcount > UIO_MAXIOV)) {
-			iov_iter_init(&msg.msg_iter, READ, vq->iov, 1, 1);
-			err = sock->ops->recvmsg(sock, &msg,
-						 1, MSG_DONTWAIT | MSG_TRUNC);
-			pr_debug("Discarded rx packet: len %zd\n", sock_len);
-			continue;
-		}
-		/* We don't need to be notified again. */
-		iov_iter_init(&msg.msg_iter, READ, vq->iov, in, vhost_len);
-		fixup = msg.msg_iter;
-		if (unlikely((vhost_hlen))) {
-			/* We will supply the header ourselves
-			 * TODO: support TSO.
-			 */
-			iov_iter_advance(&msg.msg_iter, vhost_hlen);
-		}
-		err = sock->ops->recvmsg(sock, &msg,
-					 sock_len, MSG_DONTWAIT | MSG_TRUNC);
-		/* Userspace might have consumed the packet meanwhile:
-		 * it's not supposed to do this usually, but might be hard
-		 * to prevent. Discard data we got (if any) and keep going. */
-		if (unlikely(err != sock_len)) {
-			pr_debug("Discarded rx packet: "
-				 " len %d, expected %zd\n", err, sock_len);
-			vhost_discard_vq_desc(vq, headcount);
-			continue;
-		}
-		/* Supply virtio_net_hdr if VHOST_NET_F_VIRTIO_NET_HDR */
-		if (unlikely(vhost_hlen)) {
-			if (copy_to_iter(&hdr, sizeof(hdr),
-					 &fixup) != sizeof(hdr)) {
-				vq_err(vq, "Unable to write vnet_hdr "
-				       "at addr %p\n", vq->iov->iov_base);
-				goto out;
-			}
-		} else {
-			/* Header came from socket; we'll need to patch
-			 * ->num_buffers over if VIRTIO_NET_F_MRG_RXBUF
-			 */
-			iov_iter_advance(&fixup, sizeof(hdr));
-		}
-		/* TODO: Should check and handle checksum. */
+	while (true) {
+		unsigned timeout = vq->busyloop_timeout;
+		unsigned long endtime;
+again:
+		n = ptr_ring_consume_batched(nvq->rx_ring, array, 64);
+		if (!n) {
+			preempt_disable();
+			endtime = busy_clock() + timeout;
 
-		num_buffers = cpu_to_vhost16(vq, headcount);
-		if (likely(mergeable) &&
-		    copy_to_iter(&num_buffers, sizeof num_buffers,
-				 &fixup) != sizeof num_buffers) {
-			vq_err(vq, "Failed num_buffers write");
-			vhost_discard_vq_desc(vq, headcount);
-			goto out;
+			while (vhost_can_busy_poll(endtime)) {
+				if (!__ptr_ring_empty(nvq->rx_ring)) {
+					preempt_enable();
+					goto again;
+				}
+			}
+			preempt_enable();
+			goto end;
 		}
-		nvq->done_idx += headcount;
-		if (nvq->done_idx > VHOST_NET_BATCH)
-			vhost_net_signal_used(nvq);
-		if (unlikely(vq_log))
-			vhost_log_write(vq, vq_log, log, vhost_len,
-					vq->iov, in);
-		total_len += vhost_len;
-		if (unlikely(vhost_exceeds_weight(++recv_pkts, total_len))) {
-			vhost_poll_queue(&vq->poll);
-			goto out;
-		}
+		__tun_do_offloaded_xdp(sock, array, n);
+		total_len += n * 64;
+		recv_pkts += n;
+                if (unlikely(vhost_exceeds_weight(recv_pkts, total_len))) {
+                        vhost_poll_queue(&vq->poll);
+                        goto out;
+                }
 	}
+
+end:
 	if (unlikely(busyloop_intr))
 		vhost_poll_queue(&vq->poll);
 	else

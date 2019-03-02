@@ -90,20 +90,26 @@ static int macvtap_set_offloaded_xdp(struct tap_dev *tap,
 	struct netdev_bpf xdp;
 	int fd, err;
 
+	printk("setup offloaded XDP for macvtap!\n");
+
 	if (!lowerdev->netdev_ops->ndo_bpf) {
 		printk("lower device does not have ndo_bpf\n");
 		return -EINVAL;
 	}
 
-	if (copy_from_user(&fd, argp, sizeof(fd)))
+	if (copy_from_user(&fd, argp, sizeof(fd))) {
+		printk("copy from user fail!\n");
 		return -EFAULT;
+	}
 
 	if (fd == -1) {
 		prog = NULL;
 	} else {
 		prog = bpf_prog_get_type(fd, BPF_PROG_TYPE_XDP);
-		if (IS_ERR(prog))
+		if (IS_ERR(prog)) {
+			printk("BPF_PROG_LOAD fail!\n");
 			return -EINVAL;
+		}
 	}
 
 	xdp.command = XDP_SETUP_PROG;

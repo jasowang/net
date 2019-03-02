@@ -40,6 +40,7 @@ bool tun_is_xdp_frame(void *ptr);
 void *tun_xdp_to_ptr(void *ptr);
 void *tun_ptr_to_xdp(void *ptr);
 void tun_ptr_free(void *ptr);
+int __tun_do_offloaded_xdp(struct socket *sock, void **array, int n);
 #else
 #include <linux/err.h>
 #include <linux/errno.h>
