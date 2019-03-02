@@ -2545,13 +2545,13 @@ static u32 virtnet_xdp_query(struct net_device *dev)
 	return 0;
 }
 
-static int virtnet_xdp(struct net_device *dev, struct netdev_bpf *xdp)
+static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
-	switch (xdp->command) {
+	switch (bpf->command) {
 	case XDP_SETUP_PROG:
-		return virtnet_xdp_set(dev, xdp->prog, xdp->extack);
+		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:
-		xdp->prog_id = virtnet_xdp_query(dev);
+		bpf->prog_id = virtnet_xdp_query(dev);
 		return 0;
 	default:
 		return -EINVAL;
@@ -2630,7 +2630,7 @@ static const struct net_device_ops virtnet_netdev = {
 	.ndo_get_stats64     = virtnet_stats,
 	.ndo_vlan_rx_add_vid = virtnet_vlan_rx_add_vid,
 	.ndo_vlan_rx_kill_vid = virtnet_vlan_rx_kill_vid,
-	.ndo_bpf		= virtnet_xdp,
+	.ndo_bpf		= virtnet_bpf,
 	.ndo_xdp_xmit		= virtnet_xdp_xmit,
 	.ndo_features_check	= passthru_features_check,
 	.ndo_get_phys_port_name	= virtnet_get_phys_port_name,
