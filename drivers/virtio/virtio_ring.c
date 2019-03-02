@@ -1733,6 +1733,7 @@ int virtqueue_add_sgs(struct virtqueue *_vq,
 		for (sg = sgs[i]; sg; sg = sg_next(sg))
 			total_sg++;
 	}
+	printk("total sgs %d\n", total_sg);
 	return virtqueue_add(_vq, sgs, total_sg, out_sgs, in_sgs,
 			     data, NULL, gfp);
 }

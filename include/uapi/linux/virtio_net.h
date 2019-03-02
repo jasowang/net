@@ -261,4 +261,37 @@ struct virtio_net_ctrl_mq {
 #define VIRTIO_NET_CTRL_GUEST_OFFLOADS   5
 #define VIRTIO_NET_CTRL_GUEST_OFFLOADS_SET        0
 
+/* Control eBPF offloads
+ *
+ */
+
+struct virtio_net_ctrl_ebpf {
+       char insn[0];
+};
+
+#define VIRTIO_NET_CTRL_EBPF 6
+#define VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG 0
+
+struct virtio_net_ctrl_ebpf_map {
+	__virtio32 cmd;
+	__virtio32 map_type;
+	__virtio32 key_size;
+	__virtio32 value_size;
+	__virtio32 max_entries;
+	__virtio32 map_flags;
+	__virtio64 key;
+	__virtio64 value;
+	__virtio64 flags;
+	__virtio32 map_fd;
+};
+
+#define VIRTIO_NET_CTRL_EBPF_MAP 7
+#define VIRTIO_NET_CTRL_EBPF_MAP_CMD 0
+#define VIRTIO_NET_BPF_CMD_CREATE_MAP 1
+#define VIRTIO_NET_BPF_CMD_UPDATE_ELEM 2
+#define VIRTIO_NET_BPF_CMD_LOOKUP_ELEM 3
+#define VIRTIO_NET_BPF_CMD_DELETE_ELEM 4
+#define VIRTIO_NET_BPF_CMD_GET_FIRST 5
+#define VIRTIO_NET_BPF_CMD_GET_NEXT 6
+
 #endif /* _UAPI_LINUX_VIRTIO_NET_H */

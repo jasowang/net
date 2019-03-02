@@ -7784,6 +7784,8 @@ static void free_states(struct bpf_verifier_env *env)
 	kfree(env->explored_states);
 }
 
+#define DBG() printk("file %s line %d\n", __FILE__, __LINE__)
+
 int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 	      union bpf_attr __user *uattr)
 {
@@ -7793,25 +7795,33 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 	bool is_priv;
 
 	/* no program is valid */
-	if (ARRAY_SIZE(bpf_verifier_ops) == 0)
+	if (ARRAY_SIZE(bpf_verifier_ops) == 0) {
+		DBG();
 		return -EINVAL;
+	}
 
 	/* 'struct bpf_verifier_env' can be global, but since it's not small,
 	 * allocate/free it every time bpf_check() is called
 	 */
 	env = kzalloc(sizeof(struct bpf_verifier_env), GFP_KERNEL);
-	if (!env)
+	if (!env) {
+		DBG();
 		return -ENOMEM;
+	}
 	log = &env->log;
 
 	len = (*prog)->len;
 	env->insn_aux_data =
 		vzalloc(array_size(sizeof(struct bpf_insn_aux_data), len));
 	ret = -ENOMEM;
-	if (!env->insn_aux_data)
+	if (!env->insn_aux_data) {
+		DBG();
 		goto err_free_env;
+	}
+
 	for (i = 0; i < len; i++)
 		env->insn_aux_data[i].orig_idx = i;
+
 	env->prog = *prog;
 	env->ops = bpf_verifier_ops[env->prog->type];
 
@@ -7829,8 +7839,12 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 		ret = -EINVAL;
 		/* log attributes have to be sane */
 		if (log->len_total < 128 || log->len_total > UINT_MAX >> 8 ||
-		    !log->level || !log->ubuf)
+			!log->level || !log->ubuf) {
+			printk("len_total %d UINT_MAX >> 8 %d, log->level %d log->ubuf %p\n",
+				log->len_total, UINT_MAX >> 8, log->level, log->ubuf);
+			DBG();
 			goto err_unlock;
+		}
 	}
 
 	env->strict_alignment = !!(attr->prog_flags & BPF_F_STRICT_ALIGNMENT);
@@ -7843,7 +7857,7 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 	env->allow_ptr_leaks = is_priv;
 
 	if (bpf_prog_is_dev_bound(env->prog->aux)) {
-		ret = bpf_prog_offload_verifier_setup(env);
+		ret = bpf_prog_offload_verifier_setup(env->prog);
 		if (ret)
 			goto skip_full_check;
 	}
@@ -7920,6 +7934,7 @@ skip_full_check:
 		ret = -ENOSPC;
 	if (log->level && !log->ubuf) {
 		ret = -EFAULT;
+		DBG();
 		goto err_release_maps;
 	}
 
@@ -7931,6 +7946,7 @@ skip_full_check:
 
 		if (!env->prog->aux->used_maps) {
 			ret = -ENOMEM;
+			DBG();
 			goto err_release_maps;
 		}
 

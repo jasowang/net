@@ -33,6 +33,7 @@
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/debugfs.h>
+#include <linux/bpf_verifier.h>
 #include <net/route.h>
 #include <net/xdp.h>
 #include <net/net_failover.h>
@@ -183,6 +184,8 @@ struct control_buf {
 	u8 allmulti;
 	__virtio16 vid;
 	__virtio64 offloads;
+	struct bpf_insn insns[4096];
+	struct virtio_net_ctrl_ebpf_map ebpf;
 };
 
 struct virtnet_info {
@@ -245,6 +248,26 @@ struct virtnet_info {
 	struct dentry *ddir;
 
 	struct bpf_prog __rcu *xdp_prog;
+
+	struct bpf_offload_dev *bpf_dev;
+
+	u32 xdp_flags;
+	int xdp_prog_mode;
+
+	struct bpf_prog *bpf_offloaded;
+	u32 bpf_offloaded_id;
+
+	u32 prog_id_gen;
+
+	bool bpf_bind_accept;
+	u32 bpf_bind_verifier_delay;
+	struct dentry *ddir_bpf_bound_progs;
+	struct list_head bpf_bound_progs;
+
+	bool bpf_xdpdrv_accept;
+	bool bpf_xdpoffload_accept;
+
+	struct list_head map_list;
 };
 
 struct padded_vnet_hdr {
@@ -274,6 +297,29 @@ static struct xdp_frame *ptr_to_xdp(void *ptr)
 
 #define DRV_NAME "virtio-net"
 struct dentry *virtnet_ddir;
+
+struct virtnet_bpf_bound_prog {
+	struct virtnet_info *vi;
+	struct bpf_prog *prog;
+	struct dentry *ddir;
+	const char *state;
+	bool is_loaded;
+	struct list_head l;
+	u32 len;
+	struct bpf_insn insnsi[0];
+};
+
+#define VIRTNET_EA(extack, msg)	NL_SET_ERR_MSG_MOD((extack), msg)
+
+#define pr_vlog(env, fmt, ...)						\
+	bpf_verifier_log_write(env, "[netdevsim] " fmt, ##__VA_ARGS__)
+
+struct virtnet_bpf_map {
+	struct bpf_offloaded_map *offmap;
+	struct virtnet_info *vi;
+	u32 id;
+	struct list_head l;
+};
 
 /* Converting between virtqueue no. and kernel tx/rx queue no.
  * 0:rx0 1:tx0 2:rx1 3:tx1 ... 2N:rxN 2N+1:txN 2N+2:cvq
@@ -1675,12 +1721,14 @@ static bool virtnet_send_command(struct virtnet_info *vi, u8 class, u8 cmd,
 	if (unlikely(!virtqueue_kick(vi->cvq)))
 		return vi->ctrl->status == VIRTIO_NET_OK;
 
+	printk("wait for response!\n");
 	/* Spin for a response, the kick causes an ioport write, trapping
 	 * into the hypervisor, so the request should be handled immediately.
 	 */
 	while (!virtqueue_get_buf(vi->cvq, &tmp) &&
 	       !virtqueue_is_broken(vi->cvq))
 		cpu_relax();
+	printk("response get!\n");
 
 	return vi->ctrl->status == VIRTIO_NET_OK;
 }
@@ -2541,14 +2589,491 @@ static u32 virtnet_xdp_query(struct net_device *dev)
 	return 0;
 }
 
+static int virtnet_debugfs_bpf_string_read(struct seq_file *file, void *data)
+{
+	const char **str = file->private;
+
+	if (*str)
+		seq_printf(file, "%s\n", *str);
+
+	return 0;
+}
+
+static int virtnet_debugfs_bpf_string_open(struct inode *inode, struct file *f)
+{
+	return single_open(f, virtnet_debugfs_bpf_string_read,
+			   inode->i_private);
+}
+
+static const struct file_operations virtnet_bpf_string_fops = {
+	.owner = THIS_MODULE,
+	.open = virtnet_debugfs_bpf_string_open,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek
+};
+
+static struct virtnet_bpf_map *virtnet_get_bpf_map(struct virtnet_info *vi,
+						   struct bpf_map *map)
+{
+	struct virtnet_bpf_map *virtnet_map;
+
+	list_for_each_entry(virtnet_map, &vi->map_list, l) {
+		if (&virtnet_map->offmap->map == map)
+			return virtnet_map;
+	}
+
+	return NULL;
+}
+
+static int virtnet_bpf_create_prog(struct virtnet_info *vi,
+				   struct bpf_prog *prog)
+{
+	struct virtnet_bpf_bound_prog *state;
+	size_t insn_len = prog->len * sizeof(struct bpf_insn);
+	char name[16];
+	int i;
+	int err = 0;
+
+	state = kzalloc(sizeof(*state) + insn_len, GFP_KERNEL);
+	if (!state)
+		return -ENOMEM;
+
+	memcpy(&state->insnsi[0], prog->insnsi, insn_len);
+
+	state->vi = vi;
+	state->prog = prog;
+	state->len = prog->len;
+
+	/* Replace map fd with host identitier. */
+	for (i = 0; i < state->len; i++) {
+		struct bpf_insn *insn = &state->insnsi[i];
+		struct virtnet_bpf_map *virtnet_map;
+		struct bpf_map *map;
+		struct fd f;
+
+		if (insn->code != (BPF_LD | BPF_IMM | BPF_DW))
+			continue;
+
+		printk("found map access at idx %d! fd %d\n", i, insn->imm);
+		f = fdget(insn->imm);
+		map = __bpf_map_get(f);
+		if (IS_ERR(map)) {
+			printk("fd %d is not pointing to valid bpf_map\n",
+				insn->imm);
+			err = -EINVAL;
+			goto err_replace;
+		}
+
+		printk("find fd %d in imm\n", insn->imm);
+		virtnet_map = virtnet_get_bpf_map(vi, map);
+		if (!virtnet_map) {
+			printk("could not get a offloaded map fd %d\n",
+				insn->imm);
+			err = -EINVAL;
+			goto err_replace;
+		}
+
+		printk("replace it with %d\n", virtnet_map->id);
+		insn->imm = virtnet_map->id;
+
+		fdput(f);
+	}
+
+	state->state = "verify";
+
+	/* Program id is not populated yet when we create the state. */
+	sprintf(name, "%u", vi->prog_id_gen++);
+	state->ddir = debugfs_create_dir(name, vi->ddir_bpf_bound_progs);
+	if (IS_ERR_OR_NULL(state->ddir)) {
+		kfree(state);
+		return -ENOMEM;
+	}
+
+	debugfs_create_u32("id", 0400, state->ddir, &prog->aux->id);
+	debugfs_create_file("state", 0400, state->ddir,
+			    &state->state, &virtnet_bpf_string_fops);
+	debugfs_create_bool("loaded", 0400, state->ddir, &state->is_loaded);
+
+	list_add_tail(&state->l, &vi->bpf_bound_progs);
+
+	prog->aux->offload->dev_priv = state;
+
+	return 0;
+
+err_replace:
+	kfree(state);
+	return err;
+}
+
+static int
+virtnet_bpf_verify_insn(struct bpf_verifier_env *env, int insn_idx,
+			int prev_insn)
+{
+	struct virtnet_bpf_bound_prog *state;
+	struct virtnet_info *vi;
+
+	state = env->prog->aux->offload->dev_priv;
+	vi = state->vi;
+
+	if (state->vi->bpf_bind_verifier_delay && !insn_idx)
+		msleep(state->vi->bpf_bind_verifier_delay);
+
+	if (insn_idx == env->prog->len - 1)
+		pr_vlog(env, "Hello from virtio-net!\n");
+
+	return 0;
+}
+
+static void virtnet_bpf_destroy_prog(struct bpf_prog *prog)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	state = prog->aux->offload->dev_priv;
+	WARN(state->is_loaded,
+	     "offload state destroyed while program still bound");
+	debugfs_remove_recursive(state->ddir);
+	list_del(&state->l);
+	kfree(state);
+}
+
+static int
+virtnet_setup_prog_hw_checks(struct virtnet_info *vi, struct netdev_bpf *bpf)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	if (!bpf->prog)
+		return 0;
+
+	if (!bpf->prog->aux->offload) {
+		VIRTNET_EA(bpf->extack, "xdpoffload of non-bound program");
+		return -EINVAL;
+	}
+	if (bpf->prog->aux->offload->netdev != vi->dev) {
+		VIRTNET_EA(bpf->extack, "program bound to different dev");
+		return -EINVAL;
+	}
+
+	state = bpf->prog->aux->offload->dev_priv;
+	if (WARN_ON(strcmp(state->state, "xlated"))) {
+		VIRTNET_EA(bpf->extack, "offloading program in bad state");
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static void virtnet_prog_set_loaded(struct bpf_prog *prog, bool loaded)
+{
+	struct virtnet_bpf_bound_prog *state;
+
+	if (!prog || !prog->aux->offload)
+		return;
+
+	state = prog->aux->offload->dev_priv;
+	state->is_loaded = loaded;
+}
+
+static int
+virtnet_bpf_offload(struct virtnet_info *vi, struct bpf_prog *prog,
+		    bool oldprog)
+{
+	virtnet_prog_set_loaded(vi->bpf_offloaded, false);
+
+	WARN(!!vi->bpf_offloaded != oldprog,
+	     "bad offload state, expected offload %sto be active",
+	     oldprog ? "" : "not ");
+	vi->bpf_offloaded = prog;
+	vi->bpf_offloaded_id = prog ? prog->aux->id : 0;
+	virtnet_prog_set_loaded(prog, true);
+
+	return 0;
+}
+
+static bool virtnet_xdp_offload_active(struct virtnet_info *vi)
+{
+	return vi->xdp_prog_mode == XDP_ATTACHED_HW;
+}
+
+static int virtnet_xdp_offload_prog(struct virtnet_info *vi,
+				    struct netdev_bpf *bpf)
+{
+	if (!virtnet_xdp_offload_active(vi) && !bpf->prog)
+		return 0;
+	if (!virtnet_xdp_offload_active(vi) && bpf->prog && vi->bpf_offloaded) {
+		VIRTNET_EA(bpf->extack, "TC program is already loaded");
+		return -EBUSY;
+	}
+
+	return virtnet_bpf_offload(vi, bpf->prog,
+				   virtnet_xdp_offload_active(vi));
+}
+
+static int virtnet_xdp_set_prog(struct virtnet_info *vi, struct netdev_bpf *bpf)
+{
+	struct virtio_device *vdev = vi->vdev;
+	struct bpf_prog *prog = bpf->prog;
+	struct virtnet_bpf_bound_prog *bound_prog = prog->aux->offload->dev_priv;
+	struct scatterlist sg;
+	int err, i;
+
+	if (vi->xdp_prog && (bpf->flags ^ vi->xdp_flags) & XDP_FLAGS_MODES) {
+		VIRTNET_EA(bpf->extack, "program loaded with different flags");
+		return -EBUSY;
+	}
+
+	if (!vi->bpf_xdpoffload_accept) {
+		VIRTNET_EA(bpf->extack, "XDP offload disabled in DebugFS");
+		return -EOPNOTSUPP;
+	}
+
+	err = virtnet_xdp_offload_prog(vi, bpf);
+	if (err)
+		return err;
+
+	{
+		struct bpf_prog *old_prog;
+
+		old_prog = rtnl_dereference(vi->xdp_prog);
+		rcu_assign_pointer(vi->xdp_prog, prog);
+
+		if (old_prog)
+			bpf_prog_put(old_prog);
+	}
+
+#if 0
+	err = virtnet_xdp_set(vi->dev, prog, bpf->extack);
+	if (err)
+		return err;
+#endif
+
+	printk("prog->len %d total %d\n",
+		prog->len, prog->len * sizeof(prog->insnsi[0]));
+
+	printk("bound_prog->len %d total %d\n",
+		bound_prog->len, bound_prog->len * sizeof(prog->insnsi[0]));
+
+	for (i = 0; i < prog->len; i++)
+		printk("insn %d opcode %x\n", i, bound_prog->insnsi[i].code);
+
+	memcpy(vi->ctrl->insns, bound_prog->insnsi,
+		prog->len * sizeof(bound_prog->insnsi[0]));
+	sg_init_one(&sg, vi->ctrl->insns,
+		    bound_prog->len * sizeof(bound_prog->insnsi[0]));
+
+	printk("set offload prog!\n");
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF,
+				  VIRTIO_NET_CTRL_EBPF_SET_OFFLOAD_PROG,
+				  &sg)) {
+		dev_warn(&vdev->dev, "Failed to set bpf offload prog\n");
+		err = -EFAULT;
+		return err;
+	}
+
+	printk("offload to host successfuly!\n");
+
+	vi->xdp_flags = bpf->flags;
+
+	if (!bpf->prog)
+		vi->xdp_prog_mode = XDP_ATTACHED_NONE;
+	else if (bpf->command == XDP_SETUP_PROG)
+		vi->xdp_prog_mode = XDP_ATTACHED_DRV;
+	else
+		vi->xdp_prog_mode = XDP_ATTACHED_HW;
+
+	return 0;
+}
+
+static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
+				     int cmd, u8 *key, u8 *value, u64 flags,
+				     u8 *out_key, u8 *out_value)
+{
+	struct bpf_map *map = &offmap->map;
+	struct virtnet_bpf_map *virtnet_map;
+	struct virtnet_info *vi;
+	struct virtio_net_ctrl_ebpf_map *ctrl;
+	struct scatterlist sg;
+
+	printk("map %p\n", map);
+	virtnet_map = offmap->dev_priv;
+	printk("virt map %p\n", virtnet_map);
+	vi = virtnet_map->vi;
+	printk("vi %p\n", vi);
+	ctrl = &vi->ctrl->ebpf;
+
+	/* Copy inputs */
+	if (key)
+		memcpy(&ctrl->key, key, map->key_size);
+	if (value)
+		memcpy(&ctrl->value, value, map->value_size);
+
+	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
+	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
+	ctrl->map_fd = virtnet_map->id;
+
+	printk("entry op send command %d\n", ctrl->cmd);
+	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
+				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
+				  &sg)) {
+		dev_warn(&vi->vdev->dev, "Failed to do ebpf op %d\n", cmd);
+		return -EFAULT;
+	}
+
+	printk("eBPF op was done successfully for op %d!\n", cmd);
+
+	/* Copy outputs */
+	if (out_key)
+		memcpy(out_key, &ctrl->key, map->key_size);
+	if (out_value)
+		memcpy(out_value, &ctrl->value, map->value_size);
+
+	return 0;
+}
+
+static int virtnet_bpf_map_update_entry(struct bpf_offloaded_map *offmap,
+					void *key, void *value, u64 flags)
+{
+	return virtnet_bpf_ctrl_entry_op(offmap,
+					 VIRTIO_NET_BPF_CMD_UPDATE_ELEM,
+					 key, value, flags, NULL, NULL);
+}
+
+static int virtnet_bpf_map_delete_elem(struct bpf_offloaded_map *offmap,
+				       void *key)
+{
+	return virtnet_bpf_ctrl_entry_op(offmap,
+					 VIRTIO_NET_BPF_CMD_DELETE_ELEM,
+					 key, NULL, 0, NULL, NULL);
+}
+
+static int virtnet_bpf_map_lookup_entry(struct bpf_offloaded_map *offmap,
+					void *key, void *value)
+{
+	return virtnet_bpf_ctrl_entry_op(offmap,
+					 VIRTIO_NET_BPF_CMD_LOOKUP_ELEM,
+					 key, NULL, 0, NULL, value);
+}
+
+static int virtnet_bpf_ctrl_getfirst_entry(struct bpf_offloaded_map *offmap,
+					   void *next_key)
+{
+	return virtnet_bpf_ctrl_entry_op(offmap,
+					 VIRTIO_NET_BPF_CMD_GET_FIRST,
+					 NULL, NULL, 0, next_key, NULL);
+}
+
+static int virtnet_bpf_map_get_next_key(struct bpf_offloaded_map *offmap,
+					void *key, void *next_key)
+{
+	if (!key)
+		return virtnet_bpf_ctrl_getfirst_entry(offmap, next_key);
+	return virtnet_bpf_ctrl_entry_op(offmap,
+					 VIRTIO_NET_BPF_CMD_GET_NEXT,
+					 NULL, NULL, 0, next_key, NULL);
+}
+
+static const struct bpf_map_dev_ops virtnet_bpf_map_ops = {
+	.map_get_next_key	= virtnet_bpf_map_get_next_key,
+	.map_lookup_elem	= virtnet_bpf_map_lookup_entry,
+	.map_update_elem	= virtnet_bpf_map_update_entry,
+	.map_delete_elem	= virtnet_bpf_map_delete_elem,
+};
+
+static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
+				 struct bpf_offloaded_map *offmap)
+{
+	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
+	struct virtnet_bpf_map *virtnet_map;
+	struct bpf_map *map = &offmap->map;
+	struct scatterlist sg;
+
+	virtnet_map = kzalloc(sizeof(*virtnet_map), GFP_KERNEL);
+	if (!virtnet_map)
+		return -ENOMEM;
+
+	ctrl->key_size = cpu_to_virtio32(vi->vdev, map->key_size);
+	ctrl->value_size = cpu_to_virtio32(vi->vdev, map->value_size);
+	ctrl->max_entries = cpu_to_virtio32(vi->vdev, map->max_entries);
+	ctrl->map_type = cpu_to_virtio32(vi->vdev, map->map_type);
+	ctrl->map_flags = 0;
+	ctrl->cmd = cpu_to_virtio32(vi->vdev, VIRTIO_NET_BPF_CMD_CREATE_MAP);
+
+	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
+
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
+				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
+				  &sg)) {
+		dev_warn(&vi->vdev->dev, "Failed to create ebpf map\n");
+		return -EFAULT;
+	}
+
+	offmap->dev_ops = &virtnet_bpf_map_ops;
+	offmap->dev_priv = virtnet_map;
+
+	virtnet_map->offmap = offmap;
+	virtnet_map->id = ctrl->map_fd;
+	virtnet_map->vi = vi;
+
+	printk("success get map id from host %d\n", ctrl->map_fd);
+
+	list_add_tail(&virtnet_map->l, &vi->map_list);
+
+	return 0;
+}
+
+static int virtnet_bpf_verifier_setup(struct bpf_prog *prog)
+{
+	struct virtnet_info *vi = netdev_priv(prog->aux->offload->netdev);
+
+	return virtnet_bpf_create_prog(vi, prog);
+}
+
+static int virtnet_bpf_verifier_prep(struct bpf_prog *prog)
+{
+	return 0;
+}
+
+static int virtnet_bpf_translate(struct bpf_prog *prog)
+{
+	struct virtnet_bpf_bound_prog *state = prog->aux->offload->dev_priv;
+
+	state->state = "xlated";
+	return 0;
+}
+
+static int virtnet_bpf_finalize(struct bpf_verifier_env *env)
+{
+	return 0;
+}
+
+static const struct bpf_prog_offload_ops virtnet_bpf_dev_ops = {
+	.setup		= virtnet_bpf_verifier_setup,
+	.prepare	= virtnet_bpf_verifier_prep,
+	.insn_hook	= virtnet_bpf_verify_insn,
+	.finalize	= virtnet_bpf_finalize,
+	.prepare	= virtnet_bpf_verifier_prep,
+	.translate	= virtnet_bpf_translate,
+	.destroy	= virtnet_bpf_destroy_prog,
+};
+
 static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 {
+	struct virtnet_info *vi = netdev_priv(dev);
+	int err;
+
 	switch (bpf->command) {
+	case BPF_OFFLOAD_MAP_ALLOC:
+		return virtnet_bpf_map_alloc(vi, bpf->offmap);
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:
 		bpf->prog_id = virtnet_xdp_query(dev);
 		return 0;
+	case XDP_SETUP_PROG_HW:
+		err = virtnet_setup_prog_hw_checks(vi, bpf);
+		if (err)
+			return err;
+		return virtnet_xdp_set_prog(vi, bpf);
 	default:
 		return -EINVAL;
 	}
@@ -2595,6 +3120,54 @@ static int virtnet_set_features(struct net_device *dev,
 	return 0;
 }
 
+static int virtnet_bpf_init(struct virtnet_info *vi)
+{
+	int err;
+
+	vi->bpf_dev = bpf_offload_dev_create(&virtnet_bpf_dev_ops, NULL);
+	err = PTR_ERR_OR_ZERO(vi->bpf_dev);
+	if (err)
+		return err;
+
+	err = bpf_offload_dev_netdev_register(vi->bpf_dev, vi->dev);
+	if (err)
+		goto err_netdev_register;
+
+	debugfs_create_u32("bpf_offloaded_id", 0400, vi->ddir,
+			   &vi->bpf_offloaded_id);
+
+	vi->bpf_bind_accept = true;
+	debugfs_create_bool("bpf_bind_accept", 0600, vi->ddir,
+			    &vi->bpf_bind_accept);
+	debugfs_create_u32("bpf_bind_verifier_delay", 0600, vi->ddir,
+			   &vi->bpf_bind_verifier_delay);
+
+	vi->ddir_bpf_bound_progs =
+		debugfs_create_dir("bpf_bound_progs", vi->ddir);
+	if (IS_ERR_OR_NULL(vi->ddir_bpf_bound_progs)) {
+		err = -ENOMEM;
+		goto err_debugfs;
+	}
+
+	vi->bpf_xdpdrv_accept = true;
+	debugfs_create_bool("bpf_xdpdrv_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpdrv_accept);
+	vi->bpf_xdpoffload_accept = true;
+	debugfs_create_bool("bpf_xdpoffload_accept", 0600, vi->ddir,
+			    &vi->bpf_xdpoffload_accept);
+
+	INIT_LIST_HEAD(&vi->bpf_bound_progs);
+	INIT_LIST_HEAD(&vi->map_list);
+
+	return 0;
+
+err_debugfs:
+	bpf_offload_dev_netdev_unregister(vi->bpf_dev, vi->dev);
+err_netdev_register:
+	bpf_offload_dev_destroy(vi->bpf_dev);
+	return err;
+}
+
 static int virtnet_init(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
@@ -2603,12 +3176,15 @@ static int virtnet_init(struct net_device *dev)
 	if (IS_ERR_OR_NULL(vi->ddir))
 		return -ENOMEM;
 
-	return 0;
+	return virtnet_bpf_init(vi);
 }
 
 static void virtnet_uninit(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
+
+	bpf_offload_dev_netdev_unregister(vi->bpf_dev, vi->dev);
+	bpf_offload_dev_destroy(vi->bpf_dev);
 
 	debugfs_remove_recursive(vi->ddir);
 	return;

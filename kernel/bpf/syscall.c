@@ -58,6 +58,8 @@ static const struct bpf_map_ops * const bpf_map_types[] = {
 #undef BPF_MAP_TYPE
 };
 
+#define DBG() printk("file %s line %d\n", __FILE__, __LINE__)
+
 /*
  * If we're handed a bigger struct than we know of, ensure all the unknown bits
  * are 0 - i.e. new user-space does not rely on any kernel feature extensions
@@ -509,24 +511,29 @@ static int map_create(union bpf_attr *attr)
 	int f_flags;
 	int err;
 
+	DBG();
 	err = CHECK_ATTR(BPF_MAP_CREATE);
 	if (err)
 		return -EINVAL;
 
+	DBG();
 	f_flags = bpf_get_file_flag(attr->map_flags);
 	if (f_flags < 0)
 		return f_flags;
 
+	DBG();
 	if (numa_node != NUMA_NO_NODE &&
 	    ((unsigned int)numa_node >= nr_node_ids ||
 	     !node_online(numa_node)))
 		return -EINVAL;
 
+	DBG();
 	/* find map type and init map: hashtable vs rbtree vs bloom vs ... */
 	map = find_and_alloc_map(attr);
 	if (IS_ERR(map))
 		return PTR_ERR(map);
 
+	DBG();
 	err = bpf_obj_name_cpy(map->name, attr->map_name);
 	if (err)
 		goto free_map_nouncharge;
@@ -612,6 +619,7 @@ struct bpf_map *__bpf_map_get(struct fd f)
 
 	return f.file->private_data;
 }
+EXPORT_SYMBOL(__bpf_map_get);
 
 /* prog's and map's refcnt limit */
 #define BPF_MAX_REFCNT 32768
@@ -1498,11 +1506,15 @@ static int bpf_prog_load(union bpf_attr *attr, union bpf_attr __user *uattr)
 	char license[128];
 	bool is_gpl;
 
-	if (CHECK_ATTR(BPF_PROG_LOAD))
+	if (CHECK_ATTR(BPF_PROG_LOAD)) {
+		printk("1\n");
 		return -EINVAL;
+	}
 
-	if (attr->prog_flags & ~(BPF_F_STRICT_ALIGNMENT | BPF_F_ANY_ALIGNMENT))
+	if (attr->prog_flags & ~(BPF_F_STRICT_ALIGNMENT | BPF_F_ANY_ALIGNMENT)) {
+		printk("2\n");
 		return -EINVAL;
+	}
 
 	if (!IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS) &&
 	    (attr->prog_flags & BPF_F_ANY_ALIGNMENT) &&
@@ -1511,47 +1523,66 @@ static int bpf_prog_load(union bpf_attr *attr, union bpf_attr __user *uattr)
 
 	/* copy eBPF program license from user space */
 	if (strncpy_from_user(license, u64_to_user_ptr(attr->license),
-			      sizeof(license) - 1) < 0)
+				sizeof(license) - 1) < 0) {
+		printk("3\n");
 		return -EFAULT;
+	}
 	license[sizeof(license) - 1] = 0;
 
 	/* eBPF programs must be GPL compatible to use GPL-ed functions */
 	is_gpl = license_is_gpl_compatible(license);
 
-	if (attr->insn_cnt == 0 || attr->insn_cnt > BPF_MAXINSNS)
+	if (attr->insn_cnt == 0 || attr->insn_cnt > BPF_MAXINSNS) {
+		printk("4\n");
 		return -E2BIG;
+	}
+
 	if (type != BPF_PROG_TYPE_SOCKET_FILTER &&
 	    type != BPF_PROG_TYPE_CGROUP_SKB &&
-	    !capable(CAP_SYS_ADMIN))
+		!capable(CAP_SYS_ADMIN)) {
+		printk("6\n");
 		return -EPERM;
+	}
 
 	bpf_prog_load_fixup_attach_type(attr);
-	if (bpf_prog_load_check_attach_type(type, attr->expected_attach_type))
+	if (bpf_prog_load_check_attach_type(type,
+						attr->expected_attach_type))
+	{
+		printk("7\n");
 		return -EINVAL;
+	}
 
 	/* plain bpf_prog allocation */
 	prog = bpf_prog_alloc(bpf_prog_size(attr->insn_cnt), GFP_USER);
-	if (!prog)
+	if (!prog) {
+		printk("8\n");
 		return -ENOMEM;
+	}
 
 	prog->expected_attach_type = attr->expected_attach_type;
 
 	prog->aux->offload_requested = !!attr->prog_ifindex;
 
 	err = security_bpf_prog_alloc(prog->aux);
-	if (err)
+	if (err) {
+		printk("9\n");
 		goto free_prog_nouncharge;
+	}
 
 	err = bpf_prog_charge_memlock(prog);
-	if (err)
+	if (err) {
+		printk("10\n");
 		goto free_prog_sec;
+	}
 
 	prog->len = attr->insn_cnt;
 
 	err = -EFAULT;
 	if (copy_from_user(prog->insns, u64_to_user_ptr(attr->insns),
-			   bpf_prog_insn_size(prog)) != 0)
+				bpf_prog_insn_size(prog)) != 0) {
+		printk("11\n");
 		goto free_prog;
+	}
 
 	prog->orig_prog = NULL;
 	prog->jited = 0;
@@ -1561,35 +1592,48 @@ static int bpf_prog_load(union bpf_attr *attr, union bpf_attr __user *uattr)
 
 	if (bpf_prog_is_dev_bound(prog->aux)) {
 		err = bpf_prog_offload_init(prog, attr);
-		if (err)
+		if (err) {
+			printk("12\n");
 			goto free_prog;
+		}
 	}
 
 	/* find program type: socket_filter vs tracing_filter */
 	err = find_prog_type(type, prog);
-	if (err < 0)
+	if (err < 0) {
+		printk("13\n");
 		goto free_prog;
+	}
 
 	prog->aux->load_time = ktime_get_boot_ns();
 	err = bpf_obj_name_cpy(prog->aux->name, attr->prog_name);
-	if (err)
+	if (err) {
+		printk("14\n");
 		goto free_prog;
+	}
 
 	/* run eBPF verifier */
 	err = bpf_check(&prog, attr, uattr);
-	if (err < 0)
+	if (err < 0) {
+		printk("15\n");
 		goto free_used_maps;
+	}
 
 	prog = bpf_prog_select_runtime(prog, &err);
-	if (err < 0)
+	if (err < 0) {
+		printk("16\n");
 		goto free_used_maps;
+	}
 
 	err = bpf_prog_alloc_id(prog);
-	if (err)
+	if (err) {
+		printk("17\n");
 		goto free_used_maps;
+	}
 
 	err = bpf_prog_new_fd(prog);
 	if (err < 0) {
+		printk("18\n");
 		/* failed to allocate fd.
 		 * bpf_prog_put() is needed because the above
 		 * bpf_prog_alloc_id() has published the prog
@@ -2647,6 +2691,7 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 
 	switch (cmd) {
 	case BPF_MAP_CREATE:
+		DBG();
 		err = map_create(&attr);
 		break;
 	case BPF_MAP_LOOKUP_ELEM:
