@@ -2893,24 +2893,23 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 	struct virtio_net_ctrl_ebpf_map *ctrl;
 	struct scatterlist sg;
 
-	printk("map %p\n", map);
 	virtnet_map = offmap->dev_priv;
-	printk("virt map %p\n", virtnet_map);
 	vi = virtnet_map->vi;
-	printk("vi %p\n", vi);
 	ctrl = &vi->ctrl->ebpf;
 
-	/* Copy inputs */
+	printk("key size %d\n", map->key_size);
+
+	/* FIXME: endian, Copy inputs */
 	if (key)
 		memcpy(&ctrl->key, key, map->key_size);
 	if (value)
 		memcpy(&ctrl->value, value, map->value_size);
 
-	ctrl->cmd = cpu_to_virtio64(vi->vdev, cmd);
+	ctrl->cmd = cpu_to_virtio32(vi->vdev, cmd);
 	ctrl->flags = cpu_to_virtio64(vi->vdev, flags);
-	ctrl->map_fd = virtnet_map->id;
+	ctrl->map_fd = cpu_to_virtio32(vi->vdev, virtnet_map->id);
 
-	printk("entry op send command %d\n", ctrl->cmd);
+	printk("entry op send command %d map fd %d\n", ctrl->cmd, ctrl->map_fd);
 	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
 	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
 				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
@@ -2921,18 +2920,18 @@ static int virtnet_bpf_ctrl_entry_op(struct bpf_offloaded_map *offmap,
 
 	printk("eBPF op was done successfully for op %d!\n", cmd);
 
-	/* Copy outputs */
+	/* FIXME: endian Copy outputs */
 	if (out_key)
 		memcpy(out_key, &ctrl->key, map->key_size);
 	if (out_value)
 		memcpy(out_value, &ctrl->value, map->value_size);
-
 	return 0;
 }
 
 static int virtnet_bpf_map_update_entry(struct bpf_offloaded_map *offmap,
 					void *key, void *value, u64 flags)
 {
+	printk("update entry!\n");
 	return virtnet_bpf_ctrl_entry_op(offmap,
 					 VIRTIO_NET_BPF_CMD_UPDATE_ELEM,
 					 key, value, flags, NULL, NULL);
@@ -2941,6 +2940,7 @@ static int virtnet_bpf_map_update_entry(struct bpf_offloaded_map *offmap,
 static int virtnet_bpf_map_delete_elem(struct bpf_offloaded_map *offmap,
 				       void *key)
 {
+	printk("delete elem!\n");
 	return virtnet_bpf_ctrl_entry_op(offmap,
 					 VIRTIO_NET_BPF_CMD_DELETE_ELEM,
 					 key, NULL, 0, NULL, NULL);
@@ -2949,14 +2949,20 @@ static int virtnet_bpf_map_delete_elem(struct bpf_offloaded_map *offmap,
 static int virtnet_bpf_map_lookup_entry(struct bpf_offloaded_map *offmap,
 					void *key, void *value)
 {
-	return virtnet_bpf_ctrl_entry_op(offmap,
+	int ret;
+
+	printk("lookup entry for key %lx!\n", *(u32 *)key);
+	ret =  virtnet_bpf_ctrl_entry_op(offmap,
 					 VIRTIO_NET_BPF_CMD_LOOKUP_ELEM,
 					 key, NULL, 0, NULL, value);
+	printk("get value %lx\n", *(u32 *)value);
+	return ret;
 }
 
 static int virtnet_bpf_ctrl_getfirst_entry(struct bpf_offloaded_map *offmap,
 					   void *next_key)
 {
+	printk("get first key!\n");
 	return virtnet_bpf_ctrl_entry_op(offmap,
 					 VIRTIO_NET_BPF_CMD_GET_FIRST,
 					 NULL, NULL, 0, next_key, NULL);
@@ -2965,11 +2971,21 @@ static int virtnet_bpf_ctrl_getfirst_entry(struct bpf_offloaded_map *offmap,
 static int virtnet_bpf_map_get_next_key(struct bpf_offloaded_map *offmap,
 					void *key, void *next_key)
 {
-	if (!key)
+	int ret;
+
+	printk("get next key for key %lx!\n", *(u32 *)key);
+	/* FIXME: correct? */
+	if (!key) {
+		printk("no key!\n");
 		return virtnet_bpf_ctrl_getfirst_entry(offmap, next_key);
-	return virtnet_bpf_ctrl_entry_op(offmap,
+	}
+
+	ret = virtnet_bpf_ctrl_entry_op(offmap,
 					 VIRTIO_NET_BPF_CMD_GET_NEXT,
-					 NULL, NULL, 0, next_key, NULL);
+					 key, NULL, 0, NULL, next_key);
+	printk("next key %lx\n", *(u32 *)next_key);
+
+	return ret;
 }
 
 static const struct bpf_map_dev_ops virtnet_bpf_map_ops = {
@@ -2990,6 +3006,9 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
 	virtnet_map = kzalloc(sizeof(*virtnet_map), GFP_KERNEL);
 	if (!virtnet_map)
 		return -ENOMEM;
+
+	printk("create map %p key size %d value size %d\n",
+		map, map->key_size, map->value_size);
 
 	ctrl->key_size = cpu_to_virtio32(vi->vdev, map->key_size);
 	ctrl->value_size = cpu_to_virtio32(vi->vdev, map->value_size);
@@ -3018,6 +3037,36 @@ static int virtnet_bpf_map_alloc(struct virtnet_info *vi,
 
 	list_add_tail(&virtnet_map->l, &vi->map_list);
 
+	return 0;
+}
+
+static int virtnet_bpf_map_free(struct virtnet_info *vi,
+				struct bpf_offloaded_map *offmap)
+{
+	struct virtio_net_ctrl_ebpf_map *ctrl = &vi->ctrl->ebpf;
+	struct bpf_map *map = &offmap->map;
+	struct virtnet_bpf_map *virtnet_map = virtnet_get_bpf_map(vi, map);
+	struct scatterlist sg;
+
+	if (!virtnet_map) {
+		printk("could not get a offloaded map fd %d\n");
+		return -EINVAL;
+	}
+
+	ctrl->key = virtnet_map->id;
+	ctrl->cmd = cpu_to_virtio32(vi->vdev, VIRTIO_NET_BPF_CMD_FREE_MAP);
+
+	sg_init_one(&sg, &vi->ctrl->ebpf, sizeof(vi->ctrl->ebpf));
+
+	if (!virtnet_send_command(vi, VIRTIO_NET_CTRL_EBPF_MAP,
+				  VIRTIO_NET_CTRL_EBPF_MAP_CMD,
+				  &sg)) {
+		dev_warn(&vi->vdev->dev, "Failed to free ebpf map\n");
+		return -EFAULT;
+	}
+
+	list_del(&virtnet_map->l);
+	kfree(virtnet_map);
 	return 0;
 }
 
@@ -3064,6 +3113,8 @@ static int virtnet_bpf(struct net_device *dev, struct netdev_bpf *bpf)
 	switch (bpf->command) {
 	case BPF_OFFLOAD_MAP_ALLOC:
 		return virtnet_bpf_map_alloc(vi, bpf->offmap);
+	case BPF_OFFLOAD_MAP_FREE:
+		return virtnet_bpf_map_free(vi, bpf->offmap);
 	case XDP_SETUP_PROG:
 		return virtnet_xdp_set(dev, bpf->prog, bpf->extack);
 	case XDP_QUERY_PROG:

@@ -2362,7 +2362,7 @@ static void tun_prog_free(struct rcu_head *rcu)
 {
 	struct tun_prog *prog = container_of(rcu, struct tun_prog, rcu);
 
-	bpf_prog_destroy(prog->prog);
+	bpf_prog_put(prog->prog);
 	kfree(prog);
 }
 
@@ -2385,6 +2385,11 @@ static int __tun_set_ebpf(struct tun_struct *tun,
 	rcu_assign_pointer(*prog_p, new);
 	spin_unlock_bh(&tun->lock);
 
+	dump_stack();
+	printk("prog_p %p new %p old %p\n", prog_p, new, old);
+
+	if (new)
+		printk("refcnt is %d\n", atomic_read(&prog->aux->refcnt));
 	if (old)
 		call_rcu(&old->rcu, tun_prog_free);
 
@@ -3425,6 +3430,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case TUNSETOFFLOADEDXDP:
+		dump_stack();
 		ret = tun_set_ebpf(tun, &tun->offloaded_xdp_prog, argp,
 				   BPF_PROG_TYPE_XDP);
 		break;
