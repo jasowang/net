@@ -124,6 +124,20 @@ err_maybe_put:
 	return err;
 }
 
+int bpf_prog_offload_verifier_setup(struct bpf_prog *prog)
+{
+	struct bpf_prog_offload *offload;
+	int ret = -ENODEV;
+
+	down_read(&bpf_devs_lock);
+	offload = prog->aux->offload;
+	if (offload)
+		ret = offload->offdev->ops->setup(prog);
+	up_read(&bpf_devs_lock);
+
+	return ret;
+}
+
 int bpf_prog_offload_verifier_prep(struct bpf_prog *prog)
 {
 	struct bpf_prog_offload *offload;

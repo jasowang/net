@@ -315,6 +315,7 @@ struct bpf_prog_offload_ops {
 			    struct bpf_insn *insn);
 	int (*remove_insns)(struct bpf_verifier_env *env, u32 off, u32 cnt);
 	/* program management callbacks */
+	int (*setup)(struct bpf_prog *prog);
 	int (*prepare)(struct bpf_prog *prog);
 	int (*translate)(struct bpf_prog *prog);
 	void (*destroy)(struct bpf_prog *prog);

@@ -7842,6 +7842,12 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr,
 	is_priv = capable(CAP_SYS_ADMIN);
 	env->allow_ptr_leaks = is_priv;
 
+	if (bpf_prog_is_dev_bound(env->prog->aux)) {
+		ret = bpf_prog_offload_verifier_setup(env);
+		if (ret)
+			goto skip_full_check;
+	}
+
 	ret = replace_map_fd_with_map_ptr(env);
 	if (ret < 0)
 		goto skip_full_check;
