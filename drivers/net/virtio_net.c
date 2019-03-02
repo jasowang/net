@@ -151,8 +151,6 @@ struct receive_queue {
 
 	struct napi_struct napi;
 
-	struct bpf_prog __rcu *xdp_prog;
-
 	struct virtnet_rq_stats stats;
 
 	/* Chain pages by the private ptr. */
@@ -245,6 +243,8 @@ struct virtnet_info {
 	struct failover *failover;
 
 	struct dentry *ddir;
+
+	struct bpf_prog __rcu *xdp_prog;
 };
 
 struct padded_vnet_hdr {
@@ -506,6 +506,7 @@ static int virtnet_xdp_xmit(struct net_device *dev,
 {
 	struct virtnet_info *vi = netdev_priv(dev);
 	struct receive_queue *rq = vi->rq;
+	struct xdp_frame *xdpf_sent;
 	struct bpf_prog *xdp_prog;
 	struct send_queue *sq;
 	unsigned int len;
@@ -520,7 +521,7 @@ static int virtnet_xdp_xmit(struct net_device *dev,
 	/* Only allow ndo_xdp_xmit if XDP is loaded on dev, as this
 	 * indicate XDP resources have been successfully allocated.
 	 */
-	xdp_prog = rcu_dereference(rq->xdp_prog);
+	xdp_prog = rcu_dereference(vi->xdp_prog);
 	if (!xdp_prog)
 		return -ENXIO;
 
@@ -668,7 +669,7 @@ static struct sk_buff *receive_small(struct net_device *dev,
 	stats->bytes += len;
 
 	rcu_read_lock();
-	xdp_prog = rcu_dereference(rq->xdp_prog);
+	xdp_prog = rcu_dereference(vi->xdp_prog);
 	if (xdp_prog) {
 		struct virtio_net_hdr_mrg_rxbuf *hdr = buf + header_offset;
 		struct xdp_frame *xdpf;
@@ -817,7 +818,7 @@ static struct sk_buff *receive_mergeable(struct net_device *dev,
 	stats->bytes += len - vi->hdr_len;
 
 	rcu_read_lock();
-	xdp_prog = rcu_dereference(rq->xdp_prog);
+	xdp_prog = rcu_dereference(vi->xdp_prog);
 	if (xdp_prog) {
 		struct xdp_frame *xdpf;
 		struct page *xdp_page;
@@ -2078,7 +2079,7 @@ static int virtnet_set_channels(struct net_device *dev,
 	 * also when XDP is loaded all RX queues have XDP programs so we only
 	 * need to check a single RX queue.
 	 */
-	if (vi->rq[0].xdp_prog)
+	if (vi->xdp_prog)
 		return -EINVAL;
 
 	get_online_cpus();
@@ -2459,7 +2460,7 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 		return -ENOMEM;
 	}
 
-	old_prog = rtnl_dereference(vi->rq[0].xdp_prog);
+	old_prog = rtnl_dereference(vi->xdp_prog);
 	if (!prog && !old_prog)
 		return 0;
 
@@ -2478,11 +2479,8 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 	}
 
 	if (!prog) {
-		for (i = 0; i < vi->max_queue_pairs; i++) {
-			rcu_assign_pointer(vi->rq[i].xdp_prog, prog);
-			if (i == 0)
-				virtnet_restore_guest_offloads(vi);
-		}
+		rcu_assign_pointer(vi->xdp_prog, prog);
+		virtnet_restore_guest_offloads(vi);
 		synchronize_net();
 	}
 
@@ -2493,11 +2491,9 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 	vi->xdp_queue_pairs = xdp_qp;
 
 	if (prog) {
-		for (i = 0; i < vi->max_queue_pairs; i++) {
-			rcu_assign_pointer(vi->rq[i].xdp_prog, prog);
-			if (i == 0 && !old_prog)
-				virtnet_clear_guest_offloads(vi);
-		}
+		rcu_assign_pointer(vi->xdp_prog, prog);
+		if (!old_prog)
+			virtnet_clear_guest_offloads(vi);
 	}
 
 	for (i = 0; i < vi->max_queue_pairs; i++) {
@@ -2510,13 +2506,15 @@ static int virtnet_xdp_set(struct net_device *dev, struct bpf_prog *prog,
 		}
 	}
 
+	if (old_prog)
+		bpf_prog_put(old_prog);
+
 	return 0;
 
 err:
 	if (!prog) {
 		virtnet_clear_guest_offloads(vi);
-		for (i = 0; i < vi->max_queue_pairs; i++)
-			rcu_assign_pointer(vi->rq[i].xdp_prog, old_prog);
+		rcu_assign_pointer(vi->xdp_prog, old_prog);
 	}
 
 	if (netif_running(dev)) {
@@ -2535,13 +2533,11 @@ static u32 virtnet_xdp_query(struct net_device *dev)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
 	const struct bpf_prog *xdp_prog;
-	int i;
 
-	for (i = 0; i < vi->max_queue_pairs; i++) {
-		xdp_prog = rtnl_dereference(vi->rq[i].xdp_prog);
-		if (xdp_prog)
-			return xdp_prog->aux->id;
-	}
+	xdp_prog = rtnl_dereference(vi->xdp_prog);
+	if (xdp_prog)
+		return xdp_prog->aux->id;
+
 	return 0;
 }
 
@@ -2699,18 +2695,17 @@ static void virtnet_free_queues(struct virtnet_info *vi)
 
 static void _free_receive_bufs(struct virtnet_info *vi)
 {
-	struct bpf_prog *old_prog;
+	struct bpf_prog *old_prog = rtnl_dereference(vi->xdp_prog);
 	int i;
 
 	for (i = 0; i < vi->max_queue_pairs; i++) {
 		while (vi->rq[i].pages)
 			__free_pages(get_a_page(&vi->rq[i], GFP_KERNEL), 0);
-
-		old_prog = rtnl_dereference(vi->rq[i].xdp_prog);
-		RCU_INIT_POINTER(vi->rq[i].xdp_prog, NULL);
-		if (old_prog)
-			bpf_prog_put(old_prog);
 	}
+
+	RCU_INIT_POINTER(vi->xdp_prog, NULL);
+	if (old_prog)
+		bpf_prog_put(old_prog);
 }
 
 static void free_receive_bufs(struct virtnet_info *vi)
