@@ -28,7 +28,7 @@
 
 static int ifindex_in;
 static int ifindex_out;
-static bool ifindex_out_xdp_dummy_attached = true;
+static bool ifindex_out_xdp_dummy_attached = false;
 static __u32 prog_id;
 static __u32 dummy_prog_id;
 
@@ -57,6 +57,7 @@ static void int_exit(int sig)
 			printf("bpf_get_link_xdp_id failed\n");
 			exit(1);
 		}
+		printf("clean out if %d\n", ifindex_out);
 		if (prog_id == curr_prog_id)
 			bpf_set_link_xdp_fd(ifindex_out, -1, xdp_flags);
 		else if (!curr_prog_id)
@@ -176,6 +177,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	printf("set link to in %d\n", ifindex_in);
 	if (bpf_set_link_xdp_fd(ifindex_in, prog_fd, xdp_flags) < 0) {
 		printf("ERROR: link set xdp fd failed on %d\n", ifindex_in);
 		return 1;
@@ -188,12 +190,15 @@ int main(int argc, char **argv)
 	}
 	prog_id = info.id;
 
+#if 0
+	printf("set link to out %d\n", ifindex_out);
 	/* Loading dummy XDP prog on out-device */
 	if (bpf_set_link_xdp_fd(ifindex_out, dummy_prog_fd,
 			    (xdp_flags | XDP_FLAGS_UPDATE_IF_NOEXIST)) < 0) {
 		printf("WARN: link set xdp fd failed on %d\n", ifindex_out);
 		ifindex_out_xdp_dummy_attached = false;
 	}
+#endif
 
 	memset(&info, 0, sizeof(info));
 	ret = bpf_obj_get_info_by_fd(dummy_prog_fd, &info, &info_len);

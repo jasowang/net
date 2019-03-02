@@ -703,7 +703,6 @@ static int map_lookup_elem(union bpf_attr *attr)
 	struct fd f;
 	int err;
 
-	printk(">>>>>>lookup elem!\n");
 	if (CHECK_ATTR(BPF_MAP_LOOKUP_ELEM))
 		return -EINVAL;
 
@@ -714,8 +713,6 @@ static int map_lookup_elem(union bpf_attr *attr)
 	map = __bpf_map_get(f);
 	if (IS_ERR(map))
 		return PTR_ERR(map);
-
-	printk("map %p value size %d\n", map, map->value_size);
 
 	if (!(f.file->f_mode & FMODE_CAN_READ)) {
 		err = -EPERM;
@@ -750,7 +747,6 @@ static int map_lookup_elem(union bpf_attr *attr)
 		goto free_key;
 
 	if (bpf_map_is_dev_bound(map)) {
-		printk("Start offload lookup key %x\n", *(u32 *)key);
 		err = bpf_map_offload_lookup_elem(map, key, value);
 		goto done;
 	}
@@ -804,9 +800,6 @@ done:
 	err = -EFAULT;
 	if (copy_to_user(uvalue, value, value_size) != 0)
 		goto free_value;
-
-	printk("map %p value size %d value %x\n", map, value_size, *(u32 *)value);
-	printk("<<<<<<<<<<<<lookup done!\n");
 
 	err = 0;
 
@@ -1007,8 +1000,6 @@ static int map_get_next_key(union bpf_attr *attr)
 	struct fd f;
 	int err;
 
-	printk(">>>> get next key!\n");
-
 	if (CHECK_ATTR(BPF_MAP_GET_NEXT_KEY))
 		return -EINVAL;
 
@@ -1049,7 +1040,6 @@ out:
 	if (err)
 		goto free_next_key;
 
-	printk("<<<<<<< key %x next key %x\n", *(u32 *)key, *(u32 *)next_key);
 	err = -EFAULT;
 	if (copy_to_user(unext_key, next_key, map->key_size) != 0)
 		goto free_next_key;
@@ -1275,8 +1265,6 @@ static void __bpf_prog_put_rcu(struct rcu_head *rcu)
 
 static void __bpf_prog_put(struct bpf_prog *prog, bool do_idr_lock)
 {
-	printk("prog %p \n", prog);
-	printk("aux %p \n", prog->aux);
 	if (atomic_dec_and_test(&prog->aux->refcnt)) {
 		/* bpf_prog_free_id() must be called first */
 		bpf_prog_free_id(prog, do_idr_lock);

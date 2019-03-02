@@ -1354,23 +1354,16 @@ static void __tun_xdp_flush_tfile(struct tun_file *tfile)
 	tfile->socket.sk->sk_data_ready(tfile->socket.sk);
 }
 
-static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
+static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_buff *xdp)
 {
 	struct tun_prog *xdp_prog;
-	struct xdp_buff xdp;
 	u32 act = XDP_PASS;
 
 	xdp_prog = rcu_dereference(tun->offloaded_xdp_prog);
 	if (xdp_prog) {
-		xdp.data_hard_start = frame;
-		xdp.data = frame->data;
-		xdp.data_end = xdp.data + frame->len;
-		xdp.data_meta = xdp.data - frame->metasize;
-
-		act = bpf_prog_run_xdp(xdp_prog->prog, &xdp);
+		act = bpf_prog_run_xdp(xdp_prog->prog, xdp);
 		switch (act) {
 		case XDP_TX:
-			/* FIXME! */
 			break;
 		case XDP_PASS:
 			break;
@@ -1383,7 +1376,6 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
 			trace_xdp_exception(tun->dev, xdp_prog->prog, act);
 			/* fall through */
 		case XDP_DROP:
-			xdp_return_frame_rx_napi(frame);
 			break;
 		}
 	}
@@ -1391,18 +1383,29 @@ static u32 tun_do_xdp_offload(struct tun_struct *tun, struct xdp_frame *frame)
 	return act;
 }
 
+static void tun_put_page(struct tun_page *tpage);
+
+static int tun_xdp_one(struct tun_struct *tun,
+		       struct tun_file *tfile,
+		       struct xdp_buff *xdp, int *flush,
+		       struct tun_page *tpage, bool has_hdr);
+
 static int tun_xdp_xmit(struct net_device *dev, int n,
 			struct xdp_frame **frames, u32 flags)
 {
+	struct tun_page tpage;
 	struct tun_struct *tun = netdev_priv(dev);
 	struct tun_file *tfile;
 	u32 numqueues;
-	int drops = 0;
+	int drops = 0, flush = 0;
 	int cnt = n;
 	int i;
+	bool xmit = false;
 
 	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
 		return -EINVAL;
+
+	memset(&tpage, 0, sizeof(tpage));
 
 	rcu_read_lock();
 
@@ -1415,34 +1418,52 @@ static int tun_xdp_xmit(struct net_device *dev, int n,
 	tfile = rcu_dereference(tun->tfiles[smp_processor_id() %
 					    numqueues]);
 
-	spin_lock(&tfile->tx_ring.producer_lock);
 	for (i = 0; i < n; i++) {
-		struct xdp_frame *xdp = frames[i];
+		struct xdp_frame *frame = frames[i];
+		struct xdp_buff xdp;
 		u32 act;
 		/* Encode the XDP flag into lowest bit for consumer to differ
 		 * XDP buffer from sk_buff.
 		 */
-		void *frame = tun_xdp_to_ptr(xdp);
+		void *ptr = tun_xdp_to_ptr(frame);
 
-		act = tun_do_xdp_offload(tun, xdp);
+		xdp.data_hard_start = frame;
+		xdp.data = frame->data;
+		xdp.data_end = xdp.data + frame->len;
+		xdp.data_meta = xdp.data - frame->metasize;
+
+		act = tun_do_xdp_offload(tun, &xdp);
 		if (act != XDP_PASS) {
-			if (act != XDP_TX)
+			if (act != XDP_TX) {
+				xdp_return_frame_rx_napi(frame);
 				drops++;
+				continue;
+			}
+			/* XDP_TX for offloaded XDP, time for native
+			 * XDP */
+			tun_xdp_one(tun, tfile, &xdp, &flush, &tpage, false);
 			continue;
 		}
 
-		if (__ptr_ring_produce(&tfile->tx_ring, frame)) {
+		if (ptr_ring_produce(&tfile->tx_ring, ptr)) {
 			this_cpu_inc(tun->pcpu_stats->tx_dropped);
-			xdp_return_frame_rx_napi(xdp);
+			xdp_return_frame_rx_napi(frame);
 			drops++;
 		}
-	}
-	spin_unlock(&tfile->tx_ring.producer_lock);
 
-	if (flags & XDP_XMIT_FLUSH)
+		xmit = true;
+	}
+
+	if (xmit && (flags & XDP_XMIT_FLUSH))
 		__tun_xdp_flush_tfile(tfile);
 
+	if (flush)
+		xdp_do_flush_map();
+
 	rcu_read_unlock();
+
+	tun_put_page(&tpage);
+
 	return cnt - drops;
 }
 
@@ -2527,7 +2548,7 @@ static void tun_put_page(struct tun_page *tpage)
 static int tun_xdp_one(struct tun_struct *tun,
 		       struct tun_file *tfile,
 		       struct xdp_buff *xdp, int *flush,
-		       struct tun_page *tpage)
+		       struct tun_page *tpage, bool has_hdr)
 {
 	unsigned int datasize = xdp->data_end - xdp->data;
 	struct tun_xdp_hdr *hdr = xdp->data_hard_start;
@@ -2543,7 +2564,7 @@ static int tun_xdp_one(struct tun_struct *tun,
 
 	xdp_prog = rcu_dereference(tun->xdp_prog);
 	if (xdp_prog) {
-		if (gso->gso_type) {
+		if (has_hdr && gso->gso_type) {
 			skb_xdp = true;
 			goto build;
 		}
@@ -2588,7 +2609,8 @@ build:
 	skb_reserve(skb, xdp->data - xdp->data_hard_start);
 	skb_put(skb, xdp->data_end - xdp->data);
 
-	if (virtio_net_hdr_to_skb(skb, gso, tun_is_little_endian(tun))) {
+	if (has_hdr &&
+	    virtio_net_hdr_to_skb(skb, gso, tun_is_little_endian(tun))) {
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
 		err = -EINVAL;
@@ -2651,7 +2673,7 @@ static int tun_sendmsg(struct socket *sock, struct msghdr *m, size_t total_len)
 
 		for (i = 0; i < n; i++) {
 			xdp = &((struct xdp_buff *)ctl->ptr)[i];
-			tun_xdp_one(tun, tfile, xdp, &flush, &tpage);
+			tun_xdp_one(tun, tfile, xdp, &flush, &tpage, true);
 		}
 
 		if (flush)
