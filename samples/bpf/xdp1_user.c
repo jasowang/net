@@ -77,6 +77,7 @@ static void usage(const char *prog)
 		"    -S    use skb-mode\n"
 		"    -N    enforce native mode\n"
 		"    -F    force loading prog\n",
+		"    -D ifindex offload mode\n",
 		prog);
 }
 
@@ -88,7 +89,7 @@ int main(int argc, char **argv)
 	};
 	struct bpf_prog_info info = {};
 	__u32 info_len = sizeof(info);
-	const char *optstr = "FSN";
+	const char *optstr = "FSNO";
 	int prog_fd, map_fd, opt;
 	struct bpf_object *obj;
 	struct bpf_map *map;
@@ -105,6 +106,9 @@ int main(int argc, char **argv)
 			break;
 		case 'F':
 			xdp_flags &= ~XDP_FLAGS_UPDATE_IF_NOEXIST;
+			break;
+		case 'O':
+			xdp_flags |= XDP_FLAGS_HW_MODE;
 			break;
 		default:
 			usage(basename(argv[0]));
@@ -130,6 +134,8 @@ int main(int argc, char **argv)
 
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 	prog_load_attr.file = filename;
+	if (xdp_flags & XDP_FLAGS_HW_MODE)
+		prog_load_attr.ifindex = ifindex;
 
 	if (bpf_prog_load_xattr(&prog_load_attr, &obj, &prog_fd))
 		return 1;
