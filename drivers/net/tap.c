@@ -1118,6 +1118,13 @@ static long tap_ioctl(struct file *file, unsigned int cmd,
 		rtnl_unlock();
 		return ret;
 
+	case TUNSETOFFLOADEDXDP:
+		rtnl_lock();
+		tap = tap_get_tap_dev(q);
+		ret = tap->set_offloaded_xdp(tap, sp);
+		tap_put_tap_dev(tap);
+		rtnl_unlock();
+		return ret;
 	default:
 		return -EINVAL;
 	}

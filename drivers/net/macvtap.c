@@ -27,6 +27,7 @@
 struct macvtap_dev {
 	struct macvlan_dev vlan;
 	struct tap_dev    tap;
+	struct bpf_prog *prog;
 };
 
 /*
@@ -77,6 +78,52 @@ static void macvtap_update_features(struct tap_dev *tap,
 	netdev_update_features(vlan->dev);
 }
 
+/* protected by RTNL lock */
+static int macvtap_set_offloaded_xdp(struct tap_dev *tap,
+				     void __user *argp)
+{
+	struct macvtap_dev *vlantap =
+	       container_of(tap, struct macvtap_dev, tap);
+	struct macvlan_dev *vlan = &vlantap->vlan;
+	struct net_device *lowerdev = vlan->lowerdev;
+	struct bpf_prog *prog;
+	struct netdev_bpf xdp;
+	int fd, err;
+
+	if (!lowerdev->netdev_ops->ndo_bpf) {
+		printk("lower device does not have ndo_bpf\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user(&fd, argp, sizeof(fd)))
+		return -EFAULT;
+
+	if (fd == -1) {
+		prog = NULL;
+	} else {
+		prog = bpf_prog_get_type(fd, BPF_PROG_TYPE_XDP);
+		if (IS_ERR(prog))
+			return -EINVAL;
+	}
+
+	xdp.command = XDP_SETUP_PROG;
+	xdp.prog = prog;
+
+	err = lowerdev->netdev_ops->ndo_bpf(lowerdev, &xdp);
+	if (err) {
+		printk("fail to setup XDP on lowerdev !\n");
+		if (prog)
+			bpf_prog_put(prog);
+		return -EFAULT;
+	}
+	if (vlantap->prog)
+		bpf_prog_put(vlantap->prog);
+
+	vlantap->prog = prog;
+
+	return 0;
+}
+
 static int macvtap_newlink(struct net *src_net, struct net_device *dev,
 			   struct nlattr *tb[], struct nlattr *data[],
 			   struct netlink_ext_ack *extack)
@@ -97,6 +144,7 @@ static int macvtap_newlink(struct net *src_net, struct net_device *dev,
 	vlantap->tap.count_tx_dropped = macvtap_count_tx_dropped;
 	vlantap->tap.count_rx_dropped = macvtap_count_rx_dropped;
 	vlantap->tap.update_features  = macvtap_update_features;
+	vlantap->tap.set_offloaded_xdp = macvtap_set_offloaded_xdp;
 
 	err = netdev_rx_handler_register(dev, tap_handle_frame, &vlantap->tap);
 	if (err)
@@ -112,6 +160,7 @@ static int macvtap_newlink(struct net *src_net, struct net_device *dev,
 	}
 
 	vlantap->tap.dev = vlantap->vlan.dev;
+	vlantap->prog = NULL;
 
 	return 0;
 }

@@ -46,6 +46,7 @@ struct tap_dev {
 	void (*update_features)(struct tap_dev *tap, netdev_features_t features);
 	void (*count_tx_dropped)(struct tap_dev *tap);
 	void (*count_rx_dropped)(struct tap_dev *tap);
+	int (*set_offloaded_xdp)(struct tap_dev *tap, void __user *argp);
 };
 
 /*
