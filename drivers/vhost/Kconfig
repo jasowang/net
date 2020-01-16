@@ -36,6 +36,7 @@ config VHOST_VSOCK
 
 config VHOST
 	tristate
+        select VHOST_IOTLB
 	---help---
 	  This option is selected by any driver which needs to access
 	  the core of vhost.
@@ -54,3 +55,9 @@ config VHOST_CROSS_ENDIAN_LEGACY
 	  adds some overhead, it is disabled by default.
 
 	  If unsure, say "N".
+
+config VHOST_IOTLB
+	tristate
+        default m
+        help
+          Generic IOTLB implementation for vhost and vringh.
