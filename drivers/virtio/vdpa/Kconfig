@@ -7,3 +7,20 @@ config VDPA
           datapath which complies with virtio specifications with
           vendor specific control path.
 
+menuconfig VDPA_MENU
+	bool "VDPA drivers"
+	default n
+
+if VDPA_MENU
+
+config VDPA_SIM
+	tristate "vDPA device simulator"
+        select VDPA
+        default n
+        help
+          vDPA networking device simulator which loop TX traffic back
+          to RX. This device is used for testing, prototyping and
+          development of vDPA.
+
+endif # VDPA_MENU
+
