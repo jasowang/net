@@ -73,6 +73,13 @@ struct vdpa_device {
  *				@vdev: vdpa device
  *				@idx: virtqueue index
  *				Returns virtqueue state (last_avail_idx)
+ * @get_vq_irq:			Get the irq number for this
+ *				virtqueue. (optional)
+ *				@vdev: vdpa device
+ *				@idx: virtqueue index
+ * 				Returns integer: The irq number that
+ *				is used for this virtqueue. Note the
+ *				irq should be used only for this device.
  * @get_vq_align:		Get the virtqueue align requirement
  *				for the device
  *				@vdev: vdpa device
@@ -162,6 +169,7 @@ struct vdpa_config_ops {
 	bool (*get_vq_ready)(struct vdpa_device *vdev, u16 idx);
 	int (*set_vq_state)(struct vdpa_device *vdev, u16 idx, u64 state);
 	u64 (*get_vq_state)(struct vdpa_device *vdev, u16 idx);
+	int (*get_vq_irq)(struct vdpa_device *vdev, u16 idx);
 
 	/* Device ops */
 	u16 (*get_vq_align)(struct vdpa_device *vdev);
