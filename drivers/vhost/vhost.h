@@ -60,6 +60,10 @@ enum vhost_uaddr_type {
 	VHOST_NUM_ADDRS = 3,
 };
 
+struct vhost_call_ctx {
+	struct eventfd_ctx *ctx;
+};
+
 /* The virtqueue structure describes a queue attached to a device. */
 struct vhost_virtqueue {
 	struct vhost_dev *dev;
@@ -72,9 +76,9 @@ struct vhost_virtqueue {
 	struct vring_used __user *used;
 	const struct vhost_iotlb_map *meta_iotlb[VHOST_NUM_ADDRS];
 	struct file *kick;
-	struct eventfd_ctx *call_ctx;
-	struct eventfd_ctx *error_ctx;
-	struct eventfd_ctx *log_ctx;
+	struct vhost_call_ctx call_ctx;
+	struct vhost_call_ctx error_ctx;
+	struct vhost_call_ctx log_ctx;
 
 	struct vhost_poll poll;
 
@@ -141,7 +145,7 @@ struct vhost_dev {
 	struct mutex mutex;
 	struct vhost_virtqueue **vqs;
 	int nvqs;
-	struct eventfd_ctx *log_ctx;
+	struct vhost_call_ctx log_ctx;
 	struct llist_head work_list;
 	struct task_struct *worker;
 	struct vhost_iotlb *umem;
@@ -216,10 +220,26 @@ int vhost_init_device_iotlb(struct vhost_dev *d, bool enabled);
 void vhost_iotlb_map_free(struct vhost_iotlb *iotlb,
 			  struct vhost_iotlb_map *map);
 
+static inline void vhost_call(struct vhost_call_ctx *vhost_ctx)
+{
+	if (vhost_ctx->ctx)
+		eventfd_signal(vhost_ctx->ctx, 1);
+}
+
+static inline void vhost_call_reset(struct vhost_call_ctx *vhost_ctx)
+{
+	memset(vhost_ctx, 0, sizeof(*vhost_ctx));
+}
+
+static inline void vhost_call_put(struct vhost_call_ctx *vhost_ctx)
+{
+	if (vhost_ctx->ctx)
+		eventfd_ctx_put(vhost_ctx->ctx);
+}
+
 #define vq_err(vq, fmt, ...) do {                                  \
 		pr_debug(pr_fmt(fmt), ##__VA_ARGS__);       \
-		if ((vq)->error_ctx)                               \
-				eventfd_signal((vq)->error_ctx, 1);\
+		vhost_call(&(vq)->error_ctx); \
 	} while (0)
 
 enum {

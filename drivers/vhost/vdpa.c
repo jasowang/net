@@ -93,10 +93,8 @@ static void handle_vq_kick(struct vhost_work *work)
 static irqreturn_t vhost_vdpa_virtqueue_cb(void *private)
 {
 	struct vhost_virtqueue *vq = private;
-	struct eventfd_ctx *call_ctx = vq->call_ctx;
 
-	if (call_ctx)
-		eventfd_signal(call_ctx, 1);
+	vhost_call(&vq->call_ctx);
 
 	return IRQ_HANDLED;
 }
@@ -341,7 +339,7 @@ static long vhost_vdpa_vring_ioctl(struct vhost_vdpa *v, unsigned int cmd,
 		break;
 
 	case VHOST_SET_VRING_CALL:
-		if (vq->call_ctx) {
+		if (vq->call_ctx.ctx) {
 			cb.callback = vhost_vdpa_virtqueue_cb;
 			cb.private = vq;
 		} else {

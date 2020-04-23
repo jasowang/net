@@ -313,10 +313,10 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->acked_features = 0;
 	vq->acked_backend_features = 0;
 	vq->log_base = NULL;
-	vq->error_ctx = NULL;
+	vhost_call_reset(&vq->error_ctx);
 	vq->kick = NULL;
-	vq->call_ctx = NULL;
-	vq->log_ctx = NULL;
+	vhost_call_reset(&vq->call_ctx);
+	vhost_call_reset(&vq->log_ctx);
 	vhost_reset_is_le(vq);
 	vhost_disable_cross_endian(vq);
 	vq->busyloop_timeout = 0;
@@ -463,7 +463,7 @@ void vhost_dev_init(struct vhost_dev *dev,
 	dev->vqs = vqs;
 	dev->nvqs = nvqs;
 	mutex_init(&dev->mutex);
-	dev->log_ctx = NULL;
+	vhost_call_reset(&dev->log_ctx);
 	dev->umem = NULL;
 	dev->iotlb = NULL;
 	dev->mm = NULL;
@@ -645,18 +645,15 @@ void vhost_dev_cleanup(struct vhost_dev *dev)
 	int i;
 
 	for (i = 0; i < dev->nvqs; ++i) {
-		if (dev->vqs[i]->error_ctx)
-			eventfd_ctx_put(dev->vqs[i]->error_ctx);
+		vhost_call_put(&dev->vqs[i]->error_ctx);
 		if (dev->vqs[i]->kick)
 			fput(dev->vqs[i]->kick);
-		if (dev->vqs[i]->call_ctx)
-			eventfd_ctx_put(dev->vqs[i]->call_ctx);
+		vhost_call_put(&dev->vqs[i]->call_ctx);
 		vhost_vq_reset(dev, dev->vqs[i]);
 	}
 	vhost_dev_free_iovecs(dev);
-	if (dev->log_ctx)
-		eventfd_ctx_put(dev->log_ctx);
-	dev->log_ctx = NULL;
+	vhost_call_put(&dev->log_ctx);
+	vhost_call_reset(&dev->log_ctx);
 	/* No one will access memory at this point */
 	vhost_iotlb_free(dev->umem);
 	dev->umem = NULL;
@@ -1595,7 +1592,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 			r = PTR_ERR(ctx);
 			break;
 		}
-		swap(ctx, vq->call_ctx);
+		swap(ctx, vq->call_ctx.ctx);
 		break;
 	case VHOST_SET_VRING_ERR:
 		if (copy_from_user(&f, argp, sizeof f)) {
@@ -1607,7 +1604,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 			r = PTR_ERR(ctx);
 			break;
 		}
-		swap(ctx, vq->error_ctx);
+		swap(ctx, vq->error_ctx.ctx);
 		break;
 	case VHOST_SET_VRING_ENDIAN:
 		r = vhost_set_vring_endian(vq, argp);
@@ -1732,7 +1729,7 @@ long vhost_dev_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *argp)
 			r = PTR_ERR(ctx);
 			break;
 		}
-		swap(ctx, d->log_ctx);
+		swap(ctx, d->log_ctx.ctx);
 		for (i = 0; i < d->nvqs; ++i) {
 			mutex_lock(&d->vqs[i]->mutex);
 			d->vqs[i]->log_ctx = d->log_ctx;
@@ -1887,8 +1884,7 @@ int vhost_log_write(struct vhost_virtqueue *vq, struct vhost_log *log,
 			return r;
 		len -= l;
 		if (!len) {
-			if (vq->log_ctx)
-				eventfd_signal(vq->log_ctx, 1);
+			vhost_call(&vq->log_ctx);
 			return 0;
 		}
 	}
@@ -1910,8 +1906,7 @@ static int vhost_update_used_flags(struct vhost_virtqueue *vq)
 		used = &vq->used->flags;
 		log_used(vq, (used - (void __user *)vq->used),
 			 sizeof vq->used->flags);
-		if (vq->log_ctx)
-			eventfd_signal(vq->log_ctx, 1);
+		vhost_call(&vq->log_ctx);
 	}
 	return 0;
 }
@@ -1928,8 +1923,7 @@ static int vhost_update_avail_event(struct vhost_virtqueue *vq, u16 avail_event)
 		used = vhost_avail_event(vq);
 		log_used(vq, (used - (void __user *)vq->used),
 			 sizeof *vhost_avail_event(vq));
-		if (vq->log_ctx)
-			eventfd_signal(vq->log_ctx, 1);
+		vhost_call(&vq->log_ctx);
 	}
 	return 0;
 }
@@ -2359,8 +2353,7 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 		/* Log used index update. */
 		log_used(vq, offsetof(struct vring_used, idx),
 			 sizeof vq->used->idx);
-		if (vq->log_ctx)
-			eventfd_signal(vq->log_ctx, 1);
+		vhost_call(&vq->log_ctx);
 	}
 	return r;
 }
@@ -2407,8 +2400,8 @@ static bool vhost_notify(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 void vhost_signal(struct vhost_dev *dev, struct vhost_virtqueue *vq)
 {
 	/* Signal the Guest tell them we used something up. */
-	if (vq->call_ctx && vhost_notify(dev, vq))
-		eventfd_signal(vq->call_ctx, 1);
+	if (vhost_notify(dev, vq))
+		vhost_call(&vq->call_ctx);
 }
 EXPORT_SYMBOL_GPL(vhost_signal);
 
