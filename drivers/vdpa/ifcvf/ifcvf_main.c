@@ -152,6 +152,14 @@ static u64 ifcvf_vdpa_get_vq_state(struct vdpa_device *vdpa_dev, u16 qid)
 	return ifcvf_get_vq_state(vf, qid);
 }
 
+static int ifcvf_vdpa_get_vq_irq(struct vdpa_device *vdpa_dev, u16 qid)
+{
+	struct ifcvf_adapter *adapter = dev_get_drvdata(vdpa_dev->dev.parent);
+	struct pci_dev *pdev = adapter->pdev;
+
+	return pci_irq_vector(pdev, qid + IFCVF_MSI_QUEUE_OFF);
+}
+
 static int ifcvf_vdpa_set_vq_state(struct vdpa_device *vdpa_dev, u16 qid,
 				   u64 num)
 {
@@ -271,6 +279,7 @@ static const struct vdpa_config_ops ifc_vdpa_ops = {
 	.get_vq_num_max	= ifcvf_vdpa_get_vq_num_max,
 	.get_vq_state	= ifcvf_vdpa_get_vq_state,
 	.set_vq_state	= ifcvf_vdpa_set_vq_state,
+	.get_vq_irq	= ifcvf_vdpa_get_vq_irq,
 	.set_vq_cb	= ifcvf_vdpa_set_vq_cb,
 	.set_vq_ready	= ifcvf_vdpa_set_vq_ready,
 	.get_vq_ready	= ifcvf_vdpa_get_vq_ready,
