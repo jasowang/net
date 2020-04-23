@@ -22,8 +22,10 @@ static irqreturn_t ifcvf_intr_handler(int irq, void *arg)
 {
 	struct vring_info *vring = arg;
 
-	if (vring->cb.callback)
+	if (vring->cb.callback) {
+		printk("vq callback \n");
 		return vring->cb.callback(vring->cb.private);
+	}
 
 	return IRQ_HANDLED;
 }

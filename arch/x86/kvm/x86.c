@@ -10511,6 +10511,8 @@ int kvm_arch_irq_bypass_add_producer(struct irq_bypass_consumer *cons,
 					 prod->irq, irqfd->gsi, 1);
 	if (ret)
 		kvm_arch_end_assignment(irqfd->kvm);
+	else
+		printk("start!\n");
 	return ret;
 }
 
@@ -10534,8 +10536,10 @@ void kvm_arch_irq_bypass_del_producer(struct irq_bypass_consumer *cons,
 	if (ret)
 		printk(KERN_INFO "irq bypass consumer (token %p) unregistration"
 		       " fails: %d\n", irqfd->consumer.token, ret);
-	if (!ret)
+	if (!ret) {
+		printk("end!\n");
 		kvm_arch_end_assignment(irqfd->kvm);
+	}
 }
 
 int kvm_arch_update_irqfd_routing(struct kvm *kvm, unsigned int host_irq,
