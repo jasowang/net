@@ -226,8 +226,6 @@ static int kvm_vfio_set_group(struct kvm_device *dev, long attr, u64 arg)
 		list_add_tail(&kvg->node, &kv->group_list);
 		kvg->vfio_group = vfio_group;
 
-		kvm_arch_start_assignment(dev->kvm);
-
 		mutex_unlock(&kv->lock);
 
 		kvm_vfio_group_set_kvm(vfio_group, dev->kvm);
@@ -254,7 +252,6 @@ static int kvm_vfio_set_group(struct kvm_device *dev, long attr, u64 arg)
 				continue;
 
 			list_del(&kvg->node);
-			kvm_arch_end_assignment(dev->kvm);
 #ifdef CONFIG_SPAPR_TCE_IOMMU
 			kvm_spapr_tce_release_vfio_group(dev->kvm,
 							 kvg->vfio_group);
