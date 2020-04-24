@@ -99,12 +99,26 @@ static irqreturn_t vhost_vdpa_virtqueue_cb(void *private)
 	return IRQ_HANDLED;
 }
 
+static void vhost_vdpa_unset_vring_call(struct vhost_virtqueue *vq)
+{
+	struct vhost_call_ctx *call_ctx = &vq->call_ctx;
+
+	if (call_ctx->producer.token) {
+		irq_bypass_unregister_producer(&call_ctx->producer);
+		vhost_call_reset(call_ctx);
+	}
+}
+
 static void vhost_vdpa_reset(struct vhost_vdpa *v)
 {
 	struct vdpa_device *vdpa = v->vdpa;
 	const struct vdpa_config_ops *ops = vdpa->config;
+	int i;
 
 	ops->set_status(vdpa, 0);
+
+	for (i = 0; i < v->nvqs; i++)
+		vhost_vdpa_unset_vring_call(&v->vqs[i]);
 }
 
 static long vhost_vdpa_get_device_id(struct vhost_vdpa *v, u8 __user *argp)
@@ -286,12 +300,44 @@ static long vhost_vdpa_get_vring_num(struct vhost_vdpa *v, u16 __user *argp)
 	return 0;
 }
 
+static void vhost_vdpa_set_vring_call(struct vdpa_device *vdpa,
+				      struct vhost_virtqueue *vq, int idx)
+{
+	const struct vdpa_config_ops *ops = vdpa->config;
+	struct vhost_call_ctx *call_ctx = &vq->call_ctx;
+	struct vdpa_callback cb;
+	int irq, ret;
+
+	if (call_ctx->ctx) {
+		cb.callback = vhost_vdpa_virtqueue_cb;
+		cb.private = vq;
+	} else {
+		cb.callback = NULL;
+		cb.private = NULL;
+	}
+	ops->set_vq_cb(vdpa, idx, &cb);
+
+	if (!call_ctx->ctx || !ops->get_vq_irq)
+		return;
+
+	irq = ops->get_vq_irq(vdpa, idx);
+	if (irq == -1)
+		return;
+
+	call_ctx->producer.token = call_ctx->ctx;
+	call_ctx->producer.irq = irq;
+	ret = irq_bypass_register_producer(&call_ctx->producer);
+	if (unlikely(ret))
+		vq_err(vq,
+		"irq bypass producer (token %p registration fails: %d\n",
+		vq->call_ctx.producer.token, ret);
+}
+
 static long vhost_vdpa_vring_ioctl(struct vhost_vdpa *v, unsigned int cmd,
 				   void __user *argp)
 {
 	struct vdpa_device *vdpa = v->vdpa;
 	const struct vdpa_config_ops *ops = vdpa->config;
-	struct vdpa_callback cb;
 	struct vhost_virtqueue *vq;
 	struct vhost_vring_state s;
 	u8 status;
@@ -317,8 +363,15 @@ static long vhost_vdpa_vring_ioctl(struct vhost_vdpa *v, unsigned int cmd,
 		return 0;
 	}
 
-	if (cmd == VHOST_GET_VRING_BASE)
+
+	switch (cmd) {
+	case VHOST_GET_VRING_BASE:
 		vq->last_avail_idx = ops->get_vq_state(v->vdpa, idx);
+		break;
+	case  VHOST_SET_VRING_CALL:
+		vhost_vdpa_unset_vring_call(vq);
+		break;
+	}
 
 	r = vhost_vring_ioctl(&v->vdev, cmd, argp);
 	if (r)
@@ -339,14 +392,7 @@ static long vhost_vdpa_vring_ioctl(struct vhost_vdpa *v, unsigned int cmd,
 		break;
 
 	case VHOST_SET_VRING_CALL:
-		if (vq->call_ctx.ctx) {
-			cb.callback = vhost_vdpa_virtqueue_cb;
-			cb.private = vq;
-		} else {
-			cb.callback = NULL;
-			cb.private = NULL;
-		}
-		ops->set_vq_cb(vdpa, idx, &cb);
+		vhost_vdpa_set_vring_call(vdpa, vq, idx);
 		break;
 
 	case VHOST_SET_VRING_NUM:

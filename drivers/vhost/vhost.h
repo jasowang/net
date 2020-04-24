@@ -13,6 +13,7 @@
 #include <linux/virtio_ring.h>
 #include <linux/atomic.h>
 #include <linux/vhost_iotlb.h>
+#include <linux/irqbypass.h>
 
 struct vhost_work;
 typedef void (*vhost_work_fn_t)(struct vhost_work *work);
@@ -62,6 +63,7 @@ enum vhost_uaddr_type {
 
 struct vhost_call_ctx {
 	struct eventfd_ctx *ctx;
+	struct irq_bypass_producer producer;
 };
 
 /* The virtqueue structure describes a queue attached to a device. */
