@@ -171,6 +171,20 @@ static inline __virtio16 *virtio_net_rsc_ext_num_dupacks(
     return &hdr->csum_offset;
 }
 
+#else
+
+static inline __virtio16 *virtio_net_rsc_ext_num_packets(
+    struct virtio_net_hdr *hdr)
+{
+    return &hdr->segments;
+}
+
+static inline __virtio16 *virtio_net_rsc_ext_num_dupacks(
+    struct virtio_net_hdr *hdr)
+{
+    return &hdr->dup_acks;
+}
+
 #endif
 
 static VirtIOFeature feature_sizes[] = {
