@@ -13,7 +13,12 @@
 #include <linux/dma-mapping.h>
 #include <linux/kmsan.h>
 #include <linux/spinlock.h>
+#include <linux/ptr_ring.h>
 #include <xen/xen.h>
+
+#define void_printk(...) do{} while (0)
+
+#define DBG_FUNC(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
@@ -113,6 +118,8 @@ struct vring_virtqueue_split {
 	 */
 	u32 vring_align;
 	bool may_reduce_num;
+
+	struct ptr_ring free_ring;
 };
 
 struct vring_virtqueue_packed {
@@ -512,7 +519,25 @@ static struct vring_desc *alloc_indirect_split(struct virtqueue *_vq,
 	return desc;
 }
 
-static inline unsigned int virtqueue_add_desc_split(struct virtqueue *vq,
+static void recycle_id(struct vring_virtqueue *vq, unsigned int id)
+{
+	struct vring_virtqueue_split *vring_split = &vq->split;
+	BUG_ON(__ptr_ring_produce(&vring_split->free_ring, (void *)(uintptr_t)(id + 1)));
+	DBG_FUNC("vq %llx produce %x\n", vring_split, id);
+}
+
+static unsigned int get_id(struct vring_virtqueue *vq)
+{
+	struct vring_virtqueue_split *vring_split = &vq->split;
+	unsigned int id;
+
+	id = (unsigned int)(uintptr_t)__ptr_ring_consume(&vring_split->free_ring);
+	DBG_FUNC("vq %llx consume %x\n", vring_split, id - 1);
+
+	return id - 1;
+}
+
+static inline unsigned int virtqueue_add_desc_split(struct virtqueue *_vq,
 						    struct vring_desc *desc,
 						    unsigned int i,
 						    dma_addr_t addr,
@@ -520,23 +545,32 @@ static inline unsigned int virtqueue_add_desc_split(struct virtqueue *vq,
 						    u16 flags,
 						    bool indirect)
 {
-	struct vring_virtqueue *vring = to_vvq(vq);
-	struct vring_desc_extra *extra = vring->split.desc_extra;
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	struct vring_desc_extra *extra = vq->split.desc_extra;
 	u16 next;
 
-	desc[i].flags = cpu_to_virtio16(vq->vdev, flags);
-	desc[i].addr = cpu_to_virtio64(vq->vdev, addr);
-	desc[i].len = cpu_to_virtio32(vq->vdev, len);
+	desc[i].flags = cpu_to_virtio16(_vq->vdev, flags);
+	desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+	desc[i].len = cpu_to_virtio32(_vq->vdev, len);
 
 	if (!indirect) {
-		next = extra[i].next;
-		desc[i].next = cpu_to_virtio16(vq->vdev, next);
+		if (flags & VRING_DESC_F_NEXT)
+			next = get_id(vq);
+		else
+			next = vq->split.vring.num;
+
+		desc[i].next = cpu_to_virtio16(_vq->vdev, next);
 
 		extra[i].addr = addr;
 		extra[i].len = len;
 		extra[i].flags = flags;
+		extra[i].next = next;
 	} else
-		next = virtio16_to_cpu(vq->vdev, desc[i].next);
+		next = virtio16_to_cpu(_vq->vdev, desc[i].next);
+
+	DBG_FUNC("add desc index %x next %x next_flag %x indirect %x\n",
+		 i, next, flags & VRING_DESC_F_NEXT,
+		 flags & VRING_DESC_F_INDIRECT);
 
 	return next;
 }
@@ -554,7 +588,7 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	struct scatterlist *sg;
 	struct vring_desc *desc;
 	unsigned int i, n, c, avail, descs_used, err_idx;
-	int head;
+	unsigned int head;
 	bool indirect;
 
 	START_USE(vq);
@@ -583,13 +617,10 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	if (desc) {
 		/* Use a single buffer which doesn't continue */
 		indirect = true;
-		/* Set up rest to use this indirect table. */
-		i = 0;
 		descs_used = 1;
 	} else {
 		indirect = false;
 		desc = vq->split.vring.desc;
-		i = head;
 		descs_used = total_sg;
 	}
 
@@ -604,18 +635,32 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 		if (indirect)
 			kfree(desc);
 		END_USE(vq);
+		DBG_FUNC("vq %llx no space\n", &vq->split);
 		return -ENOSPC;
 	}
 
+	DBG_FUNC("vq %llx add start!\n", &vq->split);
+
 	c = 0;
+
+	head = get_id(vq);
+
+	if (indirect)
+		i = 0;
+	else
+		i = head;
+
 	for (n = 0; n < out_sgs; n++) {
 		sg = sgs[n];
 		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
 			dma_addr_t addr;
 			u16 flags = 0;
 
-			if (vring_map_one_sg(vq, sg, DMA_TO_DEVICE, &addr))
+			if (vring_map_one_sg(vq, sg, DMA_TO_DEVICE, &addr)) {
+				DBG_FUNC("vq %llx out sg[%x] mapping fail\n",
+					 &vq->split, n);
 				goto unmap_release;
+			}
 
 			if (++c != total_sg)
 				flags = VRING_DESC_F_NEXT;
@@ -632,8 +677,11 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			dma_addr_t addr;
 			u16 flags = VRING_DESC_F_WRITE;
 
-			if (vring_map_one_sg(vq, sg, DMA_FROM_DEVICE, &addr))
+			if (vring_map_one_sg(vq, sg, DMA_FROM_DEVICE, &addr)) {
+				DBG_FUNC("vq %llx out sg[%x] mapping fail\n",
+					 &vq->split, n);
 				goto unmap_release;
+			}
 
 			if (++c != total_sg)
 				flags |= VRING_DESC_F_NEXT;
@@ -653,6 +701,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			vq, desc, total_sg * sizeof(struct vring_desc),
 			DMA_TO_DEVICE);
 		if (vring_mapping_error(vq, addr)) {
+			DBG_FUNC("vq %llx indirect mapping fail\n",
+				 &vq->split);
+
 			if (vq->premapped)
 				goto free_indirect;
 
@@ -669,11 +720,8 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	/* We're using some buffers from the free list. */
 	vq->vq.num_free -= descs_used;
 
-	/* Update free pointer */
-	if (indirect)
-		vq->free_head = vq->split.desc_extra[head].next;
-	else
-		vq->free_head = i;
+	DBG_FUNC("vq %llx descs_used % x num_free after add %x\n",
+		 &vq->split, descs_used, vq->vq.num_free);
 
 	/* Store token and indirect buffer state. */
 	vq->split.desc_state[head].data = data;
@@ -703,6 +751,8 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	if (unlikely(vq->num_added == (1 << 16) - 1))
 		virtqueue_kick(_vq);
 
+	DBG_FUNC("vq %llx add end\n", &vq->split);
+
 	return 0;
 
 unmap_release:
@@ -719,9 +769,13 @@ unmap_release:
 		if (indirect) {
 			vring_unmap_one_split_indirect(vq, &desc[i]);
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
-		} else
+		} else {
 			i = vring_unmap_one_split(vq, i);
+			recycle_id(vq, i);
+		}
 	}
+
+	recycle_id(vq, head);
 
 free_indirect:
 	if (indirect)
@@ -774,18 +828,24 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 	/* Put back on free list: unmap first-level descriptors and find end */
 	i = head;
 
+	DBG_FUNC("vq %llx before recycle num_free is %d\n",
+		 &vq->split, vq->vq.num_free);
+
 	while (vq->split.vring.desc[i].flags & nextflag) {
 		vring_unmap_one_split(vq, i);
+		recycle_id(vq, i);
 		i = vq->split.desc_extra[i].next;
 		vq->vq.num_free++;
 	}
 
 	vring_unmap_one_split(vq, i);
-	vq->split.desc_extra[i].next = vq->free_head;
-	vq->free_head = head;
+	recycle_id(vq, i);
 
 	/* Plus final descriptor */
 	vq->vq.num_free++;
+
+	DBG_FUNC("vq %llx after detach num_free is %d\n",
+		 &vq->split, READ_ONCE(vq->vq.num_free));
 
 	if (vq->indirect) {
 		struct vring_desc *indir_desc =
@@ -1043,10 +1103,14 @@ static void virtqueue_reinit_split(struct vring_virtqueue *vq)
 static void virtqueue_vring_attach_split(struct vring_virtqueue *vq,
 					 struct vring_virtqueue_split *vring_split)
 {
+	unsigned int i;
+
 	vq->split = *vring_split;
 
 	/* Put everything in free lists. */
-	vq->free_head = 0;
+	for (i = 0; i < vring_split->vring.num; i++) {
+		recycle_id(vq, i);
+	}
 }
 
 static int vring_alloc_state_extra_split(struct vring_virtqueue_split *vring_split)
@@ -1054,6 +1118,7 @@ static int vring_alloc_state_extra_split(struct vring_virtqueue_split *vring_spl
 	struct vring_desc_state_split *state;
 	struct vring_desc_extra *extra;
 	u32 num = vring_split->vring.num;
+	unsigned int i = 0;
 
 	state = kmalloc_array(num, sizeof(struct vring_desc_state_split), GFP_KERNEL);
 	if (!state)
@@ -1063,12 +1128,26 @@ static int vring_alloc_state_extra_split(struct vring_virtqueue_split *vring_spl
 	if (!extra)
 		goto err_extra;
 
+	if (ptr_ring_init(&vring_split->free_ring, num, GFP_KERNEL))
+		goto err_ring;
+
+	for (i = 0; i < num; i ++)
+		BUG_ON(ptr_ring_produce(&vring_split->free_ring, (void *)(uintptr_t)1));
+
+	ptr_ring_consume(&vring_split->free_ring);
+	BUG_ON(ptr_ring_produce(&vring_split->free_ring, (void *)(uintptr_t)1));
+
+	for (i = 0; i < num; i++)
+		ptr_ring_consume(&vring_split->free_ring);
+
 	memset(state, 0, num * sizeof(struct vring_desc_state_split));
 
 	vring_split->desc_state = state;
 	vring_split->desc_extra = extra;
 	return 0;
 
+err_ring:
+	kfree(extra);
 err_extra:
 	kfree(state);
 err_state:
@@ -1083,6 +1162,7 @@ static void vring_free_split(struct vring_virtqueue_split *vring_split,
 			 vring_split->queue_dma_addr,
 			 dma_dev);
 
+	ptr_ring_cleanup(&vring_split->free_ring, NULL);
 	kfree(vring_split->desc_state);
 	kfree(vring_split->desc_extra);
 }
@@ -1186,6 +1266,7 @@ static int virtqueue_resize_split(struct virtqueue *_vq, u32 num)
 	if (err)
 		goto err;
 
+	// FIXME: check this
 	err = vring_alloc_state_extra_split(&vring_split);
 	if (err)
 		goto err_state_extra;
