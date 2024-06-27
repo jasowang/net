@@ -30,8 +30,7 @@
 struct ptr_ring {
 	int producer ____cacheline_aligned_in_smp;
 	spinlock_t producer_lock;
-	int consumer_head ____cacheline_aligned_in_smp; /* next valid entry */
-	int consumer_tail; /* next entry to invalidate */
+	int consumer ____cacheline_aligned_in_smp; /* next valid entry */
 	spinlock_t consumer_lock;
 	/* Shared consumer/producer data */
 	/* Read-only by both the producer and the consumer */
@@ -169,7 +168,7 @@ static inline int ptr_ring_produce_bh(struct ptr_ring *r, void *ptr)
 static inline void *__ptr_ring_peek(struct ptr_ring *r)
 {
 	if (likely(r->size))
-		return READ_ONCE(r->queue[r->consumer_head]);
+		return READ_ONCE(r->queue[r->consumer]);
 	return NULL;
 }
 
@@ -194,7 +193,7 @@ static inline void *__ptr_ring_peek(struct ptr_ring *r)
 static inline bool __ptr_ring_empty(struct ptr_ring *r)
 {
 	if (likely(r->size))
-		return !r->queue[READ_ONCE(r->consumer_head)];
+		return !r->queue[READ_ONCE(r->consumer)];
 	return true;
 }
 
@@ -246,46 +245,12 @@ static inline bool ptr_ring_empty_bh(struct ptr_ring *r)
 /* Must only be called after __ptr_ring_peek returned !NULL */
 static inline void __ptr_ring_discard_one(struct ptr_ring *r)
 {
-	/* Fundamentally, what we want to do is update consumer
-	 * index and zero out the entry so producer can reuse it.
-	 * Doing it naively at each consume would be as simple as:
-	 *       consumer = r->consumer;
-	 *       r->queue[consumer++] = NULL;
-	 *       if (unlikely(consumer >= r->size))
-	 *               consumer = 0;
-	 *       r->consumer = consumer;
-	 * but that is suboptimal when the ring is full as producer is writing
-	 * out new entries in the same cache line.  Defer these updates until a
-	 * batch of entries has been consumed.
-	 */
-	/* Note: we must keep consumer_head valid at all times for __ptr_ring_empty
-	 * to work correctly.
-	 */
-	int consumer_head = r->consumer_head;
-	int head = consumer_head++;
+	int consumer = r->consumer;
 
-	/* Once we have processed enough entries invalidate them in
-	 * the ring all at once so producer can reuse their space in the ring.
-	 * We also do this when we reach end of the ring - not mandatory
-	 * but helps keep the implementation simple.
-	 */
-	if (unlikely(consumer_head - r->consumer_tail >= r->batch ||
-		     consumer_head >= r->size)) {
-		/* Zero out entries in the reverse order: this way we touch the
-		 * cache line that producer might currently be reading the last;
-		 * producer won't make progress and touch other cache lines
-		 * besides the first one until we write out all entries.
-		 */
-		while (likely(head >= r->consumer_tail))
-			r->queue[head--] = NULL;
-		r->consumer_tail = consumer_head;
-	}
-	if (unlikely(consumer_head >= r->size)) {
-		consumer_head = 0;
-		r->consumer_tail = 0;
-	}
-	/* matching READ_ONCE in __ptr_ring_empty for lockless tests */
-	WRITE_ONCE(r->consumer_head, consumer_head);
+	WRITE_ONCE(r->queue[consumer++], NULL);
+	if (unlikely(consumer >= r->size))
+		consumer = 0;
+	WRITE_ONCE(r->consumer, consumer);
 }
 
 static inline void *__ptr_ring_consume(struct ptr_ring *r)
@@ -491,7 +456,7 @@ static inline int ptr_ring_init_noprof(struct ptr_ring *r, int size, gfp_t gfp)
 		return -ENOMEM;
 
 	__ptr_ring_set_size(r, size);
-	r->producer = r->consumer_head = r->consumer_tail = 0;
+	r->producer = r->consumer = 0;
 	spin_lock_init(&r->producer_lock);
 	spin_lock_init(&r->consumer_lock);
 
@@ -522,20 +487,11 @@ static inline void ptr_ring_unconsume(struct ptr_ring *r, void **batch, int n,
 		goto done;
 
 	/*
-	 * Clean out buffered entries (for simplicity). This way following code
-	 * can test entries for NULL and if not assume they are valid.
-	 */
-	head = r->consumer_head - 1;
-	while (likely(head >= r->consumer_tail))
-		r->queue[head--] = NULL;
-	r->consumer_tail = r->consumer_head;
-
-	/*
 	 * Go over entries in batch, start moving head back and copy entries.
 	 * Stop when we run into previously unconsumed entries.
 	 */
 	while (n) {
-		head = r->consumer_head - 1;
+		head = r->consumer - 1;
 		if (head < 0)
 			head = r->size - 1;
 		if (r->queue[head]) {
@@ -543,9 +499,8 @@ static inline void ptr_ring_unconsume(struct ptr_ring *r, void **batch, int n,
 			goto done;
 		}
 		r->queue[head] = batch[--n];
-		r->consumer_tail = head;
 		/* matching READ_ONCE in __ptr_ring_empty for lockless tests */
-		WRITE_ONCE(r->consumer_head, head);
+		WRITE_ONCE(r->consumer, head);
 	}
 
 done:
@@ -574,8 +529,7 @@ static inline void **__ptr_ring_swap_queue(struct ptr_ring *r, void **queue,
 		producer = 0;
 	__ptr_ring_set_size(r, size);
 	r->producer = producer;
-	r->consumer_head = 0;
-	r->consumer_tail = 0;
+	r->consumer = 0;
 	old = r->queue;
 	r->queue = queue;
 
