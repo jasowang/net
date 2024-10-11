@@ -14,6 +14,8 @@
 #include <linux/iova.h>
 #include <linux/dma-mapping.h>
 #include <linux/vhost_iotlb.h>
+#include <linux/mm.h>
+#include <linux/mmu_context.h>
 
 #define IOVA_START_PFN 1
 
@@ -24,6 +26,7 @@ struct vduse_bounce_map {
 	struct page *user_bounce_page;
 	enum dma_data_direction dir;
 	u64 orig_phys;
+	u64 addr;
 };
 
 struct vduse_iova_domain {
@@ -39,6 +42,7 @@ struct vduse_iova_domain {
 	struct file *file;
 	bool user_bounce_pages;
 	rwlock_t bounce_lock;
+	struct vm_area_struct *vma;
 };
 
 int vduse_domain_set_map(struct vduse_iova_domain *domain,
