@@ -19,7 +19,7 @@
 
 #define void_printk(...) do{} while (0)
 
-#define DBG_FUNC(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
+#define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
 
 static bool iova_is_zc(struct vduse_iova_domain *domain, u64 iova)
 {
@@ -114,6 +114,7 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 					u64 iova, u64 size, u64 paddr)
 {
 	struct vduse_bounce_map *map;
+	struct vm_area_struct *vma = domain->vma;
 	u64 last = iova + size - 1;
 
 	while (iova <= last) {
@@ -122,6 +123,19 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 			map->bounce_page = alloc_page(GFP_ATOMIC | __GFP_ZERO);
 			if (!map->bounce_page)
 				return -ENOMEM;
+		}
+		if (iova_is_zc(domain, iova)) {
+			if (domain->vma) {
+				map->addr = domain->vma->vm_start + iova;
+				vmf_insert_pfn(domain->vma, map->addr,
+					       paddr >> PAGE_SHIFT);
+				DBG_FUNC("expected addr %llx "
+					 "vm_start %llx "
+					 "iova %llx\n",
+					 map->addr,
+					 domain->vma->vm_start,
+					 iova);
+			}
 		}
 		map->orig_phys = paddr;
 		map->dir = dir;
@@ -259,12 +273,18 @@ vduse_domain_get_bounce_page(struct vm_fault *vmf,
 			 "orig_phys %llx to_dev %llx\n",
 			 vmf->address, iova, map->orig_phys,
 			 map->dir == DMA_TO_DEVICE);
-	else
+	else {
 		DBG_FUNC("fault addr %llx "
 			 "map zc page for iova %llx "
 			 "orig_phys %llx to_dev %llx\n",
 			 vmf->address, iova, map->orig_phys,
 			 map->dir == DMA_TO_DEVICE);
+		if (vmf->address != map->addr) {
+			DBG_FUNC("mismatch fault addr %llx map "
+				 "addr %llx\n",
+				 vmf->address, map->addr);
+		}
+	}
 
 	if (iova_is_zc(domain, iova))
 		page = pfn_to_page(map->orig_phys >> PAGE_SHIFT);
@@ -622,9 +642,11 @@ static int vduse_domain_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct vduse_iova_domain *domain = file->private_data;
 
-	vm_flags_set(vma, VM_DONTDUMP | VM_DONTEXPAND);
+	vm_flags_set(vma, VM_DONTDUMP | VM_DONTEXPAND | VM_MIXEDMAP);
 	vma->vm_private_data = domain;
 	vma->vm_ops = &vduse_domain_mmap_ops;
+
+	domain->vma = vma;
 
 	return 0;
 }
@@ -665,7 +687,7 @@ vduse_domain_create(unsigned long iova_limit, size_t bounce_size)
 	struct file *file;
 	struct vduse_bounce_map *map;
 	unsigned long pfn, bounce_pfns;
-	int ret;
+	int ret, err;
 
 	bounce_pfns = PAGE_ALIGN(bounce_size) >> PAGE_SHIFT;
 	if (iova_limit <= bounce_size)
