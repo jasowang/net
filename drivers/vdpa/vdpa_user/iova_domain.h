@@ -21,11 +21,13 @@
 
 struct vduse_bounce_map {
 	struct page *bounce_page;
+	enum dma_data_direction dir;
 	u64 orig_phys;
 };
 
 struct vduse_iova_domain {
 	struct iova_domain stream_iovad;
+	struct iova_domain zc_iovad;
 	struct iova_domain consistent_iovad;
 	struct vduse_bounce_map *bounce_maps;
 	size_t bounce_size;
