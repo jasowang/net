@@ -118,7 +118,7 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 
 	while (iova <= last) {
 		map = &domain->bounce_maps[iova >> PAGE_SHIFT];
-		if (!map->bounce_page) {
+		if (!iova_is_zc(domain, iova) && !map->bounce_page) {
 			map->bounce_page = alloc_page(GFP_ATOMIC | __GFP_ZERO);
 			if (!map->bounce_page)
 				return -ENOMEM;
@@ -143,11 +143,11 @@ static void vduse_domain_unmap_bounce_page(struct vduse_iova_domain *domain,
 		iova += PAGE_SIZE;
 		if (map->bounce_page &&
 		    !page_mapped(map->bounce_page)) {
-			trace_printk("page unmapped for iova %llx "
-				     "size %llx zc %x to_dev %x\n",
-				     iova, size,
-				     iova_is_zc(domain, iova),
-				     map->dir == DMA_TO_DEVICE);
+			DBG_FUNC("page unmapped for iova %llx "
+				 "size %llx zc %x to_dev %x\n",
+				 iova, size,
+				 iova_is_zc(domain, iova),
+				 map->dir == DMA_TO_DEVICE);
 		}
 	}
 }
@@ -187,6 +187,11 @@ static void vduse_domain_bounce(struct vduse_iova_domain *domain,
 
 	if (iova >= domain->bounce_size)
 		return;
+
+	if (iova_is_zc(domain, iova)) {
+		DBG_FUNC("skip bouncing for zc iova %llx\n", iova);
+		return;
+	}
 
 	while (size) {
 		map = &domain->bounce_maps[iova >> PAGE_SHIFT];
@@ -235,8 +240,18 @@ vduse_domain_get_bounce_page(struct vm_fault *vmf,
 
 	read_lock(&domain->bounce_lock);
 	map = &domain->bounce_maps[iova >> PAGE_SHIFT];
-	if (domain->user_bounce_pages || !map->bounce_page)
+	if (domain->user_bounce_pages ||
+	    (!iova_is_zc(domain, iova) && !map->bounce_page)) {
+		DBG_FUNC("BUG: unmap no bounce page "
+			 "iova %llx orig_phys %llx "
+			 "to_dev %x\n",
+			 iova, map->orig_phys,
+			 map->dir == DMA_TO_DEVICE);
 		goto out;
+	}
+
+	DBG_FUNC("fault addr %llx is zc %x\n", iova,
+		     iova_is_zc(domain, iova));
 
 	if (!iova_is_zc(domain, iova))
 		DBG_FUNC("fault addr %llx "
@@ -246,12 +261,16 @@ vduse_domain_get_bounce_page(struct vm_fault *vmf,
 			 map->dir == DMA_TO_DEVICE);
 	else
 		DBG_FUNC("fault addr %llx "
-			 "map bounce page for iova %llx "
+			 "map zc page for iova %llx "
 			 "orig_phys %llx to_dev %llx\n",
 			 vmf->address, iova, map->orig_phys,
 			 map->dir == DMA_TO_DEVICE);
 
-	page = map->bounce_page;
+	if (iova_is_zc(domain, iova))
+		page = pfn_to_page(map->orig_phys >> PAGE_SHIFT);
+	else
+		page = map->bounce_page;
+
 	get_page(page);
 out:
 	read_unlock(&domain->bounce_lock);
@@ -576,9 +595,9 @@ static vm_fault_t vduse_domain_mmap_fault(struct vm_fault *vmf)
 		return VM_FAULT_SIGBUS;
 
 	if (iova != vmf->address - vmf->vma->vm_start) {
-		trace_printk("iova %llx, vmf->address %llx, "
-			     "vmf->vma->vm_start %llx\n",
-			     iova, vmf->address, vmf->vma->vm_start);
+		DBG_FUNC("iova %llx, vmf->address %llx, "
+			 "vmf->vma->vm_start %llx\n",
+			 iova, vmf->address, vmf->vma->vm_start);
 		dump_stack();
 	}
 
