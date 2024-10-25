@@ -455,7 +455,7 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 	struct iova_domain *iovad;
 	dma_addr_t iova;
 
-	if (offset == 0 && !(size & ~PAGE_MASK)) {
+	if (dir == DMA_TO_DEVICE && offset == 0 && !(size & ~PAGE_MASK)) {
 		iovad = &domain->zc_iovad;
 		limit = domain->bounce_size - 1;
 	} else {
