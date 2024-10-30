@@ -522,7 +522,7 @@ static struct vring_desc *alloc_indirect_split(struct virtqueue *_vq,
 static void recycle_id(struct vring_virtqueue *vq, unsigned int id)
 {
 	struct vring_virtqueue_split *vring_split = &vq->split;
-	BUG_ON(__ptr_ring_produce(&vring_split->free_ring, (void *)(uintptr_t)(id + 1)));
+	BUG_ON(ptr_ring_produce(&vring_split->free_ring, (void *)(uintptr_t)(id + 1)));
 	DBG_FUNC("vq %llx produce %x\n", vring_split, id);
 }
 
@@ -531,7 +531,7 @@ static unsigned int get_id(struct vring_virtqueue *vq)
 	struct vring_virtqueue_split *vring_split = &vq->split;
 	unsigned int id;
 
-	id = (unsigned int)(uintptr_t)__ptr_ring_consume(&vring_split->free_ring);
+	id = (unsigned int)(uintptr_t)ptr_ring_consume(&vring_split->free_ring);
 	DBG_FUNC("vq %llx consume %x\n", vring_split, id - 1);
 
 	return id - 1;
