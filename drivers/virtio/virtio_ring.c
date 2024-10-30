@@ -18,7 +18,7 @@
 
 #define void_printk(...) do{} while (0)
 
-#define DBG_FUNC(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
+#define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
