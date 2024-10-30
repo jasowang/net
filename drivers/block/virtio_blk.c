@@ -357,7 +357,8 @@ static void virtblk_done(struct virtqueue *vq)
 	unsigned long flags;
 	unsigned int len;
 
-	spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
+//	spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
+	local_irq_save(flags);
 	do {
 		virtqueue_disable_cb(vq);
 		while ((vbr = virtqueue_get_buf(vblk->vqs[qid].vq, &len)) != NULL) {
@@ -372,7 +373,8 @@ static void virtblk_done(struct virtqueue *vq)
 	/* In case queue is stopped waiting for more buffers. */
 	if (req_done)
 		blk_mq_start_stopped_hw_queues(vblk->disk->queue, true);
-	spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+//	spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+	local_irq_restore(flags);
 }
 
 static void virtio_commit_rqs(struct blk_mq_hw_ctx *hctx)
@@ -440,7 +442,8 @@ static blk_status_t virtio_queue_rq(struct blk_mq_hw_ctx *hctx,
 	if (unlikely(status))
 		return status;
 
-	spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
+	//spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
+	local_irq_save(flags);
 	err = virtblk_add_req(vblk->vqs[qid].vq, vbr);
 	if (err) {
 		virtqueue_kick(vblk->vqs[qid].vq);
@@ -449,14 +452,16 @@ static blk_status_t virtio_queue_rq(struct blk_mq_hw_ctx *hctx,
 		 */
 		if (err == -ENOSPC)
 			blk_mq_stop_hw_queue(hctx);
-		spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+		//spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+		local_irq_restore(flags);
 		virtblk_unmap_data(req, vbr);
 		return virtblk_fail_to_queue(req, err);
 	}
 
 	if (bd->last && virtqueue_kick_prepare(vblk->vqs[qid].vq))
 		notify = true;
-	spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+	//spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+	local_irq_restore(flags);
 
 	if (notify)
 		virtqueue_notify(vblk->vqs[qid].vq);
@@ -478,7 +483,8 @@ static bool virtblk_add_req_batch(struct virtio_blk_vq *vq,
 	int err;
 	bool kick;
 
-	spin_lock_irqsave(&vq->lock, flags);
+//	spin_lock_irqsave(&vq->lock, flags);
+	local_irq_save(flags);
 
 	while (!rq_list_empty(*rqlist)) {
 		struct request *req = rq_list_pop(rqlist);
@@ -493,7 +499,8 @@ static bool virtblk_add_req_batch(struct virtio_blk_vq *vq,
 	}
 
 	kick = virtqueue_kick_prepare(vq->vq);
-	spin_unlock_irqrestore(&vq->lock, flags);
+//	spin_unlock_irqrestore(&vq->lock, flags);
+	local_irq_restore(flags);
 
 	return kick;
 }
@@ -1210,7 +1217,8 @@ static int virtblk_poll(struct blk_mq_hw_ctx *hctx, struct io_comp_batch *iob)
 	unsigned int len;
 	int found = 0;
 
-	spin_lock_irqsave(&vq->lock, flags);
+//	spin_lock_irqsave(&vq->lock, flags);
+	local_irq_save(flags);
 
 	while ((vbr = virtqueue_get_buf(vq->vq, &len)) != NULL) {
 		struct request *req = blk_mq_rq_from_pdu(vbr);
@@ -1225,7 +1233,8 @@ static int virtblk_poll(struct blk_mq_hw_ctx *hctx, struct io_comp_batch *iob)
 	if (found)
 		blk_mq_start_stopped_hw_queues(vblk->disk->queue, true);
 
-	spin_unlock_irqrestore(&vq->lock, flags);
+	local_irq_restore(flags);
+//	spin_unlock_irqrestore(&vq->lock, flags);
 
 	return found;
 }
