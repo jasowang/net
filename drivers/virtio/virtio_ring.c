@@ -641,6 +641,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 
 	DBG_FUNC("vq %llx add start!\n", &vq->split);
 
+	/* Make sure id is read after num_free */
+	smp_rmb();
+
 	c = 0;
 
 	head = get_id(vq);
@@ -819,7 +822,7 @@ static bool virtqueue_kick_prepare_split(struct virtqueue *_vq)
 static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 			     void **ctx)
 {
-	unsigned int i, j;
+	unsigned int i, j, num_free;
 	__virtio16 nextflag = cpu_to_virtio16(vq->vq.vdev, VRING_DESC_F_NEXT);
 
 	/* Clear data ptr. */
@@ -835,14 +838,18 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 		vring_unmap_one_split(vq, i);
 		recycle_id(vq, i);
 		i = vq->split.desc_extra[i].next;
-		vq->vq.num_free++;
+		num_free++;
 	}
 
 	vring_unmap_one_split(vq, i);
 	recycle_id(vq, i);
 
+	/* Make sure num_free is updated after id */
+	smp_wmb();
+
 	/* Plus final descriptor */
-	vq->vq.num_free++;
+	num_free++;
+	vq->vq.num_free += num_free;
 
 	DBG_FUNC("vq %llx after detach num_free is %d\n",
 		 &vq->split, READ_ONCE(vq->vq.num_free));
