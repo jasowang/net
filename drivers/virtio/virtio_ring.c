@@ -3154,6 +3154,35 @@ void virtqueue_dma_unmap_single_attrs(struct virtqueue *_vq, dma_addr_t addr,
 }
 EXPORT_SYMBOL_GPL(virtqueue_dma_unmap_single_attrs);
 
+int virtqueue_dma_map_sg_attrs(struct virtqueue *_vq,
+			       struct scatterlist *sg, int nents,
+			       enum dma_data_direction dir, unsigned long attrs)
+
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+
+	if (!vq->use_dma_api)
+		return nents;
+
+	return dma_map_sg_attrs(vring_dma_dev(vq), sg, nents, dir, attrs);
+}
+EXPORT_SYMBOL_GPL(virtqueue_dma_map_sg_attrs);
+
+void virtqueue_dma_unmap_sg_attrs(struct virtqueue *_vq,
+				  struct scatterlist *sg, int nents,
+				  enum dma_data_direction dir, unsigned long attrs)
+
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+
+	if (!vq->use_dma_api)
+		return;
+
+	dma_unmap_sg_attrs(vring_dma_dev(vq), sg, nents, dir, attrs);
+}
+EXPORT_SYMBOL_GPL(virtqueue_dma_unmap_sg_attrs);
+
+
 /**
  * virtqueue_dma_mapping_error - check dma address
  * @_vq: the struct virtqueue we're talking about.
