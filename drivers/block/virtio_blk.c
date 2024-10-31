@@ -31,6 +31,10 @@
 #define VIRTIO_BLK_INLINE_SG_CNT	2
 #endif
 
+#define void_printk(...) do{} while (0)
+
+#define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
+
 static unsigned int num_request_queues;
 module_param(num_request_queues, uint, 0644);
 MODULE_PARM_DESC(num_request_queues,
@@ -107,6 +111,9 @@ struct virtblk_req {
 
 	size_t in_hdr_len;
 
+	struct scatterlist in_sg;
+	struct scatterlist out_sg;
+
 	struct sg_table sg_table;
 	struct scatterlist sg[];
 };
@@ -139,11 +146,10 @@ static inline struct virtio_blk_vq *get_virtio_blk_vq(struct blk_mq_hw_ctx *hctx
 
 static int virtblk_add_req(struct virtqueue *vq, struct virtblk_req *vbr)
 {
-	struct scatterlist out_hdr, in_hdr, *sgs[3];
+	struct scatterlist *sgs[3];
 	unsigned int num_out = 0, num_in = 0;
 
-	sg_init_one(&out_hdr, &vbr->out_hdr, sizeof(vbr->out_hdr));
-	sgs[num_out++] = &out_hdr;
+	sgs[num_out++] = &vbr->out_sg;
 
 	if (vbr->sg_table.nents) {
 		if (vbr->out_hdr.type & cpu_to_virtio32(vq->vdev, VIRTIO_BLK_T_OUT))
@@ -152,8 +158,7 @@ static int virtblk_add_req(struct virtqueue *vq, struct virtblk_req *vbr)
 			sgs[num_out + num_in++] = vbr->sg_table.sgl;
 	}
 
-	sg_init_one(&in_hdr, &vbr->in_hdr.status, vbr->in_hdr_len);
-	sgs[num_out + num_in++] = &in_hdr;
+	sgs[num_out + num_in++] = &vbr->in_sg;
 
 	return virtqueue_add_sgs(vq, sgs, num_out, num_in, vbr, GFP_ATOMIC);
 }
@@ -206,15 +211,60 @@ static int virtblk_setup_discard_write_zeroes_erase(struct request *req, bool un
 
 static void virtblk_unmap_data(struct request *req, struct virtblk_req *vbr)
 {
-	if (blk_rq_nr_phys_segments(req))
+	int dir = rq_data_dir(req) == READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
+	struct virtio_blk *vblk = req->mq_hctx->queue->queuedata;
+	int qid = req->mq_hctx->queue_num;
+	struct virtqueue *vq = vblk->vqs[qid].vq;
+
+	DBG_FUNC("unmap in_sg %llx\n", sg_dma_address(&vbr->in_sg));
+	virtqueue_dma_unmap_single_attrs(vq, sg_dma_address(&vbr->in_sg),
+					 vbr->in_hdr_len, DMA_FROM_DEVICE, 0);
+	DBG_FUNC("unmap out_sg %llx\n", sg_dma_address(&vbr->out_sg));
+	virtqueue_dma_unmap_single_attrs(vq, sg_dma_address(&vbr->out_sg),
+					 sizeof(vbr->out_hdr), DMA_TO_DEVICE, 0);
+
+	if (blk_rq_nr_phys_segments(req)) {
+		DBG_FUNC("unmap nents %llx\n", vbr->sg_table.nents);
+		virtqueue_dma_unmap_sg_attrs(vq, vbr->sg_table.sgl,
+					     vbr->sg_table.nents,
+					     dir, 0);
 		sg_free_table_chained(&vbr->sg_table,
 				      VIRTIO_BLK_INLINE_SG_CNT);
+	}
 }
 
-static int virtblk_map_data(struct blk_mq_hw_ctx *hctx, struct request *req,
-		struct virtblk_req *vbr)
+static int virtblk_map_data(struct virtio_blk *vblk,
+			    struct blk_mq_hw_ctx *hctx,
+			    struct request *req,
+			    struct virtblk_req *vbr)
 {
-	int err;
+	int dir = rq_data_dir(req) == READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
+	int qid = hctx->queue_num;
+	struct virtqueue *vq = vblk->vqs[qid].vq;
+	dma_addr_t addr;
+	int err, nents;
+
+	sg_init_one(&vbr->out_sg, &vbr->out_hdr, sizeof(vbr->out_hdr));
+	addr = virtqueue_dma_map_single_attrs(vq, &vbr->out_hdr,
+					      sizeof(vbr->out_hdr),
+					      DMA_TO_DEVICE, 0);
+	if (virtqueue_dma_mapping_error(vq, addr))
+		return -ENOMEM;
+
+	DBG_FUNC("map out_hdr to %llx\n", addr);
+
+	sg_dma_address(&vbr->out_sg) = addr;
+
+	sg_init_one(&vbr->in_sg, &vbr->in_hdr.status, vbr->in_hdr_len);
+	addr = virtqueue_dma_map_single_attrs(vq, &vbr->in_hdr.status,
+					      vbr->in_hdr_len,
+					      DMA_FROM_DEVICE, 0);
+	if (virtqueue_dma_mapping_error(vq, addr))
+		goto err_in;
+
+	DBG_FUNC("map in_hdr to %llx\n", addr);
+
+	sg_dma_address(&vbr->in_sg) = addr;
 
 	if (!blk_rq_nr_phys_segments(req))
 		return 0;
@@ -225,9 +275,22 @@ static int virtblk_map_data(struct blk_mq_hw_ctx *hctx, struct request *req,
 				     vbr->sg_table.sgl,
 				     VIRTIO_BLK_INLINE_SG_CNT);
 	if (unlikely(err))
-		return -ENOMEM;
+		goto err_alloc;
 
-	return blk_rq_map_sg(hctx->queue, req, vbr->sg_table.sgl);
+	nents = blk_rq_map_sg(hctx->queue, req, vbr->sg_table.sgl);
+	nents = virtqueue_dma_map_sg_attrs(vq, vbr->sg_table.sgl,
+					   nents, dir, 0);
+	DBG_FUNC("map sg nents %llx\n", nents);
+
+	return nents;
+
+err_alloc:
+	virtqueue_dma_unmap_single_attrs(vq, sg_dma_address(&vbr->in_sg),
+					 vbr->in_hdr_len, DMA_FROM_DEVICE, 0);
+err_in:
+	virtqueue_dma_unmap_single_attrs(vq, sg_dma_address(&vbr->out_sg),
+					 sizeof(vbr->out_hdr), DMA_TO_DEVICE, 0);
+	return -ENOMEM;
 }
 
 static void virtblk_cleanup_cmd(struct request *req)
@@ -414,7 +477,7 @@ static blk_status_t virtblk_prep_rq(struct blk_mq_hw_ctx *hctx,
 	if (unlikely(status))
 		return status;
 
-	num = virtblk_map_data(hctx, req, vbr);
+	num = virtblk_map_data(vblk, hctx, req, vbr);
 	if (unlikely(num < 0))
 		return virtblk_fail_to_queue(req, -ENOMEM);
 	vbr->sg_table.nents = num;
@@ -1027,6 +1090,7 @@ static int init_vq(struct virtio_blk *vblk)
 	for (i = 0; i < num_vqs; i++) {
 		spin_lock_init(&vblk->vqs[i].lock);
 		vblk->vqs[i].vq = vqs[i];
+		virtqueue_set_dma_premapped(vqs[i]);
 	}
 	vblk->num_vqs = num_vqs;
 
