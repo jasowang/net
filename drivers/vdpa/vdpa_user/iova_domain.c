@@ -442,6 +442,19 @@ void vduse_domain_unmap_page(struct vduse_iova_domain *domain,
 	vduse_domain_free_iova(iovad, dma_addr, size);
 }
 
+int vduse_domain_map_sg(struct vduse_iova_domain *domain,
+			struct scatterlist *sg, int nents,
+			enum dma_data_direction dir, unsigned long attrs)
+{
+	return 0;
+}
+
+void vduse_domain_unmap_sg(struct vduse_iova_domain *domain,
+			   struct scatterlist *sg, int nents,
+			   enum dma_data_direction dir, unsigned long attrs)
+{
+}
+
 void *vduse_domain_alloc_coherent(struct vduse_iova_domain *domain,
 				  size_t size, dma_addr_t *dma_addr,
 				  gfp_t flag, unsigned long attrs)

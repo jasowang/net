@@ -854,6 +854,24 @@ static void vduse_dev_unmap_page(struct device *dev, dma_addr_t dma_addr,
 	return vduse_domain_unmap_page(domain, dma_addr, size, dir, attrs);
 }
 
+static int vduse_dev_map_sg(struct device *dev, struct scatterlist *sg, int nents,
+			    enum dma_data_direction dir, unsigned long attrs)
+{
+	struct vduse_dev *vdev = dev_to_vduse(dev);
+	struct vduse_iova_domain *domain = vdev->domain;
+
+	return vduse_domain_map_sg(domain, sg, nents, dir, attrs);
+}
+
+static void vduse_dev_unmap_sg(struct device *dev, struct scatterlist *sg, int nents,
+			       enum dma_data_direction dir, unsigned long attrs)
+{
+	struct vduse_dev *vdev = dev_to_vduse(dev);
+	struct vduse_iova_domain *domain = vdev->domain;
+
+	vduse_domain_unmap_sg(domain, sg, nents, dir, attrs);
+}
+
 static void *vduse_dev_alloc_coherent(struct device *dev, size_t size,
 					dma_addr_t *dma_addr, gfp_t flag,
 					unsigned long attrs)
@@ -895,6 +913,8 @@ static size_t vduse_dev_max_mapping_size(struct device *dev)
 static const struct dma_map_ops vduse_dev_dma_ops = {
 	.sync_single_for_device = vduse_dev_sync_single_for_device,
 	.sync_single_for_cpu = vduse_dev_sync_single_for_cpu,
+	.map_sg = vduse_dev_map_sg,
+	.unmap_sg = vduse_dev_unmap_sg,
 	.map_page = vduse_dev_map_page,
 	.unmap_page = vduse_dev_unmap_page,
 	.alloc = vduse_dev_alloc_coherent,
