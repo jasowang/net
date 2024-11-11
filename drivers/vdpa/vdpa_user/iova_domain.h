@@ -22,6 +22,7 @@
 #define INVALID_PHYS_ADDR (~(phys_addr_t)0)
 
 struct vduse_bounce_map {
+	struct vm_area_struct *vma;
 	struct page *bounce_page;
 	struct page *user_bounce_page;
 	enum dma_data_direction dir;
