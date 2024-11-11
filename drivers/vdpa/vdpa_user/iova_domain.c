@@ -20,6 +20,7 @@
 #define void_printk(...) do{} while (0)
 
 #define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
+#define DBG_FUNC_VIP(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
 
 static bool iova_is_zc(struct vduse_iova_domain *domain, u64 iova)
 {
@@ -123,19 +124,21 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 			map->bounce_page = alloc_page(GFP_ATOMIC | __GFP_ZERO);
 			if (!map->bounce_page)
 				return -ENOMEM;
+			map->vma = domain->vma;
 		}
 		if (iova_is_zc(domain, iova)) {
 			if (domain->vma) {
 				map->addr = domain->vma->vm_start + iova;
 				vmf_insert_pfn(domain->vma, map->addr,
 					       paddr >> PAGE_SHIFT);
-				DBG_FUNC("expected addr %llx "
+				DBG_FUNC("insert pfn zc addr %llx "
 					 "vm_start %llx "
 					 "iova %llx\n",
 					 map->addr,
 					 domain->vma->vm_start,
 					 iova);
-			}
+			} else
+				map->vma = NULL;
 		}
 		map->orig_phys = paddr;
 		map->dir = dir;
@@ -271,20 +274,25 @@ vduse_domain_get_bounce_page(struct vm_fault *vmf,
 	DBG_FUNC("fault addr %llx is zc %x\n", iova,
 		     iova_is_zc(domain, iova));
 
-	if (!iova_is_zc(domain, iova))
-		DBG_FUNC("fault addr %llx "
+	if (!iova_is_zc(domain, iova)) {
+		DBG_FUNC_VIP("fault vma %llx addr %llx "
 			 "map bounce page for iova %llx "
 			 "orig_phys %llx to_dev %llx\n",
+			 vmf->vma,
 			 vmf->address, iova, map->orig_phys,
 			 map->dir == DMA_TO_DEVICE);
-	else {
+		if (map->vma != vmf->vma) {
+			DBG_FUNC("addr %llx new vma %llx\n",
+				 iova, vmf->addr);
+		}
+	} else {
 		DBG_FUNC("fault addr %llx "
 			 "map zc page for iova %llx "
 			 "orig_phys %llx to_dev %llx\n",
 			 vmf->address, iova, map->orig_phys,
 			 map->dir == DMA_TO_DEVICE);
 		if (vmf->address != map->addr) {
-			DBG_FUNC("mismatch fault addr %llx map "
+			DBG_FUNC_VIP("mismatch zc fault addr %llx map "
 				 "addr %llx\n",
 				 vmf->address, map->addr);
 		}
@@ -477,6 +485,10 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 	unsigned long limit;
 	struct iova_domain *iovad;
 	dma_addr_t iova;
+
+	if ((offset & ~PAGE_MASK) && (offset + size > PAGE_SIZE))
+		DBG_FUNC_VIP("unaligened PAGE_SIZE request offset %llx "
+			     "length llx\n", offset, size);
 
 	if (!(offset & ~PAGE_MASK) && !(size & ~PAGE_MASK)) {
 		iovad = &domain->zc_iovad;
