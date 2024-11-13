@@ -300,6 +300,9 @@ struct send_queue {
 	struct xsk_buff_pool *xsk_pool;
 
 	dma_addr_t xsk_hdr_dma_addr;
+
+	/* Queue to store packets that needs to be freed */
+	void **queue;
 };
 
 /* Internal representation of a receive virtqueue */
@@ -580,47 +583,55 @@ static void sg_fill_dma(struct scatterlist *sg, dma_addr_t addr, u32 len)
 	sg_dma_len(sg) = len;
 }
 
-static void __free_old_xmit(struct send_queue *sq, struct netdev_queue *txq,
-			    bool in_napi, struct virtnet_sq_free_stats *stats)
+static void free_ptr(void *ptr, bool in_napi, struct virtnet_sq_free_stats *stats)
 {
 	struct xdp_frame *frame;
 	struct sk_buff *skb;
+
+	switch (virtnet_xmit_ptr_unpack(&ptr)) {
+	case VIRTNET_XMIT_TYPE_SKB:
+		skb = ptr;
+
+		pr_debug("Sent skb %p\n", skb);
+		stats->napi_packets++;
+		stats->napi_bytes += skb->len;
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
+		skb = ptr;
+
+		stats->packets++;
+		stats->bytes += skb->len;
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XDP:
+		frame = ptr;
+
+		stats->packets++;
+		stats->bytes += xdp_get_frame_len(frame);
+		xdp_return_frame(frame);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XSK:
+		stats->bytes += virtnet_ptr_to_xsk_buff_len(ptr);
+		stats->xsk++;
+		break;
+	}
+}
+
+static void __free_old_xmit(struct send_queue *sq, struct netdev_queue *txq,
+			    bool in_napi, struct virtnet_sq_free_stats *stats)
+{
 	unsigned int len;
 	void *ptr;
 
 	while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL) {
-		switch (virtnet_xmit_ptr_unpack(&ptr)) {
-		case VIRTNET_XMIT_TYPE_SKB:
-			skb = ptr;
-
-			pr_debug("Sent skb %p\n", skb);
-			stats->napi_packets++;
-			stats->napi_bytes += skb->len;
-			napi_consume_skb(skb, in_napi);
-			break;
-
-		case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
-			skb = ptr;
-
-			stats->packets++;
-			stats->bytes += skb->len;
-			napi_consume_skb(skb, in_napi);
-			break;
-
-		case VIRTNET_XMIT_TYPE_XDP:
-			frame = ptr;
-
-			stats->packets++;
-			stats->bytes += xdp_get_frame_len(frame);
-			xdp_return_frame(frame);
-			break;
-
-		case VIRTNET_XMIT_TYPE_XSK:
-			stats->bytes += virtnet_ptr_to_xsk_buff_len(ptr);
-			stats->xsk++;
-			break;
-		}
+		BUG_ON(!ptr);
+		free_ptr(ptr, in_napi, stats);
 	}
+
 	netdev_tx_completed_queue(txq, stats->napi_packets, stats->napi_bytes);
 }
 
@@ -3158,6 +3169,10 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 	struct netdev_queue *txq;
 	int opaque, xsk_done = 0;
 	bool done;
+	int nxmit = 0, i;
+	struct virtnet_sq_free_stats stats = {0};
+	unsigned int len;
+	void *ptr;
 
 	if (unlikely(is_xdp_raw_buffer_queue(vi, index))) {
 		/* We don't need to enable cb for XDP */
@@ -3171,8 +3186,18 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 
 	if (sq->xsk_pool)
 		xsk_done = virtnet_xsk_xmit(sq, sq->xsk_pool, budget);
-	else
-		free_old_xmit(sq, txq, !!budget);
+	else {
+		while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+			void *skb = ptr;
+
+			virtnet_xmit_ptr_unpack(&skb);
+			++stats.napi_packets;
+			stats.napi_bytes += ((struct sk_buff *)skb)->len;
+			sq->queue[nxmit++] = ptr;
+		}
+
+		netdev_tx_completed_queue(txq, stats.napi_packets, stats.napi_bytes);
+	}
 
 	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS) {
 		if (netif_tx_queue_stopped(txq)) {
@@ -3196,6 +3221,9 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 		virtqueue_disable_cb(sq->vq);
 
 	__netif_tx_unlock(txq);
+
+	for (i = 0; i < nxmit; i++)
+		free_ptr(sq->queue[i], true, &stats);
 
 	if (done) {
 		if (unlikely(virtqueue_poll(sq->vq, opaque))) {
@@ -6373,6 +6401,9 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
 		vi->rq[i].vq = vqs[rxq2vq(i)];
 		vi->rq[i].min_buf_len = mergeable_min_buf_len(vi, vi->rq[i].vq);
 		vi->sq[i].vq = vqs[txq2vq(i)];
+		vi->sq[i].queue = kcalloc(vi->sq[0].vq->num_max,
+					  sizeof(*vi->sq[i].queue),
+					  GFP_KERNEL);
 	}
 
 	/* run here: ret == 0. */
