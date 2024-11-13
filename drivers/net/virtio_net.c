@@ -300,6 +300,9 @@ struct send_queue {
 	struct xsk_buff_pool *xsk_pool;
 
 	dma_addr_t xsk_hdr_dma_addr;
+
+	/* Queue to store packets that needs to be freed */
+	void **queue;
 };
 
 /* Internal representation of a receive virtqueue */
@@ -6344,6 +6347,9 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
 		vi->rq[i].vq = vqs[rxq2vq(i)];
 		vi->rq[i].min_buf_len = mergeable_min_buf_len(vi, vi->rq[i].vq);
 		vi->sq[i].vq = vqs[txq2vq(i)];
+		vi->sq[i].queue = kcalloc(vi->sq[0].vq->num_max,
+					  sizeof(*vi->sq[i].queue),
+					  GFP_KERNEL);
 	}
 
 	/* run here: ret == 0. */
