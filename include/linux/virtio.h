@@ -56,6 +56,16 @@ int virtqueue_add_inbuf_ctx(struct virtqueue *vq,
 			    void *ctx,
 			    gfp_t gfp);
 
+int virtqueue_map_sgs(struct virtqueue *_vq,
+		      struct scatterlist *sgs[],
+		      unsigned int out_sgs,
+		      unsigned int in_sgs);
+
+void virtqueue_unmap_sgs(struct virtqueue *_vq,
+			 struct scatterlist *sgs[],
+			 unsigned int out_sgs,
+			 unsigned int in_sgs);
+
 int virtqueue_add_sgs(struct virtqueue *vq,
 		      struct scatterlist *sgs[],
 		      unsigned int out_sgs,

@@ -362,6 +362,26 @@ static struct device *vring_dma_dev(const struct vring_virtqueue *vq)
 	return vq->dma_dev;
 }
 
+static int __vring_map_one_sg(const struct vring_virtqueue *vq,
+			      struct scatterlist *sg,
+			      enum dma_data_direction direction,
+			      dma_addr_t *addr)
+{
+	/*
+	 * We can't use dma_map_sg, because we don't use scatterlists in
+	 * the way it expects (we don't guarantee that the scatterlist
+	 * will exist for the lifetime of the mapping).
+	 */
+	*addr = dma_map_page(vring_dma_dev(vq),
+			    sg_page(sg), sg->offset, sg->length,
+			    direction);
+
+	if (dma_mapping_error(vring_dma_dev(vq), *addr))
+		return -ENOMEM;
+
+	return 0;
+}
+
 /* Map one sg entry. */
 static int vring_map_one_sg(const struct vring_virtqueue *vq, struct scatterlist *sg,
 			    enum dma_data_direction direction, dma_addr_t *addr)
@@ -382,19 +402,7 @@ static int vring_map_one_sg(const struct vring_virtqueue *vq, struct scatterlist
 		return 0;
 	}
 
-	/*
-	 * We can't use dma_map_sg, because we don't use scatterlists in
-	 * the way it expects (we don't guarantee that the scatterlist
-	 * will exist for the lifetime of the mapping).
-	 */
-	*addr = dma_map_page(vring_dma_dev(vq),
-			    sg_page(sg), sg->offset, sg->length,
-			    direction);
-
-	if (dma_mapping_error(vring_dma_dev(vq), *addr))
-		return -ENOMEM;
-
-	return 0;
+	return __vring_map_one_sg(vq, sg, direction, addr);
 }
 
 static dma_addr_t vring_map_single(const struct vring_virtqueue *vq,
@@ -540,6 +548,101 @@ static inline unsigned int virtqueue_add_desc_split(struct virtqueue *vq,
 
 	return next;
 }
+
+void virtqueue_unmap_sgs(struct virtqueue *_vq,
+			 struct scatterlist *sgs[],
+			 unsigned int out_sgs,
+			 unsigned int in_sgs)
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	struct scatterlist *sg;
+	int n;
+
+	for (n = 0; n < out_sgs; n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+			dma_unmap_page(vring_dma_dev(vq),
+				       sg_dma_address(sg),
+				       sg->length,
+				       DMA_TO_DEVICE);
+		}
+	}
+
+	for (; n < (out_sgs + in_sgs); n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+			dma_unmap_page(vring_dma_dev(vq),
+				       sg_dma_address(sg),
+				       sg->length,
+				       DMA_FROM_DEVICE);
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(virtqueue_unmap_sgs);
+
+
+int virtqueue_map_sgs(struct virtqueue *_vq,
+		      struct scatterlist *sgs[],
+		      unsigned int out_sgs,
+		      unsigned int in_sgs)
+{
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	int i, n, mapped_sg = 0;
+	struct scatterlist *sg;
+
+	for (n = 0; n < out_sgs; n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+			dma_addr_t addr;
+
+			if (__vring_map_one_sg(vq, sg, DMA_TO_DEVICE, &addr))
+				goto unmap_release;
+
+			sg_dma_address(sg) = addr;
+			mapped_sg++;
+		}
+	}
+
+	for (; n < (out_sgs + in_sgs); n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+			dma_addr_t addr;
+
+			if (__vring_map_one_sg(vq, sg, DMA_FROM_DEVICE, &addr))
+				goto unmap_release;
+
+			sg_dma_address(sg) = addr;
+			mapped_sg++;
+		}
+	}
+
+	return 0;
+
+unmap_release:
+	i = 0;
+
+	for (n = 0; n < out_sgs; n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+			if (i++ == mapped_sg)
+				goto out;
+			dma_unmap_page(vring_dma_dev(vq),
+				       sg_dma_address(sg),
+				       sg->length,
+				       DMA_TO_DEVICE);
+		}
+	}
+
+	for (; n < (out_sgs + in_sgs); n++) {
+		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
+
+			if (i++ == mapped_sg)
+				goto out;
+			dma_unmap_page(vring_dma_dev(vq),
+				       sg_dma_address(sg),
+				       sg->length,
+				       DMA_FROM_DEVICE);
+		}
+	}
+out:
+	return -ENOMEM;
+}
+EXPORT_SYMBOL_GPL(virtqueue_map_sgs);
 
 static inline int virtqueue_add_split(struct virtqueue *_vq,
 				      struct scatterlist *sgs[],
