@@ -107,6 +107,12 @@ struct virtblk_req {
 
 	size_t in_hdr_len;
 
+	struct scatterlist in_sg;
+	struct scatterlist out_sg;
+	struct scatterlist *sgs[3];
+	unsigned int num_out;
+	unsigned int num_in;
+
 	struct sg_table sg_table;
 	struct scatterlist sg[];
 };
@@ -139,23 +145,8 @@ static inline struct virtio_blk_vq *get_virtio_blk_vq(struct blk_mq_hw_ctx *hctx
 
 static int virtblk_add_req(struct virtqueue *vq, struct virtblk_req *vbr)
 {
-	struct scatterlist out_hdr, in_hdr, *sgs[3];
-	unsigned int num_out = 0, num_in = 0;
-
-	sg_init_one(&out_hdr, &vbr->out_hdr, sizeof(vbr->out_hdr));
-	sgs[num_out++] = &out_hdr;
-
-	if (vbr->sg_table.nents) {
-		if (vbr->out_hdr.type & cpu_to_virtio32(vq->vdev, VIRTIO_BLK_T_OUT))
-			sgs[num_out++] = vbr->sg_table.sgl;
-		else
-			sgs[num_out + num_in++] = vbr->sg_table.sgl;
-	}
-
-	sg_init_one(&in_hdr, &vbr->in_hdr.status, vbr->in_hdr_len);
-	sgs[num_out + num_in++] = &in_hdr;
-
-	return virtqueue_add_sgs(vq, sgs, num_out, num_in, vbr, GFP_ATOMIC);
+	return virtqueue_add_sgs(vq, vbr->sgs, vbr->num_out, vbr->num_in,
+				 vbr, GFP_ATOMIC);
 }
 
 static int virtblk_setup_discard_write_zeroes_erase(struct request *req, bool unmap)
@@ -356,23 +347,37 @@ static void virtblk_done(struct virtqueue *vq)
 	struct virtblk_req *vbr;
 	unsigned long flags;
 	unsigned int len;
+	struct request *req, *n;
+	LIST_HEAD(list);
+
+	if (vq != vblk->vqs[qid].vq)
+		pr_err("BUG!\n");
 
 	spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
 	do {
 		virtqueue_disable_cb(vq);
 		while ((vbr = virtqueue_get_buf(vblk->vqs[qid].vq, &len)) != NULL) {
-			struct request *req = blk_mq_rq_from_pdu(vbr);
-
-			if (likely(!blk_should_fake_timeout(req->q)))
-				blk_mq_complete_request(req);
+			req = blk_mq_rq_from_pdu(vbr);
+			list_add_tail(&req->queuelist, &list);
 			req_done = true;
 		}
 	} while (!virtqueue_enable_cb(vq));
 
+	spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+
+	list_for_each_entry_safe(req, n, &list, queuelist) {
+		list_del_init(&req->queuelist);
+		vbr = blk_mq_rq_to_pdu(req);
+		virtqueue_unmap_sgs(vq, vbr->sgs,
+				    vbr->num_out, vbr->num_in);
+
+		if (likely(!blk_should_fake_timeout(req->q)))
+			   blk_mq_complete_request(req);
+	}
+
 	/* In case queue is stopped waiting for more buffers. */
 	if (req_done)
 		blk_mq_start_stopped_hw_queues(vblk->disk->queue, true);
-	spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
 }
 
 static void virtio_commit_rqs(struct blk_mq_hw_ctx *hctx)
@@ -407,6 +412,8 @@ static blk_status_t virtblk_prep_rq(struct blk_mq_hw_ctx *hctx,
 					struct request *req,
 					struct virtblk_req *vbr)
 {
+	struct virtio_blk_vq *vq = get_virtio_blk_vq(hctx);
+	unsigned int num_out = 0, num_in = 0;
 	blk_status_t status;
 	int num;
 
@@ -419,7 +426,22 @@ static blk_status_t virtblk_prep_rq(struct blk_mq_hw_ctx *hctx,
 		return virtblk_fail_to_queue(req, -ENOMEM);
 	vbr->sg_table.nents = num;
 
-	blk_mq_start_request(req);
+	sg_init_one(&vbr->out_sg, &vbr->out_hdr, sizeof(vbr->out_hdr));
+	vbr->sgs[num_out++] = &vbr->out_sg;
+
+	if (vbr->sg_table.nents) {
+		if (vbr->out_hdr.type & cpu_to_virtio32(vq->vq->vdev,
+							VIRTIO_BLK_T_OUT))
+			vbr->sgs[num_out++] = vbr->sg_table.sgl;
+		else
+			vbr->sgs[num_out + num_in++] = vbr->sg_table.sgl;
+	}
+
+	sg_init_one(&vbr->in_sg, &vbr->in_hdr.status, vbr->in_hdr_len);
+	vbr->sgs[num_out + num_in++] = &vbr->in_sg;
+
+	vbr->num_out = num_out;
+	vbr->num_in = num_in;
 
 	return BLK_STS_OK;
 }
@@ -440,6 +462,14 @@ static blk_status_t virtio_queue_rq(struct blk_mq_hw_ctx *hctx,
 	if (unlikely(status))
 		return status;
 
+	err = virtqueue_map_sgs(vblk->vqs[qid].vq, vbr->sgs, vbr->num_out, vbr->num_in);
+	if (err) {
+		virtblk_unmap_data(req, vbr);
+		return virtblk_fail_to_queue(req, err);
+	}
+
+	blk_mq_start_request(req);
+
 	spin_lock_irqsave(&vblk->vqs[qid].lock, flags);
 	err = virtblk_add_req(vblk->vqs[qid].vq, vbr);
 	if (err) {
@@ -450,6 +480,7 @@ static blk_status_t virtio_queue_rq(struct blk_mq_hw_ctx *hctx,
 		if (err == -ENOSPC)
 			blk_mq_stop_hw_queue(hctx);
 		spin_unlock_irqrestore(&vblk->vqs[qid].lock, flags);
+		virtqueue_unmap_sgs(vblk->vqs[qid].vq, vbr->sgs, vbr->num_out, vbr->num_in);
 		virtblk_unmap_data(req, vbr);
 		return virtblk_fail_to_queue(req, err);
 	}
@@ -474,6 +505,8 @@ static bool virtblk_prep_rq_batch(struct request *req)
 static bool virtblk_add_req_batch(struct virtio_blk_vq *vq,
 					struct request **rqlist)
 {
+	struct request *req;
+	struct virtblk_req *vbr;
 	unsigned long flags;
 	int err;
 	bool kick;
@@ -481,11 +514,13 @@ static bool virtblk_add_req_batch(struct virtio_blk_vq *vq,
 	spin_lock_irqsave(&vq->lock, flags);
 
 	while (!rq_list_empty(*rqlist)) {
-		struct request *req = rq_list_pop(rqlist);
-		struct virtblk_req *vbr = blk_mq_rq_to_pdu(req);
+		req = rq_list_pop(rqlist);
+		vbr = blk_mq_rq_to_pdu(req);
 
 		err = virtblk_add_req(vq->vq, vbr);
 		if (err) {
+			virtqueue_unmap_sgs(vq->vq, vbr->sgs,
+					    vbr->num_out, vbr->num_in);
 			virtblk_unmap_data(req, vbr);
 			virtblk_cleanup_cmd(req);
 			blk_mq_requeue_request(req, true);
@@ -502,9 +537,11 @@ static void virtio_queue_rqs(struct request **rqlist)
 {
 	struct request *req, *next, *prev = NULL;
 	struct request *requeue_list = NULL;
+	struct virtblk_req *vbr;
 
 	rq_list_for_each_safe(rqlist, req, next) {
 		struct virtio_blk_vq *vq = get_virtio_blk_vq(req->mq_hctx);
+		vbr = blk_mq_rq_to_pdu(req);
 		bool kick;
 
 		if (!virtblk_prep_rq_batch(req)) {
@@ -513,6 +550,18 @@ static void virtio_queue_rqs(struct request **rqlist)
 			if (!req)
 				continue;
 		}
+
+		if (virtqueue_map_sgs(vq->vq, vbr->sgs, vbr->num_out,
+				      vbr->num_in)) {
+			rq_list_move(rqlist, &requeue_list, req, prev);
+			virtblk_unmap_data(req, vbr);
+			virtblk_cleanup_cmd(req);
+			req = prev;
+			if (!req)
+				continue;
+		}
+
+		blk_mq_start_request(req);
 
 		if (!next || req->mq_hctx != next->mq_hctx) {
 			req->rq_next = NULL;
@@ -1027,6 +1076,7 @@ static int init_vq(struct virtio_blk *vblk)
 	for (i = 0; i < num_vqs; i++) {
 		spin_lock_init(&vblk->vqs[i].lock);
 		vblk->vqs[i].vq = vqs[i];
+		virtqueue_set_dma_premapped(vqs[i]);
 	}
 	vblk->num_vqs = num_vqs;
 
@@ -1215,6 +1265,8 @@ static int virtblk_poll(struct blk_mq_hw_ctx *hctx, struct io_comp_batch *iob)
 	while ((vbr = virtqueue_get_buf(vq->vq, &len)) != NULL) {
 		struct request *req = blk_mq_rq_from_pdu(vbr);
 
+		virtqueue_unmap_sgs(vq->vq, vbr->sgs,
+				    vbr->num_out, vbr->num_in);
 		found++;
 		if (!blk_mq_complete_request_remote(req) &&
 		    !blk_mq_add_to_batch(req, iob, virtblk_vbr_status(vbr),
