@@ -582,6 +582,71 @@ static void sg_fill_dma(struct scatterlist *sg, dma_addr_t addr, u32 len)
 	sg_dma_len(sg) = len;
 }
 
+static void __count_ptr(void *ptr, bool in_napi,
+			struct virtnet_sq_free_stats *stats)
+{
+	struct xdp_frame *frame;
+	struct sk_buff *skb;
+
+	switch (virtnet_xmit_ptr_unpack(&ptr)) {
+	case VIRTNET_XMIT_TYPE_SKB:
+		skb = ptr;
+
+		pr_debug("Sent skb %p\n", skb);
+		stats->napi_packets++;
+		stats->napi_bytes += skb->len;
+		break;
+
+	case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
+		skb = ptr;
+
+		stats->packets++;
+		stats->bytes += skb->len;
+		break;
+
+	case VIRTNET_XMIT_TYPE_XDP:
+		frame = ptr;
+
+		stats->packets++;
+		stats->bytes += xdp_get_frame_len(frame);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XSK:
+		stats->bytes += virtnet_ptr_to_xsk_buff_len(ptr);
+		stats->xsk++;
+		break;
+	}
+}
+
+static void __clean_ptr(void *ptr, bool in_napi)
+{
+	struct xdp_frame *frame;
+	struct sk_buff *skb;
+
+	switch (virtnet_xmit_ptr_unpack(&ptr)) {
+	case VIRTNET_XMIT_TYPE_SKB:
+		skb = ptr;
+
+		pr_debug("Sent skb %p\n", skb);
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
+		skb = ptr;
+
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XDP:
+		frame = ptr;
+
+		xdp_return_frame(frame);
+		break;
+	default:
+		break;
+	}
+}
+
 static void __free_ptr(void *ptr, bool in_napi, struct virtnet_sq_free_stats *stats)
 {
 	struct xdp_frame *frame;
@@ -3141,13 +3206,25 @@ err_enable_qp:
 	return err;
 }
 
+static void __free_xmit_batch(struct send_queue *sq, struct netdev_queue *txq,
+			      void **queue, unsigned int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		__clean_ptr(queue[i], true);
+}
+
 static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 {
 	struct send_queue *sq = container_of(napi, struct send_queue, napi);
 	struct virtnet_info *vi = sq->vq->vdev->priv;
+	struct virtnet_sq_free_stats stats = {0};
 	unsigned int index = vq2txq(sq->vq);
+	unsigned int len, nxmit = 0;
 	struct netdev_queue *txq;
 	int opaque, xsk_done = 0;
+	void *ptr;
 	bool done;
 
 	if (unlikely(is_xdp_raw_buffer_queue(vi, index))) {
@@ -3162,8 +3239,14 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 
 	if (sq->xsk_pool)
 		xsk_done = virtnet_xsk_xmit(sq, sq->xsk_pool, budget);
-	else
-		free_old_xmit(sq, txq, !!budget);
+	else {
+		while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+			sq->queue[nxmit++] = ptr;
+			__count_ptr(ptr, true, &stats);
+		}
+		netdev_tx_completed_queue(txq, stats.napi_packets,
+					  stats.napi_bytes);
+	}
 
 	if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS) {
 		if (netif_tx_queue_stopped(txq)) {
@@ -3176,6 +3259,7 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 
 	if (xsk_done >= budget) {
 		__netif_tx_unlock(txq);
+		__free_xmit_batch(sq, txq, sq->queue, nxmit);
 		return budget;
 	}
 
@@ -3187,6 +3271,8 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 		virtqueue_disable_cb(sq->vq);
 
 	__netif_tx_unlock(txq);
+
+	__free_xmit_batch(sq, txq, sq->queue, nxmit);
 
 	if (done) {
 		if (unlikely(virtqueue_poll(sq->vq, opaque))) {
