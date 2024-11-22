@@ -582,47 +582,53 @@ static void sg_fill_dma(struct scatterlist *sg, dma_addr_t addr, u32 len)
 	sg_dma_len(sg) = len;
 }
 
-static void __free_old_xmit(struct send_queue *sq, struct netdev_queue *txq,
-			    bool in_napi, struct virtnet_sq_free_stats *stats)
+static void __free_ptr(void *ptr, bool in_napi, struct virtnet_sq_free_stats *stats)
 {
 	struct xdp_frame *frame;
 	struct sk_buff *skb;
+
+	switch (virtnet_xmit_ptr_unpack(&ptr)) {
+	case VIRTNET_XMIT_TYPE_SKB:
+		skb = ptr;
+
+		pr_debug("Sent skb %p\n", skb);
+		stats->napi_packets++;
+		stats->napi_bytes += skb->len;
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
+		skb = ptr;
+
+		stats->packets++;
+		stats->bytes += skb->len;
+		napi_consume_skb(skb, in_napi);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XDP:
+		frame = ptr;
+
+		stats->packets++;
+		stats->bytes += xdp_get_frame_len(frame);
+		xdp_return_frame(frame);
+		break;
+
+	case VIRTNET_XMIT_TYPE_XSK:
+		stats->bytes += virtnet_ptr_to_xsk_buff_len(ptr);
+		stats->xsk++;
+		break;
+	}
+}
+
+static void __free_old_xmit(struct send_queue *sq, struct netdev_queue *txq,
+			    bool in_napi, struct virtnet_sq_free_stats *stats)
+{
 	unsigned int len;
 	void *ptr;
 
-	while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL) {
-		switch (virtnet_xmit_ptr_unpack(&ptr)) {
-		case VIRTNET_XMIT_TYPE_SKB:
-			skb = ptr;
+	while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL)
+		__free_ptr(ptr, in_napi, stats);
 
-			pr_debug("Sent skb %p\n", skb);
-			stats->napi_packets++;
-			stats->napi_bytes += skb->len;
-			napi_consume_skb(skb, in_napi);
-			break;
-
-		case VIRTNET_XMIT_TYPE_SKB_ORPHAN:
-			skb = ptr;
-
-			stats->packets++;
-			stats->bytes += skb->len;
-			napi_consume_skb(skb, in_napi);
-			break;
-
-		case VIRTNET_XMIT_TYPE_XDP:
-			frame = ptr;
-
-			stats->packets++;
-			stats->bytes += xdp_get_frame_len(frame);
-			xdp_return_frame(frame);
-			break;
-
-		case VIRTNET_XMIT_TYPE_XSK:
-			stats->bytes += virtnet_ptr_to_xsk_buff_len(ptr);
-			stats->xsk++;
-			break;
-		}
-	}
 	netdev_tx_completed_queue(txq, stats->napi_packets, stats->napi_bytes);
 }
 
