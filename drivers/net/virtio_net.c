@@ -306,6 +306,7 @@ struct send_queue {
 	/* Queue to store packets that needs to be freed */
 	void **queue2;
 
+	spinlock_t lock;
 };
 
 /* Internal representation of a receive virtqueue */
@@ -1703,8 +1704,8 @@ static int __virtnet_xdp_xmit_one(struct virtnet_info *vi,
 	int cpu = smp_processor_id();                                   \
 	struct netdev_queue *txq;                                       \
 	typeof(vi) v = (vi);                                            \
+	struct send_queue *sq;                                          \
 	unsigned int qp;                                                \
-									\
 	if (v->curr_queue_pairs > nr_cpu_ids) {                         \
 		qp = v->curr_queue_pairs - v->xdp_queue_pairs;          \
 		qp += cpu;                                              \
@@ -1713,20 +1714,24 @@ static int __virtnet_xdp_xmit_one(struct virtnet_info *vi,
 	} else {                                                        \
 		qp = cpu % v->curr_queue_pairs;                         \
 		txq = netdev_get_tx_queue(v->dev, qp);                  \
-		__netif_tx_lock(txq, cpu);                              \
+		sq = &v->sq[qp];                                        \
+		spin_lock(&sq->lock);                                   \
 	}                                                               \
 	v->sq + qp;                                                     \
 })
 
 #define virtnet_xdp_put_sq(vi, q) {                                     \
+	int cpu = smp_processor_id();                                   \
 	struct netdev_queue *txq;                                       \
 	typeof(vi) v = (vi);                                            \
-									\
+	unsigned int qp;                                                \
 	txq = netdev_get_tx_queue(v->dev, (q) - v->sq);                 \
 	if (v->curr_queue_pairs > nr_cpu_ids)                           \
 		__netif_tx_release(txq);                                \
-	else                                                            \
-		__netif_tx_unlock(txq);                                 \
+	else {                                                          \
+		qp = cpu % v->curr_queue_pairs;                         \
+		spin_unlock(&v->sq[qp].lock);                           \
+	}                                                               \
 }
 
 static int virtnet_xdp_xmit(struct net_device *dev,
@@ -3036,7 +3041,7 @@ static void virtnet_poll_cleantx(struct receive_queue *rq, int budget)
 	if (!sq->napi.weight || is_xdp_raw_buffer_queue(vi, index))
 		return;
 
-	if (__netif_tx_trylock(txq)) {
+	if (spin_trylock(&sq->lock)) {
 		if (sq->reset) {
 			__netif_tx_unlock(txq);
 			return;
@@ -3062,7 +3067,7 @@ static void virtnet_poll_cleantx(struct receive_queue *rq, int budget)
 			netif_tx_wake_queue(txq);
 		}
 
-		__netif_tx_unlock(txq);
+		spin_unlock(&sq->lock);
 
 		__free_xmit_batch(sq, txq, sq->queue2, nxmit);
 	}
@@ -3248,7 +3253,7 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 	}
 
 	txq = netdev_get_tx_queue(vi->dev, index);
-	__netif_tx_lock(txq, raw_smp_processor_id());
+	spin_lock(&sq->lock);
 	virtqueue_disable_cb(sq->vq);
 
 	if (sq->xsk_pool)
@@ -3272,7 +3277,7 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 	}
 
 	if (xsk_done >= budget) {
-		__netif_tx_unlock(txq);
+		spin_unlock(&sq->lock);
 		__free_xmit_batch(sq, txq, sq->queue, nxmit);
 		return budget;
 	}
@@ -3284,7 +3289,7 @@ static int virtnet_poll_tx(struct napi_struct *napi, int budget)
 	if (!done)
 		virtqueue_disable_cb(sq->vq);
 
-	__netif_tx_unlock(txq);
+	spin_unlock(&sq->lock);
 
 	__free_xmit_batch(sq, txq, sq->queue, nxmit);
 
@@ -3362,6 +3367,8 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	bool use_napi = sq->napi.weight;
 	bool kick;
 
+
+	spin_lock(&sq->lock);
 	/* Free up any pending old buffers before queueing new ones. */
 	do {
 		if (use_napi)
@@ -3387,6 +3394,7 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 				 qnum, err);
 		DEV_STATS_INC(dev, tx_dropped);
 		dev_kfree_skb_any(skb);
+		spin_unlock(&sq->lock);
 		return NETDEV_TX_OK;
 	}
 
@@ -3407,6 +3415,7 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 			u64_stats_update_end(&sq->stats.syncp);
 		}
 	}
+	spin_unlock(&sq->lock);
 
 	return NETDEV_TX_OK;
 }
@@ -3465,7 +3474,7 @@ static void virtnet_tx_pause(struct virtnet_info *vi, struct send_queue *sq)
 	/* 1. wait all ximt complete
 	 * 2. fix the race of netif_stop_subqueue() vs netif_start_subqueue()
 	 */
-	__netif_tx_lock_bh(txq);
+	spin_lock_bh(&sq->lock);
 
 	/* Prevent rx poll from accessing sq. */
 	sq->reset = true;
@@ -3473,7 +3482,7 @@ static void virtnet_tx_pause(struct virtnet_info *vi, struct send_queue *sq)
 	/* Prevent the upper layer from trying to send packets. */
 	netif_stop_subqueue(vi->dev, qindex);
 
-	__netif_tx_unlock_bh(txq);
+	spin_unlock_bh(&sq->lock);
 }
 
 static void virtnet_tx_resume(struct virtnet_info *vi, struct send_queue *sq)
@@ -3486,10 +3495,10 @@ static void virtnet_tx_resume(struct virtnet_info *vi, struct send_queue *sq)
 
 	txq = netdev_get_tx_queue(vi->dev, qindex);
 
-	__netif_tx_lock_bh(txq);
+	spin_lock_bh(&sq->lock);
 	sq->reset = false;
 	netif_tx_wake_queue(txq);
-	__netif_tx_unlock_bh(txq);
+	spin_unlock_bh(&sq->lock);
 
 	if (running)
 		virtnet_napi_tx_enable(vi, sq->vq, &sq->napi);
@@ -6459,6 +6468,7 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
 		vi->sq[i].queue2 = kcalloc(vi->sq[0].vq->num_max,
 					sizeof(*vi->sq[i].queue),
 					GFP_KERNEL);
+		spin_lock_init(&vi->sq[i].lock);
 	}
 
 	/* run here: ret == 0. */
@@ -6746,6 +6756,7 @@ static int virtnet_probe(struct virtio_device *vdev)
 	dev->netdev_ops = &virtnet_netdev;
 	dev->stat_ops = &virtnet_stat_ops;
 	dev->features = NETIF_F_HIGHDMA;
+	dev->lltx = true;
 
 	dev->ethtool_ops = &virtnet_ethtool_ops;
 	SET_NETDEV_DEV(dev, &vdev->dev);
