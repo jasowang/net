@@ -303,6 +303,9 @@ struct send_queue {
 
 	/* Queue to store packets that needs to be freed */
 	void **queue;
+	/* Queue to store packets that needs to be freed */
+	void **queue2;
+
 };
 
 /* Internal representation of a receive virtqueue */
@@ -3011,12 +3014,24 @@ static int virtnet_receive(struct receive_queue *rq, int budget,
 	return packets;
 }
 
+static void __free_xmit_batch(struct send_queue *sq, struct netdev_queue *txq,
+			      void **queue, unsigned int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		__clean_ptr(queue[i], true);
+}
+
 static void virtnet_poll_cleantx(struct receive_queue *rq, int budget)
 {
 	struct virtnet_info *vi = rq->vq->vdev->priv;
 	unsigned int index = vq2rxq(rq->vq);
 	struct send_queue *sq = &vi->sq[index];
 	struct netdev_queue *txq = netdev_get_tx_queue(vi->dev, index);
+	struct virtnet_sq_free_stats stats = {0};
+	unsigned int len, nxmit = 0;
+	void *ptr;
 
 	if (!sq->napi.weight || is_xdp_raw_buffer_queue(vi, index))
 		return;
@@ -3029,8 +3044,14 @@ static void virtnet_poll_cleantx(struct receive_queue *rq, int budget)
 
 		do {
 			virtqueue_disable_cb(sq->vq);
-			free_old_xmit(sq, txq, !!budget);
+			while ((ptr = virtqueue_get_buf(sq->vq, &len)) != NULL) {
+				sq->queue2[nxmit++] = ptr;
+				__count_ptr(ptr, true, &stats);
+			}
 		} while (unlikely(!virtqueue_enable_cb_delayed(sq->vq)));
+
+		netdev_tx_completed_queue(txq, stats.napi_packets,
+					  stats.napi_bytes);
 
 		if (sq->vq->num_free >= 2 + MAX_SKB_FRAGS) {
 			if (netif_tx_queue_stopped(txq)) {
@@ -3042,6 +3063,8 @@ static void virtnet_poll_cleantx(struct receive_queue *rq, int budget)
 		}
 
 		__netif_tx_unlock(txq);
+
+		__free_xmit_batch(sq, txq, sq->queue2, nxmit);
 	}
 }
 
@@ -3204,15 +3227,6 @@ err_enable_qp:
 	}
 
 	return err;
-}
-
-static void __free_xmit_batch(struct send_queue *sq, struct netdev_queue *txq,
-			      void **queue, unsigned int num)
-{
-	int i;
-
-	for (i = 0; i < num; i++)
-		__clean_ptr(queue[i], true);
 }
 
 static int virtnet_poll_tx(struct napi_struct *napi, int budget)
@@ -6442,6 +6456,9 @@ static int virtnet_find_vqs(struct virtnet_info *vi)
 		vi->sq[i].queue = kcalloc(vi->sq[0].vq->num_max,
 					  sizeof(*vi->sq[i].queue),
 					  GFP_KERNEL);
+		vi->sq[i].queue2 = kcalloc(vi->sq[0].vq->num_max,
+					sizeof(*vi->sq[i].queue),
+					GFP_KERNEL);
 	}
 
 	/* run here: ret == 0. */
