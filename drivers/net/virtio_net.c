@@ -1506,8 +1506,8 @@ static int virtnet_xsk_xmit_batch(struct send_queue *sq,
 	return i;
 }
 
-static bool virtnet_xsk_xmit(struct send_queue *sq, struct xsk_buff_pool *pool,
-			     int budget)
+static int virtnet_xsk_xmit(struct send_queue *sq, struct xsk_buff_pool *pool,
+			    int budget)
 {
 	struct virtnet_info *vi = sq->vq->vdev->priv;
 	struct virtnet_sq_free_stats stats = {};
