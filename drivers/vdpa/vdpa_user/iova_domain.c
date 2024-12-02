@@ -491,14 +491,13 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 	struct iova_domain *iovad;
 	dma_addr_t iova;
 
-	if ((offset & ~PAGE_MASK) && (offset + size > PAGE_SIZE))
-		DBG_FUNC("unaligned PAGE_SIZE request offset %llx "
-			 "length llx\n", offset, size);
-
 	if (!(offset & ~PAGE_MASK) && !(size & ~PAGE_MASK)) {
 		iovad = &domain->zc_iovad;
 		limit = domain->bounce_size - 1;
 	} else {
+		trace_printk("unaligned PAGE_SIZE request offset %llx "
+			     "length %llx to_dev %llx\n", offset, size,
+			     dir == DMA_TO_DEVICE);
 		iovad = &domain->stream_iovad;
 		limit = domain->bounce_size / 2 - 1;
 	}

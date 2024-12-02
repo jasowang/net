@@ -641,6 +641,7 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 						     indirect);
 		}
 	}
+
 	/* Last one doesn't continue. */
 	desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
 	if (!indirect && vq->do_unmap)
@@ -706,6 +707,7 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	return 0;
 
 unmap_release:
+
 	err_idx = i;
 
 	if (indirect)
