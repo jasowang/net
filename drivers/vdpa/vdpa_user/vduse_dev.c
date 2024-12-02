@@ -1132,11 +1132,15 @@ static void vduse_vq_update_effective_cpu(struct vduse_virtqueue *vq)
 
 	while (true) {
 		curr_cpu = cpumask_next(curr_cpu, &vq->irq_affinity);
+
+		if (curr_cpu == 64)
+			curr_cpu = cpumask_first(&vq->irq_affinity);
+
 		if (cpu_online(curr_cpu))
 			break;
 
 		if (curr_cpu >= nr_cpu_ids)
-			curr_cpu = IRQ_UNBOUND;
+			curr_cpu = cpumask_first(&vq->irq_affinity);
 	}
 
 	vq->irq_effective_cpu = curr_cpu;
