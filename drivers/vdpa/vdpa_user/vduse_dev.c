@@ -532,6 +532,8 @@ static void vduse_vdpa_set_vq_cb(struct vdpa_device *vdpa, u16 idx,
 	spin_lock(&vq->irq_lock);
 	vq->cb.callback = cb->callback;
 	vq->cb.private = cb->private;
+	pr_err("vq %llx trigger set to %llx\n", vq, cb->trigger);
+	dump_stack();
 	vq->cb.trigger = cb->trigger;
 	spin_unlock(&vq->irq_lock);
 }
@@ -995,6 +997,8 @@ static bool vduse_vq_signal_irqfd(struct vduse_virtqueue *vq)
 	if (!vq->cb.trigger)
 		return false;
 
+	pr_err("has trigger!\n");
+
 	spin_lock_irq(&vq->irq_lock);
 	if (vq->ready && vq->cb.trigger) {
 		eventfd_signal(vq->cb.trigger);
@@ -1132,11 +1136,15 @@ static void vduse_vq_update_effective_cpu(struct vduse_virtqueue *vq)
 
 	while (true) {
 		curr_cpu = cpumask_next(curr_cpu, &vq->irq_affinity);
+
+		if (curr_cpu == 64)
+			curr_cpu = cpumask_first(&vq->irq_affinity);
+
 		if (cpu_online(curr_cpu))
 			break;
 
 		if (curr_cpu >= nr_cpu_ids)
-			curr_cpu = IRQ_UNBOUND;
+			curr_cpu = cpumask_first(&vq->irq_affinity);
 	}
 
 	vq->irq_effective_cpu = curr_cpu;

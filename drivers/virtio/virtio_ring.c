@@ -631,6 +631,7 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 						     premapped);
 		}
 	}
+
 	/* Last one doesn't continue. */
 	desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
 	if (!indirect && vring_need_unmap_buffer(vq, &extra[prev]))
@@ -692,6 +693,7 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	return 0;
 
 unmap_release:
+
 	err_idx = i;
 
 	if (indirect)
