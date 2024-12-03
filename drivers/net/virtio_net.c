@@ -6710,10 +6710,12 @@ static int virtnet_probe(struct virtio_device *vdev)
 	INIT_WORK(&vi->rx_mode_work, virtnet_rx_mode_work);
 	spin_lock_init(&vi->refill_lock);
 
+#if 0
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_MRG_RXBUF)) {
 		vi->mergeable_rx_bufs = true;
 		dev->xdp_features |= NETDEV_XDP_ACT_RX_SG;
 	}
+#endif
 
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_HASH_REPORT))
 		vi->has_rss_hash_report = true;
