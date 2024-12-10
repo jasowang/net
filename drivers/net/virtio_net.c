@@ -52,6 +52,9 @@ module_param(napi_tx, bool, 0644);
  */
 DECLARE_EWMA(pkt_len, 0, 64)
 
+#define void_printk(...) do{} while (0)
+#define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
+
 #define VIRTNET_DRIVER_VERSION "1.0.0"
 
 static const unsigned long guest_offloads[] = {
@@ -2029,19 +2032,98 @@ static struct sk_buff *receive_big(struct net_device *dev,
 				   unsigned int len,
 				   struct virtnet_rq_stats *stats)
 {
-	struct page *page = buf;
-	struct sk_buff *skb =
-		page_to_skb(vi, rq, page, 0, len, PAGE_SIZE, 0);
+	unsigned int copy, frag_size, head_size, head_offset;
+	struct page *page = virt_to_page(buf), *head_page;
+	struct virtio_net_common_hdr *hdr;
+	struct sk_buff *skb;
+	void *hdr_p = buf;
 
-	u64_stats_add(&stats->bytes, len - vi->hdr_len);
+	DBG_FUNC("receive buf %llx, len %llx\n", buf, len);
+
+	/* copy small packet so we can reuse these pages for small data */
+	skb = napi_alloc_skb(&rq->napi, GOOD_COPY_LEN);
 	if (unlikely(!skb))
 		goto err;
+
+	if (vi->any_header_sg)
+		buf += vi->hdr_len;
+	else
+		buf += sizeof(struct padded_vnet_hdr);
+
+	/* Copy all frame if it fits skb->head, otherwise
+	 * we let virtio_net_hdr_to_skb() and GRO pull headers as needed.
+	 */
+	if (len <= skb_tailroom(skb))
+		copy = len;
+	else
+		copy = ETH_HLEN;
+	skb_put_data(skb, buf, copy);
+
+	DBG_FUNC("copy %x\n", copy);
+
+	len -= copy;
+	buf += copy;
+
+	/*
+	 * Verify that we can indeed put this data into a skb.
+	 * This is here to handle cases when the device erroneously
+	 * tries to receive more than is possible. This is usually
+	 * the case of a broken device.
+	 */
+	if (unlikely(len > MAX_SKB_FRAGS * PAGE_SIZE)) {
+		net_dbg_ratelimited("%s: too much data\n", skb->dev->name);
+		dev_kfree_skb(skb);
+		page = (struct page *)page->private;
+		goto err;
+	}
+
+	while (len) {
+		head_page = virt_to_head_page(buf);
+		head_size = PAGE_SIZE << compound_order(head_page);
+		head_offset = buf - page_address(head_page);
+		frag_size = min(len, head_size - head_offset);
+
+		DBG_FUNC("len %llx page %llx head_page %llx head_size %llx "
+		       "head_offset %llx frag_size %llx\n",
+			len, page_to_pfn(page),
+			page_to_pfn(head_page), head_size, head_offset, frag_size);
+
+		skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags, head_page,
+				head_offset, frag_size,
+				PAGE_ALIGN(frag_size));
+
+		len -= frag_size;
+		page = (struct page *)page->private;
+		buf = page_address(page);
+	}
+
+	hdr = skb_vnet_common_hdr(skb);
+	memcpy(hdr, hdr_p, vi->hdr_len);
+
+	DBG_FUNC("hdr copy done!\n");
+
+	u64_stats_add(&stats->bytes, len - vi->hdr_len);
+
+	while (page) {
+		struct page *next = (struct page *)page->private;
+		DBG_FUNC("put page %llx\n", page_to_pfn(compound_head(page)));
+		put_page(compound_head(page));
+		page = next;
+	}
+
+	DBG_FUNC("receive done!\n");
 
 	return skb;
 
 err:
+	while (page) {
+		struct page *next = (struct page *)page->private;
+		DBG_FUNC("err put page %llx\n", page_to_pfn(compound_head(page)));
+		put_page(compound_head(page));
+		page = next;
+	}
+
 	u64_stats_inc(&stats->drops);
-	give_pages(rq, page);
 	return NULL;
 }
 
@@ -2621,49 +2703,77 @@ static int add_recvbuf_small(struct virtnet_info *vi, struct receive_queue *rq,
 static int add_recvbuf_big(struct virtnet_info *vi, struct receive_queue *rq,
 			   gfp_t gfp)
 {
-	struct page *first, *list = NULL;
-	char *p;
-	int i, err, offset;
+	u64 rx_buffer_size = vi->big_packets_num_skbfrags * PAGE_SIZE;
+	int i = 1, offset = sizeof(struct padded_vnet_hdr);
+	struct page_frag *alloc_frag = &rq->alloc_frag;
+	struct page *prev = NULL, *first = NULL, *page;
+	int err = -ENOMEM;
+	void *addr;
+	u64 size;
 
 	sg_init_table(rq->sg, vi->big_packets_num_skbfrags + 2);
 
-	/* page in rq->sg[vi->big_packets_num_skbfrags + 1] is list tail */
-	for (i = vi->big_packets_num_skbfrags + 1; i > 1; --i) {
-		first = get_a_page(rq, gfp);
-		if (!first) {
-			if (list)
-				give_pages(rq, list);
-			return -ENOMEM;
+	DBG_FUNC("refill start!\n");
+	while (rx_buffer_size) {
+		if (!skb_page_frag_refill(PAGE_SIZE, alloc_frag, gfp))
+			goto err;
+
+		size = min(rx_buffer_size, alloc_frag->size - alloc_frag->offset);
+		addr = page_address(alloc_frag->page) + alloc_frag->offset;
+
+		page = virt_to_page(addr);
+		page->private = 0;
+
+		DBG_FUNC("rx buffer size %llx addr %llx size %llx "
+		       "page %llx frag->page %llx\n",
+			rx_buffer_size, addr, size,
+			page_to_pfn(page), page_to_pfn(alloc_frag->page));
+
+		if (!first)
+			first = page;
+		if (prev)
+			prev->private = (unsigned long)page;
+
+		if (!vi->any_header_sg && i == 1)
+			sg_set_buf(&rq->sg[i], addr + offset, size - offset);
+		else {
+			DBG_FUNC("set sg[%x] addr %llx size %llx\n", i,
+				addr, size);
+			sg_set_buf(&rq->sg[i], addr, size);
 		}
-		sg_set_buf(&rq->sg[i], page_address(first), PAGE_SIZE);
 
-		/* chain new page in list head to match sg */
-		first->private = (unsigned long)list;
-		list = first;
+		get_page(alloc_frag->page);
+
+		rx_buffer_size -= size;
+		alloc_frag->offset += size;
+		prev = page;
+		i++;
 	}
 
-	first = get_a_page(rq, gfp);
-	if (!first) {
-		give_pages(rq, list);
-		return -ENOMEM;
+	sg_mark_end(&rq->sg[i - 1]);
+
+	if (!vi->any_header_sg) {
+		addr = page_address(sg_page(&rq->sg[1])) + rq->sg[1].offset - offset;
+		sg_set_buf(&rq->sg[0], addr, vi->hdr_len);
+		err = virtqueue_add_inbuf(rq->vq, rq->sg, i, addr, gfp);
+	} else {
+		addr = page_address(sg_page(&rq->sg[1])) + rq->sg[1].offset;
+		err = virtqueue_add_inbuf(rq->vq, rq->sg + 1 , i - 1, addr, gfp);
 	}
-	p = page_address(first);
 
-	/* rq->sg[0], rq->sg[1] share the same page */
-	/* a separated rq->sg[0] for header - required in case !any_header_sg */
-	sg_set_buf(&rq->sg[0], p, vi->hdr_len);
+	DBG_FUNC("add in buf %lx\n", err);
 
-	/* rq->sg[1] for data packet, from offset */
-	offset = sizeof(struct padded_vnet_hdr);
-	sg_set_buf(&rq->sg[1], p + offset, PAGE_SIZE - offset);
-
-	/* chain first in list head */
-	first->private = (unsigned long)list;
-	err = virtqueue_add_inbuf(rq->vq, rq->sg, vi->big_packets_num_skbfrags + 2,
-				  first, gfp);
 	if (err < 0)
-		give_pages(rq, first);
+		goto err;
 
+	return 0;
+
+err:
+	while (first) {
+		page = first;
+		first = (struct page *)first->private;
+		put_page(compound_head(page));
+	}
 	return err;
 }
 
