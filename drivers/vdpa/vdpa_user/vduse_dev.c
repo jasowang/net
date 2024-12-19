@@ -532,8 +532,6 @@ static void vduse_vdpa_set_vq_cb(struct vdpa_device *vdpa, u16 idx,
 	spin_lock(&vq->irq_lock);
 	vq->cb.callback = cb->callback;
 	vq->cb.private = cb->private;
-	pr_err("vq %llx trigger set to %llx\n", vq, cb->trigger);
-	dump_stack();
 	vq->cb.trigger = cb->trigger;
 	spin_unlock(&vq->irq_lock);
 }
