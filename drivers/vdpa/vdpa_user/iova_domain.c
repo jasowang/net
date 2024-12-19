@@ -20,7 +20,7 @@
 #define void_printk(...) do{} while (0)
 
 #define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
-#define DBG_FUNC_VIP(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
+#define DBG_FUNC_VIP(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
 
 static bool iova_is_zc(struct vduse_iova_domain *domain, u64 iova)
 {
@@ -110,13 +110,18 @@ void vduse_domain_clear_map(struct vduse_iova_domain *domain,
 	spin_unlock(&domain->iotlb_lock);
 }
 
+#define BATCH_SIZE 16
+
 static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 					enum dma_data_direction dir,
 					u64 iova, u64 size, u64 paddr)
 {
 	struct vduse_bounce_map *map;
 	struct vm_area_struct *vma = domain->vma;
+	struct page *pages[BATCH_SIZE];
+	unsigned long addr;
 	u64 last = iova + size - 1;
+	unsigned long i = 0;
 
 	while (iova <= last) {
 		map = &domain->bounce_maps[iova >> PAGE_SHIFT];
@@ -129,14 +134,18 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 		if (iova_is_zc(domain, iova)) {
 			if (domain->vma) {
 				map->addr = domain->vma->vm_start + iova;
-				vmf_insert_pfn(domain->vma, map->addr,
-					       paddr >> PAGE_SHIFT);
-				DBG_FUNC("insert pfn zc addr %llx "
-					 "vm_start %llx "
-					 "iova %llx\n",
-					 map->addr,
-					 domain->vma->vm_start,
-					 iova);
+				if (i == 0)
+					addr = map->addr;
+
+				DBG_FUNC_VIP("pages[%x] to %llx addr[0] %llx\n",
+					     i, paddr >> PAGE_SHIFT, addr);
+				pages[i++] = pfn_to_page(paddr >> PAGE_SHIFT);
+				if (i == BATCH_SIZE) {
+					DBG_FUNC_VIP("insert %llx\n", i);
+					vm_insert_pages(domain->vma,
+							addr, pages, &i);
+					i = 0;
+				}
 			} else
 				map->vma = NULL;
 		}
@@ -145,6 +154,13 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 		paddr += PAGE_SIZE;
 		iova += PAGE_SIZE;
 	}
+
+	if (i) {
+		DBG_FUNC_VIP("insert %llx\n", i);
+		vm_insert_pages(domain->vma,
+				addr, pages, &i);
+	}
+
 	return 0;
 }
 
