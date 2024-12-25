@@ -20,7 +20,7 @@
 #define void_printk(...) do{} while (0)
 
 #define DBG_FUNC(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
-#define DBG_FUNC_VIP(fmt, ...) trace_printk(fmt, ## __VA_ARGS__)
+#define DBG_FUNC_VIP(fmt, ...) void_printk(fmt, ## __VA_ARGS__)
 
 static bool iova_is_zc(struct vduse_iova_domain *domain, u64 iova)
 {
@@ -127,6 +127,11 @@ static int vduse_domain_map_bounce_page(struct vduse_iova_domain *domain,
 			map->vma = domain->vma;
 		}
 		if (iova_is_zc(domain, iova)) {
+			if (iova > domain->bounce_size - 1) {
+				DBG_FUNC("iova %llx limit %llx\n",
+					     iova, domain->bounce_size - 1);
+				BUG();
+			}
 			if (domain->vma) {
 				map->addr = domain->vma->vm_start + iova;
 				vmf_insert_pfn(domain->vma, map->addr,
@@ -484,7 +489,7 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 	phys_addr_t pa = page_to_phys(page) + offset;
 	unsigned long limit;
 	struct iova_domain *iovad;
-	dma_addr_t iova;
+	dma_addr_t iova, iova2;
 
 	if ((offset & ~PAGE_MASK) && (offset + size > PAGE_SIZE))
 		DBG_FUNC_VIP("unaligened PAGE_SIZE request offset %llx "
@@ -498,17 +503,58 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 		limit = domain->bounce_size / 2 - 1;
 	}
 
-	iova = vduse_domain_alloc_iova(iovad, size, limit);
+	if (iovad == &domain->zc_iovad) {
+		u64 tail;
 
-	if (iova_is_zc(domain, iova)) {
-		DBG_FUNC("map zc iova %llx size %llx orig_phys %llx\n",
-			 iova, (unsigned long)size, pa);
-	} else
+		spin_lock(&domain->iotlb_lock);
+
+		tail = domain->iova_tail;
+
+		DBG_FUNC_VIP("[%llx] map zc iova %lx size %lx orig_phys %lx to_dev %x\n",
+			     domain, iova, (unsigned long)size, pa, dir == DMA_TO_DEVICE);
+
+		iova = 0;
+
+		if (tail > domain->iova_head) {
+			if (tail + size < limit) {
+				iova = tail;
+				tail += size;
+			} else {
+				DBG_FUNC_VIP("tail %lx + size %lx > %lx "
+					"tail reset hint set %lx\n",
+					tail, size, limit, tail);
+				domain->iova_hint = tail;
+				tail = domain->iova_start;
+			}
+		}
+
+		if (tail < domain->iova_head) {
+			if (tail + size < domain->iova_head) {
+				iova = tail;
+				tail += size;
+			}
+		}
+
+		domain->iova_tail = tail;
+
+		DBG_FUNC_VIP("[%lx] in order iova allocator iova %lx size %lx\n",
+			domain, iova, size);
+		DBG_FUNC_VIP("[%lx] iova_tail %lx iova_head %lx iova_hint %lx\n",
+			domain, domain->iova_tail, domain->iova_head, domain->iova_hint);
+
+		spin_unlock(&domain->iotlb_lock);
+		BUG_ON(iova > limit);
+		if (iova == 0)
+			return DMA_MAPPING_ERROR;
+	} else {
+		iova = vduse_domain_alloc_iova(iovad, size, limit);
+
+		if (!iova)
+			return DMA_MAPPING_ERROR;
+
 		DBG_FUNC("map bounce iova %llx size %llx orig_phys %llx\n",
 			 iova, (unsigned long)size, pa);
-
-	if (!iova)
-		return DMA_MAPPING_ERROR;
+	}
 
 	if (vduse_domain_init_bounce_map(domain))
 		goto err;
@@ -527,7 +573,8 @@ dma_addr_t vduse_domain_map_page(struct vduse_iova_domain *domain,
 err_unlock:
 	read_unlock(&domain->bounce_lock);
 err:
-	vduse_domain_free_iova(iovad, iova, size);
+	if (iovad != &domain->zc_iovad)
+		vduse_domain_free_iova(iovad, iova, size);
 	return DMA_MAPPING_ERROR;
 }
 
@@ -536,12 +583,39 @@ void vduse_domain_unmap_page(struct vduse_iova_domain *domain,
 			     enum dma_data_direction dir, unsigned long attrs)
 {
 	struct iova_domain *iovad;
+	u64 orig_head;
 
 	if (iova_is_zc(domain, dma_addr)) {
 		DBG_FUNC("unmap zc iova %llx size %llx zc %d\n",
 			dma_addr, (unsigned long)size,
 			iova_is_zc(domain, dma_addr));
 		iovad = &domain->zc_iovad;
+
+		DBG_FUNC_VIP("iova_head %lx + size %lx = %lx\n",
+			domain->iova_head, size,
+			domain->iova_head + size);
+
+		spin_lock(&domain->iotlb_lock);
+		orig_head = domain->iova_head;
+
+		domain->iova_head += size;
+		if (domain->iova_head == domain->iova_hint) {
+			DBG_FUNC_VIP("[%llx] iova_head == iova_hint %lx reset\n",
+				     domain, domain->iova_hint);
+			domain->iova_head = domain->iova_start;
+			domain->iova_hint = domain->iova_start;
+		} else if (domain->iova_head == domain->bounce_size) {
+			domain->iova_head = domain->iova_start;
+		} else if (domain->iova_head > domain->bounce_size) {
+			DBG_FUNC_VIP("[%llx] BUG() iova_head %lx + size %lx = %lx limit %lx\n",
+				     domain, orig_head, size, domain->iova_head,
+				     domain->bounce_size - 1);
+			domain->iova_head = domain->iova_start;
+		}
+
+		DBG_FUNC_VIP("[%llx] size %lx domain->iova_head to %lx\n",
+			 domain, size, domain->iova_head);
+		spin_unlock(&domain->iotlb_lock);
 	} else {
 		DBG_FUNC("unmap bounce iova %llx size %llx zc %d\n",
 			dma_addr, (unsigned long)size,
@@ -556,7 +630,9 @@ void vduse_domain_unmap_page(struct vduse_iova_domain *domain,
 
 	vduse_domain_unmap_bounce_page(domain, (u64)dma_addr, (u64)size);
 	read_unlock(&domain->bounce_lock);
-	vduse_domain_free_iova(iovad, dma_addr, size);
+
+	if (!iova_is_zc(domain, dma_addr))
+		vduse_domain_free_iova(iovad, dma_addr, size);
 }
 
 void *vduse_domain_alloc_coherent(struct vduse_iova_domain *domain,
@@ -741,6 +817,9 @@ vduse_domain_create(unsigned long iova_limit, size_t bounce_size)
 	if (ret)
 		goto err_iovad_stream;
 
+	domain->iova_start = (bounce_pfns / 2) << PAGE_SHIFT;
+	domain->iova_head = domain->iova_start;
+	domain->iova_tail = domain->iova_head + PAGE_SIZE;
 	init_iova_domain(&domain->zc_iovad,
 			PAGE_SIZE, bounce_pfns / 2);
 	ret = iova_domain_init_rcaches(&domain->zc_iovad);

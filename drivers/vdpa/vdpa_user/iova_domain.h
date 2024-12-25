@@ -44,6 +44,10 @@ struct vduse_iova_domain {
 	bool user_bounce_pages;
 	rwlock_t bounce_lock;
 	struct vm_area_struct *vma;
+	u64 iova_head;
+	u64 iova_tail;
+	u64 iova_hint;
+	u64 iova_start;
 };
 
 int vduse_domain_set_map(struct vduse_iova_domain *domain,
