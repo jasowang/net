@@ -455,6 +455,8 @@ static void vhost_vq_free_iovecs(struct vhost_virtqueue *vq)
 	vq->log = NULL;
 	kfree(vq->heads);
 	vq->heads = NULL;
+	kfree(vq->nheads);
+	vq->nheads = NULL;
 }
 
 /* Helper to allocate iovec buffers for all vqs. */
@@ -472,7 +474,9 @@ static long vhost_dev_alloc_iovecs(struct vhost_dev *dev)
 					GFP_KERNEL);
 		vq->heads = kmalloc_array(dev->iov_limit, sizeof(*vq->heads),
 					  GFP_KERNEL);
-		if (!vq->indirect || !vq->log || !vq->heads)
+		vq->nheads = kmalloc_array(dev->iov_limit, sizeof(*vq->nheads),
+					   GFP_KERNEL);
+		if (!vq->indirect || !vq->log || !vq->heads || !vq->nheads)
 			goto err_nomem;
 	}
 	return 0;
@@ -2720,8 +2724,9 @@ int vhost_add_used(struct vhost_virtqueue *vq, unsigned int head, int len)
 		cpu_to_vhost32(vq, head),
 		cpu_to_vhost32(vq, len)
 	};
+	u16 nheads = 1;
 
-	return vhost_add_used_n(vq, &heads, 1);
+	return vhost_add_used_n(vq, &heads, &nheads, 1);
 }
 EXPORT_SYMBOL_GPL(vhost_add_used);
 
@@ -2757,10 +2762,10 @@ static int __vhost_add_used_n(struct vhost_virtqueue *vq,
 	return 0;
 }
 
-/* After we've used one of their buffers, we tell them about it.  We'll then
- * want to notify the guest, using eventfd. */
-int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
-		     unsigned count)
+static int vhost_add_used_n_ooo(struct vhost_virtqueue *vq,
+				struct vring_used_elem *heads,
+				u16 *nheads,
+				unsigned count)
 {
 	int start, n, r;
 
@@ -2774,6 +2779,69 @@ int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
 		count -= n;
 	}
 	r = __vhost_add_used_n(vq, heads, count);
+
+	return r;
+}
+
+static int vhost_add_used_n_in_order(struct vhost_virtqueue *vq,
+				     struct vring_used_elem *heads,
+				     u16 *nheads,
+				     unsigned count)
+{
+	vring_used_elem_t __user *used;
+	u16 old, new;
+	int start, i;
+
+	if (!nheads)
+		return -EINVAL;
+
+	start = vq->last_used_idx & (vq->num - 1);
+	used = vq->used->ring + start;
+
+	for (i = 0; i < count; i++) {
+		if (vhost_put_used(vq, &heads[i], start, 1)) {
+			vq_err(vq, "Failed to write used");
+			return -EFAULT;
+		}
+		start += nheads[i];
+		if (start >= vq->num)
+			start -= vq->num;
+	}
+
+	if (unlikely(vq->log_used)) {
+		/* Make sure data is seen before log. */
+		smp_wmb();
+		/* Log used ring entry write. */
+		log_used(vq, ((void __user *)used - (void __user *)vq->used),
+			 (vq->num - start) * sizeof *used);
+		if (start + count > vq->num)
+			log_used(vq, 0,
+				 (start + count - vq->num) * sizeof *used);
+	}
+
+	old = vq->last_used_idx;
+	new = (vq->last_used_idx += count);
+	/* If the driver never bothers to signal in a very long while,
+	 * used index might wrap around. If that happens, invalidate
+	 * signalled_used index we stored. TODO: make sure driver
+	 * signals at least once in 2^16 and remove this. */
+	if (unlikely((u16)(new - vq->signalled_used) < (u16)(new - old)))
+		vq->signalled_used_valid = false;
+	return 0;
+}
+
+/* After we've used one of their buffers, we tell them about it.  We'll then
+ * want to notify the guest, using eventfd. */
+int vhost_add_used_n(struct vhost_virtqueue *vq, struct vring_used_elem *heads,
+		     u16 *nheads, unsigned count)
+{
+	bool in_order = vhost_has_feature(vq, VIRTIO_F_IN_ORDER);
+	int r;
+
+	if (!in_order || !nheads)
+		r = vhost_add_used_n_ooo(vq, heads, nheads, count);
+	else
+		r = vhost_add_used_n_in_order(vq, heads, nheads, count);
 
 	/* Make sure buffer is written before we update index. */
 	smp_wmb();
@@ -2853,9 +2921,11 @@ EXPORT_SYMBOL_GPL(vhost_add_used_and_signal);
 /* multi-buffer version of vhost_add_used_and_signal */
 void vhost_add_used_and_signal_n(struct vhost_dev *dev,
 				 struct vhost_virtqueue *vq,
-				 struct vring_used_elem *heads, unsigned count)
+				 struct vring_used_elem *heads,
+				 u16 *nheads,
+				 unsigned count)
 {
-	vhost_add_used_n(vq, heads, count);
+	vhost_add_used_n(vq, heads, nheads, count);
 	vhost_signal(dev, vq);
 }
 EXPORT_SYMBOL_GPL(vhost_add_used_and_signal_n);
