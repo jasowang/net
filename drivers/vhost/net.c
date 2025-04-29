@@ -74,7 +74,8 @@ enum {
 			 (1ULL << VHOST_NET_F_VIRTIO_NET_HDR) |
 			 (1ULL << VIRTIO_NET_F_MRG_RXBUF) |
 			 (1ULL << VIRTIO_F_ACCESS_PLATFORM) |
-			 (1ULL << VIRTIO_F_RING_RESET)
+			 (1ULL << VIRTIO_F_RING_RESET) |
+			 (1ULL << VIRTIO_F_IN_ORDER)
 };
 
 enum {
@@ -118,6 +119,8 @@ struct vhost_net_virtqueue {
 	int done_idx;
 	/* Number of XDP frames batched */
 	int batched_xdp;
+	/* Number of used elems */
+	int batched_used;
 	/* an array of userspace buffers info */
 	struct ubuf_info_msgzc *ubuf_info;
 	/* Reference counting for outstanding ubufs.
@@ -306,6 +309,7 @@ static void vhost_net_vq_reset(struct vhost_net *n)
 
 	for (i = 0; i < VHOST_NET_VQ_MAX; i++) {
 		n->vqs[i].done_idx = 0;
+		n->vqs[i].batched_used = 0;
 		n->vqs[i].upend_idx = 0;
 		n->vqs[i].ubufs = NULL;
 		n->vqs[i].vhost_hlen = 0;
@@ -458,8 +462,10 @@ static void vhost_net_signal_used(struct vhost_net_virtqueue *nvq)
 	if (!nvq->done_idx)
 		return;
 
-	vhost_add_used_and_signal_n(dev, vq, vq->heads, NULL, nvq->done_idx);
+	vhost_add_used_and_signal_n(dev, vq, vq->heads,
+				    vq->nheads, nvq->batched_used);
 	nvq->done_idx = 0;
+	nvq->batched_used = 0;
 }
 
 static void vhost_tx_batch(struct vhost_net *net,
@@ -467,12 +473,20 @@ static void vhost_tx_batch(struct vhost_net *net,
 			   struct socket *sock,
 			   struct msghdr *msghdr)
 {
+	struct vhost_virtqueue *vq = &nvq->vq;
 	struct tun_msg_ctl ctl = {
 		.type = TUN_MSG_PTR,
 		.num = nvq->batched_xdp,
 		.ptr = nvq->xdp,
 	};
 	int i, err;
+
+	if (vhost_has_feature(vq, VIRTIO_F_IN_ORDER)) {
+		nvq->batched_used = 1;
+		vq->heads[0].len = 0;
+		vq->nheads[0] = nvq->done_idx;
+	} else
+		nvq->batched_used = nvq->done_idx;
 
 	if (nvq->batched_xdp == 0)
 		goto signal_used;
@@ -757,6 +771,7 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 	int sent_pkts = 0;
 	bool sock_can_batch = (sock->sk->sk_sndbuf == INT_MAX);
 	bool busyloop_intr;
+	bool in_order = vhost_has_feature(vq, VIRTIO_F_IN_ORDER);
 
 	do {
 		busyloop_intr = false;
@@ -793,11 +808,13 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 				break;
 			}
 
-			/* We can't build XDP buff, go for single
-			 * packet path but let's flush batched
-			 * packets.
-			 */
-			vhost_tx_batch(net, nvq, sock, &msg);
+			if (nvq->batched_xdp) {
+				/* We can't build XDP buff, go for single
+				 * packet path but let's flush batched
+				 * packets.
+				 */
+				vhost_tx_batch(net, nvq, sock, &msg);
+			}
 			msg.msg_control = NULL;
 		} else {
 			if (tx_can_batch(vq, total_len))
@@ -818,8 +835,12 @@ static void handle_tx_copy(struct vhost_net *net, struct socket *sock)
 			pr_debug("Truncated TX packet: len %d != %zd\n",
 				 err, len);
 done:
-		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
-		vq->heads[nvq->done_idx].len = 0;
+		if (in_order) {
+			vq->heads[0].id = cpu_to_vhost32(vq, head);
+		} else {
+			vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
+			vq->heads[nvq->done_idx].len = 0;
+		}
 		++nvq->done_idx;
 	} while (likely(!vhost_exceeds_weight(vq, ++sent_pkts, total_len)));
 
@@ -1020,7 +1041,7 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
 
 /* This is a multi-buffer version of vhost_get_desc, that works if
  *	vq has read descriptors only.
- * @vq		- the relevant virtqueue
+ * @nvq		- the relevant vhost_net virtqueue
  * @datalen	- data length we'll be reading
  * @iovcount	- returned count of io vectors we fill
  * @log		- vhost log
@@ -1028,14 +1049,17 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk,
  * @quota       - headcount quota, 1 for big buffer
  *	returns number of buffer heads allocated, negative on error
  */
-static int get_rx_bufs(struct vhost_virtqueue *vq,
+static int get_rx_bufs(struct vhost_net_virtqueue *nvq,
 		       struct vring_used_elem *heads,
+		       u16 *nheads,
 		       int datalen,
 		       unsigned *iovcount,
 		       struct vhost_log *log,
 		       unsigned *log_num,
 		       unsigned int quota)
 {
+	struct vhost_virtqueue *vq = &nvq->vq;
+	bool in_order = vhost_has_feature(vq, VIRTIO_F_IN_ORDER);
 	unsigned int out, in;
 	int seg = 0;
 	int headcount = 0;
@@ -1072,14 +1096,16 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 			nlogs += *log_num;
 			log += *log_num;
 		}
-		heads[headcount].id = cpu_to_vhost32(vq, d);
 		len = iov_length(vq->iov + seg, in);
-		heads[headcount].len = cpu_to_vhost32(vq, len);
-		datalen -= len;
+		if (!in_order) {
+			heads[headcount].id = cpu_to_vhost32(vq, d);
+			heads[headcount].len = cpu_to_vhost32(vq, len);
+		}
 		++headcount;
+		datalen -= len;
 		seg += in;
 	}
-	heads[headcount - 1].len = cpu_to_vhost32(vq, len + datalen);
+
 	*iovcount = seg;
 	if (unlikely(log))
 		*log_num = nlogs;
@@ -1089,6 +1115,17 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 		r = UIO_MAXIOV + 1;
 		goto err;
 	}
+
+	if (!in_order) {
+		nvq->batched_used += headcount;
+		heads[headcount - 1].len = cpu_to_vhost32(vq, len + datalen);
+	} else {
+		nvq->batched_used++;
+		heads[0].len = cpu_to_vhost32(vq, len + datalen);
+		heads[0].id = cpu_to_vhost32(vq, d);
+		nheads[0] = headcount;
+	}
+
 	return headcount;
 err:
 	vhost_discard_vq_desc(vq, headcount);
@@ -1153,7 +1190,8 @@ static void handle_rx(struct vhost_net *net)
 			break;
 		sock_len += sock_hlen;
 		vhost_len = sock_len + vhost_hlen;
-		headcount = get_rx_bufs(vq, vq->heads + nvq->done_idx,
+		headcount = get_rx_bufs(nvq, vq->heads + nvq->batched_used,
+					vq->nheads + nvq->batched_used,
 					vhost_len, &in, vq_log, &log,
 					likely(mergeable) ? UIO_MAXIOV : 1);
 		/* On error, stop handling until the next kick. */
@@ -1325,6 +1363,7 @@ static int vhost_net_open(struct inode *inode, struct file *f)
 		n->vqs[i].upend_idx = 0;
 		n->vqs[i].done_idx = 0;
 		n->vqs[i].batched_xdp = 0;
+		n->vqs[i].batched_used = 0;
 		n->vqs[i].vhost_hlen = 0;
 		n->vqs[i].sock_hlen = 0;
 		n->vqs[i].rx_ring = NULL;

@@ -2789,7 +2789,7 @@ static int vhost_add_used_n_in_order(struct vhost_virtqueue *vq,
 				     unsigned count)
 {
 	vring_used_elem_t __user *used;
-	u16 old, new;
+	u16 old, new = vq->last_used_idx;
 	int start, i;
 
 	if (!nheads)
@@ -2804,6 +2804,7 @@ static int vhost_add_used_n_in_order(struct vhost_virtqueue *vq,
 			return -EFAULT;
 		}
 		start += nheads[i];
+		new += nheads[i];
 		if (start >= vq->num)
 			start -= vq->num;
 	}
@@ -2820,7 +2821,7 @@ static int vhost_add_used_n_in_order(struct vhost_virtqueue *vq,
 	}
 
 	old = vq->last_used_idx;
-	new = (vq->last_used_idx += count);
+	vq->last_used_idx = new;
 	/* If the driver never bothers to signal in a very long while,
 	 * used index might wrap around. If that happens, invalidate
 	 * signalled_used index we stored. TODO: make sure driver
