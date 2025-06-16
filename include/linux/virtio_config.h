@@ -133,6 +133,26 @@ struct virtio_config_ops {
 	int (*enable_vq_after_reset)(struct virtqueue *vq);
 };
 
+struct virtio_map_ops {
+	dma_addr_t (*map_page)(void *token, struct page *page,
+			       unsigned long offset, size_t size,
+			       enum dma_data_direction dir, unsigned long attrs);
+	void (*unmap_page)(void *token, dma_addr_t dma_handle,
+			   size_t size, enum dma_data_direction dir,
+			   unsigned long attrs);
+	void (*sync_single_for_cpu)(void *token, dma_addr_t dma_handle,
+				    size_t size, enum dma_data_direction dir);
+	void (*sync_single_for_device)(void *token,
+				       dma_addr_t dma_handle, size_t size,
+				       enum dma_data_direction dir);
+	void *(*alloc)(void *token, size_t size,
+		       dma_addr_t *dma_handle, gfp_t gfp);
+	void (*free)(void *token, size_t size, void *vaddr,
+		     dma_addr_t dma_handle, unsigned long attrs);
+	bool (*need_sync)(void *token, dma_addr_t dma_handle);
+	size_t (*max_mapping_size)(void *token);
+};
+
 /* If driver didn't advertise the feature, it will never appear. */
 void virtio_check_driver_offered_feature(const struct virtio_device *vdev,
 					 unsigned int fbit);
