@@ -103,6 +103,7 @@ struct vhost_virtqueue {
 	 * Values are limited to 0x7fff, and the high bit is used as
 	 * a wrap counter when using VIRTIO_F_RING_PACKED. */
 	u16 last_avail_idx;
+	u16 next_avail_idx;
 
 	/* Caches available index value from user. */
 	u16 avail_idx;

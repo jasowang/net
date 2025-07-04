@@ -364,6 +364,7 @@ static void vhost_vq_reset(struct vhost_dev *dev,
 	vq->avail = NULL;
 	vq->used = NULL;
 	vq->last_avail_idx = 0;
+	vq->next_avail_idx = 0;
 	vq->avail_idx = 0;
 	vq->last_used_idx = 0;
 	vq->signalled_used = 0;
@@ -1994,6 +1995,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 			break;
 		}
 		if (vhost_has_feature(vq, VIRTIO_F_RING_PACKED)) {
+			/* FIXME */
 			vq->last_avail_idx = s.num & 0xffff;
 			vq->last_used_idx = (s.num >> 16) & 0xffff;
 		} else {
@@ -2001,7 +2003,7 @@ long vhost_vring_ioctl(struct vhost_dev *d, unsigned int ioctl, void __user *arg
 				r = -EINVAL;
 				break;
 			}
-			vq->last_avail_idx = s.num;
+			vq->next_avail_idx = vq->last_avail_idx = s.num;
 		}
 		/* Forget the cached index value. */
 		vq->avail_idx = vq->last_avail_idx;
@@ -2594,11 +2596,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 		      unsigned int *out_num, unsigned int *in_num,
 		      struct vhost_log *log, unsigned int *log_num)
 {
+	bool in_order = vhost_has_feature(vq, VIRTIO_F_IN_ORDER);
 	struct vring_desc desc;
 	unsigned int i, head, found = 0;
 	u16 last_avail_idx = vq->last_avail_idx;
 	__virtio16 ring_head;
-	int ret, access;
+	int ret, access, c = 0;
 
 	if (vq->avail_idx == vq->last_avail_idx) {
 		ret = vhost_get_avail_idx(vq);
@@ -2609,16 +2612,20 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			return vq->num;
 	}
 
-	/* Grab the next descriptor number they're advertising, and increment
-	 * the index we've seen. */
-	if (unlikely(vhost_get_avail_head(vq, &ring_head, last_avail_idx))) {
-		vq_err(vq, "Failed to read head: idx %d address %p\n",
-		       last_avail_idx,
-		       &vq->avail->ring[last_avail_idx % vq->num]);
-		return -EFAULT;
+	if (in_order)
+		head = vq->next_avail_idx & (vq->num - 1);
+	else {
+		/* Grab the next descriptor number they're
+		 * advertising, and increment the index we've seen. */
+		if (unlikely(vhost_get_avail_head(vq, &ring_head,
+						  last_avail_idx))) {
+			vq_err(vq, "Failed to read head: idx %d address %p\n",
+				last_avail_idx,
+				&vq->avail->ring[last_avail_idx % vq->num]);
+			return -EFAULT;
+		}
+		head = vhost16_to_cpu(vq, ring_head);
 	}
-
-	head = vhost16_to_cpu(vq, ring_head);
 
 	/* If their number is silly, that's an error. */
 	if (unlikely(head >= vq->num)) {
@@ -2662,6 +2669,7 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 						"in indirect descriptor at idx %d\n", i);
 				return ret;
 			}
+			++c;
 			continue;
 		}
 
@@ -2697,10 +2705,12 @@ int vhost_get_vq_desc(struct vhost_virtqueue *vq,
 			}
 			*out_num += ret;
 		}
+		++c;
 	} while ((i = next_desc(vq, &desc)) != -1);
 
 	/* On success, increment avail index. */
 	vq->last_avail_idx++;
+	vq->next_avail_idx += c;
 
 	/* Assume notifications from guest are disabled at this point,
 	 * if they aren't we would need to update avail_event index. */
